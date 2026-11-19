@@ -86,13 +86,13 @@ export function useRepartoGpsAndSettle({
         checksDeclared: totals.totalCheck,
         transfersDeclared: totals.totalTransfer,
       });
-      setSuccessMsg(`Viaje #${settleRoute.id} liquidado.`);
+      setSuccessMsg(`Viaje #${settleRoute.id} cerrado.`);
       setShowSettleModal(false);
       setSettleRoute(null);
       setSelectedRoute(null);
       await onSettled();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al liquidar el viaje.');
+      setErrorMsg(err.message || 'Error al cerrar el viaje.');
     } finally {
       setLoading(false);
     }

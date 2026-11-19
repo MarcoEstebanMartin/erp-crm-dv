@@ -97,7 +97,7 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
           )}
           {selectedRoute.status === 'IN_TRANSIT' && (
             <button type="button" className="btn btn-primary" style={{ fontSize: '0.78rem', backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => handleOpenSettleModal(selectedRoute)}>
-              <CheckCircle size={12} aria-hidden="true" /> Rendir
+              <CheckCircle size={12} aria-hidden="true" /> Cerrar Viaje
             </button>
           )}
           <button type="button" className="btn btn-secondary no-print" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => printDeliveryRouteCustodyGuide(selectedRoute)}>

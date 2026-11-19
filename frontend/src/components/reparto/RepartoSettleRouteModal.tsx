@@ -41,7 +41,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
         <>
           <div className="modal-header">
             <h3 id="reparto-settle-modal-title" className="tabular-nums">
-              Liquidación de Viaje #{settleRoute.id}
+              Cierre de Viaje #{settleRoute.id}
             </h3>
             <button
               type="button"
@@ -77,47 +77,34 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
 
           <div
             className="tabular-nums"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: '10px',
-              marginBottom: '14px',
-            }}
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', marginBottom: '14px' }}
           >
-            <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Efectivo</div>
-              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#15803d' }}>
-                ${totals.totalCash.toLocaleString('es-AR')}
-              </div>
-            </div>
-            <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Transferencia</div>
-              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0369a1' }}>
-                ${totals.totalTransfer.toLocaleString('es-AR')}
-              </div>
-            </div>
-            <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Cheques</div>
-              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#6d28d9' }}>
-                ${totals.totalCheck.toLocaleString('es-AR')}
-              </div>
-            </div>
-            <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>A Cuenta (C/C)</div>
-              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#b78103' }}>
-                ${totals.totalCredit.toLocaleString('es-AR')}
-              </div>
-            </div>
-            {totals.notDeliveredCount > 0 && (
-              <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #fecaca', backgroundColor: '#fff5f5' }}>
-                <div style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600 }}>
-                  No Entregados ({totals.notDeliveredCount})
+            {[
+              { label: 'Efectivo', value: totals.totalCash, color: '#15803d', danger: false },
+              { label: 'Transferencia', value: totals.totalTransfer, color: '#0369a1', danger: false },
+              { label: 'Cheques', value: totals.totalCheck, color: '#6d28d9', danger: false },
+              { label: 'A Cuenta (C/C)', value: totals.totalCredit, color: '#b78103', danger: false },
+              ...(totals.notDeliveredCount > 0
+                ? [{ label: `No Entregados (${totals.notDeliveredCount})`, value: totals.totalNotDelivered, color: '#b91c1c', danger: true }]
+                : []),
+            ].map((card) => (
+              <div
+                key={card.label}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${card.danger ? '#fecaca' : 'var(--border-color)'}`,
+                  backgroundColor: card.danger ? '#fff5f5' : '#fff',
+                }}
+              >
+                <div style={{ fontSize: '0.72rem', color: card.danger ? '#b91c1c' : 'var(--text-secondary)', fontWeight: 600 }}>
+                  {card.label}
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#b91c1c' }}>
-                  ${totals.totalNotDelivered.toLocaleString('es-AR')}
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: card.color }}>
+                  ${card.value.toLocaleString('es-AR')}
                 </div>
               </div>
-            )}
+            ))}
           </div>
 
           <form onSubmit={onSubmit}>
@@ -223,60 +210,34 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                           {set.paymentMethod === 'CHECK' && (
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                               <input
-                                type="text"
-                                aria-label={`Número de cheque ${set.clientName}`}
-                                placeholder="N° Cheque"
-                                autoCorrect="off"
-                                autoCapitalize="none"
-                                spellCheck={false}
+                                type="text" aria-label={`Número de cheque ${set.clientName}`} placeholder="N° Cheque"
+                                autoCorrect="off" autoCapitalize="none" spellCheck={false}
                                 className="input tabular-nums"
                                 style={{ padding: '2px 6px', fontSize: '0.76rem', height: '28px', width: '105px' }}
                                 value={set.checkNumber}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, checkNumber: val } : s)));
-                                }}
+                                onChange={(e) => setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, checkNumber: e.target.value } : s)))}
                                 required
                               />
                               <input
-                                type="text"
-                                aria-label={`Emisor de cheque ${set.clientName}`}
-                                placeholder="Emisor"
+                                type="text" aria-label={`Emisor de cheque ${set.clientName}`} placeholder="Emisor"
                                 className="input"
                                 style={{ padding: '2px 6px', fontSize: '0.76rem', height: '28px', flex: '1 1 120px', minWidth: '110px' }}
                                 value={set.checkIssuer}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, checkIssuer: val } : s)));
-                                }}
+                                onChange={(e) => setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, checkIssuer: e.target.value } : s)))}
                                 required
                               />
                               <label
                                 style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '5px',
-                                  fontSize: '0.76rem',
-                                  fontWeight: 600,
-                                  color: set.isEcheq ? '#0369a1' : 'var(--text-secondary)',
-                                  cursor: 'pointer',
-                                  whiteSpace: 'nowrap',
-                                  padding: '0 8px',
-                                  height: '28px',
-                                  borderRadius: '4px',
+                                  display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', fontWeight: 600,
+                                  color: set.isEcheq ? '#0369a1' : 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap',
+                                  padding: '0 8px', height: '28px', borderRadius: '4px', userSelect: 'none',
                                   border: `1px solid ${set.isEcheq ? '#7dd3fc' : 'var(--border-color)'}`,
                                   backgroundColor: set.isEcheq ? '#f0f9ff' : 'transparent',
-                                  userSelect: 'none',
                                 }}
                               >
                                 <input
-                                  type="checkbox"
-                                  aria-label={`Es eCheq ${set.clientName}`}
-                                  checked={Boolean(set.isEcheq)}
-                                  onChange={(e) => {
-                                    const checked = e.target.checked;
-                                    setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, isEcheq: checked } : s)));
-                                  }}
+                                  type="checkbox" aria-label={`Es eCheq ${set.clientName}`} checked={Boolean(set.isEcheq)}
+                                  onChange={(e) => setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, isEcheq: e.target.checked } : s)))}
                                   style={{ width: '14px', height: '14px', margin: 0, accentColor: '#0284c7', cursor: 'pointer' }}
                                 />
                                 <span>eCheq</span>
@@ -327,7 +288,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                 className="btn btn-primary"
                 style={{ backgroundColor: 'var(--color-corp-red)', borderColor: 'var(--color-corp-red)' }}
               >
-                Liquidar Viaje
+                Cerrar Viaje
               </button>
             </div>
           </form>
