@@ -169,7 +169,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             {[
               { id: 'general', label: 'Finanzas', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: true },
               { id: 'rendiciones', label: 'Rendiciones', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
-              { id: 'field-receipts', label: 'Recibos Digitales', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
+              { id: 'field-receipts', label: 'Recibos', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
               { id: 'gastos', label: 'Gastos', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: true },
               { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={15} aria-hidden="true" />, adminOnly: true },
             ]

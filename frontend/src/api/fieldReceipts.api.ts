@@ -107,17 +107,32 @@ export interface CollectorSettlementDTO {
   receipts: FieldReceiptDTO[];
 }
 
+export interface OfficeReceiptDTO {
+  id: number;
+  receiptNumber: string | null;
+  amount: number | string;
+  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CHECK' | 'OTHER';
+  billingType: 'OFFICIAL' | 'INTERNAL';
+  description: string | null;
+  verified: boolean;
+  createdAt: string;
+  personaId: number | null;
+  persona?: { id: number; name: string; phone?: string | null } | null;
+  user?: { id: number; username: string } | null;
+  order?: { id: number; invoiceNumber: string | null } | null;
+  bankAccount?: { id: number; name: string } | null;
+}
+
+function normalizeArgentinaWhatsAppPhone(raw?: string | null): string {
+  const digits = (raw || '').replace(/\D/g, '');
+  if (digits.startsWith('549')) return digits;
+  if (digits.startsWith('54')) return `549${digits.slice(2)}`;
+  if (digits.startsWith('0')) return `549${digits.slice(1)}`;
+  return digits.length >= 8 ? `549${digits}` : '';
+}
+
 export function buildManualWhatsAppUrl(receipt: FieldReceiptDTO): string {
-  const rawPhone = (receipt.persona?.phone || '').replace(/\D/g, '');
-  const phone = rawPhone.startsWith('549')
-    ? rawPhone
-    : rawPhone.startsWith('54')
-      ? `549${rawPhone.slice(2)}`
-      : rawPhone.startsWith('0')
-        ? `549${rawPhone.slice(1)}`
-        : rawPhone.length >= 8
-          ? `549${rawPhone}`
-          : '';
+  const phone = normalizeArgentinaWhatsAppPhone(receipt.persona?.phone);
   const nro = receipt.receiptNumber || receipt.provisionalCode;
   const total = `$${Math.round(Number(receipt.totalAmount)).toLocaleString('es-AR')}`;
   const pdfLink = receipt.pdfUrl ? `\nComprobante PDF: ${window.location.origin}${receipt.pdfUrl}` : '';
@@ -126,7 +141,23 @@ export function buildManualWhatsAppUrl(receipt: FieldReceiptDTO): string {
   return `${base}?text=${encodeURIComponent(text)}`;
 }
 
+export function buildOfficeReceiptWhatsAppUrl(receipt: OfficeReceiptDTO): string {
+  const phone = normalizeArgentinaWhatsAppPhone(receipt.persona?.phone);
+  const nro = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
+  const total = `$${Math.round(Number(receipt.amount)).toLocaleString('es-AR')}`;
+  const link = `${window.location.origin}/recibo/${receipt.id}`;
+  const text = `Hola ${receipt.persona?.name || ''}, te enviamos tu Recibo ${nro} por ${total}.\nComprobante: ${link}`;
+  const base = phone ? `https://wa.me/${phone}` : 'https://wa.me/';
+  return `${base}?text=${encodeURIComponent(text)}`;
+}
+
 export const fieldReceiptsApi = {
+  listOfficeReceipts(limit = 200): Promise<OfficeReceiptDTO[]> {
+    return apiClient.get(`/collections/receipts?limit=${limit}`);
+  },
+  deleteOfficeReceipt(id: number): Promise<{ status: string; message: string }> {
+    return apiClient.delete(`/collections/receipt/${id}`);
+  },
   getOfflineBundle(): Promise<OfflineBundleResponse> {
     return apiClient.get('/field-receipts/offline-bundle');
   },

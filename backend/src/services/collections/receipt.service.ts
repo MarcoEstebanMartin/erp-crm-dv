@@ -6,6 +6,48 @@ import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
 export const receiptService = {
   /**
+   * Lista los recibos de cobro registrados en oficina/mostrador/cuenta corriente.
+   */
+  async listReceipts(limit = 200) {
+    const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 500);
+    return prisma.transaction.findMany({
+      where: {
+        type: TransactionType.INCOME,
+        personaId: { not: null },
+      },
+      include: {
+        persona: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        order: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+          },
+        },
+        bankAccount: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: safeLimit,
+    });
+  },
+
+  /**
    * Obtiene un recibo de pago sanitizando campos sensibles (jamás expone passwordHash ni webPin).
    */
   async getReceipt(id: number) {

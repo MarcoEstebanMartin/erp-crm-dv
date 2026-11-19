@@ -57,6 +57,16 @@ export const registerCollection = async (req: AuthenticatedRequest, res: Respons
   }
 };
 
+export const listReceipts = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const limit = req.query.limit ? Number(req.query.limit) : 200;
+    const receipts = await receiptService.listReceipts(limit);
+    return res.json(receipts);
+  } catch (error) {
+    return handleCollectionError(res, error, 'Error al listar recibos');
+  }
+};
+
 export const getReceipt = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const transaction = await receiptService.getReceipt(parseInt(req.params.id as string, 10));

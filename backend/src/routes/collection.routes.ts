@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Role } from '@prisma/client';
 import {
   registerCollection,
+  listReceipts,
   getReceipt,
   getPendingCollections,
   getPendingRendiciones,
@@ -34,6 +35,14 @@ router.post(
   validateRequest(registerCollectionSchema),
   idempotencyGuard,
   registerCollection,
+);
+
+// Listado de recibos de cobro (Oficina / Mostrador / Cuenta Corriente)
+router.get(
+  '/receipts',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  listReceipts,
 );
 
 // Detalle público sanitizado de un recibo (para compartir comprobante digital)
