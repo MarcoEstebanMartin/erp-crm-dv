@@ -13,6 +13,7 @@ import {
 import { emitirFacturaAFIP } from '../afip.service';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { notifyWebOrderStatusForErpOrder } from '../orders/web-order-status-bridge.service';
+import { generateUniqueVerificationCode } from '../../core/receiptToken';
 
 export interface RouteOrderSettlementItem {
   orderId: number;
@@ -263,6 +264,7 @@ export const routeSettlementService = {
               description: txDescription,
               cashDrawerId,
               bankAccountId,
+              verificationCode: generateUniqueVerificationCode(),
             },
           });
 

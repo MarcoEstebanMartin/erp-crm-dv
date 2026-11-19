@@ -1,0 +1,326 @@
+/* ==========================================================================
+   RECIBO OFICIAL VERIFICABLE — Estética Minimalista Don Venancio (sin Tailwind)
+   ========================================================================== */
+
+.dv-receipt-page {
+  min-height: 100dvh;
+  background: var(--bg-app, #f9fafb);
+  color: var(--text-primary, #111827);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+  box-sizing: border-box;
+}
+
+.dv-receipt-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.05));
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.dv-receipt-status-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-md, 0 1px 3px rgba(0, 0, 0, 0.05));
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.dv-receipt-error-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: var(--color-corp-red, #e30613);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.dv-receipt-status-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.dv-receipt-status-text {
+  margin: 6px 0 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #4b5563);
+}
+
+.dv-receipt-loading {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #4b5563);
+}
+
+/* Header */
+.dv-receipt-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dv-receipt-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dv-receipt-monogram {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.dv-receipt-brand-text {
+  min-width: 0;
+}
+
+.dv-receipt-company {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dv-receipt-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #4b5563);
+}
+
+.dv-receipt-number {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #374151;
+  background: #f3f4f6;
+  padding: 4px 10px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* Monto */
+.dv-receipt-amount-section {
+  padding: 26px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: center;
+}
+
+.dv-receipt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  margin-bottom: 12px;
+}
+
+.dv-receipt-amount {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: var(--text-primary, #111827);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Detalle */
+.dv-receipt-details {
+  margin: 0;
+  padding: 16px 24px;
+}
+
+.dv-receipt-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dv-receipt-row:last-child {
+  border-bottom: none;
+}
+
+.dv-receipt-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #4b5563);
+  flex-shrink: 0;
+}
+
+.dv-receipt-value {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+  text-align: right;
+  word-break: break-word;
+}
+
+.dv-receipt-value--mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Código único y QR */
+.dv-receipt-verify {
+  margin: 0 24px 22px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f9fafb;
+  border: 1px solid var(--border-color, #e5e7eb);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dv-receipt-qr {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: #ffffff;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.dv-receipt-verify-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.dv-receipt-verify-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #047857;
+}
+
+.dv-receipt-verify-code {
+  margin-top: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-primary, #111827);
+  word-break: break-all;
+}
+
+/* Acciones */
+.dv-receipt-actions {
+  padding: 16px 24px;
+  background: #f9fafb;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dv-receipt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, opacity 140ms ease;
+}
+
+.dv-receipt-btn:focus-visible {
+  outline: 2px solid #111827;
+  outline-offset: 2px;
+}
+
+.dv-receipt-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.dv-receipt-btn--primary {
+  flex: 1;
+  background: #111827;
+  color: #ffffff;
+  border: 1px solid #111827;
+}
+
+.dv-receipt-btn--primary:hover:not(:disabled) {
+  background: #1f2937;
+}
+
+.dv-receipt-btn--secondary {
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.dv-receipt-btn--secondary:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+@container (max-width: 340px) {
+  .dv-receipt-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media print {
+  .dv-receipt-page {
+    min-height: auto;
+    background: #ffffff;
+    padding: 0;
+  }
+
+  .dv-receipt-card {
+    max-width: none;
+    border: none;
+    box-shadow: none;
+  }
+
+  .dv-receipt-actions {
+    display: none;
+  }
+}

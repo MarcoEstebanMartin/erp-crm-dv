@@ -15,6 +15,7 @@ import {
   evaluateSettlementArqueo,
 } from '../engines/fieldReceipts.engine';
 import { recordLedgerMovement } from './ledger/account-ledger.service';
+import { generateUniqueVerificationCode } from '../core/receiptToken';
 import {
   ApproveSettlementInput,
   SyncFieldReceiptInput,
@@ -165,6 +166,7 @@ export const fieldReceiptsService = {
           paymentMethod: primaryMethod,
           amount: totalNum,
           receiptNumber,
+          verificationCode: generateUniqueVerificationCode(),
           description: `Cobro digital en calle (${receiptNumber})`,
           verified: false,
         },

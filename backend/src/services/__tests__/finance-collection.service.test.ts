@@ -150,6 +150,31 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
     expect(receipt.authenticity.verified).toBe(true);
   });
 
+  it('getReceipt valida directamente el verificationCode único persistido en BD sin depender de secretos por entorno', async () => {
+    vi.spyOn(prisma.transaction, 'findUnique').mockResolvedValue({
+      id: 77,
+      type: TransactionType.INCOME,
+      amount: '12500.00',
+      receiptNumber: 'REC-00077',
+      verificationCode: 'DV-A1B2-C3D4-E5F6',
+      paymentMethod: PaymentMethod.BANK_TRANSFER,
+      billingType: BillingType.OFFICIAL,
+      verified: true,
+      persona: { id: 10, name: 'Almacén Don Pepe', cuit: null, address: null, city: 'Villegas' },
+      user: { id: 2, username: 'oficina1' },
+    } as any);
+
+    await expect(receiptService.getReceipt(77, { token: 'DV-0000-0000-0000' })).rejects.toThrow(
+      'Comprobante no encontrado o enlace de verificación inválido',
+    );
+
+    const receipt = await receiptService.getReceipt(77, { token: 'dv-a1b2-c3d4-e5f6' });
+    expect(receipt.verificationCode).toBe('DV-A1B2-C3D4-E5F6');
+    expect(receipt.shareToken).toBe('DV-A1B2-C3D4-E5F6');
+    expect(receipt.publicUrl).toContain('/recibo/77?v=DV-A1B2-C3D4-E5F6');
+    expect(receipt.authenticity.verified).toBe(true);
+  });
+
   it('verifyRendicion ejecuta la creación de caja cerrada y acreditación bancaria dentro de una única transacción atómica', async () => {
     vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({ id: 4, username: 'juan_vendedor' } as any);
     vi.spyOn(prisma.transaction, 'findMany').mockResolvedValue([

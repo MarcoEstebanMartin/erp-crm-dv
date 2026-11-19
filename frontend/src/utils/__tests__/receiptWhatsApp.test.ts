@@ -32,7 +32,7 @@ describe('receiptWhatsApp (mensajes profesionales, minimalistas y sin localhost)
     );
   });
 
-  it('genera mensaje limpio y estructurado para recibo de oficina con link firmado y código DV', () => {
+  it('genera mensaje limpio para recibo de oficina sin link feo y con código único DV', () => {
     const text = buildOfficeReceiptWhatsAppMessage(
       {
         id: 52,
@@ -42,8 +42,8 @@ describe('receiptWhatsApp (mensajes profesionales, minimalistas y sin localhost)
         createdAt: '2026-11-18T15:00:00.000Z',
         persona: { name: 'MARTIN MARCO ESTEBAN', phone: '3388123456' },
         bankAccount: { name: 'Banco Nación' },
-        verificationCode: 'DV-8F3A-9C12',
-        publicUrl: 'https://erp-dv-prueba-production.up.railway.app/recibo/52?v=8f3a9c12b4e17d05',
+        verificationCode: 'DV-8F3A-9C12-4B7E',
+        publicUrl: 'https://erp-dv-prueba-production.up.railway.app/recibo/52?v=DV-8F3A-9C12-4B7E',
       },
       'http://localhost:5174',
     );
@@ -53,10 +53,8 @@ describe('receiptWhatsApp (mensajes profesionales, minimalistas y sin localhost)
     expect(text).toContain('*Cliente:* Martin Marco Esteban');
     expect(text).toContain('*Medio:* Transferencia (Banco Nación)');
     expect(text).toContain('*Importe:* *$388.108*');
-    expect(text).toContain(
-      'https://erp-dv-prueba-production.up.railway.app/recibo/52?v=8f3a9c12b4e17d05',
-    );
-    expect(text).toContain('Verificación: `DV-8F3A-9C12`');
+    expect(text).toContain('Código único: `DV-8F3A-9C12-4B7E`');
+    expect(text).not.toContain('/recibo/');
     expect(text).not.toContain('localhost');
   });
 

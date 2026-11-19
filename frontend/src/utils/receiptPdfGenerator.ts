@@ -105,14 +105,14 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
   doc.setLineWidth(0.3);
   doc.line(marginX, 40, pageWidth - marginX, 40);
 
-  // Bloque de monto + badge verificado
+  // Bloque de monto + badge oficial
   doc.setFillColor(236, 253, 245); // emerald-50
   doc.setDrawColor(167, 243, 208); // emerald-200
-  doc.roundedRect(marginX, 49, 44, 7.5, 3.5, 3.5, 'FD');
+  doc.roundedRect(marginX, 49, 48, 7.5, 3.5, 3.5, 'FD');
   doc.setTextColor(4, 120, 87); // emerald-700
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.text('VERIFICADO EN VIVO', marginX + 22, 54, { align: 'center' });
+  doc.setFontSize(8);
+  doc.text('COMPROBANTE OFICIAL', marginX + 24, 54, { align: 'center' });
 
   doc.setTextColor(24, 24, 27);
   doc.setFont('helvetica', 'bold');
@@ -170,25 +170,22 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
   }
 
   const textStartX = marginX + 41;
-  doc.setTextColor(24, 24, 27);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('Autenticidad verificable', textStartX, qrBoxY + 12);
+  doc.setTextColor(113, 113, 122);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.text('Código único de verificación', textStartX, qrBoxY + 13);
 
   if (verificationCode) {
     doc.setTextColor(24, 24, 27);
     doc.setFont('courier', 'bold');
-    doc.setFontSize(11);
-    doc.text(verificationCode, textStartX, qrBoxY + 20);
+    doc.setFontSize(13);
+    doc.text(verificationCode, textStartX, qrBoxY + 22);
   }
 
-  if (verifyUrl) {
-    doc.setTextColor(113, 113, 122);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    const shortUrl = doc.splitTextToSize(verifyUrl, contentWidth - 46);
-    doc.text(shortUrl, textStartX, qrBoxY + 27);
-  }
+  doc.setTextColor(113, 113, 122);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('Distribuidora Don Venancio · Registro inmutable', textStartX, qrBoxY + 30);
 
   return doc.output('blob');
 }
@@ -203,4 +200,40 @@ export async function downloadReceiptPdf(receipt: PublicReceiptData): Promise<vo
   link.click();
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * En celulares compatibles comparte el archivo PDF directo a WhatsApp vía Web Share API;
+ * en PC descarga el PDF instantáneamente.
+ */
+export async function shareOrDownloadReceiptPdf(
+  receipt: PublicReceiptData,
+): Promise<'shared' | 'downloaded'> {
+  const blob = await generateReceiptPdfBlob(receipt);
+  const filename = buildReceiptPdfFilename(receipt);
+
+  if (typeof navigator !== 'undefined' && typeof File !== 'undefined') {
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    if (
+      typeof navigator.canShare === 'function' &&
+      typeof navigator.share === 'function' &&
+      navigator.canShare({ files: [file] })
+    ) {
+      await navigator.share({
+        title: `Recibo ${receipt.receiptNumber || `REC-${receipt.id}`}`,
+        files: [file],
+      });
+      return 'shared';
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return 'downloaded';
 }

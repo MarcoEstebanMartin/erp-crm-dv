@@ -11,6 +11,7 @@ import AppError from '../../utils/AppError';
 import { personaService } from '../persona.service';
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { generateUniqueVerificationCode } from '../../core/receiptToken';
 import { buildOfficeReceiptSecurityMeta } from './receipt.service';
 
 export const collectionService = {
@@ -169,6 +170,7 @@ export const collectionService = {
               ? `Cobro Factura ${orderNumberDesc}${checkInfoStr}`
               : `Cobro a cliente ${client.name}${checkInfoStr}`,
           receiptNumber: null,
+          verificationCode: generateUniqueVerificationCode(),
           verified: false,
           orderId: params.orderId ? Number(params.orderId) : null,
           bankAccountId: params.bankAccountId ? Number(params.bankAccountId) : null,
@@ -207,7 +209,10 @@ export const collectionService = {
       });
     });
 
-    const securityMeta = buildOfficeReceiptSecurityMeta(transaction.id);
+    const securityMeta = buildOfficeReceiptSecurityMeta(
+      transaction.id,
+      transaction.verificationCode,
+    );
 
     if (transaction.persona?.phone) {
       const cleanPhone = transaction.persona.phone.replace(/\D/g, '');

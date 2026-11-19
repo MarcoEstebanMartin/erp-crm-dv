@@ -127,16 +127,13 @@ export interface OfficeReceiptMessageInput {
 
 export function buildOfficeReceiptWhatsAppMessage(
   receipt: OfficeReceiptMessageInput,
-  fallbackOrigin?: string,
+  _fallbackOrigin?: string,
 ): string {
   const nro = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
   const customer = formatCustomerDisplayName(receipt.persona?.name);
   const dateStr = formatReceiptDateAr(receipt.createdAt);
   const method = formatPaymentMethodLabel(receipt.paymentMethod, receipt.bankAccount?.name);
   const total = formatReceiptAmountAr(receipt.amount);
-  const link =
-    receipt.publicUrl ||
-    `${resolvePublicReceiptOrigin(fallbackOrigin)}/recibo/${receipt.id}`;
 
   const lines: string[] = [
     '*Don Venancio* · Recibo de Cobro',
@@ -148,13 +145,10 @@ export function buildOfficeReceiptWhatsAppMessage(
   if (dateStr) lines.push(`*Fecha:* ${dateStr}`);
   lines.push(`*Medio:* ${method}`);
   lines.push(`*Importe:* *${total}*`);
-  lines.push('');
-  lines.push('Comprobante oficial:');
-  lines.push(link);
 
   if (receipt.verificationCode) {
     lines.push('');
-    lines.push(`Verificación: \`${receipt.verificationCode}\``);
+    lines.push(`Código único: \`${receipt.verificationCode}\``);
   }
 
   return lines.join('\n');

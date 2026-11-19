@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Search, Send, Trash2 } from 'lucide-react';
+import { ExternalLink, FileDown, Search, Send, Trash2 } from 'lucide-react';
 import {
   buildManualWhatsAppUrl,
   buildOfficeReceiptWhatsAppUrl,
   type FieldReceiptDTO,
   type OfficeReceiptDTO,
 } from '../../api/fieldReceipts.api';
+import { shareOrDownloadReceiptPdf } from '../../utils/receiptPdfGenerator';
 
 type ReceiptOriginFilter = 'ALL' | 'OFFICE' | 'FIELD';
 
@@ -67,6 +68,33 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
 }) => {
   const [originFilter, setOriginFilter] = useState<ReceiptOriginFilter>('ALL');
   const [search, setSearch] = useState('');
+  const [busyPdfKey, setBusyPdfKey] = useState<string | null>(null);
+
+  const handleOfficePdf = async (row: UnifiedReceiptRow) => {
+    const r = row.officeReceipt;
+    if (!r || busyPdfKey) return;
+    setBusyPdfKey(row.key);
+    try {
+      await shareOrDownloadReceiptPdf({
+        id: r.id,
+        receiptNumber: r.receiptNumber,
+        amount: r.amount,
+        paymentMethod: r.paymentMethod,
+        description: r.description,
+        createdAt: r.createdAt,
+        verified: r.verified,
+        verificationCode: r.verificationCode,
+        publicUrl: r.publicUrl,
+        persona: r.persona ? { id: r.persona.id, name: r.persona.name } : null,
+        user: r.user,
+        bankAccount: r.bankAccount,
+      });
+    } catch {
+      // Usuario canceló compartir o error transitorio
+    } finally {
+      setBusyPdfKey(null);
+    }
+  };
 
   const unifiedRows = useMemo<UnifiedReceiptRow[]>(() => {
     const officeRows: UnifiedReceiptRow[] = officeReceipts.map((r) => ({
@@ -80,7 +108,9 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
       amount: Math.round(Number(r.amount || 0)),
       isVoided: false,
       verified: Boolean(r.verified),
-      viewUrl: `/recibo/${r.id}`,
+      viewUrl: r.verificationCode
+        ? `/recibo/${r.id}?v=${encodeURIComponent(r.verificationCode)}`
+        : `/recibo/${r.id}`,
       whatsappUrl: buildOfficeReceiptWhatsAppUrl(r),
       officeReceipt: r,
     }));
@@ -238,6 +268,29 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                   </td>
                   <td style={{ padding: '10px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      {row.officeReceipt && !row.isVoided && (
+                        <button
+                          type="button"
+                          onClick={() => void handleOfficePdf(row)}
+                          disabled={busyPdfKey === row.key}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 9px',
+                            borderRadius: '6px',
+                            border: '1px solid #18181b',
+                            background: '#18181b',
+                            color: '#fff',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            cursor: busyPdfKey === row.key ? 'wait' : 'pointer',
+                            opacity: busyPdfKey === row.key ? 0.65 : 1,
+                          }}
+                        >
+                          <FileDown size={12} aria-hidden="true" /> {busyPdfKey === row.key ? 'PDF…' : 'PDF'}
+                        </button>
+                      )}
                       {row.viewUrl && (
                         <a
                           href={row.viewUrl}

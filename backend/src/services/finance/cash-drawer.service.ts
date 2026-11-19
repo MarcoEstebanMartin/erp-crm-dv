@@ -11,6 +11,7 @@ import { logAudit } from '../../utils/audit';
 import { roundToTwoDecimals } from '../../core/money';
 import { calculateDrawerClosingBalance } from '../../engines/drawer-arqueo.engine';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { generateUniqueVerificationCode } from '../../core/receiptToken';
 
 export interface IncomingDrawerReceipt {
   clientId: number;
@@ -131,6 +132,7 @@ export const cashDrawerService = {
               description: `Recibo/Cobranza - Arqueo de Caja${checkSuffix}`,
               cashDrawerId: drawer.id,
               bankAccountId,
+              verificationCode: generateUniqueVerificationCode(),
               verified: !isBankTransfer,
             },
           });

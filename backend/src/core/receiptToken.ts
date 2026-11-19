@@ -91,6 +91,38 @@ export function verifyReceiptToken(params: {
 }
 
 /**
+ * Genera un código único e irrepetible criptográfico para persistir en base de datos:
+ * formato `DV-XXXX-XXXX-XXXX` (48 bits de entropía, 281+ billones de combinaciones).
+ * Al guardarse en PostgreSQL con índice `@unique`, jamás cambia entre PC local y Railway.
+ */
+export function generateUniqueVerificationCode(): string {
+  const hex = crypto.randomBytes(6).toString('hex').toUpperCase();
+  return `DV-${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}`;
+}
+
+/**
+ * Normaliza un código de verificación para comparación tolerante a guiones/espacios/mayúsculas.
+ */
+export function normalizeVerificationCode(raw?: string | null): string {
+  return (raw || '').trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
+}
+
+/**
+ * Verifica en tiempo constante un código/token recibido contra el `verificationCode`
+ * persistido en base de datos para ese recibo.
+ */
+export function verifyPersistedReceiptCode(
+  expectedCode?: string | null,
+  candidateToken?: string | null,
+): boolean {
+  const expected = normalizeVerificationCode(expectedCode);
+  const candidate = normalizeVerificationCode(candidateToken);
+  if (!expected || !candidate) return false;
+  if (expected.length !== candidate.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(candidate, 'utf8'), Buffer.from(expected, 'utf8'));
+}
+
+/**
  * Formatea un código legible anti-estafas derivado del token firmado: `DV-XXXX-XXXX`.
  */
 export function formatVerificationCode(token: string): string {

@@ -55,12 +55,23 @@ export const getWhatsAppSendLink = (
   clientName: string,
   receiptNumber: string,
   amount: number,
-  receiptId: number
+  _receiptId: number,
+  verificationCode?: string | null,
 ): string => {
   const cleanPhone = phone.replace(/\D/g, '');
-  const receiptLink = `${window.location.origin}/recibo/${receiptId}`;
-  const text = `Hola ${clientName}! Tu pago por $${amount.toLocaleString('es-AR')} (Comprobante: ${receiptNumber}) ha sido verificado y acreditado formalmente en tu cuenta corriente. Comprobante digital: ${receiptLink}`;
-  return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+  const lines = [
+    '*Don Venancio* · Recibo de Cobro',
+    '',
+    `*N°:* ${receiptNumber}`,
+    `*Cliente:* ${clientName}`,
+    `*Importe:* *$${Math.round(amount).toLocaleString('es-AR')}*`,
+    'Estado: Verificado y acreditado en cuenta corriente',
+  ];
+  if (verificationCode) {
+    lines.push('');
+    lines.push(`Código único: \`${verificationCode}\``);
+  }
+  return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(lines.join('\n'))}`;
 };
 
 export const getDetectedRoutesAndCities = (

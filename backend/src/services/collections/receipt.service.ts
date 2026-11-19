@@ -7,11 +7,29 @@ import { env } from '../../config/env.config';
 import {
   buildPublicReceiptUrl,
   formatVerificationCode,
+  generateUniqueVerificationCode,
   signReceiptToken,
+  verifyPersistedReceiptCode,
   verifyReceiptToken,
 } from '../../core/receiptToken';
 
-export function buildOfficeReceiptSecurityMeta(id: number) {
+export function buildOfficeReceiptSecurityMeta(
+  id: number,
+  persistedVerificationCode?: string | null,
+) {
+  const cleanCode = (persistedVerificationCode || '').trim();
+  if (cleanCode) {
+    return {
+      shareToken: cleanCode,
+      verificationCode: cleanCode,
+      publicUrl: buildPublicReceiptUrl({
+        baseUrl: env.PUBLIC_APP_URL,
+        id,
+        token: cleanCode,
+      }),
+    };
+  }
+
   const shareToken = signReceiptToken({
     kind: 'office',
     id,
@@ -70,15 +88,36 @@ export const receiptService = {
       take: safeLimit,
     });
 
-    return rows.map((row) => ({
-      ...row,
-      ...buildOfficeReceiptSecurityMeta(row.id),
-    }));
+    const rowsWithCode = await Promise.all(
+      rows.map(async (row) => {
+        let verificationCode = row.verificationCode;
+        if (!verificationCode) {
+          const generated = generateUniqueVerificationCode();
+          try {
+            const updated = await prisma.transaction.update({
+              where: { id: row.id },
+              data: { verificationCode: generated },
+              select: { verificationCode: true },
+            });
+            verificationCode = updated.verificationCode || generated;
+          } catch {
+            verificationCode = generated;
+          }
+        }
+        return {
+          ...row,
+          ...buildOfficeReceiptSecurityMeta(row.id, verificationCode),
+        };
+      }),
+    );
+
+    return rowsWithCode;
   },
 
   /**
    * Obtiene un recibo de pago sanitizando campos sensibles (jamás expone passwordHash ni webPin).
-   * Para accesos públicos externos exige token HMAC `?v=...` válido (anti-enumeración IDOR).
+   * Para accesos públicos externos valida el código único persistido en BD (`?v=DV-...`),
+   * con respaldo retrocompatible para firmas HMAC anteriores (anti-enumeración IDOR).
    */
   async getReceipt(
     id: number,
@@ -86,18 +125,6 @@ export const receiptService = {
   ) {
     if (isNaN(id) || id <= 0) {
       throw new AppError('ID de recibo inválido', 400);
-    }
-
-    if (!options?.isAuthenticatedStaff) {
-      const isValid = verifyReceiptToken({
-        kind: 'office',
-        id,
-        token: options?.token,
-        secret: env.RECEIPT_SIGNING_SECRET,
-      });
-      if (!isValid) {
-        throw new AppError('Comprobante no encontrado o enlace de verificación inválido', 404);
-      }
     }
 
     const transaction = await prisma.transaction.findUnique({
@@ -122,12 +149,33 @@ export const receiptService = {
     });
 
     if (!transaction || transaction.type !== TransactionType.INCOME) {
+      if (!options?.isAuthenticatedStaff) {
+        throw new AppError('Comprobante no encontrado o enlace de verificación inválido', 404);
+      }
       throw new AppError('Recibo no encontrado', 404);
+    }
+
+    if (!options?.isAuthenticatedStaff) {
+      const matchesPersisted = verifyPersistedReceiptCode(
+        transaction.verificationCode,
+        options?.token,
+      );
+      const matchesLegacyHmac =
+        !matchesPersisted &&
+        verifyReceiptToken({
+          kind: 'office',
+          id,
+          token: options?.token,
+          secret: env.RECEIPT_SIGNING_SECRET,
+        });
+      if (!matchesPersisted && !matchesLegacyHmac) {
+        throw new AppError('Comprobante no encontrado o enlace de verificación inválido', 404);
+      }
     }
 
     return {
       ...transaction,
-      ...buildOfficeReceiptSecurityMeta(transaction.id),
+      ...buildOfficeReceiptSecurityMeta(transaction.id, transaction.verificationCode),
       authenticity: {
         verified: true,
         issuer: 'Distribuidora Don Venancio',
