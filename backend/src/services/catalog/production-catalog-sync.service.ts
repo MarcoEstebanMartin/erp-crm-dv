@@ -9,9 +9,11 @@ import { env } from '../../config/env.config';
 import { roundToIntegerPeso, roundToThreeDecimalsWeight } from '../../core/money';
 import {
   computeErpProductSyncPatch,
+  extractVariantParentSku,
   normalizeRubroCanonicalName,
   normalizeRubroLookupKey,
   resolveSyncedImageFilename,
+  type ErpProductSyncPatchOptions,
   type ProductionCatalogRow,
 } from '../../engines/catalog-sync.engine';
 import { writeProductUploadAtomically } from './product-upload-writer.helper';
@@ -237,16 +239,46 @@ export class ProductionCatalogSyncService {
       let pausedCount = 0;
       let namesUpdatedCount = 0;
 
+      const parentSkusWithVariants = new Set<string>();
+      for (const erp of erpProducts) {
+        const parentSku = extractVariantParentSku(erp.sku);
+        if (parentSku && prodBySku.has(parentSku)) {
+          parentSkusWithVariants.add(parentSku);
+        }
+      }
+
       for (const erp of erpProducts) {
         const cleanSku = erp.sku.trim();
-        const prod = prodBySku.get(cleanSku);
+        const variantParentSku = extractVariantParentSku(cleanSku);
+        const isMappedVariant = Boolean(variantParentSku && parentSkusWithVariants.has(variantParentSku));
+        const isGroupedParent = parentSkusWithVariants.has(cleanSku);
+
+        const prod = isMappedVariant ? prodBySku.get(variantParentSku!) : prodBySku.get(cleanSku);
         const targetRubroId = prod ? resolveRubroId(prod.rubro) : null;
+        const resolvedImage = isMappedVariant
+          ? resolvedUrlBySku.get(cleanSku) || resolvedUrlBySku.get(variantParentSku!) || null
+          : resolvedUrlBySku.get(cleanSku) || null;
+
+        let patchOptions: ErpProductSyncPatchOptions | undefined;
+        if (isMappedVariant) {
+          const erpParent = erpBySku.get(variantParentSku!);
+          patchOptions = {
+            preserveName: true,
+            inheritedCostPrice: erpParent?.costPrice ?? null,
+            inheritedUnitsPerBox: erpParent?.unitsPerBox ?? null,
+            inheritedProviderId: erpParent?.providerId ?? null,
+          };
+        } else if (isGroupedParent) {
+          patchOptions = { forceInactive: true };
+        }
+
         const patch = computeErpProductSyncPatch(
           erp,
           prod,
-          resolvedUrlBySku.get(cleanSku) || null,
+          resolvedImage,
           syncNow,
           targetRubroId,
+          patchOptions,
         );
         if (!patch.hasChanges) continue;
         if (patch.priceChanged) pricesUpdatedCount++;

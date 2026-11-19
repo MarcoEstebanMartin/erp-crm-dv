@@ -33,11 +33,36 @@ export interface ErpCatalogProductSnapshot {
   imageUrl: string | null;
   isActive: boolean;
   isPesable: boolean;
+  unitsPerBox?: number;
   minOrderQuantity: number;
   approximateWeight: Decimal | number | string | null;
   commercialCategory?: string | null;
   description?: string | null;
   rubroId?: number | null;
+  providerId?: number | null;
+}
+
+export interface ErpProductSyncPatchOptions {
+  /** Preserva el nombre propio de la variante (con sabor) al heredar datos del padre agrupado. */
+  preserveName?: boolean;
+  /** Desactiva el producto padre agrupado en el ERP para evitar facturarlo sin sabor. */
+  forceInactive?: boolean;
+  /** Costo heredado del padre si la variante todavía tiene costPrice <= 0. */
+  inheritedCostPrice?: Decimal | number | string | null;
+  /** Unidades por bulto heredadas del padre si la variante tiene unitsPerBox <= 1. */
+  inheritedUnitsPerBox?: number | null;
+  /** Proveedor heredado del padre si la variante todavía no tiene providerId asignado. */
+  inheritedProviderId?: number | null;
+}
+
+/**
+ * Si un SKU corresponde a una variante desdoblada (ej. `0504-1`, `0149-4`),
+ * devuelve el SKU del producto padre agrupado en el catálogo (`0504`, `0149`).
+ */
+export function extractVariantParentSku(sku: string): string | null {
+  const clean = String(sku || '').trim();
+  const match = /^([A-Za-z0-9]+)-\d+$/.exec(clean);
+  return match ? match[1] : null;
 }
 
 export interface ErpProductSyncPatchResult {
@@ -192,6 +217,7 @@ export function computeErpProductSyncPatch(
   resolvedImageUrl: string | null,
   syncTimestamp: Date = new Date(),
   resolvedRubroId?: number | null,
+  options?: ErpProductSyncPatchOptions,
 ): ErpProductSyncPatchResult {
   if (!prodRow) {
     if (!erp.isActive) {
@@ -221,16 +247,29 @@ export function computeErpProductSyncPatch(
   }
 
   const updateData: Record<string, unknown> = {};
-  const targetActive = Number(prodRow.active) === 1;
+  const targetActive = options?.forceInactive ? false : Number(prodRow.active) === 1;
   const activeChanged = erp.isActive !== targetActive;
   if (activeChanged) updateData.isActive = targetActive;
 
   const cleanProdName = (prodRow.name || '').trim();
-  const nameChanged = Boolean(cleanProdName && cleanProdName !== erp.name.trim());
+  const nameChanged =
+    !options?.preserveName && Boolean(cleanProdName && cleanProdName !== erp.name.trim());
   if (nameChanged) updateData.name = cleanProdName;
+
+  let metaChanged = false;
+  let effectiveCostDec = roundToTwoDecimals(erp.costPrice);
+  if (effectiveCostDec.lte(0) && options?.inheritedCostPrice != null) {
+    const inheritedCost = roundToTwoDecimals(options.inheritedCostPrice);
+    if (inheritedCost.gt(0)) {
+      effectiveCostDec = inheritedCost;
+      updateData.costPrice = inheritedCost.toNumber();
+      metaChanged = true;
+    }
+  }
 
   let priceChanged = false;
   const rawProdPrice = prodRow.price !== null && prodRow.price !== undefined ? Number(prodRow.price) : 0;
+  let effectiveListPrice = roundToIntegerPeso(erp.listPrice);
   if (Number.isFinite(rawProdPrice) && rawProdPrice > 0) {
     const nextListPrice = roundToIntegerPeso(prodRow.price!);
     const currListPrice = roundToIntegerPeso(erp.listPrice);
@@ -239,17 +278,21 @@ export function computeErpProductSyncPatch(
 
     if (!nextListPrice.eq(currListPrice)) {
       priceChanged = true;
+      effectiveListPrice = nextListPrice;
       const nextPriceB = computeProportionalTierPrice(nextListPrice, currListPrice, currPriceB);
       const nextPriceC = computeProportionalTierPrice(nextListPrice, currListPrice, currPriceC);
-      const costDec = roundToTwoDecimals(erp.costPrice);
 
       updateData.previousListPrice = currListPrice.toNumber();
       updateData.lastPriceUpdateAt = syncTimestamp;
       updateData.listPrice = nextListPrice.toNumber();
       updateData.listPriceB = nextPriceB.toNumber();
       updateData.listPriceC = nextPriceC.toNumber();
-      updateData.profitMargin = computeClampedMarginPct(costDec, nextListPrice);
+      updateData.profitMargin = computeClampedMarginPct(effectiveCostDec, nextListPrice);
     }
+  }
+
+  if (!priceChanged && updateData.costPrice !== undefined && effectiveListPrice.gt(0)) {
+    updateData.profitMargin = computeClampedMarginPct(effectiveCostDec, effectiveListPrice);
   }
 
   const imageChanged = Boolean(resolvedImageUrl && resolvedImageUrl !== erp.imageUrl);
@@ -267,7 +310,6 @@ export function computeErpProductSyncPatch(
   );
   if (rubroChanged) updateData.rubroId = resolvedRubroId;
 
-  let metaChanged = false;
   const cleanSubrubro = (prodRow.subrubro || '').trim();
   if (cleanSubrubro && cleanSubrubro !== (erp.description || '').trim()) {
     updateData.description = cleanSubrubro;
@@ -277,6 +319,20 @@ export function computeErpProductSyncPatch(
   const parsedMinQty = parseInt(String(prodRow.min_qty ?? '').trim(), 10);
   if (Number.isInteger(parsedMinQty) && parsedMinQty >= 1 && parsedMinQty !== erp.minOrderQuantity) {
     updateData.minOrderQuantity = parsedMinQty;
+    metaChanged = true;
+  }
+
+  if (
+    options?.inheritedUnitsPerBox &&
+    options.inheritedUnitsPerBox > 1 &&
+    (erp.unitsPerBox ?? 1) <= 1
+  ) {
+    updateData.unitsPerBox = options.inheritedUnitsPerBox;
+    metaChanged = true;
+  }
+
+  if (options?.inheritedProviderId && !erp.providerId) {
+    updateData.providerId = options.inheritedProviderId;
     metaChanged = true;
   }
 

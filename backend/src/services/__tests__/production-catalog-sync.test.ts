@@ -7,6 +7,7 @@ import {
   computeClampedMarginPct,
   computeErpProductSyncPatch,
   computeProportionalTierPrice,
+  extractVariantParentSku,
   resolveMasterArchiveExtension,
   resolveSyncedImageFilename,
 } from '../../engines/catalog-sync.engine';
@@ -132,5 +133,96 @@ describe('Paso U2 — Motor y Servicio de Sincronización Producción -> ERP', (
     } finally {
       fs.rmSync(tmpRoot, { recursive: true, force: true });
     }
+  });
+
+  it('detecta SKU padre en variantes desdobladas (Padre -> Variantes) y resguarda nombres propios', () => {
+    expect(extractVariantParentSku('0504-1')).toBe('0504');
+    expect(extractVariantParentSku('0149-4')).toBe('0149');
+    expect(extractVariantParentSku('0504')).toBeNull();
+    expect(extractVariantParentSku('ABC-DEF')).toBeNull();
+
+    const syncDate = new Date('2026-11-19T11:30:00.000Z');
+    const parentProdRow = {
+      sku: '0504',
+      name: 'MOCORETÁ GASEOSA 6X2.25 LTS',
+      price: 1603,
+      active: 1,
+      min_qty: '6',
+      category: 'Bebidas',
+    };
+
+    // 1. El padre agrupado se desactiva en el ERP (forceInactive: true)
+    const parentPatch = computeErpProductSyncPatch(
+      {
+        id: 1621,
+        sku: '0504',
+        name: 'MOCORETÁ GASEOSA 6X2.25 LTS',
+        costPrice: '1282.40',
+        listPrice: '1603.00',
+        listPriceB: '1603.00',
+        listPriceC: '1603.00',
+        profitMargin: '25.00',
+        imageUrl: '/uploads/products/0504_1790527059.png',
+        isActive: true,
+        isPesable: false,
+        unitsPerBox: 6,
+        minOrderQuantity: 6,
+        approximateWeight: null,
+        commercialCategory: 'Bebidas',
+      },
+      parentProdRow,
+      '/uploads/products/0504_1790527059.png',
+      syncDate,
+      113,
+      { forceInactive: true },
+    );
+    expect(parentPatch.hasChanges).toBe(true);
+    expect(parentPatch.activeChanged).toBe(true);
+    expect(parentPatch.updateData.isActive).toBe(false);
+
+    // 2. La variante hereda precio, activo, mínimo, costo, unitsPerBox y proveedor SIN perder su nombre con sabor
+    const variantPatch = computeErpProductSyncPatch(
+      {
+        id: 2764,
+        sku: '0504-1',
+        name: 'MOCORETA GASEOSA COLA 6x2.25 LTS',
+        costPrice: '0.00',
+        listPrice: '9163.00',
+        listPriceB: '9163.00',
+        listPriceC: '9163.00',
+        profitMargin: null,
+        imageUrl: '/uploads/products/0504-1_1790975005.png',
+        isActive: false,
+        isPesable: false,
+        unitsPerBox: 1,
+        minOrderQuantity: 1,
+        approximateWeight: null,
+        commercialCategory: 'Bebidas',
+        providerId: null,
+      },
+      parentProdRow,
+      '/uploads/products/0504-1_1790975005.png',
+      syncDate,
+      113,
+      {
+        preserveName: true,
+        inheritedCostPrice: '1282.40',
+        inheritedUnitsPerBox: 6,
+        inheritedProviderId: 8717,
+      },
+    );
+
+    expect(variantPatch.hasChanges).toBe(true);
+    expect(variantPatch.nameChanged).toBe(false);
+    expect(variantPatch.updateData.name).toBeUndefined();
+    expect(variantPatch.updateData.isActive).toBe(true);
+    expect(variantPatch.updateData.listPrice).toBe(1603);
+    expect(variantPatch.updateData.listPriceB).toBe(1603);
+    expect(variantPatch.updateData.listPriceC).toBe(1603);
+    expect(variantPatch.updateData.costPrice).toBe(1282.4);
+    expect(variantPatch.updateData.profitMargin).toBe(25);
+    expect(variantPatch.updateData.minOrderQuantity).toBe(6);
+    expect(variantPatch.updateData.unitsPerBox).toBe(6);
+    expect(variantPatch.updateData.providerId).toBe(8717);
   });
 });
