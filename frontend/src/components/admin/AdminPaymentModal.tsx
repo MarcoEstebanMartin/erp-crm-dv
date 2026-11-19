@@ -4,6 +4,8 @@ import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 
+type ClientPaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+
 interface AdminPaymentModalProps {
   paymentModal: { open: boolean; clientId: number; clientName: string } | null;
   clientProfileModal: { open: boolean; client: any; ledger: any[] } | null;
@@ -23,26 +25,26 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
 }) => {
   const confirm = useConfirm();
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<ClientPaymentMethod>('CASH');
   const [paymentDescription, setPaymentDescription] = useState('');
+  const [checkNumber, setCheckNumber] = useState('');
+  const [checkBank, setCheckBank] = useState('');
+  const [checkDueDate, setCheckDueDate] = useState('');
+  const [isEcheq, setIsEcheq] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentPendingInvoices, setPaymentPendingInvoices] = useState<any[]>([]);
   const [paymentSelectedInvoiceId, setPaymentSelectedInvoiceId] = useState<number | null>(null);
 
-  const [paymentRetencionGananciasAmount, setPaymentRetencionGananciasAmount] = useState('');
-  const [paymentRetencionGananciasNumber, setPaymentRetencionGananciasNumber] = useState('');
-  const [paymentRetencionIibbAmount, setPaymentRetencionIibbAmount] = useState('');
-  const [paymentRetencionIibbNumber, setPaymentRetencionIibbNumber] = useState('');
-
   useEffect(() => {
     if (paymentModal && paymentModal.open) {
       setPaymentAmount('');
+      setPaymentMethod('CASH');
       setPaymentDescription('');
+      setCheckNumber('');
+      setCheckBank('');
+      setCheckDueDate('');
+      setIsEcheq(false);
       setPaymentSelectedInvoiceId(null);
-      setPaymentRetencionGananciasAmount('');
-      setPaymentRetencionGananciasNumber('');
-      setPaymentRetencionIibbAmount('');
-      setPaymentRetencionIibbNumber('');
       api
         .getPersonaPendingInvoices(paymentModal.clientId)
         .then((res) => setPaymentPendingInvoices(res?.invoices && Array.isArray(res.invoices) ? res.invoices : []))
@@ -57,6 +59,9 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paymentAmount || Number(paymentAmount) <= 0) return setErrorMsg('Monto inválido.');
+    if (paymentMethod === 'CHECK' && !checkNumber.trim()) {
+      return setErrorMsg('Ingresá el número de cheque o eCheq.');
+    }
     if (paymentLoading) return;
 
     if (clientProfileModal && clientProfileModal.client.id === paymentModal.clientId) {
@@ -74,28 +79,20 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
     try {
       setPaymentLoading(true);
       setErrorMsg(null);
-      const retencionesToSend = [];
-      if (paymentRetencionGananciasAmount && Number(paymentRetencionGananciasAmount) > 0) {
-        retencionesToSend.push({
-          taxType: 'GANANCIAS' as const,
-          number: paymentRetencionGananciasNumber || `RET-GAN-${Date.now()}`,
-          amount: Number(paymentRetencionGananciasAmount),
-        });
-      }
-      if (paymentRetencionIibbAmount && Number(paymentRetencionIibbAmount) > 0) {
-        retencionesToSend.push({
-          taxType: 'IIBB' as const,
-          number: paymentRetencionIibbNumber || `RET-IIBB-${Date.now()}`,
-          amount: Number(paymentRetencionIibbAmount),
-        });
-      }
 
       await api.registerPayment(paymentModal.clientId, {
         amount: Number(paymentAmount),
         paymentMethod,
-        description: paymentDescription,
+        description: paymentDescription.trim() || undefined,
         orderId: paymentSelectedInvoiceId || undefined,
-        retenciones: retencionesToSend.length > 0 ? retencionesToSend : undefined,
+        ...(paymentMethod === 'CHECK'
+          ? {
+              checkNumber: checkNumber.trim(),
+              checkBank: checkBank.trim() || undefined,
+              checkDueDate: checkDueDate || undefined,
+              isEcheq,
+            }
+          : {}),
       });
 
       setSuccessMsg('Cobro registrado.');
@@ -166,6 +163,8 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
             id="payment-amount"
             name="amount"
             type="number"
+            min="1"
+            step="any"
             className="input"
             value={paymentAmount}
             onChange={(e) => setPaymentAmount(e.target.value)}
@@ -181,86 +180,102 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
             name="paymentMethod"
             className="select"
             value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value as ClientPaymentMethod;
+              setPaymentMethod(next);
+              if (next !== 'CHECK') {
+                setCheckNumber('');
+                setCheckBank('');
+                setCheckDueDate('');
+                setIsEcheq(false);
+              }
+            }}
             disabled={paymentLoading}
           >
             <option value="CASH">Efectivo</option>
             <option value="BANK_TRANSFER">Transferencia</option>
             <option value="CHECK">Cheque</option>
-            <option value="OTHER">Otro</option>
           </select>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '14px', paddingTop: '12px', marginBottom: '12px' }}>
-          <h4 style={{ margin: '0 0 10px 0', fontSize: '0.84rem', fontWeight: 600 }}>Retenciones</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px', marginBottom: '8px' }}>
-            <div>
-              <label htmlFor="payment-ret-ganancias-amount" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                Ganancias ($)
-              </label>
-              <input
-                id="payment-ret-ganancias-amount"
-                name="retGananciasAmount"
-                type="number"
-                step="0.01"
-                className="input"
-                style={{ padding: '6px 8px', fontSize: '0.8rem' }}
-                value={paymentRetencionGananciasAmount}
-                onChange={(e) => setPaymentRetencionGananciasAmount(e.target.value)}
-                disabled={paymentLoading}
-              />
-            </div>
-            <div>
-              <label htmlFor="payment-ret-ganancias-number" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                Certificado
-              </label>
-              <input
-                id="payment-ret-ganancias-number"
-                name="retGananciasNumber"
-                type="text"
-                className="input"
-                style={{ padding: '6px 8px', fontSize: '0.8rem' }}
-                value={paymentRetencionGananciasNumber}
-                onChange={(e) => setPaymentRetencionGananciasNumber(e.target.value)}
-                disabled={paymentLoading}
-              />
-            </div>
-          </div>
+        {paymentMethod === 'CHECK' && (
+          <fieldset
+            style={{
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px',
+              marginBottom: '1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <legend style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', padding: '0 6px' }}>
+              Datos del cheque
+            </legend>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '10px' }}>
-            <div>
-              <label htmlFor="payment-ret-iibb-amount" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                IIBB ($)
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="payment-check-number">
+                N° de cheque / eCheq <span aria-hidden="true">*</span>
               </label>
               <input
-                id="payment-ret-iibb-amount"
-                name="retIibbAmount"
-                type="number"
-                step="0.01"
-                className="input"
-                style={{ padding: '6px 8px', fontSize: '0.8rem' }}
-                value={paymentRetencionIibbAmount}
-                onChange={(e) => setPaymentRetencionIibbAmount(e.target.value)}
-                disabled={paymentLoading}
-              />
-            </div>
-            <div>
-              <label htmlFor="payment-ret-iibb-number" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                Certificado
-              </label>
-              <input
-                id="payment-ret-iibb-number"
-                name="retIibbNumber"
+                id="payment-check-number"
+                name="checkNumber"
                 type="text"
                 className="input"
-                style={{ padding: '6px 8px', fontSize: '0.8rem' }}
-                value={paymentRetencionIibbNumber}
-                onChange={(e) => setPaymentRetencionIibbNumber(e.target.value)}
+                value={checkNumber}
+                onChange={(e) => setCheckNumber(e.target.value)}
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
                 disabled={paymentLoading}
               />
             </div>
-          </div>
-        </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="payment-check-bank">Banco / Emisor</label>
+                <input
+                  id="payment-check-bank"
+                  name="checkBank"
+                  type="text"
+                  className="input"
+                  value={checkBank}
+                  onChange={(e) => setCheckBank(e.target.value)}
+                  disabled={paymentLoading}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label htmlFor="payment-check-due">Vencimiento</label>
+                <input
+                  id="payment-check-due"
+                  name="checkDueDate"
+                  type="date"
+                  className="input"
+                  value={checkDueDate}
+                  onChange={(e) => setCheckDueDate(e.target.value)}
+                  disabled={paymentLoading}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '2px' }}>
+              <input
+                id="payment-check-echeq"
+                name="isEcheq"
+                type="checkbox"
+                checked={isEcheq}
+                onChange={(e) => setIsEcheq(e.target.checked)}
+                disabled={paymentLoading}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+              />
+              <label htmlFor="payment-check-echeq" style={{ fontSize: '0.84rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                eCheq
+              </label>
+            </div>
+          </fieldset>
+        )}
 
         <div className="form-group">
           <label htmlFor="payment-notes">Notas</label>
@@ -279,11 +294,7 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={paymentLoading}>
             Cancelar
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={paymentLoading || !paymentAmount || Number(paymentAmount) <= 0}
-          >
+          <button type="submit" className="btn btn-primary" disabled={paymentLoading}>
             {paymentLoading ? 'Guardando...' : 'Cobrar'}
           </button>
         </div>

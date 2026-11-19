@@ -552,7 +552,7 @@ export const api = {
     });
   },
 
-  registerPayment: async (personaId: number, paymentData: { amount?: number, paymentMethod?: string, payments?: { amount: number, paymentMethod: string, bankAccountId?: number | null, description?: string }[], description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, bankAccountId?: number | null, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
+  registerPayment: async (personaId: number, paymentData: { amount?: number, paymentMethod?: string, payments?: { amount: number, paymentMethod: string, bankAccountId?: number | null, description?: string, checkNumber?: string, checkBank?: string, checkDueDate?: string, isEcheq?: boolean }[], description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, bankAccountId?: number | null, checkNumber?: string, checkBank?: string, checkDueDate?: string, isEcheq?: boolean, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
     const res = await request(`/personas/${personaId}/payments`, {
       method: 'POST',
       body: JSON.stringify(paymentData)

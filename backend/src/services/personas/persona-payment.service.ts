@@ -55,6 +55,10 @@ export class PersonaPaymentSubService {
               paymentMethod: data.paymentMethod,
               bankAccountId: reqBankAccountId,
               description: data.description,
+              checkNumber: data.checkNumber,
+              checkBank: data.checkBank,
+              checkDueDate: data.checkDueDate,
+              isEcheq: data.isEcheq,
             },
           ];
 
@@ -67,6 +71,10 @@ export class PersonaPaymentSubService {
           ? Number(reqBankAccountId)
           : null,
       description: p.description || description,
+      checkNumber: typeof p.checkNumber === 'string' ? p.checkNumber.trim() : '',
+      checkBank: typeof p.checkBank === 'string' ? p.checkBank.trim() : '',
+      checkDueDate: typeof p.checkDueDate === 'string' ? p.checkDueDate.trim() : '',
+      isEcheq: Boolean(p.isEcheq),
     }));
 
     const totalPaymentDec = paymentItems.reduce((acc: any, p: any) => acc.plus(toDecimal(p.amount)), toDecimal(0));
@@ -166,10 +174,38 @@ export class PersonaPaymentSubService {
           cashDrawerId = activeDrawer.id;
         }
 
+        const checkDetailParts: string[] = [];
+        if (item.paymentMethod === PaymentMethod.CHECK) {
+          if (item.checkNumber) {
+            checkDetailParts.push(
+              item.isEcheq ? `Cheque N° ${item.checkNumber} (Echeq)` : `Cheque N° ${item.checkNumber}`,
+            );
+          } else if (item.isEcheq) {
+            checkDetailParts.push('Echeq');
+          }
+          if (item.checkBank) checkDetailParts.push(`Banco: ${item.checkBank}`);
+          if (item.checkDueDate) checkDetailParts.push(`Vto: ${item.checkDueDate}`);
+        }
+        const checkDetailSuffix = checkDetailParts.length > 0 ? checkDetailParts.join(' · ') : '';
+
+        const baseDescription =
+          item.description ||
+          (supplierInvoiceId
+            ? `Pago de Factura Nro ${invoiceNumberToLog}`
+            : orderId
+              ? `Cobro de Factura ${orderNumberDesc}`
+              : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`);
+        const txDescription = checkDetailSuffix
+          ? `${baseDescription} - ${checkDetailSuffix}`
+          : baseDescription;
+
         let bankAccountId: number | null = null;
-        const isPendingBankTransferIncome =
+        const isEcheqCheck =
+          item.paymentMethod === PaymentMethod.CHECK &&
+          (item.isEcheq || /\(echeq\)|e-?cheq/i.test(txDescription));
+        const isPendingBankReconciliationIncome =
           resolvedType === TransactionType.INCOME &&
-          item.paymentMethod === PaymentMethod.BANK_TRANSFER;
+          (item.paymentMethod === PaymentMethod.BANK_TRANSFER || isEcheqCheck);
 
         if (
           item.paymentMethod === PaymentMethod.BANK_TRANSFER ||
@@ -183,7 +219,7 @@ export class PersonaPaymentSubService {
           }
           bankAccountId = Number(selectedBankId);
 
-          if (!isPendingBankTransferIncome) {
+          if (!isPendingBankReconciliationIncome) {
             await tx.bankAccount.update({
               where: { id: bankAccountId },
               data: {
@@ -198,13 +234,6 @@ export class PersonaPaymentSubService {
 
         const txBillingType =
           selectedBranch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL;
-        const txDescription =
-          item.description ||
-          (supplierInvoiceId
-            ? `Pago de Factura Nro ${invoiceNumberToLog}`
-            : orderId
-              ? `Cobro de Factura ${orderNumberDesc}`
-              : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`);
 
         const transaction = await tx.transaction.create({
           data: {
@@ -219,7 +248,7 @@ export class PersonaPaymentSubService {
             bankAccountId,
             supplierInvoiceId: supplierInvoiceId ? Number(supplierInvoiceId) : null,
             orderId: orderId ? Number(orderId) : null,
-            verified: !isPendingBankTransferIncome,
+            verified: !isPendingBankReconciliationIncome,
           },
         });
         createdTransactions.push(transaction);
