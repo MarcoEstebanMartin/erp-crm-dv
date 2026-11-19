@@ -125,9 +125,9 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           <nav aria-label="Pedidos y facturación" className="linear-underline-nav">
             {[
               { id: 'fulfillment', label: 'Armado', icon: <Warehouse size={15} aria-hidden="true" /> },
+              { id: 'billing', label: 'Facturación', icon: <FileText size={15} aria-hidden="true" /> },
               { id: 'entregas', label: 'Entregas', icon: <Truck size={15} aria-hidden="true" /> },
               { id: 'orders', label: 'Historial', icon: <ShoppingCart size={15} aria-hidden="true" /> },
-              { id: 'billing', label: 'Facturación', icon: <FileText size={15} aria-hidden="true" /> },
             ].map((tab) => (
               <button
                 key={tab.id}
