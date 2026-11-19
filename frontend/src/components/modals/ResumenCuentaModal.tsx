@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Printer, Calendar } from 'lucide-react';
 import { api } from '../../utils/api';
-import { formatCompanyPhone, getCompanyProfile } from '../../utils/companyProfile';
 import { useConfirm } from '../../context/ConfirmContext';
 import { NativeModalDialog } from './NativeModalDialog';
 import { ResumenCuentaDetailModals } from './ResumenCuentaDetailModals';
@@ -9,6 +8,17 @@ import { ResumenCuentaDetailModals } from './ResumenCuentaDetailModals';
 interface ResumenCuentaModalProps {
   client: any;
   onClose: () => void;
+}
+
+interface ResumenMovementLike {
+  id?: string;
+  sourceType?: string;
+  description?: string;
+  reference?: string;
+  receiptNumber?: string | null;
+  movementId?: number | string | null;
+  debit?: number;
+  credit?: number;
 }
 
 function formatInvoiceNumberShort(text: string): string {
@@ -19,26 +29,51 @@ function formatInvoiceNumberShort(text: string): string {
   });
 }
 
-function formatMovementLabel(rawDescription: string): string {
-  const text = String(rawDescription || '').trim();
+function resolveReceiptNumber(tx: ResumenMovementLike): string | null {
+  const direct = String(tx.receiptNumber || '').trim();
+  if (direct) return direct;
 
-  const receiptMatch = text.match(/^Recibo\s+(?:N°\s*)?([A-Z0-9-]+)(?:\s*[-–—].*)?$/i);
+  const desc = String(tx.description || '').trim();
+  const descMatch = desc.match(/Recibo(?:\s+digital\s+en\s+calle)?\s+(?:N°\s*)?(REC-[A-Z0-9-]+)/i);
+  if (descMatch) return descMatch[1];
+
+  const ref = String(tx.reference || '').trim();
+  const refRecMatch = ref.match(/^(REC-[A-Z0-9-]+)$/i);
+  if (refRecMatch) return refRecMatch[1];
+
+  if (tx.movementId !== undefined && tx.movementId !== null && String(tx.movementId).trim() !== '') {
+    return `REC-${String(tx.movementId).padStart(5, '0')}`;
+  }
+
+  const idMatch = String(tx.id || '').match(/^transaction-(\d+)$/);
+  if (idMatch) {
+    return `REC-${idMatch[1].padStart(5, '0')}`;
+  }
+
+  return null;
+}
+
+export function formatMovementLabel(txOrDescription: ResumenMovementLike | string): string {
+  const tx: ResumenMovementLike =
+    typeof txOrDescription === 'string' ? { description: txOrDescription } : txOrDescription;
+  const text = String(tx.description || '').trim();
+
+  const isCollectionReceipt =
+    tx.sourceType === 'COLLECTION_RECEIPT' ||
+    (Number(tx.credit || 0) > 0 && Number(tx.debit || 0) === 0 && String(tx.id || '').startsWith('transaction-'));
+
+  if (isCollectionReceipt) {
+    const receiptNum = resolveReceiptNumber(tx);
+    return receiptNum ? `Recibo ${receiptNum}` : 'Recibo';
+  }
+
+  const receiptMatch = text.match(/^Recibo(?:\s+digital\s+en\s+calle)?\s+(?:N°\s*)?([A-Z0-9-]+)(?:\s*[-–—].*)?$/i);
   if (receiptMatch) {
     return `Recibo ${receiptMatch[1]}`;
   }
 
-  const cobroDirectoMatch = text.match(/^Cobro en el acto de factura directa #(\d+)/i);
-  if (cobroDirectoMatch) {
-    return `Cobro Factura #${cobroDirectoMatch[1]}`;
-  }
-
-  const cobroCajaMatch = text.match(/^Cobro en caja de pedido #(\d+)/i);
-  if (cobroCajaMatch) {
-    return `Cobro Pedido #${cobroCajaMatch[1]}`;
-  }
-
   const mainPart = text.split(/\s+[-–—]\s+(?![\d])/)[0] || text;
-  return formatInvoiceNumberShort(mainPart.trim());
+  return formatInvoiceNumberShort(mainPart.trim()).replace(/\bFactura\b/i, 'Fc.');
 }
 
 export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaModalProps) {
@@ -60,13 +95,6 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   const [viewLoading, setViewLoading] = useState(false);
   const [actionBanner, setActionBanner] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
-  const company = getCompanyProfile();
-  const companyName = company.nombreFantasia.toUpperCase();
-  const companyCuit = company.cuit;
-  const companyDireccion = company.direccion;
-  const companyTelefono = formatCompanyPhone(company.telefono);
-  const companyEmail = company.email;
-
   useEffect(() => {
     fetchTransactions();
   }, [dateRange, branchFilter, customStart, customEnd]);
@@ -87,6 +115,8 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
           isPureDate,
           reference: item.reference,
           description: item.description,
+          sourceType: item.sourceType,
+          receiptNumber: item.receiptNumber ?? null,
           billingType: item.billingType || item.metadata?.billingType || 'ALL',
           debit: isDebit ? Number(item.amount) : 0,
           credit: !isDebit ? Number(item.amount) : 0,
@@ -280,20 +310,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
           <div id="print-area" className="print-only-container" style={{ backgroundColor: '#fff' }}>
             <div className="resumen-print-header">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #111827', paddingBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <img src="/logo.png" alt="Logo Distribuidora" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
-                  <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-                    <strong style={{ fontSize: '1.02rem', color: '#111827' }}>{companyName}</strong>
-                    {companyDireccion && <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>{companyDireccion}</div>}
-                    <div style={{ fontSize: '0.72rem', color: '#6b7280' }}>
-                      {companyCuit && <span>CUIT: {companyCuit}</span>}
-                      {companyCuit && (companyTelefono || companyEmail) && <span style={{ margin: '0 6px' }}>|</span>}
-                      {companyTelefono && <span>{companyTelefono}</span>}
-                      {companyTelefono && companyEmail && <span style={{ margin: '0 6px' }}>|</span>}
-                      {companyEmail && <span>{companyEmail}</span>}
-                    </div>
-                  </div>
-                </div>
+                <img src="/logo.png" alt="Distribuidora Don Venancio" style={{ height: '46px', width: 'auto', objectFit: 'contain' }} />
                 <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
                   <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#111827' }}>RESUMEN DE CUENTA</h2>
                   <div className="tabular-nums" style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '2px' }}>{new Date().toLocaleDateString('es-AR')}</div>
@@ -341,7 +358,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                     transactions.map((t, idx) => {
                       const isClickable = t.id && (t.id.startsWith('order-') || t.id.startsWith('credit-note-') || t.id.startsWith('transaction-') || t.id.startsWith('withholding-'));
                       const movId = t?.movementId ? String(t.movementId) : '-';
-                      const label = formatMovementLabel(t.description);
+                      const label = formatMovementLabel(t);
                       const isHaber = t.credit > 0 && t.debit === 0;
                       return (
                         <tr
@@ -370,7 +387,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
                                 >
                                   <span className="resumen-desc-title">{label}</span>
                                 </button>
-                                <span className="resumen-print-inline">{t.description}</span>
+                                <span className="resumen-print-inline">{label}</span>
                               </>
                             ) : (
                               <span style={{ color: '#111827', fontWeight: 500 }}>{label}</span>

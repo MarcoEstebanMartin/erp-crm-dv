@@ -135,7 +135,25 @@ export const ResumenCuentaDetailModals: React.FC<ResumenCuentaDetailModalsProps>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}><span style={{ color: 'var(--text-secondary)' }}>Movimiento</span><strong className="tabular-nums">{selectedTransaction.movementId || '-'}</strong></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}><span style={{ color: 'var(--text-secondary)' }}>Comprobante</span><strong className="tabular-nums">{selectedTransaction.receiptNumber || `INT-${selectedTransaction.id.toString().padStart(5, '0')}`}</strong></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Comprobante</span>
+              <strong className="tabular-nums">
+                {selectedTransaction.receiptNumber ||
+                  (selectedTransaction.movementId
+                    ? `REC-${String(selectedTransaction.movementId).padStart(5, '0')}`
+                    : `REC-${String(selectedTransaction.id).padStart(5, '0')}`)}
+              </strong>
+            </div>
+            {(selectedTransaction.user?.employee || selectedTransaction.user?.username) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Cobrado por</span>
+                <strong>
+                  {selectedTransaction.user?.employee
+                    ? `${selectedTransaction.user.employee.firstName || ''} ${selectedTransaction.user.employee.lastName || ''}`.trim() || selectedTransaction.user.username
+                    : selectedTransaction.user.username}
+                </strong>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}><span style={{ color: 'var(--text-secondary)' }}>Fecha</span><span className="tabular-nums">{new Date(selectedTransaction.createdAt).toLocaleString('es-AR')}</span></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '6px' }}><span style={{ color: 'var(--text-secondary)' }}>Método</span><span className="badge badge-secondary" style={{ fontWeight: 600 }}>{selectedTransaction.paymentMethod === 'CASH' ? 'Efectivo' : selectedTransaction.paymentMethod === 'CHECK' ? 'Cheque' : selectedTransaction.paymentMethod === 'BANK_TRANSFER' ? 'Transferencia' : selectedTransaction.paymentMethod}</span></div>
             {selectedTransaction.description && (

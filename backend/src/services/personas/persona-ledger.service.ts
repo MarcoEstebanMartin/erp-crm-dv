@@ -27,6 +27,11 @@ export class PersonaLedgerSubService {
 
     const rawEntries = await prisma.accountLedger.findMany({
       where: { personaId: persona.id },
+      include: {
+        transaction: {
+          select: { id: true, movementId: true, receiptNumber: true },
+        },
+      },
       orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
     });
 

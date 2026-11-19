@@ -130,6 +130,7 @@ export function mapLedgerEntryToViewItem(entry: any, seenUiIds: Set<string>) {
     billingType: entry.billingType,
     reference: entry.reference,
     description: entry.description,
+    receiptNumber: entry.transaction?.receiptNumber ?? null,
     amount: roundToTwoDecimals(entry.amount.toString()).toNumber(),
     balance: roundToTwoDecimals(entry.balanceAfter.toString()).toNumber(),
     metadata: entry.metadata ?? undefined,
