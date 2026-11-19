@@ -111,9 +111,10 @@ export default function HomeTab({
     usePendingRendicionesQuery();
   const { data: weeklyScheduleRaw } = useWeeklyScheduleQuery();
 
-  const pendingRendicionesDetails: { sellers: any[]; routes: any[] } = {
+  const pendingRendicionesDetails: { sellers: any[]; routes: any[]; fieldSettlements: any[] } = {
     sellers: pendingRendicionesRaw?.sellers || [],
     routes: pendingRendicionesRaw?.routes || [],
+    fieldSettlements: pendingRendicionesRaw?.fieldSettlements || [],
   };
   const weeklyScheduleData: { currentWeek: string; items: any[] } = {
     currentWeek: weeklyScheduleRaw?.currentWeek || 'SEMANA_1',
@@ -262,6 +263,7 @@ export default function HomeTab({
         <HomePendingCashCard
           sellers={pendingRendicionesDetails.sellers}
           routes={pendingRendicionesDetails.routes}
+          fieldSettlements={pendingRendicionesDetails.fieldSettlements}
           loading={loadingRendicionesDetails}
           onOpenRendiciones={() => {
             if (onOpenRendiciones) {

@@ -1,8 +1,9 @@
-import { BillingType, PaymentMethod, TransactionType } from '@prisma/client';
+import { BillingType, PaymentMethod, SettlementStatus, TransactionType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
 import { calculateRendicionSummary } from '../../engines/drawer-arqueo.engine';
+import { summarizeOpenFieldSettlements } from '../../engines/pending-rendiciones.engine';
 
 interface RendicionBucket {
   totalToCollectDec: ReturnType<typeof toDecimal>;
@@ -90,9 +91,25 @@ export const rendicionService = {
       bucket.transactions.push(tx);
     }
 
+    const openFieldSettlements = await prisma.collectorSettlement.findMany({
+      where: { status: { in: [SettlementStatus.OPEN, SettlementStatus.SUBMITTED] } },
+      include: {
+        collector: { select: { id: true, username: true, role: true } },
+        deliveryRoute: { select: { id: true, driverName: true, vehiclePlate: true } },
+        receipts: {
+          where: { status: { not: 'VOIDED' } },
+          select: { id: true, status: true, deliveryRouteId: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const fieldSettlements = summarizeOpenFieldSettlements(openFieldSettlements);
+
     return {
       sellers: Object.values(sellersGroup).map(serializeBucket),
       routes: Object.values(routesGroup).map(serializeBucket),
+      fieldSettlements,
     };
   },
 

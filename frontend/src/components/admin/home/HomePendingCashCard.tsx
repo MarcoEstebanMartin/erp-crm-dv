@@ -6,6 +6,7 @@ import ArqueoResultModal from '../../rendiciones/ArqueoResultModal';
 interface HomePendingCashCardProps {
   sellers: any[];
   routes: any[];
+  fieldSettlements?: any[];
   loading: boolean;
   onOpenRendiciones: () => void;
   onRendicionCompleted?: () => void;
@@ -16,12 +17,13 @@ const formatPeso = (value: number) => `$${Math.round(value).toLocaleString('es-A
 export function HomePendingCashCard({
   sellers,
   routes,
+  fieldSettlements = [],
   loading,
   onOpenRendiciones,
   onRendicionCompleted,
 }: HomePendingCashCardProps) {
   const audit = useRendicionesAudit({ onSuccess: onRendicionCompleted });
-  const pendingCount = sellers.length + routes.length;
+  const pendingCount = sellers.length + routes.length + fieldSettlements.length;
 
   return (
     <section
@@ -103,6 +105,24 @@ export function HomePendingCashCard({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {fieldSettlements.map((fs: any) => {
+            const isDriver = fs.channel === 'DRIVER';
+            const label = fs.routeLabel ? `${fs.collectorName} · ${fs.routeLabel}` : fs.collectorName;
+            return (
+              <CashRowButton
+                key={`field-${fs.id}`}
+                label={label}
+                channelLabel={isDriver ? 'Repartidor' : 'Vendedor'}
+                receiptCount={Number(fs.receiptCount || 0)}
+                cash={Number(fs.expectedCash || 0)}
+                checks={Number(fs.expectedChecksAmount || 0)}
+                transfers={Number(fs.pendingTransfersAmount || 0)}
+                total={Number(fs.totalPending || 0)}
+                onClick={onOpenRendiciones}
+              />
+            );
+          })}
+
           {sellers.map((s: any) => {
             const name = s.user?.username || `Vendedor #${s.user?.id}`;
             const count = s.transactions?.length || 0;
@@ -186,6 +206,7 @@ export function HomePendingCashCard({
 
 interface CashRowButtonProps {
   label: string;
+  channelLabel?: 'Vendedor' | 'Repartidor';
   receiptCount: number;
   cash: number;
   checks: number;
@@ -194,49 +215,34 @@ interface CashRowButtonProps {
   onClick: () => void;
 }
 
-function CashRowButton({
-  label,
-  receiptCount,
-  cash,
-  checks,
-  transfers,
-  total,
-  onClick,
-}: CashRowButtonProps) {
+function CashRowButton({ label, channelLabel, receiptCount, cash, checks, transfers, total, onClick }: CashRowButtonProps) {
+  const isDriver = channelLabel === 'Repartidor';
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        width: '100%',
-        textAlign: 'left',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        padding: '10px 14px',
-        backgroundColor: 'var(--bg-light, #f9f9fb)',
-        border: '1px solid var(--border-color, #e5e5e7)',
-        borderRadius: '8px',
-        fontSize: '0.84rem',
-        cursor: 'pointer',
-        gap: '8px',
-        fontVariantNumeric: 'tabular-nums',
+        width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', padding: '10px 14px', backgroundColor: 'var(--bg-light, #f9f9fb)',
+        border: '1px solid var(--border-color, #e5e5e7)', borderRadius: '8px', fontSize: '0.84rem',
+        cursor: 'pointer', gap: '8px', fontVariantNumeric: 'tabular-nums',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
-        <span
-          style={{
-            color: 'var(--text-secondary)',
-            fontSize: '0.76rem',
-            backgroundColor: '#ffffff',
-            border: '1px solid var(--border-color)',
-            padding: '2px 7px',
-            borderRadius: '6px',
-            fontWeight: 600,
-          }}
-        >
+        {channelLabel && (
+          <span
+            style={{
+              fontSize: '0.7rem', fontWeight: 700, padding: '2px 7px', borderRadius: '6px',
+              backgroundColor: isDriver ? '#eff6ff' : '#f3f4f6',
+              color: isDriver ? '#1d4ed8' : '#374151',
+              border: `1px solid ${isDriver ? '#bfdbfe' : '#e5e7eb'}`,
+            }}
+          >
+            {channelLabel}
+          </span>
+        )}
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.76rem', backgroundColor: '#ffffff', border: '1px solid var(--border-color)', padding: '2px 7px', borderRadius: '6px', fontWeight: 600 }}>
           {receiptCount} {receiptCount === 1 ? 'recibo' : 'recibos'}
         </span>
       </div>
