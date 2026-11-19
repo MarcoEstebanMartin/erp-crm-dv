@@ -31,6 +31,8 @@ interface FieldCollectModalProps {
   client: OfflineBundleClient | null;
   collectorUserId: number;
   bankAccounts: OfflineBundleBankAccount[];
+  deliveryRouteId?: number | null;
+  suggestedAmount?: number | null;
   onClose: () => void;
   onSuccess: (info: {
     offline: boolean;
@@ -94,6 +96,8 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   client,
   collectorUserId,
   bankAccounts,
+  deliveryRouteId = null,
+  suggestedAmount = null,
   onClose,
   onSuccess,
 }) => {
@@ -107,7 +111,11 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (client) {
-      const initialAmt = client.outstandingBalance > 0 ? String(Math.round(client.outstandingBalance)) : '';
+      const preferred =
+        suggestedAmount !== null && suggestedAmount !== undefined && suggestedAmount > 0
+          ? suggestedAmount
+          : client.outstandingBalance;
+      const initialAmt = preferred > 0 ? String(Math.round(preferred)) : '';
       setPayments([createEmptyPayment(initialAmt)]);
       setNotes('');
       setError(null);
@@ -115,7 +123,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
     } else if (dialog.open) {
       dialog.close();
     }
-  }, [client]);
+  }, [client, suggestedAmount]);
 
   if (!client) return null;
 
@@ -182,6 +190,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
     const payload: SyncFieldReceiptPayload = {
       provisionalCode,
       personaId: client.id,
+      deliveryRouteId: deliveryRouteId ?? null,
       billingType: 'INTERNAL',
       notes: notes.trim() || null,
       capturedAt: new Date().toISOString(),

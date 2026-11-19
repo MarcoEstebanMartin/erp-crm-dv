@@ -5,6 +5,7 @@ import { RepartoActiveRoutePanel } from './reparto/RepartoActiveRoutePanel';
 import { RepartoCreateRouteModal } from './reparto/RepartoCreateRouteModal';
 import { RepartoSettleRouteModal } from './reparto/RepartoSettleRouteModal';
 import { PrintRouteSheet } from './reparto/RepartoPrintRouteSheet';
+import { FieldCollectModal } from './field-receipts/FieldCollectModal';
 
 type TripsTab = 'active' | 'history';
 
@@ -217,10 +218,21 @@ export default function RepartoDashboard() {
             handleTransferCustody={c.handleTransferCustody}
             handleChangeStatus={c.handleChangeStatus}
             handleOpenSettleModal={c.handleOpenSettleModal}
+            handleOpenCollectForStop={c.handleOpenCollectForStop}
             handleUpdateClientCoords={c.handleUpdateClientCoords}
           />
         </div>
       </div>
+
+      <FieldCollectModal
+        client={c.collectStopTarget?.client ?? null}
+        collectorUserId={Number(c.currentUser?.id || 0)}
+        bankAccounts={c.bankAccounts}
+        deliveryRouteId={c.collectStopTarget?.deliveryRouteId ?? null}
+        suggestedAmount={c.collectStopTarget?.suggestedAmount ?? null}
+        onClose={() => c.setCollectStopTarget(null)}
+        onSuccess={c.handleCollectSuccess}
+      />
 
       <RepartoCreateRouteModal
         show={c.showCreateModal}

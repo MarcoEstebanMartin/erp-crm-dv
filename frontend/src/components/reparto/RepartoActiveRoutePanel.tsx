@@ -1,5 +1,5 @@
 import type { FC, Dispatch, SetStateAction } from 'react';
-import { Navigation, CheckCircle, Play, Map, Printer, Lock, Clock, Pencil, ChevronUp, ChevronDown } from 'lucide-react';
+import { Navigation, CheckCircle, Play, Map, Printer, Lock, Clock, Pencil, ChevronUp, ChevronDown, Banknote } from 'lucide-react';
 import { printDeliveryRouteCustodyGuide } from '../../utils/printHelpers';
 import { RouteMap } from './LeafletRouteMap';
 import { computeTripDisplayMetrics } from './repartoRouteHelpers';
@@ -17,13 +17,15 @@ interface RepartoActiveRoutePanelProps {
   handleTransferCustody: (route: any) => void;
   handleChangeStatus: (routeId: number, nextStatus: string) => void;
   handleOpenSettleModal: (route: any) => void;
+  handleOpenCollectForStop?: (stop: any) => void;
   handleUpdateClientCoords: (clientId: number, lat: number, lng: number) => void;
 }
 
 export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
   selectedRoute, activeRouteTspDetails, selectedRouteStreetPoints, liveGpsInfo,
   gpsHistory, expandedStops, setExpandedStops, handleEditRoute, handleReorderStop,
-  handleTransferCustody, handleChangeStatus, handleOpenSettleModal, handleUpdateClientCoords,
+  handleTransferCustody, handleChangeStatus, handleOpenSettleModal, handleOpenCollectForStop,
+  handleUpdateClientCoords,
 }) => {
   if (!selectedRoute) {
     return (
@@ -37,6 +39,16 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
   const metrics = computeTripDisplayMetrics(selectedRoute.orders || []);
   const orderedIds = activeRouteTspDetails.locations.map((s: any) => Number(s.id));
   const isPendingRoute = selectedRoute.status === 'PENDING';
+  const isInTransitRoute = selectedRoute.status === 'IN_TRANSIT';
+
+  const receiptsByClientId: Record<number, { codes: string[]; total: number }> = {};
+  for (const r of selectedRoute.fieldReceipts || []) {
+    if (r.status === 'VOIDED') continue;
+    const pid = Number(r.personaId);
+    if (!receiptsByClientId[pid]) receiptsByClientId[pid] = { codes: [], total: 0 };
+    receiptsByClientId[pid].codes.push(r.receiptNumber || r.provisionalCode || `#${r.id}`);
+    receiptsByClientId[pid].total += Math.round(Number(r.totalAmount || 0));
+  }
 
   return (
     <div className="card">
@@ -128,6 +140,7 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
           {activeRouteTspDetails.locations.map((stop: any, idx: number) => {
             const stopKey = `${selectedRoute.id}-${idx}`;
             const isExpanded = !!expandedStops[stopKey];
+            const clientReceipt = receiptsByClientId[Number(stop.clientId)];
             return (
               <div key={stop.id ?? idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -140,12 +153,47 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
                     <div className="tabular-nums" style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--accent-color)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.78rem', flexShrink: 0 }}>
                       {idx + 1}
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{stop.name}</div>
                       <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{stop.address}</div>
+                      {clientReceipt && (
+                        <div className="tabular-nums" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', padding: '2px 7px', borderRadius: '4px', backgroundColor: '#dcfce7', color: '#15803d', fontSize: '0.72rem', fontWeight: 700, border: '1px solid #86efac' }}>
+                          <CheckCircle size={11} aria-hidden="true" />
+                          <span>{clientReceipt.codes.join(', ')} · ${clientReceipt.total.toLocaleString('es-AR')}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="tabular-nums" style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{stop.invoice}</div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div className="tabular-nums" style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{stop.invoice}</div>
+                      {Number(stop.totalAmount) > 0 && (
+                        <div className="tabular-nums" style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          ${Math.round(Number(stop.totalAmount)).toLocaleString('es-AR')}
+                        </div>
+                      )}
+                    </div>
                   </button>
+                  {isInTransitRoute && handleOpenCollectForStop && (
+                    <button
+                      type="button"
+                      className={clientReceipt ? 'btn btn-secondary' : 'btn btn-primary'}
+                      style={{
+                        fontSize: '0.76rem',
+                        padding: '6px 10px',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        flexShrink: 0,
+                        ...(clientReceipt
+                          ? {}
+                          : { backgroundColor: '#15803d', borderColor: '#15803d' }),
+                      }}
+                      onClick={() => handleOpenCollectForStop(stop)}
+                    >
+                      <Banknote size={13} aria-hidden="true" />
+                      {clientReceipt ? '+ Recibo' : 'Cobrar'}
+                    </button>
+                  )}
                   {isPendingRoute && handleReorderStop && orderedIds.length > 1 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                       <button type="button" className="btn btn-secondary" style={{ padding: '2px 5px', height: '22px' }} disabled={idx === 0} aria-label={`Subir parada ${idx + 1}`} onClick={() => handleReorderStop(selectedRoute.id, orderedIds, idx, -1)}>

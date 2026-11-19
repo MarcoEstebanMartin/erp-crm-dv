@@ -1,6 +1,18 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../utils/api';
+import type { OfflineBundleClient } from '../../api/fieldReceipts.api';
 import { useGpsTracker } from '../../hooks/useGpsTracker';
+import {
+  buildInitialRouteSettlements,
+  computeRouteSettlementTotals,
+  type RouteSettlementRow,
+} from './repartoSettlementHelpers';
+
+export interface CollectStopTarget {
+  client: OfflineBundleClient;
+  deliveryRouteId: number;
+  suggestedAmount: number;
+}
 
 export function useRepartoGpsAndSettle({
   selectedRoute,
@@ -23,7 +35,8 @@ export function useRepartoGpsAndSettle({
   const [liveGpsInfo, setLiveGpsInfo] = useState<any>(null);
   const [showSettleModal, setShowSettleModal] = useState(false);
   const [settleRoute, setSettleRoute] = useState<any | null>(null);
-  const [settlements, setSettlements] = useState<any[]>([]);
+  const [settlements, setSettlements] = useState<RouteSettlementRow[]>([]);
+  const [collectStopTarget, setCollectStopTarget] = useState<CollectStopTarget | null>(null);
 
   useGpsTracker({
     activeRouteId: selectedRoute?.id,
@@ -55,18 +68,7 @@ export function useRepartoGpsAndSettle({
   const handleOpenSettleModal = (route: any) => {
     setErrorMsg(null);
     setSettleRoute(route);
-    setSettlements(route.orders.map((o: any) => ({
-      orderId: o.id,
-      clientName: o.persona?.name || 'Cliente',
-      invoiceNumber: o.invoiceNumber || `Pedido #${o.id}`,
-      amount: Number(o.totalAmount),
-      paymentMethod: 'CASH',
-      bankAccountId: bankAccounts[0]?.id || '',
-      checkNumber: '',
-      checkIssuer: '',
-      isEcheq: false,
-      checkAmount: Number(o.totalAmount),
-    })));
+    setSettlements(buildInitialRouteSettlements(route, bankAccounts));
     setShowSettleModal(true);
   };
 
@@ -77,11 +79,12 @@ export function useRepartoGpsAndSettle({
     setSuccessMsg(null);
     setLoading(true);
     try {
-      const expectedCash = settlements.filter((s) => s.paymentMethod === 'CASH').reduce((sum, s) => sum + s.amount, 0);
-      const expectedTransfers = settlements.filter((s) => s.paymentMethod === 'BANK_TRANSFER').reduce((sum, s) => sum + s.amount, 0);
-      const expectedChecks = settlements.filter((s) => s.paymentMethod === 'CHECK').reduce((sum, s) => sum + s.amount, 0);
+      const totals = computeRouteSettlementTotals(settlements);
       await api.settleDeliveryRoute(settleRoute.id, {
-        settlements, cashDeclared: expectedCash, checksDeclared: expectedChecks, transfersDeclared: expectedTransfers,
+        settlements,
+        cashDeclared: totals.totalCash,
+        checksDeclared: totals.totalCheck,
+        transfersDeclared: totals.totalTransfer,
       });
       setSuccessMsg(`Viaje #${settleRoute.id} liquidado.`);
       setShowSettleModal(false);
@@ -95,6 +98,46 @@ export function useRepartoGpsAndSettle({
     }
   };
 
+  const handleOpenCollectForStop = (stop: any) => {
+    if (!selectedRoute?.id || !stop) return;
+    const p = stop.persona || {};
+    const client: OfflineBundleClient = {
+      id: Number(stop.clientId || p.id),
+      name: String(stop.name || p.name || 'Cliente'),
+      cuit: p.cuit ?? null,
+      city: p.city ?? null,
+      address: stop.address || p.address || null,
+      phone: p.phone ?? null,
+      route: p.route ?? null,
+      saleRouteId: p.saleRouteId ?? null,
+      routeSequence: p.routeSequence ?? null,
+      outstandingBalance: Number(p.outstandingBalance || 0),
+      sellerId: p.sellerId ?? null,
+    };
+    setErrorMsg(null);
+    setCollectStopTarget({
+      client,
+      deliveryRouteId: Number(selectedRoute.id),
+      suggestedAmount: Math.round(Number(stop.totalAmount || 0)),
+    });
+  };
+
+  const handleCollectSuccess = (info: {
+    offline: boolean;
+    receiptNumber?: string | null;
+    provisionalCode: string;
+    totalAmount: number;
+  }) => {
+    setCollectStopTarget(null);
+    const label = info.receiptNumber || info.provisionalCode;
+    setSuccessMsg(
+      info.offline
+        ? `Recibo ${label} guardado offline ($${info.totalAmount.toLocaleString('es-AR')}).`
+        : `Recibo ${label} registrado ($${info.totalAmount.toLocaleString('es-AR')}).`,
+    );
+    void onSettled();
+  };
+
   return {
     gpsHistory,
     liveGpsInfo,
@@ -105,5 +148,9 @@ export function useRepartoGpsAndSettle({
     setSettlements,
     handleOpenSettleModal,
     handleSettleSubmit,
+    collectStopTarget,
+    setCollectStopTarget,
+    handleOpenCollectForStop,
+    handleCollectSuccess,
   };
 }

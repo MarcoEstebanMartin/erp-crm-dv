@@ -6,6 +6,10 @@ import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { roundToIntegerPeso } from '../../core/money';
+import {
+  evaluateRouteSettlementActions,
+  type RouteFieldReceiptInput,
+} from '../../engines/route-settlement.engine';
 import { emitirFacturaAFIP } from '../afip.service';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { notifyWebOrderStatusForErpOrder } from '../orders/web-order-status-bridge.service';
@@ -100,12 +104,62 @@ export const routeSettlementService = {
         orders: {
           include: { persona: { select: { id: true, name: true, cuit: true } } },
         },
+        fieldReceipts: {
+          where: { status: { not: 'VOIDED' } },
+          select: {
+            id: true,
+            receiptNumber: true,
+            provisionalCode: true,
+            personaId: true,
+            status: true,
+            totalAmount: true,
+            payments: {
+              select: {
+                paymentMethod: true,
+                amount: true,
+                status: true,
+              },
+            },
+          },
+        },
       },
     });
 
     if (!route) throw new AppError('Hoja de ruta no encontrada.', 404);
     if (route.status === 'COMPLETED') {
       throw new AppError('La hoja de ruta ya fue completada y liquidada.', 400);
+    }
+
+    const activeFieldReceipts: RouteFieldReceiptInput[] = (route.fieldReceipts || []).map((r) => ({
+      id: r.id,
+      receiptNumber: r.receiptNumber,
+      provisionalCode: r.provisionalCode,
+      personaId: r.personaId,
+      status: r.status,
+      totalAmount: r.totalAmount.toString(),
+      payments: (r.payments || []).map((p) => ({
+        paymentMethod: p.paymentMethod as 'CASH' | 'BANK_TRANSFER' | 'CHECK',
+        amount: p.amount.toString(),
+        status: p.status,
+      })),
+    }));
+
+    const evaluation = evaluateRouteSettlementActions(
+      route.orders.map((o) => ({
+        id: o.id,
+        personaId: o.personaId,
+        clientName: o.persona?.name || `Cliente #${o.personaId}`,
+        totalAmount: o.totalAmount.toString(),
+      })),
+      activeFieldReceipts,
+      input.settlements,
+    );
+
+    if (evaluation.conflicts.length > 0) {
+      throw new AppError(
+        evaluation.conflicts.map((c) => c.message).join(' | '),
+        409,
+      );
     }
 
     const afipResults: Record<number, AfipInvoiceResult> = {};
@@ -190,10 +244,11 @@ export const routeSettlementService = {
           });
         }
 
-        if (set.paymentMethod && set.paymentMethod !== 'CREDITO') {
+        const evaluatedAction = evaluation.actionsByOrderId[order.id];
+        if (evaluatedAction?.action === 'CREATE_OFFICE_TRANSACTION') {
           const { cashDrawerId, bankAccountId, txDescription } =
             await resolveRoutePaymentDestination(
-              tx, set.paymentMethod, route.driverName, input.userId, order.persona.name, route.id, set,
+              tx, evaluatedAction.paymentMethod, route.driverName, input.userId, order.persona.name, route.id, set,
             );
 
           const createdRouteTx = await tx.transaction.create({
@@ -203,7 +258,7 @@ export const routeSettlementService = {
               userId: input.userId,
               billingType: order.billingType,
               type: TransactionType.INCOME,
-              paymentMethod: set.paymentMethod as PaymentMethod,
+              paymentMethod: evaluatedAction.paymentMethod as PaymentMethod,
               amount: totalAmount,
               description: txDescription,
               cashDrawerId,
@@ -256,6 +311,8 @@ export const routeSettlementService = {
       entityId: input.routeId,
       newValues: {
         status: 'COMPLETED',
+        fieldReceiptsCount: activeFieldReceipts.length,
+        fieldReceiptsTotal: evaluation.totals.fieldTotal.toNumber(),
         cashDeclared: normalizeOptionalPeso(input.cashDeclared),
         checksDeclared: normalizeOptionalPeso(input.checksDeclared),
         transfersDeclared: normalizeOptionalPeso(input.transfersDeclared),

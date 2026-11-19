@@ -50,6 +50,8 @@ export function useRepartoTspRoutes({
       return {
         id: o.id,
         clientId: p.id,
+        persona: p,
+        totalAmount: Number(o.totalAmount || 0),
         lat: coords.lat,
         lng: coords.lng,
         name: p.name,

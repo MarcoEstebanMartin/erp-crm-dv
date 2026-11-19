@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../utils/api';
+import { fieldReceiptsApi } from '../../api/fieldReceipts.api';
 import { ORDERS_QUERY_KEYS, PENDING_ROUTES_QUERY_KEY } from '../../hooks/queries';
 import { useConfirm } from '../../context/ConfirmContext';
 import { setRuntimeGoogleMapsApiKey } from '../../utils/googleMapsLoader';
@@ -105,7 +106,9 @@ export function useRepartoController() {
       }
       setPendingOrders(Array.isArray(queueRes?.orders) ? queueRes.orders : []);
       try { setBankAccounts((await api.getBankAccounts()) || []); }
-      catch { console.warn('Cuentas bancarias no disponibles para este perfil.'); }
+      catch {
+        await fieldReceiptsApi.getOfflineBundle().then((b) => setBankAccounts(b.bankAccounts || [])).catch(() => {});
+      }
     } catch (err) {
       console.error('Error al cargar datos logísticos:', err);
       setErrorMsg('Error al cargar datos logísticos.');

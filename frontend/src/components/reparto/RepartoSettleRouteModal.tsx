@@ -1,12 +1,17 @@
 import type { Dispatch, FC, FormEvent, SetStateAction } from 'react';
-import { X } from 'lucide-react';
+import { CheckCircle, X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
+import {
+  computeRouteSettlementTotals,
+  formatFieldReceiptBreakdown,
+  type RouteSettlementRow,
+} from './repartoSettlementHelpers';
 
 interface RepartoSettleRouteModalProps {
   show: boolean;
   settleRoute: any | null;
-  settlements: any[];
-  setSettlements: Dispatch<SetStateAction<any[]>>;
+  settlements: RouteSettlementRow[];
+  setSettlements: Dispatch<SetStateAction<RouteSettlementRow[]>>;
   bankAccounts: any[];
   errorMsg: string | null;
   onClose: () => void;
@@ -21,8 +26,10 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
   bankAccounts,
   errorMsg,
   onClose,
-  onSubmit
+  onSubmit,
 }) => {
+  const totals = computeRouteSettlementTotals(settlements);
+
   return (
     <NativeModalDialog
       isOpen={show && Boolean(settleRoute)}
@@ -33,7 +40,9 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
       {settleRoute && (
         <>
           <div className="modal-header">
-            <h3 id="reparto-settle-modal-title" className="tabular-nums">Liquidación de Viaje #{settleRoute.id}</h3>
+            <h3 id="reparto-settle-modal-title" className="tabular-nums">
+              Liquidación de Viaje #{settleRoute.id}
+            </h3>
             <button
               type="button"
               className="btn btn-ghost"
@@ -47,29 +56,79 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
 
           <div
             className="tabular-nums"
-            style={{ marginBottom: '16px', padding: '10px 14px', backgroundColor: '#f3e8fd', borderRadius: '6px', fontSize: '0.82rem', color: '#681da8' }}
+            style={{
+              marginBottom: '12px',
+              padding: '10px 14px',
+              backgroundColor: '#f3e8fd',
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              color: '#681da8',
+            }}
           >
             Chofer: <strong>{settleRoute.driverName}</strong>
-            {settleRoute.companionName && <> | Acompañante: <strong>{settleRoute.companionName}</strong></>}
-            {' '}| Patente: <strong>{settleRoute.vehiclePlate}</strong> | Pedidos: <strong>{settleRoute.orders?.length || 0}</strong>
+            {settleRoute.companionName && (
+              <>
+                {' '}| Acompañante: <strong>{settleRoute.companionName}</strong>
+              </>
+            )}
+            {' '}| Patente: <strong>{settleRoute.vehiclePlate}</strong> | Pedidos:{' '}
+            <strong>{settleRoute.orders?.length || 0}</strong>
+          </div>
+
+          <div
+            className="tabular-nums"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '10px',
+              marginBottom: '14px',
+            }}
+          >
+            <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Efectivo</div>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#15803d' }}>
+                ${totals.totalCash.toLocaleString('es-AR')}
+              </div>
+            </div>
+            <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Transferencia</div>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0369a1' }}>
+                ${totals.totalTransfer.toLocaleString('es-AR')}
+              </div>
+            </div>
+            <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Cheques</div>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#6d28d9' }}>
+                ${totals.totalCheck.toLocaleString('es-AR')}
+              </div>
+            </div>
+            <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600 }}>A Cuenta (C/C)</div>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#b78103' }}>
+                ${totals.totalCredit.toLocaleString('es-AR')}
+              </div>
+            </div>
           </div>
 
           <form onSubmit={onSubmit}>
             <div className="card" style={{ padding: '16px', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
-              <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '12px' }}>Entregas y Cobros</h4>
+              <h4 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 0, marginBottom: '12px' }}>
+                Entregas y Cobros
+              </h4>
               <div
                 className="table-container"
                 role="region"
                 aria-label="Entregas y cobros del viaje"
                 tabIndex={0}
-                style={{ maxHeight: '58vh', minHeight: '360px', overflowY: 'auto' }}
+                style={{ maxHeight: '52vh', minHeight: '320px', overflowY: 'auto' }}
               >
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
                       <th scope="col" style={{ padding: '8px 4px' }}>Cliente</th>
                       <th scope="col" style={{ padding: '8px 4px' }}>Comprobante</th>
-                      <th scope="col" style={{ padding: '8px 4px', width: '160px' }}>Medio de Pago</th>
+                      <th scope="col" style={{ padding: '8px 6px', textAlign: 'right', width: '105px' }}>Importe</th>
+                      <th scope="col" style={{ padding: '8px 4px', width: '165px' }}>Medio de Pago</th>
                       <th scope="col" style={{ padding: '8px 4px' }}>Detalles Cobro</th>
                     </tr>
                   </thead>
@@ -78,24 +137,62 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                       <tr key={set.orderId} style={{ borderBottom: '1px solid #f0f0f0' }}>
                         <td style={{ padding: '8px 4px', fontWeight: 600 }}>{set.clientName}</td>
                         <td className="tabular-nums" style={{ padding: '8px 4px' }}>{set.invoiceNumber}</td>
-                        <td style={{ padding: '8px 4px' }}>
-                          <select
-                            aria-label={`Medio de pago ${set.clientName}`}
-                            className="input"
-                            style={{ padding: '2px 4px', fontSize: '0.78rem', height: '28px' }}
-                            value={set.paymentMethod}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, paymentMethod: val, isEcheq: val === 'CHECK' ? Boolean(s.isEcheq) : false } : s));
-                            }}
-                          >
-                            <option value="CASH">Efectivo</option>
-                            <option value="BANK_TRANSFER">Transferencia</option>
-                            <option value="CHECK">Cheque</option>
-                            <option value="CREDITO">A Cuenta (C/C)</option>
-                          </select>
+                        <td className="tabular-nums" style={{ padding: '8px 6px', textAlign: 'right', fontWeight: 600 }}>
+                          ${Math.round(Number(set.amount || 0)).toLocaleString('es-AR')}
                         </td>
                         <td style={{ padding: '8px 4px' }}>
+                          {set.lockedByFieldReceipt ? (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                backgroundColor: '#dcfce7',
+                                color: '#15803d',
+                                border: '1px solid #86efac',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <CheckCircle size={12} aria-hidden="true" />
+                              Recibo en calle
+                            </span>
+                          ) : (
+                            <select
+                              aria-label={`Medio de pago ${set.clientName}`}
+                              className="input"
+                              style={{ padding: '2px 4px', fontSize: '0.78rem', height: '28px' }}
+                              value={set.paymentMethod}
+                              onChange={(e) => {
+                                const val = e.target.value as RouteSettlementRow['paymentMethod'];
+                                setSettlements((prev) =>
+                                  prev.map((s, i) =>
+                                    i === idx
+                                      ? { ...s, paymentMethod: val, isEcheq: val === 'CHECK' ? Boolean(s.isEcheq) : false }
+                                      : s,
+                                  ),
+                                );
+                              }}
+                            >
+                              <option value="CREDITO">A Cuenta (C/C)</option>
+                              <option value="CASH">Efectivo</option>
+                              <option value="BANK_TRANSFER">Transferencia</option>
+                              <option value="CHECK">Cheque</option>
+                            </select>
+                          )}
+                        </td>
+                        <td style={{ padding: '8px 4px' }}>
+                          {set.paymentMethod === 'FIELD_RECEIPT' && set.fieldReceipts && (
+                            <div className="tabular-nums" style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: 600 }}>
+                              {set.fieldReceipts.receiptNumbers.join(', ')} ·{' '}
+                              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                                {formatFieldReceiptBreakdown(set.fieldReceipts)}
+                              </span>
+                            </div>
+                          )}
                           {set.paymentMethod === 'BANK_TRANSFER' && (
                             <select
                               aria-label={`Cuenta bancaria ${set.clientName}`}
@@ -104,10 +201,12 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                               value={set.bankAccountId}
                               onChange={(e) => {
                                 const val = e.target.value;
-                                setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, bankAccountId: val } : s));
+                                setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, bankAccountId: val } : s)));
                               }}
                             >
-                              {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                              {bankAccounts.map((b) => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                              ))}
                             </select>
                           )}
                           {set.paymentMethod === 'CHECK' && (
@@ -124,7 +223,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                                 value={set.checkNumber}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, checkNumber: val } : s));
+                                  setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, checkNumber: val } : s)));
                                 }}
                                 required
                               />
@@ -137,7 +236,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                                 value={set.checkIssuer}
                                 onChange={(e) => {
                                   const val = e.target.value;
-                                  setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, checkIssuer: val } : s));
+                                  setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, checkIssuer: val } : s)));
                                 }}
                                 required
                               />
@@ -165,7 +264,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                                   checked={Boolean(set.isEcheq)}
                                   onChange={(e) => {
                                     const checked = e.target.checked;
-                                    setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, isEcheq: checked } : s));
+                                    setSettlements((prev) => prev.map((s, i) => (i === idx ? { ...s, isEcheq: checked } : s)));
                                   }}
                                   style={{ width: '14px', height: '14px', margin: 0, accentColor: '#0284c7', cursor: 'pointer' }}
                                 />
@@ -190,7 +289,16 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
             {errorMsg && (
               <div
                 role="alert"
-                style={{ backgroundColor: '#FFF2F2', borderLeft: '4px solid var(--color-danger)', color: 'var(--color-danger)', padding: '10px 14px', borderRadius: '6px', fontSize: '0.82rem', marginBottom: '14px', fontWeight: 600 }}
+                style={{
+                  backgroundColor: '#FFF2F2',
+                  borderLeft: '4px solid var(--color-danger)',
+                  color: 'var(--color-danger)',
+                  padding: '10px 14px',
+                  borderRadius: '6px',
+                  fontSize: '0.82rem',
+                  marginBottom: '14px',
+                  fontWeight: 600,
+                }}
               >
                 {errorMsg}
               </div>
