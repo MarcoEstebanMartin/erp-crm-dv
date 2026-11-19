@@ -62,6 +62,7 @@ export interface SyncFieldReceiptPayload {
   gpsLat?: number | null;
   gpsLng?: number | null;
   capturedAt: string;
+  allowCreditOnAccount?: boolean;
   payments: SyncFieldReceiptPaymentPayload[];
 }
 

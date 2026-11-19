@@ -104,6 +104,8 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [payments, setPayments] = useState<PaymentDraft[]>([]);
   const [notes, setNotes] = useState('');
+  const [allowCreditOnAccount, setAllowCreditOnAccount] = useState(false);
+  const [needsCreditOverride, setNeedsCreditOverride] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,6 +120,8 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
       const initialAmt = preferred > 0 ? String(Math.round(preferred)) : '';
       setPayments([createEmptyPayment(initialAmt)]);
       setNotes('');
+      setAllowCreditOnAccount(false);
+      setNeedsCreditOverride(false);
       setError(null);
       if (!dialog.open) dialog.showModal();
     } else if (dialog.open) {
@@ -133,6 +137,13 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   }, 0);
 
   const balanceAfter = Math.round(client.outstandingBalance) - totalAmount;
+  const effectiveLocalDebt = deliveryRouteId
+    ? Math.max(0, Math.round(client.outstandingBalance), Math.round(suggestedAmount ?? 0))
+    : Math.max(0, Math.round(client.outstandingBalance));
+  const excessAmount = totalAmount > effectiveLocalDebt ? totalAmount - effectiveLocalDebt : 0;
+  const isOverpaying = totalAmount > 0 && excessAmount > 0;
+  const showCreditToggle = isOverpaying || needsCreditOverride;
+  const blockedByOverpayment = showCreditToggle && !allowCreditOnAccount;
 
   const updatePayment = (id: string, patch: Partial<PaymentDraft>) => {
     setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
@@ -194,6 +205,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
       billingType: 'INTERNAL',
       notes: notes.trim() || null,
       capturedAt: new Date().toISOString(),
+      allowCreditOnAccount: showCreditToggle ? allowCreditOnAccount : false,
       payments: mappedPayments,
     };
 
@@ -211,9 +223,13 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
           });
           return;
         } catch (err: any) {
-          // Si es error de red/servidor caído, encola offline; si es validación 400, muestra el error.
+          // Si es error de red/servidor caído, encola offline; si es validación 400/409, muestra el error.
           if (err?.status && err.status >= 400 && err.status < 500) {
-            setError(err.message || 'Datos inválidos en el cobro.');
+            const msg = String(err.message || 'Datos inválidos en el cobro.');
+            if (err.status === 409 && msg.toLowerCase().includes('favor')) {
+              setNeedsCreditOverride(true);
+            }
+            setError(msg);
             return;
           }
         }
@@ -413,6 +429,41 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
             style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
           />
 
+          {showCreditToggle && (
+            <div
+              role="status"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                color: '#92400e',
+                fontSize: '0.84rem',
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>
+                {excessAmount > 0
+                  ? `Estás cargando $${excessAmount.toLocaleString('es-AR')} de más`
+                  : 'El importe supera la deuda actual'}
+              </span>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#111827', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={allowCreditOnAccount}
+                  onChange={(e) => {
+                    setAllowCreditOnAccount(e.target.checked);
+                    if (e.target.checked) setError(null);
+                  }}
+                  style={{ width: '16px', height: '16px', accentColor: '#111827', cursor: 'pointer' }}
+                />
+                <span>Dejar plata a favor</span>
+              </label>
+            </div>
+          )}
+
           {error && (
             <div style={{ padding: '8px 12px', borderRadius: '8px', background: '#fee2e2', color: '#991b1b', fontSize: '0.85rem' }}>
               {error}
@@ -425,13 +476,15 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
             <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
               Total: ${totalAmount.toLocaleString('es-AR')}
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
-              Saldo restante: ${balanceAfter.toLocaleString('es-AR')}
+            <div style={{ fontSize: '0.78rem', color: balanceAfter < 0 ? '#059669' : '#6b7280', fontWeight: balanceAfter < 0 ? 600 : 400 }}>
+              {balanceAfter < 0
+                ? `A favor: $${Math.abs(balanceAfter).toLocaleString('es-AR')}`
+                : `Saldo restante: $${balanceAfter.toLocaleString('es-AR')}`}
             </div>
           </div>
           <button
             type="submit"
-            disabled={submitting || totalAmount <= 0}
+            disabled={submitting || totalAmount <= 0 || blockedByOverpayment}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -442,8 +495,8 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
               background: '#E30613',
               color: '#fff',
               fontWeight: 700,
-              cursor: submitting ? 'not-allowed' : 'pointer',
-              opacity: submitting ? 0.7 : 1,
+              cursor: submitting || blockedByOverpayment ? 'not-allowed' : 'pointer',
+              opacity: submitting || blockedByOverpayment ? 0.55 : 1,
             }}
           >
             <CheckCircle2 size={17} />

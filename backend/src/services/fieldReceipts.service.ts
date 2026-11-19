@@ -129,7 +129,7 @@ export const fieldReceiptsService = {
         personaId: input.personaId,
         amount: totalNum,
         deliveryRouteId: input.deliveryRouteId ?? null,
-        allowCreditOnAccount: false,
+        allowCreditOnAccount: Boolean(input.allowCreditOnAccount),
       });
 
       let settlement = await tx.collectorSettlement.findFirst({

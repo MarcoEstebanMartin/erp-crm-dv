@@ -28,7 +28,8 @@ describe('collection-guard.engine (Guardia Central Anti-Doble Cobro)', () => {
 
     expect(res.allowed).toBe(false);
     expect(res.code).toBe('ZERO_DEBT_BLOCKED');
-    expect(res.message).toContain('no registra deuda pendiente');
+    expect(res.message).toContain('de más');
+    expect(res.message).toContain('Dejar plata a favor');
   });
 
   it('BLOQUEA sobrepago cuando intentan cobrar más de la deuda actual sin anticipo explícito', () => {
@@ -41,7 +42,8 @@ describe('collection-guard.engine (Guardia Central Anti-Doble Cobro)', () => {
 
     expect(res.allowed).toBe(false);
     expect(res.code).toBe('OVERPAYMENT_BLOCKED');
-    expect(res.message).toContain('Alarma de sobrepago');
+    expect(res.message).toContain('de más');
+    expect(res.message).toContain('Dejar plata a favor');
   });
 
   it('BLOQUEA recibo duplicado del mismo monto dentro de la ventana de 5 minutos (incluso con anticipo)', () => {

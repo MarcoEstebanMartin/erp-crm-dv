@@ -36,6 +36,7 @@ export const syncFieldReceiptBodySchema = z.object({
   gpsLat: z.coerce.number().nullable().optional(),
   gpsLng: z.coerce.number().nullable().optional(),
   capturedAt: z.string().datetime({ offset: true }).or(z.string().min(10)),
+  allowCreditOnAccount: z.boolean().optional().default(false),
   payments: z.array(fieldReceiptPaymentSchema).min(1, 'Debe ingresar al menos un medio de pago'),
 });
 

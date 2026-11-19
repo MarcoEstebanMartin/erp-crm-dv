@@ -32,30 +32,6 @@ export function FinanzasPeriodKpiCards({
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(185px, 1fr))', gap: '14px' }}>
-      {kpiCards.map((card) => (
-        <button
-          key={card.key}
-          type="button"
-          onClick={() => onSelectCard(card)}
-          style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'space-between',
-            gap: '10px', padding: '16px 18px', backgroundColor: card.bg, border: `1px solid ${card.border}`,
-            borderRadius: '12px', cursor: 'pointer', textAlign: 'left', font: 'inherit', width: '100%', minWidth: 0, boxShadow: 'none',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
-            <span style={{ fontSize: '0.82rem', color: card.color, fontWeight: 600, lineHeight: 1.25 }}>{card.label}</span>
-            <Eye size={15} color={card.color} aria-hidden="true" style={{ flexShrink: 0, opacity: 0.8 }} />
-          </div>
-          <div className="tabular-nums" style={{ fontSize: 'clamp(1.25rem, 1.5vw, 1.55rem)', lineHeight: 1.15, fontWeight: 700, color: card.color, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-            ${Math.round(card.val).toLocaleString('es-AR')}
-          </div>
-          <div className="tabular-nums" style={{ fontSize: '0.75rem', color: card.color, display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, opacity: 0.9 }}>
-            <span>{card.items.length} movimientos</span><ChevronRight size={13} aria-hidden="true" />
-          </div>
-        </button>
-      ))}
-
       {showSalesCard && (
         <button
           type="button"
@@ -79,6 +55,30 @@ export function FinanzasPeriodKpiCards({
           </div>
         </button>
       )}
+
+      {kpiCards.map((card) => (
+        <button
+          key={card.key}
+          type="button"
+          onClick={() => onSelectCard(card)}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'space-between',
+            gap: '10px', padding: '16px 18px', backgroundColor: card.bg, border: `1px solid ${card.border}`,
+            borderRadius: '12px', cursor: 'pointer', textAlign: 'left', font: 'inherit', width: '100%', minWidth: 0, boxShadow: 'none',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
+            <span style={{ fontSize: '0.82rem', color: card.color, fontWeight: 600, lineHeight: 1.25 }}>{card.label}</span>
+            <Eye size={15} color={card.color} aria-hidden="true" style={{ flexShrink: 0, opacity: 0.8 }} />
+          </div>
+          <div className="tabular-nums" style={{ fontSize: 'clamp(1.25rem, 1.5vw, 1.55rem)', lineHeight: 1.15, fontWeight: 700, color: card.color, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+            ${Math.round(card.val).toLocaleString('es-AR')}
+          </div>
+          <div className="tabular-nums" style={{ fontSize: '0.75rem', color: card.color, display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, opacity: 0.9 }}>
+            <span>{card.items.length} movimientos</span><ChevronRight size={13} aria-hidden="true" />
+          </div>
+        </button>
+      ))}
     </div>
   );
 }

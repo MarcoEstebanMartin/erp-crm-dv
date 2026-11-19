@@ -124,17 +124,18 @@ export function evaluateCollectionGuard(input: CollectionGuardInput): Collection
       return {
         allowed: false,
         code: 'ZERO_DEBT_BLOCKED',
-        message: `Alarma de cobro bloqueado: ${input.clientName} no registra deuda pendiente (saldo actual: ${formatPesosAr(rawBalance)}). Verificá que no sea un recibo duplicado o marcá "Dejar dinero a favor" si es un anticipo.`,
+        message: `Estás cargando ${formatPesosAr(normalizedAmount)} de más (sin deuda). Tildá "Dejar plata a favor" para continuar.`,
         effectiveDebt,
         normalizedAmount,
       };
     }
 
     if (normalizedAmount.gt(effectiveDebt)) {
+      const excess = normalizedAmount.minus(effectiveDebt);
       return {
         allowed: false,
         code: 'OVERPAYMENT_BLOCKED',
-        message: `Alarma de sobrepago: intentás cobrar ${formatPesosAr(normalizedAmount)} a ${input.clientName}, pero su deuda actual es ${formatPesosAr(effectiveDebt)}. Verificá que no se esté cargando dos veces el mismo cobro o marcá "Dejar dinero a favor".`,
+        message: `Estás cargando ${formatPesosAr(excess)} de más (deuda: ${formatPesosAr(effectiveDebt)}). Tildá "Dejar plata a favor" para continuar.`,
         effectiveDebt,
         normalizedAmount,
       };

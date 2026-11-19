@@ -26,6 +26,7 @@ describe('fieldReceipts.schema + validateRequest', () => {
         billingType: 'INTERNAL',
         notes: null,
         capturedAt: '2026-11-19T17:00:00.000Z',
+        allowCreditOnAccount: true,
         payments: [
           {
             paymentMethod: 'CASH',
