@@ -211,8 +211,8 @@ describe('Paso 4C - Barrel printHelpers, plantillas limpias y hooks postMessage'
       vehiclePlate: 'AB123CD',
       orders: [sampleOrder],
     });
-    expect(writtenHtml).toContain('HOJA DE RUTA #12');
-    expect(writtenHtml).toContain('____/____/______');
+    expect(writtenHtml).toContain('Hoja de Ruta #12');
+    expect(writtenHtml).toContain('____ / ____ / ____');
     expect(writtenHtml).not.toContain('____/____/2026');
   });
 });
