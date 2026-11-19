@@ -334,6 +334,23 @@ export async function assignWmsLocation(req: AuthenticatedRequest, res: Response
   }
 }
 
+export async function moveWmsSlot(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+  try {
+    const result = await productService.moveWmsSlot(req.body, userId);
+    appCache.invalidateProductCatalog();
+    res.status(200).json({ status: 'success', data: result });
+  } catch (error: any) {
+    res
+      .status(400)
+      .json({ status: 'error', message: error.message || 'Error al mudar el slot WMS.' });
+  }
+}
+
 export async function revertPrices(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const result = await productService.revertPrices(req.user?.id);

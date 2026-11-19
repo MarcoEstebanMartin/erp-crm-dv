@@ -1,36 +1,37 @@
 import React from 'react';
 import type { Product, ProductLot } from '../../types';
+import { evaluateLotDateHealth, type RackLevel } from './wmsMapHelpers';
 
 interface Slot3DRackIsometricViewProps {
-  activeLevel: 'A' | 'B' | 'C';
-  setActiveLevel: (level: 'A' | 'B' | 'C') => void;
-  supportsLevelB: boolean;
-  supportsLevelC: boolean;
-  itemsLevelA: { product: Product; lot: ProductLot }[];
-  itemsLevelB: { product: Product; lot: ProductLot }[];
-  itemsLevelC: { product: Product; lot: ProductLot }[];
+  supportedLevels: RackLevel[];
+  activeLevel: RackLevel;
+  setActiveLevel: (level: RackLevel) => void;
+  itemsByLevel: Record<RackLevel, { product: Product; lot: ProductLot }[]>;
 }
 
+const LEVEL_TITLES: Record<RackLevel, string> = {
+  A: 'BASE / SUELO',
+  B: 'NIVEL MEDIO',
+  C: 'NIVEL ALTO',
+  D: 'CUARTO NIVEL',
+  E: 'QUINTO NIVEL',
+  F: 'NIVEL SUPERIOR',
+};
+
 export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = ({
+  supportedLevels,
   activeLevel,
   setActiveLevel,
-  supportsLevelB,
-  supportsLevelC,
-  itemsLevelA,
-  itemsLevelB,
-  itemsLevelC,
+  itemsByLevel,
 }) => {
+  const levelsDesc = [...supportedLevels].reverse();
+  const isCompact = supportedLevels.length >= 4;
+
   return (
     <div className="wms-rack-3d-container">
       <div className="wms-rack-3d-header">
-        <span
-          style={{
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            color: '#64748b',
-          }}
-        >
-          Estantería (3 Niveles)
+        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b' }}>
+          Estantería ({supportedLevels.length} {supportedLevels.length === 1 ? 'Nivel' : 'Niveles'})
         </span>
         <span
           className="badge"
@@ -40,137 +41,75 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
         </span>
       </div>
 
-      <div className="wms-isometric-rack-wrapper">
-        {/* PISO 3: NIVEL C (SUPERIOR) */}
-        <div
-          className={`wms-3d-shelf-level ${!supportsLevelC ? 'disabled' : ''} ${activeLevel === 'C' ? 'selected' : ''}`}
-          onClick={() => supportsLevelC && setActiveLevel('C')}
-        >
-          <div className="wms-3d-shelf-top" />
-          <div className="wms-3d-shelf-front">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.8rem' }}>PISO 3 - NIVEL C (ALTILLO)</span>
-              {supportsLevelC ? (
-                <span
-                  className="badge"
-                  style={{
-                    backgroundColor: itemsLevelC.length > 0 ? '#22c55e' : '#94a3b8',
-                    color: '#fff',
-                    fontSize: '0.65rem',
-                  }}
-                >
-                  {itemsLevelC.length > 0
-                    ? `${itemsLevelC.reduce((s, i) => s + i.lot.stock, 0)} u.`
-                    : 'LIBRE'}
-                </span>
-              ) : (
-                <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>N/A</span>
-              )}
-            </div>
+      <div
+        className="wms-isometric-rack-wrapper"
+        style={{ gap: isCompact ? '8px' : '14px', padding: isCompact ? '4px 0' : '10px 0' }}
+      >
+        {levelsDesc.map((lvl, idx) => {
+          const floorNumber = supportedLevels.length - idx;
+          const items = itemsByLevel[lvl] || [];
+          const totalUnits = items.reduce((s, i) => s + Number(i.lot.stock || 0), 0);
+          const hasExpired = items.some((i) => evaluateLotDateHealth(i.lot.expirationDate) === 'EXPIRED');
+          const hasExpiringSoon = items.some(
+            (i) => evaluateLotDateHealth(i.lot.expirationDate) === 'EXPIRING_SOON',
+          );
+          const badgeBg =
+            items.length === 0
+              ? '#94a3b8'
+              : hasExpired
+                ? '#E30613'
+                : hasExpiringSoon
+                  ? '#d97706'
+                  : '#16a34a';
 
-            {itemsLevelC.length > 0 ? (
-              <div className="wms-3d-items-preview">
-                {itemsLevelC.map((item, idx) => (
-                  <div key={idx} className="wms-3d-item-pill">
-                    {item.product.name} ({item.lot.stock}u)
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.72rem', fontStyle: 'italic', opacity: 0.7, marginTop: '2px' }}>
-                {supportsLevelC ? 'Posición superior vacía' : 'Sin piso superior en esta estantería'}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* PISO 2: NIVEL B (MEDIO) */}
-        <div
-          className={`wms-3d-shelf-level ${!supportsLevelB ? 'disabled' : ''} ${activeLevel === 'B' ? 'selected' : ''}`}
-          onClick={() => supportsLevelB && setActiveLevel('B')}
-        >
-          <div className="wms-3d-shelf-top" />
-          <div className="wms-3d-shelf-front">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.8rem' }}>
-                PISO 2 - NIVEL B (ESTANTE MEDIO)
-              </span>
-              {supportsLevelB ? (
-                <span
-                  className="badge"
-                  style={{
-                    backgroundColor: itemsLevelB.length > 0 ? '#22c55e' : '#94a3b8',
-                    color: '#fff',
-                    fontSize: '0.65rem',
-                  }}
-                >
-                  {itemsLevelB.length > 0
-                    ? `${itemsLevelB.reduce((s, i) => s + i.lot.stock, 0)} u.`
-                    : 'LIBRE'}
-                </span>
-              ) : (
-                <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>N/A</span>
-              )}
-            </div>
-
-            {itemsLevelB.length > 0 ? (
-              <div className="wms-3d-items-preview">
-                {itemsLevelB.map((item, idx) => (
-                  <div key={idx} className="wms-3d-item-pill">
-                    {item.product.name} ({item.lot.stock}u)
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.72rem', fontStyle: 'italic', opacity: 0.7, marginTop: '2px' }}>
-                {supportsLevelB ? 'Posición media vacía' : 'Sin piso medio en esta estantería'}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* PISO 1: NIVEL A (INFERIOR / SUELO) */}
-        <div
-          className={`wms-3d-shelf-level ${activeLevel === 'A' ? 'selected' : ''}`}
-          onClick={() => setActiveLevel('A')}
-        >
-          <div className="wms-3d-shelf-top" />
-          <div className="wms-3d-shelf-front">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 800, fontSize: '0.8rem' }}>
-                PISO 1 - NIVEL A (BASE / SUELO)
-              </span>
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: itemsLevelA.length > 0 ? '#22c55e' : '#94a3b8',
-                  color: '#fff',
-                  fontSize: '0.65rem',
-                }}
+          return (
+            <div
+              key={lvl}
+              className={`wms-3d-shelf-level ${activeLevel === lvl ? 'selected' : ''}`}
+              onClick={() => setActiveLevel(lvl)}
+            >
+              <div className="wms-3d-shelf-top" style={{ height: isCompact ? '6px' : '8px' }} />
+              <div
+                className="wms-3d-shelf-front"
+                style={{ padding: isCompact ? '6px 10px' : '10px 12px' }}
               >
-                {itemsLevelA.length > 0
-                  ? `${itemsLevelA.reduce((s, i) => s + i.lot.stock, 0)} u.`
-                  : 'LIBRE'}
-              </span>
-            </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 800, fontSize: isCompact ? '0.74rem' : '0.8rem' }}>
+                    PISO {floorNumber} - NIVEL {lvl} ({LEVEL_TITLES[lvl]})
+                  </span>
+                  <span
+                    className="badge tabular-nums"
+                    style={{ backgroundColor: badgeBg, color: '#fff', fontSize: '0.65rem' }}
+                  >
+                    {items.length > 0 ? `${totalUnits} u.` : 'LIBRE'}
+                  </span>
+                </div>
 
-            {itemsLevelA.length > 0 ? (
-              <div className="wms-3d-items-preview">
-                {itemsLevelA.map((item, idx) => (
-                  <div key={idx} className="wms-3d-item-pill">
-                    {item.product.name} ({item.lot.stock}u)
+                {items.length > 0 ? (
+                  <div className="wms-3d-items-preview">
+                    {items.map((item, iIdx) => (
+                      <div key={iIdx} className="wms-3d-item-pill">
+                        {item.product.name} ({item.lot.stock}u)
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div
+                    style={{
+                      fontSize: '0.71rem',
+                      fontStyle: 'italic',
+                      opacity: 0.7,
+                      marginTop: '2px',
+                    }}
+                  >
+                    Posición vacía
+                  </div>
+                )}
               </div>
-            ) : (
-              <div style={{ fontSize: '0.72rem', fontStyle: 'italic', opacity: 0.7, marginTop: '2px' }}>
-                Posición inferior vacía
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })}
       </div>
-
     </div>
   );
 };

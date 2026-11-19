@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { addDaysIso, computeSupplierInvoicesMetrics, parseExactCents } from './providersHelpers';
+import { KNOWN_WMS_LOCATION_SET } from '../deposito/depositoHelpers';
 
 export const INITIAL_SUPPLIER_FORM = () => {
   const todayIso = new Date().toISOString().split('T')[0];
@@ -39,7 +40,9 @@ export function useComprasController(activeSubTab: string, refreshKey?: number, 
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [receiveForm, setReceiveForm] = useState<{ billingType: 'OFFICIAL' | 'INTERNAL'; invoiceType: string }>({ billingType: 'OFFICIAL', invoiceType: 'FACTURA_A' });
   const [receivedQuantities, setReceivedQuantities] = useState<Record<number, number>>({});
-  const [lotAssignments, setLotAssignments] = useState<Record<number, { lotNumber: string; expirationDate: string }>>({});
+  const [lotAssignments, setLotAssignments] = useState<
+    Record<number, { lotNumber: string; expirationDate: string; location: string }>
+  >({});
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [supplierForm, setSupplierForm] = useState(INITIAL_SUPPLIER_FORM);
@@ -170,10 +173,13 @@ export function useComprasController(activeSubTab: string, refreshKey?: number, 
     const order = orderOrInvoice?.purchaseOrder ? { ...orderOrInvoice.purchaseOrder, supplierInvoice: orderOrInvoice, persona: orderOrInvoice.persona } : orderOrInvoice;
     setErrorMsg(null); setInvoiceNumber('');
     setReceiveForm({ billingType: 'OFFICIAL', invoiceType: 'FACTURA_A' });
-    const initialLots: Record<number, { lotNumber: string; expirationDate: string }> = {};
+    const initialLots: Record<number, { lotNumber: string; expirationDate: string; location: string }> = {};
     const initialQtys: Record<number, number> = {};
     (order?.items || []).forEach((item: any) => {
-      initialLots[item.productId] = { lotNumber: '', expirationDate: '' };
+      const prod = products.find((pr) => pr.id === item.productId) || item.product;
+      const defLoc = prod?.defaultLocation ? String(prod.defaultLocation).trim().toUpperCase() : '';
+      const suggestedLoc = defLoc && KNOWN_WMS_LOCATION_SET.has(defLoc) ? defLoc : 'S/U';
+      initialLots[item.productId] = { lotNumber: '', expirationDate: '', location: suggestedLoc };
       initialQtys[item.productId] = Number(item.quantity || 0);
     });
     setLotAssignments(initialLots); setReceivedQuantities(initialQtys); setShowReceiveModal(order);

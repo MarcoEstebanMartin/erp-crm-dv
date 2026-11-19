@@ -2,6 +2,7 @@ import { useState, useMemo, type FC, type FormEvent } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 import { formatCentsArs, formatCuitDisplay, parseExactCents } from './providersHelpers';
+import { WMS_LOCATION_GROUPS } from '../deposito/depositoHelpers';
 
 export const ComprasCreateReceiveModals: FC<{
   showCreateModal: boolean;
@@ -21,8 +22,8 @@ export const ComprasCreateReceiveModals: FC<{
   setReceiveForm: React.Dispatch<React.SetStateAction<{ billingType: 'OFFICIAL' | 'INTERNAL'; invoiceType: string }>>;
   receivedQuantities: Record<number, number>;
   setReceivedQuantities: React.Dispatch<React.SetStateAction<Record<number, number>>>;
-  lotAssignments: Record<number, { lotNumber: string; expirationDate: string }>;
-  onLotAssignmentChange: (productId: number, field: 'lotNumber' | 'expirationDate', val: string) => void;
+  lotAssignments: Record<number, { lotNumber: string; expirationDate: string; location: string }>;
+  onLotAssignmentChange: (productId: number, field: 'lotNumber' | 'expirationDate' | 'location', val: string) => void;
   onReceiveSubmit: (e: FormEvent) => void;
   viewDetailsModal: any | null;
   setViewDetailsModal: (v: any | null) => void;
@@ -147,7 +148,7 @@ export const ComprasCreateReceiveModals: FC<{
         </form>
       </NativeModalDialog>
 
-      <NativeModalDialog isOpen={Boolean(p.showReceiveModal)} onClose={closeReceive} ariaLabelledBy="po-receive-title" style={{ maxWidth: '640px', width: '94vw', padding: '24px' }}>
+      <NativeModalDialog isOpen={Boolean(p.showReceiveModal)} onClose={closeReceive} ariaLabelledBy="po-receive-title" style={{ maxWidth: '780px', width: '95vw', padding: '24px' }}>
         {p.showReceiveModal && (
           <>
             <div className="modal-header">
@@ -191,7 +192,7 @@ export const ComprasCreateReceiveModals: FC<{
                     <div className="tabular-nums" style={{ fontWeight: 600, marginBottom: '6px' }}>
                       {item.product?.name || `Producto #${item.productId}`} · Esperado: {item.quantity} u.
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '95px 1fr 135px 1.2fr', gap: '8px' }}>
                       <div>
                         <label htmlFor={`po-qty-${item.productId}`} style={{ fontSize: '0.72rem' }}>Cant. recibida</label>
                         <input id={`po-qty-${item.productId}`} type="number" min={0} className="input tabular-nums" value={p.receivedQuantities[item.productId] ?? item.quantity} onChange={(e) => p.setReceivedQuantities((prev) => ({ ...prev, [item.productId]: Math.max(0, Math.trunc(Number(e.target.value || 0))) }))} />
@@ -203,6 +204,19 @@ export const ComprasCreateReceiveModals: FC<{
                       <div>
                         <label htmlFor={`po-exp-${item.productId}`} style={{ fontSize: '0.72rem' }}>Vencimiento</label>
                         <input id={`po-exp-${item.productId}`} type="date" className="input" value={p.lotAssignments[item.productId]?.expirationDate || ''} onChange={(e) => p.onLotAssignmentChange(item.productId, 'expirationDate', e.target.value)} />
+                      </div>
+                      <div>
+                        <label htmlFor={`po-loc-${item.productId}`} style={{ fontSize: '0.72rem' }}>Ubicación WMS</label>
+                        <select id={`po-loc-${item.productId}`} className="select" value={p.lotAssignments[item.productId]?.location || 'S/U'} onChange={(e) => p.onLotAssignmentChange(item.productId, 'location', e.target.value)}>
+                          <option value="S/U">Sin Ubicar (S/U)</option>
+                          {WMS_LOCATION_GROUPS.map((g) => (
+                            <optgroup key={g.chamber} label={g.label}>
+                              {g.options.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.value}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -240,23 +254,4 @@ export const ComprasCreateReceiveModals: FC<{
                         <td>{item.product?.name || `Producto #${item.productId}`}</td>
                         <td className="tabular-nums" style={{ textAlign: 'right' }}>{item.quantity} u.</td>
                         <td className="tabular-nums" style={{ textAlign: 'right' }}>{formatCentsArs(parseExactCents(item.costPrice))}</td>
-                        <td className="tabular-nums" style={{ textAlign: 'right' }}>{formatCentsArs(parseExactCents(item.subtotal))}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', backgroundColor: 'var(--bg-app)', borderRadius: '6px', fontWeight: 700 }}>
-                <span>Total neto:</span>
-                <span className="tabular-nums">{formatCentsArs(parseExactCents(p.viewDetailsModal.totalAmount))}</span>
-              </div>
-            </div>
-            <div className="modal-footer" style={{ marginTop: '16px' }}>
-              <button type="button" className="btn btn-secondary" onClick={() => p.setViewDetailsModal(null)}>Cerrar</button>
-            </div>
-          </>
-        )}
-      </NativeModalDialog>
-    </>
-  );
-};
+           

@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import type { Product, ProductLot } from '../../types';
 import { SECTORS_INFO } from './depositomapaData';
-import { X, AlertCircle, Lock, Layers } from 'lucide-react';
+import { X, AlertCircle, Lock, Layers, ArrowRightLeft } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { Slot3DRackIsometricView } from './Slot3DRackIsometricView';
 import { Slot3DLoadStockForm } from './Slot3DLoadStockForm';
+import { Slot3DMoveSlotBar } from './Slot3DMoveSlotBar';
 import { extractSlotLevels, type MergedDepositSlot } from './warehouseLayoutMerger';
 import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
-
-type RackLevel = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+import { computeProductWmsBreakdown } from './wmsStockBreakdown';
+import { WMS_LOCATION_GROUPS } from './depositoHelpers';
+import type { RackLevel, UnassignedTrayItem } from './wmsMapHelpers';
 
 interface Slot3DInspectorModalProps {
   isOpen: boolean;
@@ -18,6 +20,9 @@ interface Slot3DInspectorModalProps {
   slot: MergedDepositSlot | null;
   initialLevel?: RackLevel | null;
   products: Product[];
+  mergedSlots?: MergedDepositSlot[];
+  prefillLoad?: UnassignedTrayItem | null;
+  onPrefillConsumed?: () => void;
   onStockUpdated: () => void;
 }
 
@@ -25,18 +30,21 @@ type Slot3DInspectorInnerProps = Omit<Slot3DInspectorModalProps, 'slot'> & {
   slot: NonNullable<Slot3DInspectorModalProps['slot']>;
 };
 
+const ALL_RACK_LEVELS: RackLevel[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+
 const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
-  isOpen, onClose, slot, initialLevel, products, onStockUpdated,
+  isOpen, onClose, slot, initialLevel, products, mergedSlots, prefillLoad, onPrefillConsumed, onStockUpdated,
 }) => {
   const confirm = useConfirm();
   const chamberInfo = SECTORS_INFO[slot.chamber] || SECTORS_INFO.GENERAL;
-  const supportedLevels = extractSlotLevels(slot.nivel);
-  const supportsLevelB = supportedLevels.includes('B');
-  const supportsLevelC = supportedLevels.includes('C');
+  const supportedLevels = extractSlotLevels(slot.nivel) as RackLevel[];
   const isSlotBlocked = Boolean(slot.isBlocked);
 
   const [activeLevel, setActiveLevel] = useState<RackLevel>('A');
   const [showLoadForm, setShowLoadForm] = useState(false);
+  const [showMoveSlotBar, setShowMoveSlotBar] = useState(false);
+  const [movingLotId, setMovingLotId] = useState<number | null>(null);
+  const [targetLotLocation, setTargetLotLocation] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -60,6 +68,18 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
     if (!supportedLevels.includes(activeLevel)) setActiveLevel(supportedLevels[0] || 'A');
   }, [slot.code, slot.nivel, initialLevel]);
 
+  useEffect(() => {
+    if (!prefillLoad || isSlotBlocked || !isOpen) return;
+    setSelectedProductId(prefillLoad.product.id);
+    setSourceLotId(prefillLoad.lotId ?? '');
+    setLotNumber(prefillLoad.lotNumber || '');
+    setQuantity(prefillLoad.units);
+    setIsNewLot(false);
+    setExpirationDate('');
+    setShowLoadForm(true);
+    setShowMoveSlotBar(false);
+  }, [prefillLoad, isSlotBlocked, isOpen, slot.code]);
+
   const filteredProducts = (localProducts || [])
     .filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()) || p.sku.toLowerCase().includes(productSearch.toLowerCase()) || (p.barcode && p.barcode.includes(productSearch)))
     .slice(0, 8);
@@ -71,23 +91,35 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
     (localProducts || []).forEach((p) => {
       if (p.lots && p.lots.length > 0) {
         p.lots.forEach((l) => {
-          if (l.stock > 0 && (l.location === levelCode || (level === 'A' && l.location === slot.code))) levelItems.push({ product: p, lot: l });
+          const cleanLoc = (l.location || '').trim().toUpperCase();
+          if (l.stock > 0 && (cleanLoc === levelCode || (level === 'A' && cleanLoc === slot.code))) {
+            levelItems.push({ product: p, lot: l });
+          }
         });
-      } else if (p.stock > 0 && (p.defaultLocation === levelCode || (level === 'A' && p.defaultLocation === slot.code))) {
-        levelItems.push({
-          product: p,
-          lot: { id: 0, productId: p.id, lotNumber: 'S/L', expirationDate: '2036-12-31T00:00:00.000Z', stock: p.stock, location: levelCode, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        });
+      } else {
+        const cleanDef = (p.defaultLocation || '').trim().toUpperCase();
+        if (p.stock > 0 && (cleanDef === levelCode || (level === 'A' && cleanDef === slot.code))) {
+          levelItems.push({
+            product: p,
+            lot: { id: 0, productId: p.id, lotNumber: 'S/L', expirationDate: '2036-12-31T00:00:00.000Z', stock: p.stock, location: levelCode, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+          });
+        }
       }
     });
     return levelItems;
   };
 
-  const itemsLevelA = getItemsForLevel('A');
-  const itemsLevelB = getItemsForLevel('B');
-  const itemsLevelC = getItemsForLevel('C');
+  const itemsByLevel = ALL_RACK_LEVELS.reduce(
+    (acc, lvl) => {
+      acc[lvl] = getItemsForLevel(lvl);
+      return acc;
+    },
+    {} as Record<RackLevel, { product: Product; lot: ProductLot }[]>,
+  );
+
+  const occupiedLevels = supportedLevels.filter((lvl) => itemsByLevel[lvl].length > 0);
   const totalStockInSlot = supportedLevels.reduce(
-    (acc, lvl) => acc + getItemsForLevel(lvl).reduce((s, i) => s + i.lot.stock, 0),
+    (acc, lvl) => acc + itemsByLevel[lvl].reduce((s, i) => s + i.lot.stock, 0),
     0,
   );
 
@@ -95,8 +127,11 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
     e.preventDefault();
     if (!selectedProductId || !selectedProduct) return setErrorMsg('Seleccioná un producto de la lista.');
     if (!quantity || Number(quantity) <= 0) return setErrorMsg('Ingresá una cantidad entera mayor a 0.');
-    if (Number(quantity) > selectedProduct.stock) {
-      return setErrorMsg(`No podés ubicar ${quantity} u. porque el stock total disponible de ${selectedProduct.name} es de ${selectedProduct.stock} u.`);
+
+    const chosenSource = (selectedProduct.lots || []).find((l) => l.id === Number(sourceLotId));
+    const maxPhysical = chosenSource ? chosenSource.stock : computeProductWmsBreakdown(selectedProduct).totalUnits;
+    if (Number(quantity) > maxPhysical) {
+      return setErrorMsg(`No podés ubicar ${quantity} u. porque el stock físico disponible en origen es de ${maxPhysical} u.`);
     }
     const targetLocation = `${slot.code}-${activeLevel}`;
     try {
@@ -112,20 +147,41 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
       });
       setSuccessMsg(`Mercadería ubicada en ${targetLocation}.`);
       setShowLoadForm(false); setSelectedProductId(''); setSourceLotId(''); setQuantity(''); setLotNumber('');
+      onPrefillConsumed?.();
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) { setErrorMsg(err.message || 'Error al ubicar la mercadería en el slot.'); } finally { setLoading(false); }
   };
 
-  const handleMoveLot = async (lot: ProductLot, newLevel: RackLevel) => {
-    const newLocation = `${slot.code}-${newLevel}`;
+  const handleMoveLot = async (lot: ProductLot, newLocation: string) => {
     try {
       setLoading(true); setErrorMsg(null);
       await api.updateLot(lot.id, { location: newLocation });
-      setSuccessMsg(`Lote ${extractCleanLotNumber(lot.lotNumber)} reubicado al Nivel ${newLevel}.`);
+      setSuccessMsg(`Lote ${extractCleanLotNumber(lot.lotNumber)} trasladado a ${newLocation}.`);
+      setMovingLotId(null);
+      setTargetLotLocation('');
       onStockUpdated();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) { setErrorMsg(err.message || 'Error al reubicar el lote.'); } finally { setLoading(false); }
+  };
+
+  const handleMoveEntireSlot = async (toSlotCode: string) => {
+    const isConfirmed = await confirm({
+      title: `Mudar Slot ${slot.code}`,
+      message: `¿Confirmás trasladar las ${totalStockInSlot} u. de ${slot.code} hacia ${toSlotCode} conservando lotes, vencimientos y niveles?`,
+      type: 'warning',
+      confirmText: 'Sí, Mudar Slot',
+      cancelText: 'Cancelar',
+    });
+    if (!isConfirmed) return;
+    try {
+      setLoading(true); setErrorMsg(null);
+      await api.moveWmsSlot({ fromSlotCode: slot.code, toSlotCode });
+      setSuccessMsg(`Slot ${slot.code} mudado completo hacia ${toSlotCode}.`);
+      setShowMoveSlotBar(false);
+      onStockUpdated();
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: any) { setErrorMsg(err.message || 'Error al mudar el slot completo.'); } finally { setLoading(false); }
   };
 
   const handleVacatePosition = async (product: Product, lot: ProductLot) => {
@@ -158,8 +214,7 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
     } catch (err: any) { setErrorMsg(err.message || 'Error al liberar el slot completo.'); } finally { setLoading(false); }
   };
 
-  const currentItems = getItemsForLevel(activeLevel);
-  const rack3DLevel: 'A' | 'B' | 'C' = activeLevel === 'B' || activeLevel === 'C' ? activeLevel : 'A';
+  const currentItems = itemsByLevel[activeLevel] || [];
 
   return (
     <NativeModalDialog
@@ -189,7 +244,19 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {totalStockInSlot > 0 && mergedSlots && mergedSlots.length > 1 && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                style={{ fontWeight: 700, fontSize: '0.78rem', padding: '6px 11px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                onClick={() => setShowMoveSlotBar((prev) => !prev)}
+                disabled={loading}
+              >
+                <ArrowRightLeft size={13} aria-hidden="true" />
+                Mudar Slot Completo
+              </button>
+            )}
             {totalStockInSlot > 0 && (
               <button type="button" className="btn btn-sm" style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', fontWeight: 700, fontSize: '0.78rem', padding: '6px 12px', borderRadius: '6px' }} onClick={handleVacateEntireSlot} disabled={loading}>
                 Liberar Slot a S/U
@@ -198,6 +265,17 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
             <button type="button" className="wms-close-btn" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
           </div>
         </div>
+
+        {showMoveSlotBar && mergedSlots && (
+          <Slot3DMoveSlotBar
+            sourceSlot={slot}
+            occupiedLevels={occupiedLevels}
+            mergedSlots={mergedSlots}
+            loading={loading}
+            onConfirmMove={handleMoveEntireSlot}
+            onCancel={() => setShowMoveSlotBar(false)}
+          />
+        )}
 
         {isSlotBlocked && (
           <div role="alert" className="alert alert-danger" style={{ margin: '12px 18px 0 18px', padding: '9px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -209,7 +287,7 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
         {successMsg && <div className="alert alert-success" style={{ margin: '12px 18px 0 18px', padding: '10px 14px', fontSize: '0.82rem' }}>{successMsg}</div>}
 
         <div className="wms-modal-body">
-          <Slot3DRackIsometricView activeLevel={rack3DLevel} setActiveLevel={(lvl) => { setActiveLevel(lvl); setShowLoadForm(false); }} supportsLevelB={supportsLevelB} supportsLevelC={supportsLevelC} itemsLevelA={itemsLevelA} itemsLevelB={itemsLevelB} itemsLevelC={itemsLevelC} />
+          <Slot3DRackIsometricView supportedLevels={supportedLevels} activeLevel={activeLevel} setActiveLevel={(lvl) => { setActiveLevel(lvl); setShowLoadForm(false); }} itemsByLevel={itemsByLevel} />
 
           <div className="wms-shelf-detail-container">
             <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '14px', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -226,7 +304,8 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
                 selectedProductId={selectedProductId} setSelectedProductId={setSelectedProductId} productSearch={productSearch} setProductSearch={setProductSearch}
                 sourceLotId={sourceLotId} setSourceLotId={setSourceLotId}
                 lotNumber={lotNumber} setLotNumber={setLotNumber} isNewLot={isNewLot} setIsNewLot={setIsNewLot} expirationDate={expirationDate} setExpirationDate={setExpirationDate}
-                quantity={quantity} setQuantity={setQuantity} reason={reason} setReason={setReason} loading={loading} onSubmit={handleLoadStock} onCancel={() => setShowLoadForm(false)}
+                quantity={quantity} setQuantity={setQuantity} reason={reason} setReason={setReason} existingLevelItems={currentItems} loading={loading}
+                onSubmit={handleLoadStock} onCancel={() => { setShowLoadForm(false); onPrefillConsumed?.(); }}
               />
             ) : (
               <div>
@@ -276,16 +355,59 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
                             <div style={{ display: 'flex', gap: '4px', fontSize: '0.74rem', alignItems: 'center', flexWrap: 'wrap' }}>
                               <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Mover a:</span>
                               {supportedLevels.filter((lvl) => lvl !== activeLevel).map((lvl) => (
-                                <button key={lvl} type="button" className="btn btn-ghost btn-sm" onClick={() => handleMoveLot(lot, lvl)} style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
+                                <button key={lvl} type="button" className="btn btn-ghost btn-sm" onClick={() => handleMoveLot(lot, `${slot.code}-${lvl}`)} style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
                                   Nivel {lvl}
                                 </button>
                               ))}
+                              <button
+                                type="button"
+                                className="btn btn-secondary btn-sm"
+                                style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+                                onClick={() => {
+                                  setMovingLotId((prev) => (prev === lot.id ? null : lot.id));
+                                  setTargetLotLocation('');
+                                }}
+                              >
+                                Otro slot
+                              </button>
                             </div>
                           )}
                           <button type="button" className="btn btn-outline btn-sm" onClick={() => handleVacatePosition(product, lot)} style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', color: '#e30613', borderColor: '#fca5a5', fontWeight: 700, marginLeft: 'auto' }}>
                             Liberar a S/U
                           </button>
                         </div>
+
+                        {movingLotId === lot.id && !isSlotBlocked && (
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
+                            <select
+                              aria-label={`Destino para lote ${extractCleanLotNumber(lot.lotNumber)}`}
+                              className="select"
+                              value={targetLotLocation}
+                              onChange={(e) => setTargetLotLocation(e.target.value)}
+                              style={{ flex: 1, height: '30px', fontSize: '0.75rem' }}
+                            >
+                              <option value="">Elegir slot destino...</option>
+                              {WMS_LOCATION_GROUPS.map((g) => (
+                                <optgroup key={g.chamber} label={g.label}>
+                                  {g.options
+                                    .filter((opt) => opt.value !== `${slot.code}-${activeLevel}`)
+                                    .map((opt) => (
+                                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </optgroup>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              disabled={loading || !targetLotLocation}
+                              onClick={() => targetLotLocation && handleMoveLot(lot, targetLotLocation)}
+                              style={{ fontSize: '0.74rem', padding: '4px 10px' }}
+                            >
+                              Mover
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

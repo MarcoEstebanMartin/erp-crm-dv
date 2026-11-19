@@ -44,13 +44,14 @@ export function useStockAdjustments({
     setSuccessMessage(null);
 
     try {
-      await api.adjustStock(
-        targetProduct.id,
-        adjustModal.quantityChange,
-        adjustModal.reason || 'Ajuste manual administrativo',
-        adjustModal.lotNumber || undefined,
-        adjustModal.isNewLot ? adjustModal.expirationDate : undefined
-      );
+      await api.adjustStock(targetProduct.id, {
+        quantityChange: adjustModal.quantityChange,
+        reason: adjustModal.reason || 'Ajuste manual administrativo',
+        lotId: !adjustModal.isNewLot && adjustModal.lotId ? adjustModal.lotId : undefined,
+        lotNumber: adjustModal.lotNumber || undefined,
+        expirationDate: adjustModal.isNewLot ? adjustModal.expirationDate : undefined,
+        location: !adjustModal.isNewLot && adjustModal.location ? adjustModal.location : undefined,
+      });
 
       setSuccessMessage(`Ajuste de stock para ${targetProduct.name} aplicado con éxito.`);
       setAdjustModal(INITIAL_ADJUST_MODAL);

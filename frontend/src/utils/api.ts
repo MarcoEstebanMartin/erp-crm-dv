@@ -370,6 +370,17 @@ export const api = {
     });
   },
 
+  moveWmsSlot: async (data: {
+    fromSlotCode: string;
+    toSlotCode: string;
+    reason?: string;
+  }) => {
+    return request('/products/wms/move-slot', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
   getWarehouseCells: async () => {
     const res = await request('/products/wms/cells');
     return res?.cells || [];
@@ -420,7 +431,17 @@ export const api = {
     return res;
   },
 
-  transferLotStock: async (productId: number, transferData: { fromLotId: number; toLotNumber: string; toExpirationDate?: string; quantity: number }) => {
+  transferLotStock: async (
+    productId: number,
+    transferData: {
+      fromLotId: number;
+      toLotId?: number;
+      toLotNumber?: string;
+      toExpirationDate?: string;
+      toLocation?: string;
+      quantity: number;
+    },
+  ) => {
     const res = await request(`/products/${productId}/lots/transfer`, {
       method: 'POST',
       body: JSON.stringify(transferData)

@@ -15,7 +15,9 @@ export interface AdjustModalState {
   product: any | null;
   quantityChange: number;
   reason: string;
+  lotId: number | null;
   lotNumber: string;
+  location: string;
   isNewLot: boolean;
   expirationDate: string;
 }
@@ -27,6 +29,7 @@ export interface LotManagerModalState {
 
 export interface TransferLotData {
   fromLotId: number | '';
+  toLotId: number | '';
   toLotNumber: string;
   toExpirationDate: string;
   isNewDestLot: boolean;
@@ -49,13 +52,16 @@ export const INITIAL_ADJUST_MODAL: AdjustModalState = {
   product: null,
   quantityChange: 0,
   reason: '',
+  lotId: null,
   lotNumber: '',
+  location: '',
   isNewLot: false,
   expirationDate: ''
 };
 
 export const INITIAL_TRANSFER_DATA: TransferLotData = {
   fromLotId: '',
+  toLotId: '',
   toLotNumber: '',
   toExpirationDate: '',
   isNewDestLot: false,

@@ -88,13 +88,39 @@ export default function StockAdjustModal({
             <select
               id="stock-adjust-lot"
               className="select"
-              value={modal.isNewLot ? '__new__' : modal.lotNumber}
+              value={modal.isNewLot ? '__new__' : modal.lotId ? String(modal.lotId) : ''}
               onChange={(e) => {
                 const val = e.target.value;
                 if (val === '__new__') {
-                  onChange({ ...modal, isNewLot: true, lotNumber: '', expirationDate: '' });
+                  onChange({
+                    ...modal,
+                    isNewLot: true,
+                    lotId: null,
+                    lotNumber: '',
+                    location: '',
+                    expirationDate: '',
+                  });
+                } else if (!val) {
+                  onChange({
+                    ...modal,
+                    isNewLot: false,
+                    lotId: null,
+                    lotNumber: '',
+                    location: '',
+                    expirationDate: '',
+                  });
                 } else {
-                  onChange({ ...modal, isNewLot: false, lotNumber: val, expirationDate: '' });
+                  const selected = (modal.product.lots || []).find(
+                    (l: any) => l.id === Number(val),
+                  );
+                  onChange({
+                    ...modal,
+                    isNewLot: false,
+                    lotId: selected ? selected.id : Number(val),
+                    lotNumber: selected ? selected.lotNumber : '',
+                    location: selected ? selected.location || 'S/U' : '',
+                    expirationDate: '',
+                  });
                 }
               }}
               style={{ borderRadius: '8px' }}
@@ -107,7 +133,7 @@ export default function StockAdjustModal({
                   ? 'Sin vencimiento'
                   : `Vence: ${formatCleanExpirationDate(lot.expirationDate)}`;
                 return (
-                  <option key={lot.id} value={lot.lotNumber}>
+                  <option key={lot.id} value={String(lot.id)}>
                     Lote: {cleanLot}
                     {locLabel} ({lot.stock} u. · {expLabel})
                   </option>

@@ -77,13 +77,38 @@ export default function LotTransferForm({
           <select
             id="transfer-to-lot"
             className="select"
-            value={transferData.isNewDestLot ? '__new__' : transferData.toLotNumber}
+            value={
+              transferData.isNewDestLot
+                ? '__new__'
+                : transferData.toLotId
+                  ? String(transferData.toLotId)
+                  : ''
+            }
             onChange={(e) => {
               const val = e.target.value;
               if (val === '__new__') {
-                onChange({ ...transferData, isNewDestLot: true, toLotNumber: '', toExpirationDate: '' });
+                onChange({
+                  ...transferData,
+                  isNewDestLot: true,
+                  toLotId: '',
+                  toLotNumber: '',
+                  toExpirationDate: '',
+                });
+              } else if (!val) {
+                onChange({
+                  ...transferData,
+                  isNewDestLot: false,
+                  toLotId: '',
+                  toLotNumber: '',
+                });
               } else {
-                onChange({ ...transferData, isNewDestLot: false, toLotNumber: val });
+                const dest = lots.find((l: any) => l.id === Number(val));
+                onChange({
+                  ...transferData,
+                  isNewDestLot: false,
+                  toLotId: dest ? dest.id : Number(val),
+                  toLotNumber: dest ? dest.lotNumber : '',
+                });
               }
             }}
             required
@@ -96,7 +121,7 @@ export default function LotTransferForm({
                 const cleanLot = extractCleanLotNumber(l.lotNumber);
                 const locLabel = l.location && l.location !== 'S/U' ? ` · ${l.location}` : '';
                 return (
-                  <option key={l.id} value={l.lotNumber}>
+                  <option key={l.id} value={String(l.id)}>
                     Lote: {cleanLot}{locLabel} (Stock: {l.stock} u.)
                   </option>
                 );

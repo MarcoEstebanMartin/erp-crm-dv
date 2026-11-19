@@ -9,6 +9,7 @@ export interface StockAdjustModalState {
   product: Product | null;
   quantityChange: number;
   reason: string;
+  lotId?: number | null;
   lotNumber: string;
   isNewLot: boolean;
   expirationDate: string;
@@ -36,6 +37,7 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
       product: null,
       quantityChange: 0,
       reason: '',
+      lotId: null,
       lotNumber: '',
       isNewLot: false,
       expirationDate: '',
@@ -89,34 +91,51 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
             <select
               id="deposito-adjust-lot"
               className="select"
-              value={stockModal.isNewLot ? '__new__' : stockModal.lotNumber}
+              value={
+                stockModal.isNewLot
+                  ? '__new__'
+                  : stockModal.lotId
+                    ? String(stockModal.lotId)
+                    : ''
+              }
               onChange={(e) => {
                 const val = e.target.value;
                 if (val === '__new__') {
                   setStockModal({
                     ...stockModal,
                     isNewLot: true,
+                    lotId: null,
+                    lotNumber: '',
+                    expirationDate: '',
+                    location: '',
+                  });
+                } else if (!val) {
+                  setStockModal({
+                    ...stockModal,
+                    isNewLot: false,
+                    lotId: null,
                     lotNumber: '',
                     expirationDate: '',
                     location: '',
                   });
                 } else {
                   const lot = (stockModal.product?.lots || []).find(
-                    (l: any) => l.lotNumber === val,
+                    (l: any) => l.id === Number(val),
                   );
                   setStockModal({
                     ...stockModal,
                     isNewLot: false,
-                    lotNumber: val,
+                    lotId: lot ? lot.id : Number(val),
+                    lotNumber: lot ? lot.lotNumber : '',
                     expirationDate: '',
-                    location: lot ? lot.location || '' : '',
+                    location: lot ? lot.location || 'S/U' : '',
                   });
                 }
               }}
             >
               <option value="">Sin lote</option>
               {(stockModal.product?.lots || []).map((lot: any) => (
-                <option key={lot.id} value={lot.lotNumber}>
+                <option key={lot.id} value={String(lot.id)}>
                   Lote: {extractCleanLotNumber(lot.lotNumber)} ({lot.location || 'S/U'} · Stock: {lot.stock} u. ·{' '}
                   {formatCleanExpirationDate(lot.expirationDate)})
                 </option>

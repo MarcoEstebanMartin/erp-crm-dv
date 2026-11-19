@@ -34,7 +34,7 @@ export function useDepositoController(activeTab: string, confirm: any) {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [stockModal, setStockModal] = useState<StockAdjustModalState>({
-    open: false, product: null, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '', location: '',
+    open: false, product: null, quantityChange: 0, reason: '', lotId: null, lotNumber: '', isNewLot: false, expirationDate: '', location: '',
   });
   const [lotAssignments, setLotAssignments] = useState<Record<number, Record<number, number>>>({});
   const [confirmedLocations, setConfirmedLocations] = useState<Record<number, boolean>>({});
@@ -290,9 +290,16 @@ export function useDepositoController(activeTab: string, confirm: any) {
     if (!stockModal.product || !stockModal.quantityChange) return;
     setErrorMsg(null); setSuccessMsg(null); setLoading(true);
     try {
-      await api.adjustStock(stockModal.product.id, Number(stockModal.quantityChange), stockModal.reason || 'Ajuste manual depósito', stockModal.lotNumber || undefined, stockModal.isNewLot ? stockModal.expirationDate : undefined, stockModal.location || undefined);
+      await api.adjustStock(stockModal.product.id, {
+        quantityChange: Number(stockModal.quantityChange),
+        reason: stockModal.reason || 'Ajuste manual depósito',
+        lotId: !stockModal.isNewLot && stockModal.lotId ? stockModal.lotId : undefined,
+        lotNumber: stockModal.lotNumber || undefined,
+        expirationDate: stockModal.isNewLot ? stockModal.expirationDate : undefined,
+        location: stockModal.location || undefined,
+      });
       setSuccessMsg(`Stock de ${stockModal.product.name} ajustado con éxito.`);
-      setStockModal({ open: false, product: null, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '', location: '' });
+      setStockModal({ open: false, product: null, quantityChange: 0, reason: '', lotId: null, lotNumber: '', isNewLot: false, expirationDate: '', location: '' });
       fetchData();
     } catch (err: any) { setErrorMsg(err.message || 'Error al ajustar stock.'); } finally { setLoading(false); }
   };

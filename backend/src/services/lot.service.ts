@@ -176,7 +176,7 @@ export class LotService {
    * Transferir stock entre dos lotes del mismo producto de forma atómica (`Δ Product.stock = 0`).
    */
   async transferStock(productId: number, data: any, userId: number) {
-    const { fromLotId, toLotNumber, toExpirationDate, toLocation, quantity } = data;
+    const { fromLotId, toLotId, toLotNumber, toExpirationDate, toLocation, quantity } = data;
     const qty = Math.trunc(Number(quantity));
 
     if (!Number.isFinite(qty) || qty <= 0) {
@@ -197,48 +197,66 @@ export class LotService {
         );
       }
 
-      const cleanToLot = extractBaseLotNumber(String(toLotNumber ?? ''));
-      const targetLocation =
-        toLocation !== undefined
-          ? normalizeWmsLocationCode(toLocation)
-          : normalizeWmsLocationCode(fromLot.location);
-
-      let toLot = await tx.productLot.findUnique({
-        where: {
-          productId_lotNumber_location: { productId, lotNumber: cleanToLot, location: targetLocation },
-        },
-      });
-      // Sin ubicación explícita, el lote destino elegido de la lista puede estar en otro rack.
-      if (!toLot && toLocation === undefined) {
-        toLot = await tx.productLot.findFirst({
-          where: { productId, lotNumber: cleanToLot },
-          orderBy: { id: 'asc' },
-        });
-      }
-
-      if (!toLot) {
-        if (!toExpirationDate) {
-          throw new Error(
-            `La fecha de vencimiento es requerida para crear el lote de destino "${cleanToLot}".`,
-          );
+      let toLot: any = null;
+      if (toLotId) {
+        toLot = await tx.productLot.findUnique({ where: { id: Number(toLotId) } });
+        if (!toLot) {
+          throw new Error('El lote de destino seleccionado no existe.');
         }
-        await assertSlotAcceptsStockInTx(tx, targetLocation);
-        toLot = await tx.productLot.create({
-          data: {
-            productId,
-            lotNumber: cleanToLot,
-            expirationDate: new Date(toExpirationDate),
-            stock: 0,
-            location: targetLocation,
-          },
-        });
-      } else {
+        if (toLot.productId !== productId) {
+          throw new Error('El lote de destino no pertenece al producto seleccionado.');
+        }
         const resolvedDestLoc = normalizeWmsLocationCode(toLot.location);
         if (
           resolvedDestLoc !== 'S/U' &&
           resolvedDestLoc !== normalizeWmsLocationCode(fromLot.location)
         ) {
           await assertSlotAcceptsStockInTx(tx, resolvedDestLoc);
+        }
+      } else {
+        const cleanToLot = extractBaseLotNumber(String(toLotNumber ?? ''));
+        const targetLocation =
+          toLocation !== undefined
+            ? normalizeWmsLocationCode(toLocation)
+            : normalizeWmsLocationCode(fromLot.location);
+
+        toLot = await tx.productLot.findUnique({
+          where: {
+            productId_lotNumber_location: { productId, lotNumber: cleanToLot, location: targetLocation },
+          },
+        });
+        // Sin ubicación explícita, el lote destino elegido de la lista puede estar en otro rack.
+        if (!toLot && toLocation === undefined) {
+          toLot = await tx.productLot.findFirst({
+            where: { productId, lotNumber: cleanToLot },
+            orderBy: { id: 'asc' },
+          });
+        }
+
+        if (!toLot) {
+          if (!toExpirationDate) {
+            throw new Error(
+              `La fecha de vencimiento es requerida para crear el lote de destino "${cleanToLot}".`,
+            );
+          }
+          await assertSlotAcceptsStockInTx(tx, targetLocation);
+          toLot = await tx.productLot.create({
+            data: {
+              productId,
+              lotNumber: cleanToLot,
+              expirationDate: new Date(toExpirationDate),
+              stock: 0,
+              location: targetLocation,
+            },
+          });
+        } else {
+          const resolvedDestLoc = normalizeWmsLocationCode(toLot.location);
+          if (
+            resolvedDestLoc !== 'S/U' &&
+            resolvedDestLoc !== normalizeWmsLocationCode(fromLot.location)
+          ) {
+            await assertSlotAcceptsStockInTx(tx, resolvedDestLoc);
+          }
         }
       }
 

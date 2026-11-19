@@ -1,12 +1,14 @@
-import React from 'react';
-import type { Product } from '../../types';
+import React, { useEffect, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
+import type { Product, ProductLot } from '../../types';
 import type { DepositSlot } from './depositomapaData';
 import { computeProductWmsBreakdown } from './wmsStockBreakdown';
 import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
+import { computeLevelMixWarning, type RackLevel } from './wmsMapHelpers';
 
 interface Slot3DLoadStockFormProps {
   slot: DepositSlot;
-  activeLevel: 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+  activeLevel: RackLevel;
   products: Product[];
   filteredProducts: Product[];
   selectedProduct: Product | undefined;
@@ -26,6 +28,7 @@ interface Slot3DLoadStockFormProps {
   setQuantity: (q: number | '') => void;
   reason: string;
   setReason: (r: string) => void;
+  existingLevelItems: { product: Product; lot: ProductLot }[];
   loading: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
@@ -34,12 +37,39 @@ interface Slot3DLoadStockFormProps {
 export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
   slot, activeLevel, products, filteredProducts, selectedProduct, selectedProductId, setSelectedProductId,
   productSearch, setProductSearch, sourceLotId, setSourceLotId, lotNumber, setLotNumber, isNewLot, setIsNewLot,
-  expirationDate, setExpirationDate, quantity, setQuantity, reason, setReason, loading, onSubmit, onCancel,
+  expirationDate, setExpirationDate, quantity, setQuantity, reason, setReason, existingLevelItems, loading,
+  onSubmit, onCancel,
 }) => {
+  const [mixConfirmed, setMixConfirmed] = useState(false);
+
   const wms = selectedProduct ? computeProductWmsBreakdown(selectedProduct) : null;
   const activeLots = (selectedProduct?.lots || []).filter((l) => l.stock > 0);
   const chosenSourceLot = activeLots.find((l) => l.id === Number(sourceLotId));
-  const maxRelocatable = chosenSourceLot ? chosenSourceLot.stock : wms ? wms.totalUnits : 0;
+  const physicalUnits = wms ? wms.totalUnits : 0;
+  const availableUnits = selectedProduct ? Math.max(0, Number(selectedProduct.stock || 0)) : 0;
+  const reservedUnits = Math.max(0, physicalUnits - availableUnits);
+  const maxRelocatable = chosenSourceLot ? chosenSourceLot.stock : physicalUnits;
+
+  const autoFefoCandidate =
+    !chosenSourceLot && !isNewLot
+      ? activeLots.find((l) => !l.location || l.location === 'S/U') || activeLots[0]
+      : undefined;
+
+  const mixWarning = computeLevelMixWarning(existingLevelItems, {
+    productId: selectedProductId,
+    lotNumber: isNewLot
+      ? lotNumber
+      : chosenSourceLot?.lotNumber || autoFefoCandidate?.lotNumber || lotNumber,
+    expirationDate: isNewLot
+      ? expirationDate || null
+      : chosenSourceLot?.expirationDate || autoFefoCandidate?.expirationDate || null,
+  });
+
+  useEffect(() => {
+    setMixConfirmed(false);
+  }, [selectedProductId, activeLevel, sourceLotId, isNewLot, expirationDate, lotNumber]);
+
+  const quickFillUnits = chosenSourceLot ? chosenSourceLot.stock : wms ? wms.unassignedUnits : 0;
 
   return (
     <form
@@ -80,16 +110,21 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
                 Cambiar
               </button>
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '0.73rem' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', fontSize: '0.72rem' }}>
               <span style={{ backgroundColor: '#DCFCE7', color: '#15803D', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', fontVariantNumeric: 'tabular-nums' }}>
                 Sin Ubicar (S/U): {wms.unassignedUnits} u.
               </span>
               <span style={{ backgroundColor: '#E2E8F0', color: '#334155', fontWeight: 600, padding: '2px 7px', borderRadius: '4px', fontVariantNumeric: 'tabular-nums' }}>
                 En Mapa: {wms.locatedUnits} u.
               </span>
-              <span style={{ color: '#475569', fontWeight: 600, padding: '2px 4px' }}>
-                Total Físico: <strong>{wms.totalUnits} u.</strong>
+              <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', color: '#0F172A', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                Físico: {physicalUnits} u.
               </span>
+              {reservedUnits > 0 && (
+                <span style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', fontVariantNumeric: 'tabular-nums' }}>
+                  Reservado: {reservedUnits} u. · Disponible: {availableUnits} u.
+                </span>
+              )}
             </div>
           </div>
         ) : (
@@ -111,12 +146,12 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
             >
               <option value="">-- Seleccionar producto del depósito --</option>
               {(filteredProducts.length > 0 ? filteredProducts : products || [])
-                .filter((p) => p.stock > 0)
+                .filter((p) => computeProductWmsBreakdown(p).totalUnits > 0)
                 .map((p) => {
                   const b = computeProductWmsBreakdown(p);
                   return (
                     <option key={p.id} value={p.id}>
-                      [{p.sku}] {p.name} — S/U: {b.unassignedUnits} u. (Total: {b.totalUnits} u.)
+                      [{p.sku}] {p.name} — S/U: {b.unassignedUnits} u. (Físico: {b.totalUnits} u.)
                     </option>
                   );
                 })}
@@ -178,13 +213,13 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
         <div style={{ width: '165px', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
             <label htmlFor="slot-load-qty" style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569' }}>Cantidad (u.)</label>
-            {wms && wms.unassignedUnits > 0 && (
+            {quickFillUnits > 0 && (
               <button
                 type="button"
-                onClick={() => setQuantity(chosenSourceLot ? chosenSourceLot.stock : wms.unassignedUnits)}
+                onClick={() => setQuantity(quickFillUnits)}
                 style={{ fontSize: '0.68rem', fontWeight: 700, color: '#007AFF', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}
               >
-                Usar {chosenSourceLot ? chosenSourceLot.stock : wms.unassignedUnits} u.
+                Usar {quickFillUnits} u.
               </button>
             )}
           </div>
@@ -206,9 +241,41 @@ export const Slot3DLoadStockForm: React.FC<Slot3DLoadStockFormProps> = ({
         </div>
       </div>
 
+      {mixWarning && (
+        <div
+          role="status"
+          style={{
+            backgroundColor: '#fffbeb',
+            border: '1.5px solid #f59e0b',
+            borderRadius: '8px',
+            padding: '10px 12px',
+            fontSize: '0.77rem',
+            color: '#92400e',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', fontWeight: 700 }}>
+            <AlertTriangle size={15} aria-hidden="true" style={{ flexShrink: 0, marginTop: '1px' }} />
+            <span>{mixWarning.message}</span>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 700 }}>
+            <input
+              type="checkbox"
+              checked={mixConfirmed}
+              onChange={(e) => setMixConfirmed(e.target.checked)}
+            />
+            <span>Confirmo ubicar junto a la mercadería existente</span>
+          </label>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
         <button
-          type="submit" className="btn btn-primary" disabled={loading || (selectedProduct ? maxRelocatable <= 0 : false)}
+          type="submit"
+          className="btn btn-primary"
+          disabled={loading || (selectedProduct ? maxRelocatable <= 0 : false) || Boolean(mixWarning && !mixConfirmed)}
           style={{ flex: 1, height: '38px', fontSize: '0.84rem', fontWeight: 700, borderRadius: '8px', backgroundColor: '#0F172A', borderColor: '#0F172A', color: '#FFFFFF' }}
         >
           {loading ? 'Ubicando...' : `Ubicar en Nivel ${activeLevel}`}

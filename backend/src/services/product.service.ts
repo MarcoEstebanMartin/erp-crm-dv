@@ -273,6 +273,7 @@ export class ProductService {
   executeStockReconciliation = (userId: number) => productReconciliationSubService.executeStockReconciliation(userId);
   clearWmsLocation = (input: any, userId: number) => productWmsSubService.clearWmsLocation(input, userId);
   assignWmsLocation = (data: any, userId: number) => productWmsSubService.assignWmsLocation(data, userId);
+  moveWmsSlot = (data: any, userId: number) => productWmsSubService.moveWmsSlot(data, userId);
   uploadSingleProductImage = (productId: number, file: Express.Multer.File, userId?: number) => productImageSubService.uploadSingleProductImage(productId, file, userId);
   importProductImagesFromZip = (fileBuffer: Buffer, userId?: number) => productImageSubService.importProductImagesFromZip(fileBuffer, userId);
 }

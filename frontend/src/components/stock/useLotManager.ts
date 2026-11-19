@@ -70,6 +70,7 @@ export function useLotManager({
     const lotsWithStock = (lotManagerModal.product?.lots || []).filter((l: any) => l.stock > 0);
     setTransferData({
       fromLotId: lotsWithStock.length > 0 ? lotsWithStock[0].id : '',
+      toLotId: '',
       toLotNumber: '',
       toExpirationDate: '',
       isNewDestLot: false,
@@ -167,7 +168,10 @@ export function useLotManager({
     try {
       await api.transferLotStock(lotManagerModal.product.id, {
         fromLotId: Number(transferData.fromLotId),
-        toLotNumber: transferData.toLotNumber,
+        toLotId: !transferData.isNewDestLot && transferData.toLotId ? Number(transferData.toLotId) : undefined,
+        toLotNumber: transferData.isNewDestLot
+          ? transferData.toLotNumber
+          : transferData.toLotNumber || undefined,
         toExpirationDate: transferData.isNewDestLot ? transferData.toExpirationDate : undefined,
         quantity: Number(transferData.quantity)
       });

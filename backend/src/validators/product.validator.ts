@@ -151,6 +151,22 @@ export const clearWmsLocationSchema = z.object({
   }),
 });
 
+export const moveWmsSlotSchema = z.object({
+  body: z.object({
+    fromSlotCode: z
+      .string()
+      .trim()
+      .min(1, 'El slot de origen es obligatorio')
+      .max(40, 'Código de origen inválido'),
+    toSlotCode: z
+      .string()
+      .trim()
+      .min(1, 'El slot de destino es obligatorio')
+      .max(40, 'Código de destino inválido'),
+    reason: z.string().max(200).optional(),
+  }),
+});
+
 export const importPricesSchema = z.object({
   body: z.object({
     products: z

@@ -9,6 +9,10 @@ import {
 } from '../../engines/stock.engine';
 import { assertSlotAcceptsStockInTx } from '../../utils/warehouse-base-layout.util';
 import { executeWmsAssignmentInTx } from './product-wms-tx.helper';
+import {
+  executeMoveWmsSlotInTx,
+  type MoveWmsSlotInput,
+} from './product-wms-move.helper';
 
 export interface ClearWmsLocationInput {
   locationCode: string;
@@ -308,6 +312,33 @@ export class ProductWmsSubService {
         mode === 'RELOCATE'
           ? `Se ubicaron ${qty} u. en la posición ${scope.cleanCode} (stock total conservado sin descalces).`
           : `Se ingresaron ${qty} u. nuevas en la posición ${scope.cleanCode}.`,
+      result,
+    };
+  }
+
+  /**
+   * Mudar todos los lotes activos de un slot WMS completo hacia otro slot en 1 transacción (`Δ Stock = 0`).
+   */
+  async moveWmsSlot(data: MoveWmsSlotInput, userId: number) {
+    const result = await prisma.$transaction(async (tx) =>
+      executeMoveWmsSlotInTx(tx, {
+        fromSlotCode: data.fromSlotCode,
+        toSlotCode: data.toSlotCode,
+        reason: data.reason,
+        userId,
+      }),
+    );
+
+    await logAudit({
+      userId,
+      action: 'MOVE_WMS_SLOT',
+      entityType: 'ProductLot',
+      entityId: 0,
+      newValues: result,
+    });
+
+    return {
+      message: `Slot ${result.fromSlotCode} mudado a ${result.toSlotCode} (${result.movedUnits} u. en ${result.movedLotsCount} lotes).`,
       result,
     };
   }

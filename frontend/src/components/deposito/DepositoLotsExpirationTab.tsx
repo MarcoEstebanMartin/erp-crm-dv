@@ -258,6 +258,7 @@ export const DepositoLotsExpirationTab: React.FC<DepositoLotsExpirationTabProps>
                                 product,
                                 quantityChange: 0,
                                 reason: 'Ajuste de stock desde panel de vencimientos',
+                                lotId: lot.id,
                                 lotNumber: lot.lotNumber,
                                 isNewLot: false,
                                 expirationDate: lot.expirationDate,

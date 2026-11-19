@@ -4,6 +4,14 @@ import { SECTORS_INFO } from './depositomapaData';
 import { Slot3DInspectorModal } from './Slot3DInspectorModal';
 import { WarehouseSlotInspectorSidebar } from './WarehouseSlotInspectorSidebar';
 import { WarehouseSlotConfigSidebar } from './WarehouseSlotConfigSidebar';
+import { WarehouseUnassignedTray } from './WarehouseUnassignedTray';
+import {
+  buildSlotStockSummaryMap,
+  buildUnassignedTrayEntries,
+  formatCompactSlotLevels,
+  resolveWarehouseForSector,
+  type UnassignedTrayItem,
+} from './wmsMapHelpers';
 import {
   extractBaseSlotFromLocation,
   mergeWarehouseLayout,
@@ -11,7 +19,7 @@ import {
   type MergedSlotCellData,
   type WarehouseCellOverride,
 } from './warehouseLayoutMerger';
-import { Maximize2, Minimize2, Search, Settings2, X } from 'lucide-react';
+import { Clock, Lock, Maximize2, Minimize2, PackagePlus, Search, Settings2, X } from 'lucide-react';
 import { api } from '../../utils/api';
 
 interface WarehouseMapProps {
@@ -38,6 +46,8 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
   const [is3DModalOpen, setIs3DModalOpen] = useState(false);
   const [focusedLevel, setFocusedLevel] = useState<'A' | 'B' | 'C' | 'D' | 'E' | 'F' | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'inspector' | 'tray'>('inspector');
+  const [pendingPlaceItem, setPendingPlaceItem] = useState<UnassignedTrayItem | null>(null);
 
   const loadCustomCells = useCallback(async () => {
     try {
@@ -87,31 +97,8 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
     return null;
   }, [mergedMatrix, selectedEditCode]);
 
-  const slotStockMap = useMemo(() => {
-    const map: Record<string, { totalStock: number; itemsCount: number; hasStock: boolean; levels: Set<string> }> = {};
-    (products || []).forEach((p) => {
-      if (p.lots && p.lots.length > 0) {
-        p.lots.forEach((l) => {
-          const baseCode = extractBaseSlotFromLocation(l.location);
-          if (l.stock > 0 && baseCode) {
-            if (!map[baseCode]) map[baseCode] = { totalStock: 0, itemsCount: 0, hasStock: true, levels: new Set() };
-            map[baseCode].totalStock += l.stock;
-            map[baseCode].itemsCount += 1;
-            const parts = (l.location || '').toUpperCase().split('-');
-            map[baseCode].levels.add(parts[3] || 'A');
-          }
-        });
-      } else {
-        const baseCode = extractBaseSlotFromLocation(p.defaultLocation);
-        if (p.stock > 0 && baseCode) {
-          if (!map[baseCode]) map[baseCode] = { totalStock: 0, itemsCount: 0, hasStock: true, levels: new Set(['A']) };
-          map[baseCode].totalStock += p.stock;
-          map[baseCode].itemsCount += 1;
-        }
-      }
-    });
-    return map;
-  }, [products]);
+  const slotStockMap = useMemo(() => buildSlotStockSummaryMap(products), [products]);
+  const unassignedItems = useMemo(() => buildUnassignedTrayEntries(products), [products]);
 
   const filteredMatrix = useMemo(() => {
     if (selectedWarehouse === 'D1') return mergedMatrix.slice(0, 7);
@@ -147,6 +134,10 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
     }
     if (!cell.is_storage) return;
     setSelectedSlotCode(cell.code);
+    if (pendingPlaceItem && !cell.isBlocked) {
+      setFocusedLevel(null);
+      setIs3DModalOpen(true);
+    }
   };
 
   const editCellStockInfo = selectedEditCell ? slotStockMap[selectedEditCell.code] : undefined;
@@ -198,6 +189,19 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
             ))}
           </div>
 
+          <button
+            type="button"
+            className={`btn ${sidebarTab === 'tray' && !isEditMode ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontSize: '0.78rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}
+            onClick={() => {
+              setIsEditMode(false);
+              setSidebarTab((prev) => (prev === 'tray' ? 'inspector' : 'tray'));
+            }}
+          >
+            <PackagePlus size={14} aria-hidden="true" />
+            <span>Por Ubicar ({unassignedItems.length})</span>
+          </button>
+
           {isAdmin && (
             <button
               type="button"
@@ -210,7 +214,10 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
               onClick={() => {
                 const next = !isEditMode;
                 setIsEditMode(next);
-                if (next && selectedSlotCode) setSelectedEditCode(selectedSlotCode);
+                if (next) {
+                  setPendingPlaceItem(null);
+                  if (selectedSlotCode) setSelectedEditCode(selectedSlotCode);
+                }
               }}
             >
               <Settings2 size={14} />
@@ -224,6 +231,17 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
           </button>
         </div>
       </div>
+
+      {pendingPlaceItem && (
+        <div role="status" style={{ padding: '10px 16px', backgroundColor: '#eff6ff', border: '1.5px solid #007AFF', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.82rem', color: '#1e3a8a', fontWeight: 700 }}>
+            Ubicando [{pendingPlaceItem.product.sku}] {pendingPlaceItem.product.name} ({pendingPlaceItem.units} u.) — Seleccioná un slot libre del mapa
+          </span>
+          <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px' }} onClick={() => setPendingPlaceItem(null)}>
+            Cancelar
+          </button>
+        </div>
+      )}
 
       {focusLocationCode && selectedSlot && (
         <div style={{ padding: '10px 16px', backgroundColor: '#eff6ff', border: '1.5px solid #3b82f6', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -252,7 +270,13 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
             <button
               key={key} type="button" className="btn btn-sm"
               style={{ backgroundColor: isSelected ? info.color : info.bg, color: isSelected ? '#ffffff' : info.color, border: `1.5px solid ${info.border}`, fontWeight: 600, fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-              onClick={() => { setSelectedSector(selectedSector === key ? 'ALL' : key); if (selectedWarehouse === 'ALL') setSelectedWarehouse('D1'); }}
+              onClick={() => {
+                const next = selectedSector === key ? 'ALL' : key;
+                setSelectedSector(next);
+                if (next !== 'ALL') {
+                  setSelectedWarehouse(resolveWarehouseForSector(next));
+                }
+              }}
             >
               <span aria-hidden="true" style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: isSelected ? '#ffffff' : info.color, display: 'inline-block' }} />
               {info.label}
@@ -264,6 +288,14 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
             Limpiar
           </button>
         )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '14px', fontSize: '0.74rem', color: 'var(--text-secondary)', alignItems: 'center', flexWrap: 'wrap', padding: '0 4px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#ffffff', border: '1.5px solid #94a3b8' }} /> Vacío</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#ecfdf5', border: '1.5px solid #16a34a' }} /> Ocupado OK</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#fffbeb', border: '1.5px solid #d97706' }} /> Por vencer</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#fef2f2', border: '1.5px solid #E30613' }} /> Vencido</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: '#fee2e2', border: '1.5px dashed #dc2626' }} /> Bloqueado</span>
       </div>
 
       <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', width: '100%' }}>
@@ -279,51 +311,64 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
                       const slotCode = cell.code;
                       const stockData = isSlot ? slotStockMap[slotCode] : null;
                       const hasStock = Boolean(stockData && stockData.hasStock);
+                      const health = stockData?.health || 'EMPTY';
                       const isSelected = isEditMode ? selectedEditCode === slotCode : selectedSlot?.code === slotCode;
                       const isChamberMatch = selectedSector !== 'ALL' && isSlot && cell?.chamber === selectedSector;
                       const isSearchMatch = isSlot ? matchingSlotCodes.has(slotCode) : false;
 
-                      let bg = 'transparent', color = '#334155', border = isEditMode ? '1px dashed #e2e8f0' : '1px solid transparent';
+                      let bg = 'transparent', backgroundImage = 'none', color = '#334155', border = isEditMode ? '1px dashed #e2e8f0' : '1px solid transparent';
                       const chamberMeta = cell?.chamber ? SECTORS_INFO[cell.chamber] : null;
                       if (!isSlot) {
                         color = '#94a3b8';
                         if (cellText && cellText.trim() !== '') { border = '1px solid #cbd5e1'; color = '#0f172a'; bg = '#f8fafc'; }
                       } else if (cell.isBlocked) {
-                        bg = '#fee2e2'; color = '#991b1b'; border = '1.5px dashed #ef4444';
+                        bg = '#fee2e2';
+                        backgroundImage = 'repeating-linear-gradient(135deg, #fee2e2, #fee2e2 4px, #fecaca 4px, #fecaca 8px)';
+                        color = '#991b1b';
+                        border = '1.5px dashed #dc2626';
+                      } else if (health === 'EXPIRED') {
+                        bg = '#fef2f2'; color = '#991b1b'; border = '2px solid #E30613';
+                      } else if (health === 'EXPIRING_SOON') {
+                        bg = '#fffbeb'; color = '#92400e'; border = '2px solid #d97706';
+                      } else if (hasStock) {
+                        bg = '#ecfdf5'; color = '#166534'; border = '2px solid #16a34a';
                       } else {
-                        bg = cell?.fill && cell.fill.toUpperCase() !== '#000000' && cell.fill.toUpperCase() !== '#000' ? cell.fill : '#ffffff';
-                        border = '1px solid #cbd5e1';
-                        if (chamberMeta && chamberMeta !== SECTORS_INFO.GENERAL) { bg = chamberMeta.bg; color = chamberMeta.color; border = `1.5px solid ${chamberMeta.border}`; }
-                        if (cell?.fill && cell.fill.toUpperCase() !== '#FFFFFF' && cell.fill.toUpperCase() !== '#000000') { bg = cell.fill; border = '1px solid rgba(0,0,0,0.18)'; color = '#0f172a'; }
-                        else if (cellText === 'A') { bg = '#ffffff'; color = '#334155'; border = '1px solid #94a3b8'; }
-                        else if (cellText === 'A-B') { bg = '#fef3c7'; color = '#92400e'; border = '1.5px solid #f59e0b'; }
-                        else if (cellText === 'A-B-C') { bg = '#dbeafe'; color = '#1e40af'; border = '1.5px solid #3b82f6'; }
-                        else if (cellText === 'A-B-C-D' || cellText === 'A-B-C-D-E-F') { bg = '#dcfce7'; color = '#166534'; border = '2px solid #22c55e'; }
+                        bg = '#ffffff';
+                        color = chamberMeta && chamberMeta !== SECTORS_INFO.GENERAL ? chamberMeta.color : '#334155';
+                        border = chamberMeta && chamberMeta !== SECTORS_INFO.GENERAL ? `1.5px solid ${chamberMeta.border}` : '1.5px solid #cbd5e1';
                       }
+
+                      const finalBorder = isSelected ? '2.5px solid #007AFF' : isSearchMatch ? '2.5px solid #eab308' : isChamberMatch && !hasStock ? '2px solid #0284c7' : border;
+                      const finalBg = isSelected ? '#e0f2fe' : isSearchMatch ? '#fef9c3' : isChamberMatch && !hasStock ? '#bae6fd' : bg;
 
                       return (
                         <td
                           key={cIdx} onClick={() => handleCellClick(cell)}
                           style={{
-                            width: '36px', minWidth: '36px', maxWidth: '36px', height: '34px',
-                            border: isSelected ? '2.5px solid #007AFF' : isSearchMatch ? '2.5px solid #eab308' : isChamberMatch ? '2.5px solid #0284c7' : hasStock && !cell.isBlocked ? '2px solid #22c55e' : border,
-                            backgroundColor: isSelected ? '#e0f2fe' : isSearchMatch ? '#fef9c3' : isChamberMatch ? '#bae6fd' : hasStock && !cell.isBlocked ? '#dcfce7' : bg,
-                            color: isSelected ? '#007AFF' : isChamberMatch ? '#0369a1' : hasStock && !cell.isBlocked ? '#15803d' : color,
+                            width: '46px', minWidth: '46px', maxWidth: '46px', height: '40px',
+                            border: finalBorder,
+                            backgroundColor: finalBg,
+                            backgroundImage: !isSelected && cell.isBlocked ? backgroundImage : 'none',
+                            color: isSelected ? '#007AFF' : color,
                             fontWeight: isSlot || (cellText && cellText.length > 2) ? 'bold' : 'normal',
-                            fontSize: !isSlot && cellText && cellText.length > 3 ? '0.6rem' : '0.64rem',
-                            padding: '1px 2px', textAlign: 'center', cursor: isSlot || isEditMode ? 'pointer' : 'default', userSelect: 'none',
+                            fontSize: !isSlot && cellText && cellText.length > 3 ? '0.58rem' : '0.64rem',
+                            padding: '2px', textAlign: 'center', cursor: isSlot || isEditMode ? 'pointer' : 'default', userSelect: 'none',
                             whiteSpace: !isSlot ? 'normal' : 'nowrap', wordBreak: 'break-word', lineHeight: 1.1, overflow: 'hidden', borderRadius: isSlot ? '5px' : '3px',
                           }}
                           title={isSlot ? `Slot ${slotCode} (${cellText})${cell.customLabel ? ` [${cell.customLabel}]` : ''} - ${cell.isBlocked ? 'BLOQUEADO' : hasStock ? `${stockData?.totalStock} u.` : 'Vacío'}` : isEditMode ? `Pasillo ${slotCode} (clic para configurar)` : cellText}
                         >
                           {isSlot ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-                              <span>{cellText}</span>
-                              {cell.isBlocked ? (
-                                <span aria-label="Bloqueado" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#dc2626', display: 'inline-block' }} />
-                              ) : hasStock ? (
-                                <span aria-label="Con stock" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e', display: 'inline-block' }} />
-                              ) : null}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px', lineHeight: 1.05 }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                <span>{formatCompactSlotLevels(cellText)}</span>
+                                {cell.isBlocked && <Lock size={9} aria-label="Bloqueado" />}
+                                {!cell.isBlocked && health === 'EXPIRING_SOON' && <Clock size={9} aria-label="Por vencer" />}
+                              </span>
+                              {hasStock && (
+                                <span className="tabular-nums" style={{ fontSize: '0.62rem', fontWeight: 800 }}>
+                                  {stockData?.totalStock}u
+                                </span>
+                              )}
                             </div>
                           ) : cellText}
                         </td>
@@ -344,13 +389,29 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
             originalBlueprint={selectedEditCell ? originalCellByCode[selectedEditCell.code] : undefined}
             onSaved={loadCustomCells}
           />
+        ) : sidebarTab === 'tray' ? (
+          <WarehouseUnassignedTray
+            items={unassignedItems}
+            selectedItem={pendingPlaceItem}
+            onSelectItem={setPendingPlaceItem}
+          />
         ) : (
           <WarehouseSlotInspectorSidebar selectedSlot={selectedSlot} products={products} onOpen3DModal={() => setIs3DModalOpen(true)} />
         )}
       </div>
 
       {selectedSlot && (
-        <Slot3DInspectorModal isOpen={is3DModalOpen} onClose={() => setIs3DModalOpen(false)} slot={selectedSlot} initialLevel={focusedLevel} products={products} onStockUpdated={onStockUpdated} />
+        <Slot3DInspectorModal
+          isOpen={is3DModalOpen}
+          onClose={() => setIs3DModalOpen(false)}
+          slot={selectedSlot}
+          initialLevel={focusedLevel}
+          products={products}
+          mergedSlots={mergedSlots}
+          prefillLoad={pendingPlaceItem}
+          onPrefillConsumed={() => setPendingPlaceItem(null)}
+          onStockUpdated={onStockUpdated}
+        />
       )}
     </div>
   );

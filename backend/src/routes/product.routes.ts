@@ -18,6 +18,7 @@ import {
   reconcileStockDrift,
   clearWmsLocation,
   assignWmsLocation,
+  moveWmsSlot,
   revertPrices,
 } from '../controllers/product.controller';
 import {
@@ -46,6 +47,7 @@ import {
   adjustStockBatchSchema,
   assignWmsLocationSchema,
   clearWmsLocationSchema,
+  moveWmsSlotSchema,
   importPricesSchema,
   bulkUpdatePricesSchema,
 } from '../validators/product.validator';
@@ -205,6 +207,14 @@ router.post(
   idempotencyGuard,
   validateRequest(assignWmsLocationSchema),
   assignWmsLocation,
+);
+router.post(
+  '/wms/move-slot',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.DEPOSITO, Role.FACTURACION]),
+  idempotencyGuard,
+  validateRequest(moveWmsSlotSchema),
+  moveWmsSlot,
 );
 
 export default router;
