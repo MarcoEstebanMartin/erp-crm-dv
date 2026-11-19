@@ -176,9 +176,7 @@ export const centralDrawerService = {
         status: 'CLOSED',
         openedAt: now,
         closedAt: now,
-        notes: params.notes
-          ? String(params.notes).trim()
-          : `Cierre de Caja Grande. Saldo remanente: $${numRealBalance.toLocaleString('es-AR')}.`,
+        notes: params.notes ? String(params.notes).trim() : null,
       },
     });
 
