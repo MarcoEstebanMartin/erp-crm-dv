@@ -221,7 +221,7 @@ export default function FulfillmentDashboard() {
           </section>
 
           <section
-            aria-label="Pedidos facturados hoy y pendientes de CAE"
+            aria-label="Pedidos facturados y pendientes de CAE"
             style={{
               ...COLUMN_CONTAINER_STYLE,
               borderTop: `3px solid ${FULFILLMENT_STAGE_TONES.BILLED.accent}`,
@@ -242,7 +242,7 @@ export default function FulfillmentDashboard() {
             >
               <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', color: FULFILLMENT_STAGE_TONES.BILLED.text }}>
                 <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: FULFILLMENT_STAGE_TONES.BILLED.dot }} />
-                <span>Facturados Hoy ({f.billedOrPendingCae.length})</span>
+                <span>Facturados ({f.billedOrPendingCae.length})</span>
                 <span className="tabular-nums" style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6B7280' }}>
                   · {f.billedTotalLabel}
                 </span>

@@ -48,7 +48,7 @@ export function FulfillmentStageFilterBar({
     },
     {
       key: 'BILLED',
-      label: 'Facturados Hoy',
+      label: 'Facturados',
       count: billedCount,
       dotColor: FULFILLMENT_STAGE_TONES.BILLED.dot,
       accentColor: FULFILLMENT_STAGE_TONES.BILLED.dot,
