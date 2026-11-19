@@ -21,6 +21,7 @@ interface HomeTabProps {
     enRepartoCount?: number;
   } | null;
   setActiveTab: (tab: string) => void;
+  onOpenRendiciones?: () => void;
   setSummaryCardModal: (modal: { open: boolean; cardKey: string; cardLabel: string } | null) => void;
   setClientModal: (modal: any) => void;
   setClientSearchModal: (modal: any) => void;
@@ -44,6 +45,7 @@ export default function HomeTab({
   orders = [],
   ordersSummary,
   setActiveTab,
+  onOpenRendiciones,
   setSummaryCardModal,
   setClientModal,
   setClientSearchModal,
@@ -261,7 +263,13 @@ export default function HomeTab({
           sellers={pendingRendicionesDetails.sellers}
           routes={pendingRendicionesDetails.routes}
           loading={loadingRendicionesDetails}
-          onOpenRendiciones={() => setActiveTab('rendiciones')}
+          onOpenRendiciones={() => {
+            if (onOpenRendiciones) {
+              onOpenRendiciones();
+            } else {
+              setActiveTab('rendiciones');
+            }
+          }}
           onRendicionCompleted={() =>
             void queryClient.invalidateQueries({ queryKey: HOME_QUERY_KEYS.pendingRendiciones })
           }

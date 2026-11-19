@@ -74,6 +74,10 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           orders={c.orders}
           ordersSummary={c.ordersSummary}
           setActiveTab={setActiveTab}
+          onOpenRendiciones={() => {
+            c.setCajasSubTab('rendiciones');
+            setActiveTab('rendiciones');
+          }}
           setSummaryCardModal={c.setSummaryCardModal}
           setClientModal={c.setClientModal}
           setClientSearchModal={c.setClientSearchModal}
