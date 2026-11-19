@@ -18,7 +18,6 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cashAmount, setCashAmount] = useState('');
   const [checksAmount, setChecksAmount] = useState('');
-  const [routeNoteInput, setRouteNoteInput] = useState(drawer.routeNote || defaultRouteNote || '');
   const [notesInput, setNotesInput] = useState(drawer.notes || '');
   const [receipts, setReceipts] = useState<any[]>([]);
   const [theoreticalBalance, setTheoreticalBalance] = useState<number>(0);
@@ -67,7 +66,7 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
     e.preventDefault();
     if (realBalance < 0) return setErrorMsg('El saldo real no puede ser negativo.');
     setLoading(true);
-    onSuccess(realBalance, receipts, [], routeNoteInput, notesInput);
+    onSuccess(realBalance, receipts, [], drawer.routeNote || defaultRouteNote || undefined, notesInput);
   };
 
   return (
@@ -92,15 +91,8 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
           </div>
 
           <div className="card" style={{ padding: '16px' }}>
-            <h4 style={{ margin: '0 0 12px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>Ruta y Observaciones</h4>
-            <div style={{ marginBottom: '10px' }}>
-              <label htmlFor="arqueo-route-note" style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Ciudad o Ruta</label>
-              <input id="arqueo-route-note" type="text" className="input" value={routeNoteInput} onChange={(e) => setRouteNoteInput(e.target.value)} placeholder="Ciudad o ruta" />
-            </div>
-            <div>
-              <label htmlFor="arqueo-notes" style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Observaciones</label>
-              <textarea id="arqueo-notes" className="input" rows={2} value={notesInput} onChange={(e) => setNotesInput(e.target.value)} placeholder="Opcional" style={{ resize: 'vertical' }} />
-            </div>
+            <label htmlFor="arqueo-notes" style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '10px', color: 'var(--text-primary)' }}>Observaciones</label>
+            <textarea id="arqueo-notes" className="input" rows={3} value={notesInput} onChange={(e) => setNotesInput(e.target.value)} placeholder="Opcional" style={{ resize: 'vertical' }} />
           </div>
         </div>
 
