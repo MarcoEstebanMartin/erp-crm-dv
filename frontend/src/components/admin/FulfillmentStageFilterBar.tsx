@@ -41,7 +41,7 @@ export function FulfillmentStageFilterBar({
     },
     {
       key: 'PREPARING',
-      label: 'En Picking',
+      label: 'En Armado',
       count: preparingCount,
       dotColor: FULFILLMENT_STAGE_TONES.PREPARING.dot,
       accentColor: FULFILLMENT_STAGE_TONES.PREPARING.dot,

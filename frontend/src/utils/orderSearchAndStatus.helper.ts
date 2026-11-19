@@ -96,7 +96,7 @@ export function resolveOrderBalance(order: any): number {
 
 const STATUS_LABEL_TO_KEY: Record<string, Exclude<OrderFilterStatusKey, 'ALL'>> = {
   Recibido: 'RECIBIDO',
-  'En Picking': 'EN_PICKING',
+  'En Armado': 'EN_PICKING',
   Armado: 'ARMADO',
   Facturado: 'FACTURADO',
   'En Viaje': 'EN_VIAJE',

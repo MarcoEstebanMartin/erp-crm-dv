@@ -12,7 +12,7 @@ export function getOrderStatusInfo(order: any): OrderStatusInfo {
     return { label: 'Recibido', badgeClass: 'pending', color: 'var(--accent-color)' };
   }
   if (order.status === 'PREPARING') {
-    return { label: 'En Picking', badgeClass: 'preparing', color: '#F59E0B' };
+    return { label: 'En Armado', badgeClass: 'preparing', color: '#F59E0B' };
   }
   if (order.deliveryRoute) {
     if (order.deliveryRoute.status === 'IN_TRANSIT') {

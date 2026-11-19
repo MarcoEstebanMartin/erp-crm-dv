@@ -212,7 +212,7 @@ export function useFulfillmentDashboard() {
     if (preparing.length === 0) return;
     showConfirm({
       title: 'Devolver a Pendientes',
-      message: `¿Deseas devolver los ${preparing.length} pedidos de "En Picking" a la columna "Pendientes"?`,
+      message: `¿Deseas devolver los ${preparing.length} pedidos de "En Armado" a la columna "Pendientes"?`,
       confirmText: 'Devolver Todos',
       cancelText: 'Cancelar',
       type: 'warning',
@@ -240,7 +240,7 @@ export function useFulfillmentDashboard() {
       await fetchOrders();
     } catch (err: any) {
       showConfirm({
-        title: 'Error al pasar a En Picking',
+        title: 'Error al pasar a En Armado',
         message: err?.message || 'Se imprimió la hoja, pero no se pudo actualizar el estado del pedido.',
         confirmText: 'Entendido',
         type: 'danger',

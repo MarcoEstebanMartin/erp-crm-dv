@@ -122,7 +122,7 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
           >
             {[
               { key: 'RECIBIDO', label: '1. Recibido' },
-              { key: 'EN_PICKING', label: '2. Picking' },
+              { key: 'EN_PICKING', label: '2. Armado' },
               { key: 'FACTURADO', label: '3. Facturado' },
               { key: 'ENTREGA', label: '4. Entrega' },
             ].map((step, idx, arr) => {

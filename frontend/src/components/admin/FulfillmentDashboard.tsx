@@ -152,7 +152,7 @@ export default function FulfillmentDashboard() {
           </section>
 
           <section
-            aria-label="Pedidos en picking"
+            aria-label="Pedidos en armado"
             style={{
               ...COLUMN_CONTAINER_STYLE,
               borderTop: `3px solid ${FULFILLMENT_STAGE_TONES.PREPARING.accent}`,
@@ -173,7 +173,7 @@ export default function FulfillmentDashboard() {
             >
               <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', color: FULFILLMENT_STAGE_TONES.PREPARING.text }}>
                 <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: FULFILLMENT_STAGE_TONES.PREPARING.dot }} />
-                <span>En Picking ({f.preparing.length})</span>
+                <span>En Armado ({f.preparing.length})</span>
                 <span className="tabular-nums" style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6B7280' }}>
                   · {f.preparingTotalLabel}
                 </span>
@@ -184,7 +184,7 @@ export default function FulfillmentDashboard() {
                   className="btn btn-secondary"
                   style={{ padding: '2px 8px', fontSize: '0.72rem', height: '24px', borderRadius: '5px', fontWeight: 600 }}
                   onClick={f.handleRevertAllPreparingToPending}
-                  title="Devolver todos los pedidos en picking a la columna Pendientes"
+                  title="Devolver todos los pedidos en armado a la columna Pendientes"
                 >
                   Devolver Todos
                 </button>

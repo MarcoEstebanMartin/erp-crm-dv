@@ -72,7 +72,7 @@ export function FulfillmentListView({
 
   const allRows: ListRow[] = [
     ...pending.map((order): ListRow => ({ order, stage: 'PENDING', stageLabel: 'Pendiente' })),
-    ...preparing.map((order): ListRow => ({ order, stage: 'PREPARING', stageLabel: 'En Picking' })),
+    ...preparing.map((order): ListRow => ({ order, stage: 'PREPARING', stageLabel: 'En Armado' })),
     ...billedOrPendingCae.map((order): ListRow => ({ order, stage: 'BILLED', stageLabel: 'Facturado' })),
   ];
 
