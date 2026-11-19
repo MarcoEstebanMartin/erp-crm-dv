@@ -80,3 +80,37 @@ export function formatArDisplayDate(dateStr?: string | null): string {
     year: 'numeric',
   });
 }
+
+export function shiftArWeekRange(
+  anchorIso: string,
+  deltaWeeks: number,
+): { startDate: string; endDate: string } {
+  const [y, m, d] = anchorIso.split('-').map(Number);
+  const anchorUtc = new Date(Date.UTC(y, m - 1, d));
+  const dow = anchorUtc.getUTCDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(Date.UTC(y, m - 1, d + mondayOffset + deltaWeeks * 7));
+  const sunday = new Date(
+    Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + 6),
+  );
+  return { startDate: toIso(monday), endDate: toIso(sunday) };
+}
+
+export function formatShortArRange(startIso: string, endIso: string): string {
+  const short = (iso: string) => {
+    const [, m, d] = iso.split('-');
+    return d && m ? `${d}/${m}` : iso;
+  };
+  return `${short(startIso)} – ${short(endIso)}`;
+}
+
+export function formatCityLabel(raw: string): string {
+  if (!raw) return 'Sin Localidad';
+  const trimmed = raw.trim();
+  if (trimmed.toLowerCase() === 'sin localidad') return 'Sin Localidad';
+  return trimmed
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => (word.length <= 2 && word.endsWith('.') ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(' ');
+}

@@ -35,7 +35,11 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
         update: vi.fn().mockResolvedValue({}),
       },
       persona: {
-        findUnique: vi.fn().mockResolvedValue({ id: 42, name: 'Despensa San Martín' }),
+        findUnique: vi.fn().mockResolvedValue({
+          id: 42,
+          name: 'Despensa San Martín',
+          outstandingBalance: '12500.00',
+        }),
         update: vi.fn().mockImplementation((args) => {
           personaUpdates.push(args);
           return Promise.resolve({ id: 42, outstandingBalance: '0.00' });
@@ -45,6 +49,7 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
         create: vi.fn().mockResolvedValue({ id: 501 }),
       },
       transaction: {
+        findFirst: vi.fn().mockResolvedValue(null),
         create: vi.fn().mockImplementation(({ data }) => {
           const rec = { id: 901, movementId: 145, ...data };
           createdTransactions.push(rec);

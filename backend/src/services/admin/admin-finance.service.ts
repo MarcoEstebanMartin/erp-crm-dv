@@ -29,6 +29,7 @@ export class AdminFinanceSubService {
         prisma.order.findMany({
           where: { status: OrderStatus.DELIVERED, ...(range ? { createdAt: range } : {}) },
           include: {
+            persona: { select: { city: true } },
             items: {
               include: {
                 product: { select: { isPesable: true, costPrice: true } },
@@ -39,11 +40,13 @@ export class AdminFinanceSubService {
         prisma.creditNote.findMany({
           where: { status: CreditNoteStatus.APPROVED, ...(range ? { createdAt: range } : {}) },
           include: {
+            persona: { select: { city: true } },
             order: {
               select: {
                 deliveryMethod: true,
                 salesChannel: true,
                 deliveryRouteId: true,
+                persona: { select: { city: true } },
                 items: { select: { productId: true, unitCostSnapshot: true } },
               },
             },

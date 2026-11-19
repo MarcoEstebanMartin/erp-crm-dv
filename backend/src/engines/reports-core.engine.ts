@@ -115,15 +115,18 @@ export interface FinancialSummaryInput {
     deliveryMethod?: string | null;
     salesChannel?: string | null;
     deliveryRouteId?: number | null;
+    persona?: { city?: string | null } | null;
     items: ReportLineItemInput[];
   }>;
   creditNotes: Array<{
     billingType: string;
     totalAmount: NumericInput;
+    persona?: { city?: string | null } | null;
     order?: {
       deliveryMethod?: string | null;
       salesChannel?: string | null;
       deliveryRouteId?: number | null;
+      persona?: { city?: string | null } | null;
       items?: Array<{ productId: number; unitCostSnapshot?: NumericInput | null }>;
     } | null;
     items: Array<ReportLineItemInput & { productId: number }>;
@@ -138,20 +141,44 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
   let internalSalesDec = new Decimal(0), internalCostDec = new Decimal(0), internalCount = 0;
   let localSalesDec = new Decimal(0), localCostDec = new Decimal(0), localCount = 0;
   let routeSalesDec = new Decimal(0), routeCostDec = new Decimal(0), routeCount = 0;
+  const cityMap = new Map<
+    string,
+    { officialDec: Decimal; internalDec: Decimal; officialCount: number; internalCount: number }
+  >();
+
+  const getOrCreateCityBucket = (rawCity: string | null | undefined) => {
+    const key = normalizeCity(rawCity);
+    let bucket = cityMap.get(key);
+    if (!bucket) {
+      bucket = {
+        officialDec: new Decimal(0),
+        internalDec: new Decimal(0),
+        officialCount: 0,
+        internalCount: 0,
+      };
+      cityMap.set(key, bucket);
+    }
+    return bucket;
+  };
 
   for (const order of input.orders) {
     const amountDec = roundToIntegerPeso(order.totalAmount || 0);
     let costDec = new Decimal(0);
     for (const item of order.items) costDec = costDec.plus(resolveItemHistoricalMetrics(item).itemCostDec);
+    const cityBucket = getOrCreateCityBucket(order.persona?.city);
 
     if (order.billingType === 'OFFICIAL') {
       officialSalesDec = officialSalesDec.plus(amountDec);
       officialCostDec = officialCostDec.plus(costDec);
       officialCount += 1;
+      cityBucket.officialDec = cityBucket.officialDec.plus(amountDec);
+      cityBucket.officialCount += 1;
     } else {
       internalSalesDec = internalSalesDec.plus(amountDec);
       internalCostDec = internalCostDec.plus(costDec);
       internalCount += 1;
+      cityBucket.internalDec = cityBucket.internalDec.plus(amountDec);
+      cityBucket.internalCount += 1;
     }
 
     if (classifyOrderModality(order) === 'LOCAL') {
@@ -176,12 +203,15 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
       cnCostDec = cnCostDec.plus(resolveItemHistoricalMetrics({ ...item, fallbackUnitCostSnapshot: fallback }).itemCostDec);
     }
 
+    const cityBucket = getOrCreateCityBucket(cn.persona?.city ?? cn.order?.persona?.city);
     if (cn.billingType === 'OFFICIAL') {
       officialSalesDec = officialSalesDec.minus(cnAmountDec);
       officialCostDec = officialCostDec.minus(cnCostDec);
+      cityBucket.officialDec = cityBucket.officialDec.minus(cnAmountDec);
     } else {
       internalSalesDec = internalSalesDec.minus(cnAmountDec);
       internalCostDec = internalCostDec.minus(cnCostDec);
+      cityBucket.internalDec = cityBucket.internalDec.minus(cnAmountDec);
     }
 
     if (classifyOrderModality(cn.order || { deliveryMethod: 'DELIVERY' }) === 'LOCAL') {
@@ -217,6 +247,23 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
   const findTxSum = (billingType: string, type: string) =>
     roundToIntegerPeso(input.transactionsGrouped.find((g) => g.billingType === billingType && g.type === type)?._sum.amount ?? 0).toNumber();
 
+  const salesByCity = Array.from(cityMap.entries())
+    .map(([city, row]) => {
+      const totalDec = row.officialDec.plus(row.internalDec);
+      return {
+        city,
+        official: roundToIntegerPeso(row.officialDec).toNumber(),
+        internal: roundToIntegerPeso(row.internalDec).toNumber(),
+        total: roundToIntegerPeso(totalDec).toNumber(),
+        officialCount: row.officialCount,
+        internalCount: row.internalCount,
+        count: row.officialCount + row.internalCount,
+        sharePct: netSalesDec.gt(0) ? computeMarginPercent(Decimal.max(0, totalDec), netSalesDec, 0) : 0,
+      };
+    })
+    .filter((row) => row.total !== 0 || row.count > 0)
+    .sort((a, b) => b.total - a.total || a.city.localeCompare(b.city, 'es'));
+
   return {
     sales: {
       official: roundToIntegerPeso(officialSalesDec).toNumber(),
@@ -226,6 +273,7 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
       internalCost: roundToIntegerPeso(internalCostDec).toNumber(),
       internalCount,
     },
+    salesByCity,
     summary: {
       netSales: roundToIntegerPeso(netSalesDec).toNumber(),
       totalCost: roundToIntegerPeso(totalCostDec).toNumber(),

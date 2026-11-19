@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
-import { DollarSign, RefreshCw, PlusCircle, Eye, ChevronRight, Lock } from 'lucide-react';
+import { DollarSign, RefreshCw, PlusCircle, Lock } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
 import FinanceMovementModal from './FinanceMovementModal';
 import { computeCajaGrandeBalance, computeFilteredMetricsAndLedger } from './finanzas/finanzasHelpers';
@@ -9,6 +9,9 @@ import { FinanzasExpenseModal, FinanzasDrawerInspectModal, FinanzasCentralCloseA
 import { FinanzasBanksCard } from './finanzas/FinanzasBanksCard';
 import { FinanzasTransferenciasTab } from './finanzas/FinanzasTransferenciasTab';
 import { FinanzasCierresHistoryTab } from './finanzas/FinanzasCierresHistoryTab';
+import { FinanzasPeriodKpiCards } from './finanzas/FinanzasPeriodKpiCards';
+import { WeeklySalesByCityModal } from './finanzas/WeeklySalesByCityModal';
+import { useWeeklySalesQuery } from '../hooks/queries';
 
 export default function FinanzasDashboard() {
   const confirm = useConfirm();
@@ -51,6 +54,13 @@ export default function FinanzasDashboard() {
   const [modalCategory, setModalCategory] = useState<'CASH' | 'CHECK' | 'TRANSFER' | 'EXPENSE' | 'NET'>('CASH');
   const [modalTitle, setModalTitle] = useState('');
   const [modalMovements, setModalMovements] = useState<any[]>([]);
+  const [salesModalOpen, setSalesModalOpen] = useState(false);
+
+  const { data: salesReport, refetch: refetchSalesReport } = useWeeklySalesQuery(
+    filterStartDate,
+    filterEndDate,
+    isAdmin,
+  );
 
   useEffect(() => { fetchFinancialData(); }, []);
 
@@ -154,35 +164,22 @@ export default function FinanzasDashboard() {
           <input id="fin-start-date" type="date" className="input" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} style={{ padding: '6px 10px', width: 'auto' }} />
           <label htmlFor="fin-end-date" style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Hasta</label>
           <input id="fin-end-date" type="date" className="input" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} style={{ padding: '6px 10px', width: 'auto' }} />
-          <button type="button" className="btn btn-ghost" onClick={fetchFinancialData} aria-label="Actualizar" title="Actualizar"><RefreshCw size={16} aria-hidden="true" /></button>
+          <button type="button" className="btn btn-ghost" onClick={() => { fetchFinancialData(); void refetchSalesReport(); }} aria-label="Actualizar" title="Actualizar"><RefreshCw size={16} aria-hidden="true" /></button>
         </search>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px' }}>
-        {kpiCards.map((card) => (
-          <button
-            key={card.key}
-            type="button"
-            onClick={() => { setModalCategory(card.key); setModalTitle(card.label); setModalMovements(card.items); setDetailModalOpen(true); }}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'space-between',
-              gap: '10px', padding: '16px 18px', backgroundColor: card.bg, border: `1px solid ${card.border}`,
-              borderRadius: '12px', cursor: 'pointer', textAlign: 'left', font: 'inherit', width: '100%', minWidth: 0, boxShadow: 'none',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
-              <span style={{ fontSize: '0.82rem', color: card.color, fontWeight: 600, lineHeight: 1.25 }}>{card.label}</span>
-              <Eye size={15} color={card.color} aria-hidden="true" style={{ flexShrink: 0, opacity: 0.8 }} />
-            </div>
-            <div className="tabular-nums" style={{ fontSize: 'clamp(1.25rem, 1.5vw, 1.55rem)', lineHeight: 1.15, fontWeight: 700, color: card.color, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-              ${Math.round(card.val).toLocaleString('es-AR')}
-            </div>
-            <div className="tabular-nums" style={{ fontSize: '0.75rem', color: card.color, display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, opacity: 0.9 }}>
-              <span>{card.items.length} movimientos</span><ChevronRight size={13} aria-hidden="true" />
-            </div>
-          </button>
-        ))}
-      </div>
+      <FinanzasPeriodKpiCards
+        kpiCards={kpiCards}
+        onSelectCard={(card) => {
+          setModalCategory(card.key);
+          setModalTitle(card.label);
+          setModalMovements(card.items);
+          setDetailModalOpen(true);
+        }}
+        showSalesCard={isAdmin}
+        salesReport={salesReport}
+        onOpenSalesModal={() => setSalesModalOpen(true)}
+      />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div role="tablist" aria-label="Vistas de Caja Grande" className="linear-tablist">
@@ -275,6 +272,7 @@ export default function FinanzasDashboard() {
       />
       <FinanzasBankReconciliationModal isOpen={reconModalOpen} onClose={() => setReconModalOpen(false)} bankAccounts={bankAccounts} reconBankId={reconBankId} setReconBankId={setReconBankId} onRefreshMainData={fetchFinancialData} />
       <FinanceMovementModal isOpen={detailModalOpen} onClose={() => setDetailModalOpen(false)} title={modalTitle} categoryKey={modalCategory} dateRangeText={`${filterStartDate} - ${filterEndDate}`} movements={modalMovements} />
+      <WeeklySalesByCityModal isOpen={salesModalOpen} onClose={() => setSalesModalOpen(false)} initialStartDate={filterStartDate} initialEndDate={filterEndDate} initialReport={salesReport} />
       <FinanzasDrawerInspectModal inspectingDrawer={inspectingDrawer} onClose={() => setInspectingDrawer(null)} />
       <FinanzasCentralCloseAndBankModals
         centralCloseOpen={centralCloseModalOpen} onCloseCentral={() => { setModalError(null); setCentralCloseModalOpen(false); }}

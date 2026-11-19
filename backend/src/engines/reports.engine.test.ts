@@ -275,6 +275,88 @@ describe('Reportes Minimalistas — Motores Decimal.js, Fechas AR (-03:00), Nota
     ]);
   });
 
+  it('computeFinancialSummaryMetrics agrupa salesByCity por localidad normalizada y sucursal (A/X) descontando NC', () => {
+    const result = computeFinancialSummaryMetrics({
+      orders: [
+        {
+          billingType: 'OFFICIAL',
+          totalAmount: 100000,
+          persona: { city: 'Gral. Villegas' },
+          items: [{ quantity: 1, subtotal: 100000, unitCostSnapshot: 70000 }],
+        },
+        {
+          billingType: 'INTERNAL',
+          totalAmount: 50000,
+          persona: { city: 'GENERAL VILLEGAS' },
+          items: [{ quantity: 1, subtotal: 50000, unitCostSnapshot: 35000 }],
+        },
+        {
+          billingType: 'INTERNAL',
+          totalAmount: 80000,
+          persona: { city: 'Bunge' },
+          items: [{ quantity: 1, subtotal: 80000, unitCostSnapshot: 55000 }],
+        },
+        {
+          billingType: 'OFFICIAL',
+          totalAmount: 20000,
+          persona: { city: null },
+          items: [{ quantity: 1, subtotal: 20000, unitCostSnapshot: 14000 }],
+        },
+      ],
+      creditNotes: [
+        {
+          billingType: 'OFFICIAL',
+          totalAmount: 10000,
+          persona: { city: 'Villegas' },
+          items: [{ productId: 1, quantity: 1, subtotal: 10000, unitCostSnapshot: 7000 }],
+        },
+      ],
+      expenses: [],
+      transactionsGrouped: [],
+      paymentMethodsGrouped: [],
+    });
+
+    expect(result.salesByCity).toEqual([
+      {
+        city: 'GENERAL VILLEGAS',
+        official: 90000,
+        internal: 50000,
+        total: 140000,
+        officialCount: 1,
+        internalCount: 1,
+        count: 2,
+        sharePct: 58,
+      },
+      {
+        city: 'EMILIO V. BUNGE',
+        official: 0,
+        internal: 80000,
+        total: 80000,
+        officialCount: 0,
+        internalCount: 1,
+        count: 1,
+        sharePct: 33,
+      },
+      {
+        city: 'Sin Localidad',
+        official: 20000,
+        internal: 0,
+        total: 20000,
+        officialCount: 1,
+        internalCount: 0,
+        count: 1,
+        sharePct: 8,
+      },
+    ]);
+
+    const sumOfficial = result.salesByCity.reduce((acc, r) => acc + r.official, 0);
+    const sumInternal = result.salesByCity.reduce((acc, r) => acc + r.internal, 0);
+    const sumTotal = result.salesByCity.reduce((acc, r) => acc + r.total, 0);
+    expect(sumOfficial).toBe(result.sales.official);
+    expect(sumInternal).toBe(result.sales.internal);
+    expect(sumTotal).toBe(result.summary.netSales);
+  });
+
   it('crm.controller.ts no tiene mocks Coca Cola/Quilmes y admin.routes.ts expone /reports/pdf/employee/:userId sin rutas muertas', () => {
     const crmContent = fs.readFileSync(path.resolve(__dirname, '../controllers/crm.controller.ts'), 'utf8');
     expect(crmContent).not.toMatch(/Coca Cola|Quilmes/i);
