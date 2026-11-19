@@ -1,4 +1,9 @@
 import { apiClient } from './apiClient';
+import {
+  buildFieldReceiptWhatsAppMessage,
+  buildOfficeReceiptWhatsAppMessage,
+  buildWhatsAppDeepLink,
+} from '../utils/receiptWhatsApp';
 
 export type FieldPaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CHECK';
 export type FieldReceiptStatus = 'ISSUED' | 'PENDING_VERIFICATION' | 'VERIFIED' | 'VOIDED';
@@ -126,32 +131,14 @@ export interface OfficeReceiptDTO {
   publicUrl?: string;
 }
 
-function normalizeArgentinaWhatsAppPhone(raw?: string | null): string {
-  const digits = (raw || '').replace(/\D/g, '');
-  if (digits.startsWith('549')) return digits;
-  if (digits.startsWith('54')) return `549${digits.slice(2)}`;
-  if (digits.startsWith('0')) return `549${digits.slice(1)}`;
-  return digits.length >= 8 ? `549${digits}` : '';
-}
-
 export function buildManualWhatsAppUrl(receipt: FieldReceiptDTO): string {
-  const phone = normalizeArgentinaWhatsAppPhone(receipt.persona?.phone);
-  const nro = receipt.receiptNumber || receipt.provisionalCode;
-  const total = `$${Math.round(Number(receipt.totalAmount)).toLocaleString('es-AR')}`;
-  const pdfLink = receipt.pdfUrl ? `\nComprobante PDF: ${window.location.origin}${receipt.pdfUrl}` : '';
-  const text = `Hola ${receipt.persona?.name || ''}, te enviamos tu Recibo Digital ${nro} por ${total}.${pdfLink}`;
-  const base = phone ? `https://wa.me/${phone}` : 'https://wa.me/';
-  return `${base}?text=${encodeURIComponent(text)}`;
+  const text = buildFieldReceiptWhatsAppMessage(receipt, window.location.origin);
+  return buildWhatsAppDeepLink(receipt.persona?.phone, text);
 }
 
 export function buildOfficeReceiptWhatsAppUrl(receipt: OfficeReceiptDTO): string {
-  const phone = normalizeArgentinaWhatsAppPhone(receipt.persona?.phone);
-  const nro = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
-  const total = `$${Math.round(Number(receipt.amount)).toLocaleString('es-AR')}`;
-  const link = receipt.publicUrl || `${window.location.origin}/recibo/${receipt.id}`;
-  const text = `Hola ${receipt.persona?.name || ''}, te enviamos tu Recibo ${nro} por ${total}.\nComprobante: ${link}`;
-  const base = phone ? `https://wa.me/${phone}` : 'https://wa.me/';
-  return `${base}?text=${encodeURIComponent(text)}`;
+  const text = buildOfficeReceiptWhatsAppMessage(receipt, window.location.origin);
+  return buildWhatsAppDeepLink(receipt.persona?.phone, text);
 }
 
 export const fieldReceiptsApi = {
