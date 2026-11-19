@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, Store, Truck } from 'lucide-react';
+import { Store, Truck } from 'lucide-react';
 import { api } from '../../utils/api';
 import { ORDERS_QUERY_KEYS, PENDING_ROUTES_QUERY_KEY } from '../../hooks/queries';
 import {
@@ -14,6 +14,8 @@ interface OrderDeliveryBadgeControlProps {
   pendingRoutes?: any[];
   compact?: boolean;
   readOnly?: boolean;
+  hideSelector?: boolean;
+  emptyFallback?: ReactNode;
   onUpdated?: (updatedOrder: any) => void;
   onError?: (msg: string) => void;
   onSuccess?: (msg: string) => void;
@@ -24,6 +26,8 @@ export function OrderDeliveryBadgeControl({
   pendingRoutes = [],
   compact = false,
   readOnly = false,
+  hideSelector = false,
+  emptyFallback = null,
   onUpdated,
   onError,
   onSuccess,
@@ -70,51 +74,90 @@ export function OrderDeliveryBadgeControl({
 
   const canDeliverNow = summary.canMarkPickedUp || summary.canMarkDirectDelivered;
 
-  const handleMarkDelivered = async () => {
+  const handleMarkLocalPickup = async () => {
     if (saving || !canDeliverNow) return;
     setSaving(true);
     try {
-      const updatedOrder = await api.updateOrderDelivery(
-        order.id,
-        summary.canMarkPickedUp
-          ? { deliveryMethod: 'PICKUP', markPickedUp: true }
-          : { deliveryMethod: 'DELIVERY', markDelivered: true },
-      );
+      const updatedOrder = await api.updateOrderDelivery(order.id, {
+        deliveryMethod: 'PICKUP',
+        markPickedUp: true,
+      });
       invalidateDeliveryCaches();
-      onSuccess?.(
-        summary.canMarkPickedUp
-          ? `Pedido #${order.id} entregado en local.`
-          : `Pedido #${order.id} entregado.`,
-      );
+      onSuccess?.(`Pedido #${order.id} retirado en local.`);
       onUpdated?.(updatedOrder);
     } catch (err: any) {
-      onError?.(err?.message || 'Error al registrar la entrega.');
+      onError?.(err?.message || 'Error al registrar el retiro en local.');
     } finally {
       setSaving(false);
     }
   };
 
+  const Icon = summary.method === 'PICKUP' ? Store : Truck;
+  const hasExplicitDeliveryState =
+    Boolean(summary.routeId) ||
+    summary.method === 'PICKUP' ||
+    Boolean(order?.deliveredAt);
+
+  const renderBadge = () => (
+    <span
+      className="badge-minimal"
+      title={summary.subLabel || summary.badgeLabel}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: compact ? '0.72rem' : '0.8rem',
+        padding: compact ? '2px 7px' : '4px 9px',
+      }}
+    >
+      <Icon size={12} aria-hidden="true" />
+      <span>{summary.badgeLabel}</span>
+    </span>
+  );
+
+  const renderLocalPickupButton = () => (
+    <button
+      type="button"
+      className="btn btn-primary"
+      disabled={saving}
+      onClick={() => void handleMarkLocalPickup()}
+      title="Marcar retirado en local"
+      style={{
+        height: compact ? '26px' : '32px',
+        padding: compact ? '0 9px' : '0 12px',
+        fontSize: compact ? '0.72rem' : '0.8rem',
+        fontWeight: 600,
+        backgroundColor: '#111827',
+        borderColor: '#111827',
+        color: '#FFFFFF',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}
+    >
+      <Store size={12} aria-hidden="true" />
+      <span>{saving ? '...' : 'Retiró local'}</span>
+    </button>
+  );
+
   if (readOnly || summary.isLocked) {
-    const Icon = summary.method === 'PICKUP' ? Store : Truck;
-    return (
-      <span
-        className="badge-minimal"
-        title={summary.subLabel || summary.badgeLabel}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          fontSize: compact ? '0.72rem' : '0.8rem',
-          padding: compact ? '2px 7px' : '4px 9px',
-        }}
-      >
-        <Icon size={12} aria-hidden="true" />
-        <span>{summary.badgeLabel}</span>
-      </span>
-    );
+    if (hideSelector && !hasExplicitDeliveryState) {
+      return <>{emptyFallback}</>;
+    }
+    return renderBadge();
   }
 
-  const Icon = summary.method === 'PICKUP' ? Store : Truck;
+  if (hideSelector) {
+    if (canDeliverNow) {
+      return renderLocalPickupButton();
+    }
+    if (hasExplicitDeliveryState) {
+      return renderBadge();
+    }
+    return <>{emptyFallback}</>;
+  }
 
   return (
     <div
@@ -172,32 +215,7 @@ export function OrderDeliveryBadgeControl({
         </select>
       </div>
 
-      {canDeliverNow && (
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={saving}
-          onClick={() => void handleMarkDelivered()}
-          title={summary.canMarkPickedUp ? 'Registrar entrega por mostrador' : 'Registrar entrega directa'}
-          style={{
-            height: compact ? '26px' : '32px',
-            padding: compact ? '0 8px' : '0 12px',
-            fontSize: compact ? '0.72rem' : '0.8rem',
-            fontWeight: 600,
-            backgroundColor: '#111827',
-            borderColor: '#111827',
-            color: '#FFFFFF',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-          }}
-        >
-          <Check size={12} aria-hidden="true" />
-          <span>{saving ? '...' : 'Entregar'}</span>
-        </button>
-      )}
+      {canDeliverNow && renderLocalPickupButton()}
     </div>
   );
 }

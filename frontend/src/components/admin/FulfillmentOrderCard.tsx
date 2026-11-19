@@ -248,10 +248,11 @@ export function FulfillmentOrderCard({
           order={o}
           pendingRoutes={pendingRoutes}
           compact
+          hideSelector
           onUpdated={() => onOrderDeliveryUpdated?.()}
         />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, marginLeft: 'auto' }}>
           {column === 'PENDING' && (
             <>
               <button

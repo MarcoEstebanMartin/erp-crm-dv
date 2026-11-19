@@ -299,6 +299,8 @@ export default function OrdersTab({
                         order={o}
                         pendingRoutes={pendingRoutes}
                         compact
+                        hideSelector
+                        emptyFallback={<span style={{ color: '#9CA3AF', fontSize: '0.75rem' }}>—</span>}
                         onUpdated={() => {
                           fetchData();
                           void refetch();
