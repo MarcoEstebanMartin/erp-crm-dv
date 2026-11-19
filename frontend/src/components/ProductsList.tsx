@@ -78,6 +78,13 @@ export default function ProductsList({
     () => filteredProducts.slice(0, visibleCount),
     [filteredProducts, visibleCount],
   );
+  const showActionsColumn = useMemo(
+    () =>
+      catalogTab === 'inactive_products' ||
+      activeFilter === 'inactive' ||
+      visibleProducts.some((p) => p.isActive === false),
+    [catalogTab, activeFilter, visibleProducts],
+  );
 
   useEffect(() => {
     const node = loadMoreSentinelRef.current;
@@ -210,12 +217,14 @@ export default function ProductsList({
               <th scope="col" style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pesable</th>
               <th scope="col" style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sin IVA</th>
               <th scope="col" style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Final</th>
-              <th scope="col" style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Acciones</th>
+              {showActionsColumn && (
+                <th scope="col" style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Acciones</th>
+              )}
             </tr>
           </thead>
           <tbody>
             {visibleProducts.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Sin productos</td></tr>
+              <tr><td colSpan={showActionsColumn ? 6 : 5} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Sin productos</td></tr>
             ) : (
               visibleProducts.map((p) => {
                 const precioFinal = Number(p.listPrice) || 0;
@@ -235,7 +244,7 @@ export default function ProductsList({
                 });
 
                 return (
-                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s', opacity: p.isActive === false ? 0.6 : 1 }} className="hover-bg-muted">
+                  <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background-color 0.2s' }} className="hover-bg-muted">
                     <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }} onClick={handleOpenEdit} title="Clic para editar producto">{p.sku}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -297,19 +306,22 @@ export default function ProductsList({
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        {(catalogTab === 'inactive_products' || activeFilter === 'inactive' || p.isActive === false) && (
-                          <button
-                            className="btn"
-                            style={{ borderRadius: '6px', padding: '5px 10px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(34, 197, 94, 0.12)', color: '#15803d', border: '1px solid rgba(34, 197, 94, 0.3)', fontWeight: 600 }}
-                            onClick={async (e) => { e.stopPropagation(); if (onUpdateProduct) await onUpdateProduct({ ...p, isActive: true }); }}
-                          >
-                            <RotateCcw size={13} /><span>Reactivar</span>
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                    {showActionsColumn && (
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          {(catalogTab === 'inactive_products' || activeFilter === 'inactive' || p.isActive === false) && (
+                            <button
+                              type="button"
+                              className="btn"
+                              style={{ borderRadius: '6px', padding: '5px 10px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(34, 197, 94, 0.12)', color: '#15803d', border: '1px solid rgba(34, 197, 94, 0.3)', fontWeight: 600 }}
+                              onClick={async (e) => { e.stopPropagation(); if (onUpdateProduct) await onUpdateProduct({ ...p, isActive: true }); }}
+                            >
+                              <RotateCcw size={13} aria-hidden="true" /><span>Reactivar</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })
