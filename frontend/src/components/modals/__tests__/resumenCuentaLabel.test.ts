@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { formatMovementLabel } from '../ResumenCuentaModal';
 
 describe('ResumenCuentaModal — formatMovementLabel', () => {
-  it('muestra únicamente Recibo + número para cobros en el Haber (con receiptNumber explícito)', () => {
+  it('muestra únicamente el número de recibo para cobros en el Haber (con receiptNumber explícito)', () => {
     expect(
       formatMovementLabel({
         id: 'transaction-88',
@@ -14,10 +14,10 @@ describe('ResumenCuentaModal — formatMovementLabel', () => {
         debit: 0,
         credit: 178496,
       }),
-    ).toBe('Recibo REC-00145');
+    ).toBe('REC-00145');
   });
 
-  it('muestra únicamente Recibo + número cuando el cobro fue en mostrador con cheque o factura directa sin receiptNumber', () => {
+  it('muestra únicamente el número de recibo cuando el cobro fue en mostrador con cheque o factura directa sin receiptNumber', () => {
     expect(
       formatMovementLabel({
         id: 'transaction-90',
@@ -29,7 +29,7 @@ describe('ResumenCuentaModal — formatMovementLabel', () => {
         debit: 0,
         credit: 178496,
       }),
-    ).toBe('Recibo REC-01033');
+    ).toBe('REC-01033');
 
     expect(
       formatMovementLabel({
@@ -42,10 +42,10 @@ describe('ResumenCuentaModal — formatMovementLabel', () => {
         debit: 0,
         credit: 356992,
       }),
-    ).toBe('Recibo REC-01064');
+    ).toBe('REC-01064');
   });
 
-  it('abrevia Factura como Fc. para comprobantes internos y oficiales', () => {
+  it('omite la palabra Factura/Fc. dejando solo el código del comprobante', () => {
     expect(
       formatMovementLabel({
         id: 'order-100',
@@ -54,7 +54,7 @@ describe('ResumenCuentaModal — formatMovementLabel', () => {
         debit: 178496,
         credit: 0,
       }),
-    ).toBe('Fc. INT-00100');
+    ).toBe('INT-00100');
 
     expect(
       formatMovementLabel({
@@ -64,7 +64,7 @@ describe('ResumenCuentaModal — formatMovementLabel', () => {
         debit: 356992,
         credit: 0,
       }),
-    ).toBe('Fc. A 0001-0105');
+    ).toBe('A 0001-0105');
   });
 
   it('preserva etiquetas de Notas de Crédito y Retenciones sin convertirlas en Recibo', () => {

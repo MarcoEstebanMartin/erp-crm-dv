@@ -64,16 +64,16 @@ export function formatMovementLabel(txOrDescription: ResumenMovementLike | strin
 
   if (isCollectionReceipt) {
     const receiptNum = resolveReceiptNumber(tx);
-    return receiptNum ? `Recibo ${receiptNum}` : 'Recibo';
+    return receiptNum || 'REC';
   }
 
   const receiptMatch = text.match(/^Recibo(?:\s+digital\s+en\s+calle)?\s+(?:N°\s*)?([A-Z0-9-]+)(?:\s*[-–—].*)?$/i);
   if (receiptMatch) {
-    return `Recibo ${receiptMatch[1]}`;
+    return receiptMatch[1];
   }
 
   const mainPart = text.split(/\s+[-–—]\s+(?![\d])/)[0] || text;
-  return formatInvoiceNumberShort(mainPart.trim()).replace(/\bFactura\b/i, 'Fc.');
+  return formatInvoiceNumberShort(mainPart.trim()).replace(/^(?:Factura|Fc\.?)\s+/i, '').trim();
 }
 
 export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaModalProps) {
