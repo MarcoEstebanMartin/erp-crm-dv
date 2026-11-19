@@ -21,6 +21,26 @@ export interface LotAllocationRecord {
 }
 
 /**
+ * Evalúa si un lote está vencido al día UTC de referencia (excluyendo fecha centinela >= 2036).
+ */
+export function isLotExpired(
+  expirationDate: Date | string | null | undefined,
+  referenceDate: Date = new Date(),
+): boolean {
+  if (!expirationDate) return false;
+  const exp = expirationDate instanceof Date ? expirationDate : new Date(expirationDate);
+  if (Number.isNaN(exp.getTime()) || exp.getUTCFullYear() >= 2036) return false;
+
+  const expDay = Date.UTC(exp.getUTCFullYear(), exp.getUTCMonth(), exp.getUTCDate());
+  const refDay = Date.UTC(
+    referenceDate.getUTCFullYear(),
+    referenceDate.getUTCMonth(),
+    referenceDate.getUTCDate(),
+  );
+  return expDay <= refDay;
+}
+
+/**
  * Ordenamiento FEFO determinístico:
  * 1) expirationDate ascendente, 2) Sin Ubicar ('S/U') primero ante empate, 3) id ascendente.
  */
@@ -94,7 +114,12 @@ async function linkOrderLotMovementsInTx(
   const originalMov =
     typeof tx.stockMovement.findFirst === 'function'
       ? await tx.stockMovement.findFirst({
-          where: { productId, referenceId: `ORDER-${orderId}`, productLotId: null },
+          where: {
+            productId,
+            productLotId: null,
+            type: MovementType.OUT,
+            OR: [{ orderId }, { referenceId: `ORDER-${orderId}` }],
+          },
         })
       : null;
 
@@ -169,9 +194,12 @@ export async function ensureFefoLotsForOrderItem(
     where: { productId, stock: { gt: 0 } },
     orderBy: { expirationDate: 'asc' },
   });
+  const allLots = rawLots || [];
+  const validLots = allLots.filter((l: any) => !isLotExpired(l.expirationDate));
+  const expiredLots = allLots.filter((l: any) => isLotExpired(l.expirationDate));
   const allocations: LotAllocationRecord[] = [];
 
-  for (const lot of sortLotsDeterministicFefo(rawLots || [])) {
+  for (const lot of sortLotsDeterministicFefo(validLots)) {
     if (remainingToAssign <= 0) break;
     const allocatedQty = Math.min(Number(lot.stock || 0), remainingToAssign);
     if (allocatedQty <= 0) continue;
@@ -180,6 +208,12 @@ export async function ensureFefoLotsForOrderItem(
     await tx.orderItemLot.create({ data: { orderItemId, productLotId: lot.id, quantity: allocatedQty } });
     allocations.push({ lot, quantity: allocatedQty });
     remainingToAssign -= allocatedQty;
+  }
+
+  if (remainingToAssign > 0 && expiredLots.length > 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
+    throw new Error(
+      `Stock vigente insuficiente para completar el pedido (faltan ${remainingToAssign} u.): existen lotes vencidos que no pueden despacharse.`,
+    );
   }
 
   if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK === 'true') {
@@ -266,20 +300,47 @@ export async function processOrderPreparedLotAssignments(
 
   const items = await tx.orderItem.findMany({ where: { orderId }, include: { product: true } });
   const updatedSubtotals: number[] = [];
+  const lotRemainingById = new Map<number, number>();
 
   for (const item of items) {
     const userAssignments = lotAssignments[item.id] || [];
-    const totalUserAssigned = userAssignments.reduce((sum: number, a: any) => sum + Number(a.quantity), 0);
+    const consolidatedByLot = new Map<number, number>();
+    for (const uAs of userAssignments) {
+      const lid = Number(uAs.lotId);
+      const q = Math.trunc(Number(uAs.quantity));
+      if (lid > 0 && q > 0) {
+        consolidatedByLot.set(lid, (consolidatedByLot.get(lid) || 0) + q);
+      }
+    }
+
+    const totalUserAssigned = Array.from(consolidatedByLot.values()).reduce((sum, q) => sum + q, 0);
     if (totalUserAssigned > item.quantity) {
       throw new Error(
         `Asignación inválida para "${item.product.name}". Cantidad asignada (${totalUserAssigned}) supera la cantidad pedida (${item.quantity}).`,
       );
     }
 
-    const finalAssignments: { lotId: number; quantity: number }[] = [];
-    for (const uAs of userAssignments) {
-      const q = Number(uAs.quantity);
-      if (q > 0) finalAssignments.push({ lotId: Number(uAs.lotId), quantity: q });
+    const finalAssignments: { lotId: number; quantity: number; lot?: any; isContingency?: boolean }[] = [];
+    for (const [lotId, qty] of consolidatedByLot.entries()) {
+      const lot = await tx.productLot.findUnique({ where: { id: lotId } });
+      if (!lot) {
+        throw new Error(`El lote seleccionado (#${lotId}) no existe.`);
+      }
+      if (lot.productId !== item.productId) {
+        throw new Error(`El lote "${lot.lotNumber}" no pertenece al producto "${item.product.name}".`);
+      }
+      if (isLotExpired(lot.expirationDate)) {
+        throw new Error(
+          `El lote "${extractBaseLotNumber(lot.lotNumber)}" de "${item.product.name}" está vencido y no puede despacharse.`,
+        );
+      }
+      const availableStock = lotRemainingById.has(lot.id) ? lotRemainingById.get(lot.id)! : Number(lot.stock || 0);
+      if (availableStock < qty) {
+        throw new Error(
+          `Stock insuficiente en el lote "${extractBaseLotNumber(lot.lotNumber)}" para "${item.product.name}" (Disponible: ${availableStock} u., Solicitado: ${qty} u.).`,
+        );
+      }
+      finalAssignments.push({ lotId, quantity: qty, lot });
     }
 
     let remainingToAssign = item.quantity - totalUserAssigned;
@@ -288,17 +349,19 @@ export async function processOrderPreparedLotAssignments(
         where: { productId: item.productId, stock: { gt: 0 }, id: { notIn: finalAssignments.map((fa) => fa.lotId) } },
         orderBy: { expirationDate: 'asc' },
       });
-      for (const lot of sortLotsDeterministicFefo(rawLots)) {
+      const validRawLots = (rawLots || []).filter((l) => !isLotExpired(l.expirationDate));
+      for (const lot of sortLotsDeterministicFefo(validRawLots)) {
         if (remainingToAssign <= 0) break;
-        const allocatedQty = Math.min(lot.stock, remainingToAssign);
+        const availableStock = lotRemainingById.has(lot.id) ? lotRemainingById.get(lot.id)! : Number(lot.stock || 0);
+        const allocatedQty = Math.min(availableStock, remainingToAssign);
         if (allocatedQty > 0) {
-          finalAssignments.push({ lotId: lot.id, quantity: allocatedQty });
+          finalAssignments.push({ lotId: lot.id, quantity: allocatedQty, lot });
           remainingToAssign -= allocatedQty;
         }
       }
       if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK === 'true') {
         const slLot = await getOrCreateContingencySlLotInTx(tx, item.productId);
-        finalAssignments.push({ lotId: slLot.id, quantity: remainingToAssign });
+        finalAssignments.push({ lotId: slLot.id, quantity: remainingToAssign, lot: slLot, isContingency: true });
       }
     }
 
@@ -338,8 +401,15 @@ export async function processOrderPreparedLotAssignments(
 
     const allocations: LotAllocationRecord[] = [];
     for (const assignment of finalAssignments) {
-      const lot = await tx.productLot.findUnique({ where: { id: assignment.lotId } });
+      const lot = assignment.lot || (await tx.productLot.findUnique({ where: { id: assignment.lotId } }));
       if (!lot) continue;
+      const availableStock = lotRemainingById.has(lot.id) ? lotRemainingById.get(lot.id)! : Number(lot.stock || 0);
+      if (!assignment.isContingency && availableStock < assignment.quantity) {
+        throw new Error(
+          `Stock insuficiente en el lote "${extractBaseLotNumber(lot.lotNumber)}" para "${item.product.name}" (Disponible: ${availableStock} u., Solicitado: ${assignment.quantity} u.).`,
+        );
+      }
+      lotRemainingById.set(lot.id, availableStock - assignment.quantity);
       await tx.productLot.update({ where: { id: lot.id }, data: { stock: { decrement: assignment.quantity } } });
       await tx.orderItemLot.create({
         data: { orderItemId: item.id, productLotId: lot.id, quantity: assignment.quantity },

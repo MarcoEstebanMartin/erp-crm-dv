@@ -8,7 +8,7 @@ import {
   toDecimal,
 } from '../../core/money';
 import { isPromoBonusOrderItem } from './order-weekly-promos.helper';
-import { sortLotsDeterministicFefo } from './order-lot-picking.helper';
+import { isLotExpired, sortLotsDeterministicFefo } from './order-lot-picking.helper';
 
 function resolveBillingLineValues(params: {
   item: any;
@@ -197,7 +197,10 @@ export async function assignFifoLotsToOrderItem(
     where: { productId, stock: { gt: 0 } },
     orderBy: { expirationDate: 'asc' },
   });
-  const activeLots = sortLotsDeterministicFefo(rawLots || []);
+  const allLots = rawLots || [];
+  const validLots = allLots.filter((l: any) => !isLotExpired(l.expirationDate));
+  const expiredLots = allLots.filter((l: any) => isLotExpired(l.expirationDate));
+  const activeLots = sortLotsDeterministicFefo(validLots);
 
   for (const lot of activeLots) {
     if (remainingToAssign <= 0) break;
@@ -218,6 +221,12 @@ export async function assignFifoLotsToOrderItem(
       },
     });
     allocatedLots.push({ productLotId: lot.id, quantity: allocatedQty });
+  }
+
+  if (remainingToAssign > 0 && expiredLots.length > 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
+    throw new Error(
+      'No hay stock vigente (no vencido) suficiente para despachar este producto. Verificá los lotes vencidos en Control de Stock.',
+    );
   }
 
   if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK === 'true') {

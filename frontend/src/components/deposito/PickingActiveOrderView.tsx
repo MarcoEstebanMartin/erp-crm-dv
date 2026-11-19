@@ -165,51 +165,72 @@ export const PickingActiveOrderView: React.FC<PickingActiveOrderViewProps> = ({
                         </button>
                       </div>
 
-                      {productLots.length === 0 ? (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--accent-color)' }}>Sin lotes en depósito.</div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {productLots.map((lot: any) => {
-                            const qty = itemAssignments[lot.id] || 0;
-                            const hasShelf = Boolean(lot.location && lot.location !== 'S/U');
-                            const isConfirmed = !hasShelf || confirmedLocations[lot.id];
-                            const isGeneric = isGenericUntrackedLot(lot);
-                            const cleanLot = extractCleanLotNumber(lot.lotNumber);
-                            const hasRealExp = !isSentinelExpiration(lot.expirationDate);
-                            return (
-                              <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', gap: '8px' }}>
-                                <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                                  {!isGeneric && <strong>Lote: {cleanLot}</strong>}
-                                  {isGeneric && !hasShelf && <strong>Sin ubicar (S/U)</strong>}
-                                  {hasShelf && (
-                                    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 6px', backgroundColor: isConfirmed ? '#e6f4ea' : '#fef7e0', border: isConfirmed ? '1px solid #137333' : '1px solid #b06000', borderRadius: '4px', fontWeight: 600, fontSize: '0.72rem', color: isConfirmed ? '#137333' : '#b06000' }}>
-                                      Estante: {lot.location}
-                                      <button type="button" onClick={() => setConfirmedLocations((prev) => ({ ...prev, [lot.id]: !prev[lot.id] }))} style={{ marginLeft: '6px', background: 'none', border: 'none', boxShadow: 'none', color: isConfirmed ? '#137333' : '#b06000', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '0.7rem' }}>
-                                        {isConfirmed ? <Check size={12} aria-hidden="true" /> : 'Confirmar'}
-                                      </button>
-                                    </span>
-                                  )}
-                                  <span className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>({lot.stock} u.)</span>
-                                  {hasRealExp && (
-                                    <span style={{ color: 'var(--text-secondary)' }}>[Vence: {formatCleanExpirationDate(lot.expirationDate)}]</span>
-                                  )}
-                                </span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <input
-                                    type="number" className="input tabular-nums"
-                                    aria-label={`Cantidad lote ${cleanLot} para ${item.product?.name}`}
-                                    style={{ width: '70px', padding: '4px 6px', fontSize: '0.8rem', height: '28px', textAlign: 'center', opacity: isConfirmed ? 1 : 0.6 }}
-                                    min={0} max={lot.stock} value={qty || ''}
-                                    onChange={(e) => onLotQtyChange(item.id, lot.id, Number(e.target.value), lot.stock)}
-                                    placeholder="0" disabled={!isConfirmed}
-                                  />
-                                  <span style={{ color: 'var(--text-secondary)' }}>u.</span>
+                      {(() => {
+                        const visibleLots = productLots.filter(
+                          (lot: any) => Number(lot.stock || 0) > 0 || (itemAssignments[lot.id] || 0) > 0,
+                        );
+                        if (visibleLots.length === 0) {
+                          return <div style={{ fontSize: '0.8rem', color: 'var(--accent-color)' }}>Sin lotes en depósito.</div>;
+                        }
+                        const now = new Date();
+                        const todayDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {visibleLots.map((lot: any) => {
+                              const qty = itemAssignments[lot.id] || 0;
+                              const hasShelf = Boolean(lot.location && lot.location !== 'S/U');
+                              const isConfirmed = !hasShelf || confirmedLocations[lot.id];
+                              const isGeneric = isGenericUntrackedLot(lot);
+                              const cleanLot = extractCleanLotNumber(lot.lotNumber);
+                              const hasRealExp = !isSentinelExpiration(lot.expirationDate);
+                              const expObj = hasRealExp ? new Date(lot.expirationDate) : null;
+                              const isExpired = Boolean(
+                                expObj &&
+                                  !Number.isNaN(expObj.getTime()) &&
+                                  Date.UTC(expObj.getUTCFullYear(), expObj.getUTCMonth(), expObj.getUTCDate()) <= todayDay,
+                              );
+                              return (
+                                <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', gap: '8px' }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                    {!isGeneric && <strong>Lote: {cleanLot}</strong>}
+                                    {isGeneric && !hasShelf && <strong>Sin ubicar (S/U)</strong>}
+                                    {hasShelf && (
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 6px', backgroundColor: isConfirmed ? '#e6f4ea' : '#fef7e0', border: isConfirmed ? '1px solid #137333' : '1px solid #b06000', borderRadius: '4px', fontWeight: 600, fontSize: '0.72rem', color: isConfirmed ? '#137333' : '#b06000' }}>
+                                        Estante: {lot.location}
+                                        <button type="button" onClick={() => setConfirmedLocations((prev) => ({ ...prev, [lot.id]: !prev[lot.id] }))} style={{ marginLeft: '6px', background: 'none', border: 'none', boxShadow: 'none', color: isConfirmed ? '#137333' : '#b06000', cursor: 'pointer', padding: 0, fontWeight: 700, fontSize: '0.7rem' }}>
+                                          {isConfirmed ? <Check size={12} aria-hidden="true" /> : 'Confirmar'}
+                                        </button>
+                                      </span>
+                                    )}
+                                    <span className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>({lot.stock} u.)</span>
+                                    {hasRealExp && (
+                                      <span style={{ color: isExpired ? '#dc2626' : 'var(--text-secondary)', fontWeight: isExpired ? 700 : 400 }}>
+                                        [Vence: {formatCleanExpirationDate(lot.expirationDate)}]
+                                      </span>
+                                    )}
+                                    {isExpired && (
+                                      <span className="badge" style={{ backgroundColor: '#fee2e2', color: '#dc2626', fontSize: '0.68rem', fontWeight: 700, padding: '1px 6px' }}>
+                                        VENCIDO
+                                      </span>
+                                    )}
+                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <input
+                                      type="number" className="input tabular-nums"
+                                      aria-label={`Cantidad lote ${cleanLot} para ${item.product?.name}`}
+                                      style={{ width: '70px', padding: '4px 6px', fontSize: '0.8rem', height: '28px', textAlign: 'center', opacity: isConfirmed && !isExpired ? 1 : 0.5 }}
+                                      min={0} max={lot.stock} value={qty || ''}
+                                      onChange={(e) => onLotQtyChange(item.id, lot.id, Number(e.target.value), lot.stock)}
+                                      placeholder="0" disabled={!isConfirmed || isExpired}
+                                    />
+                                    <span style={{ color: 'var(--text-secondary)' }}>u.</span>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
 
                       <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
                         <span style={{ fontWeight: 600, color: assignedSum === item.quantity ? 'var(--color-success)' : assignedSum > 0 ? 'var(--color-warning)' : 'var(--accent-color)' }}>

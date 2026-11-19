@@ -7,6 +7,7 @@ import { StoreCatalogService } from '../services/store/store-catalog.service';
 import { StoreOrderService } from '../services/store/store-order.service';
 import { env } from '../config/env.config';
 import { sessionCache } from '../utils/session-cache.util';
+import { appCache } from '../utils/cache';
 import {
   clearStoreSessionCookie,
   extractStoreToken,
@@ -128,6 +129,7 @@ export async function createStoreOrder(
       items: req.body.items,
       notes: req.body.notes,
     });
+    appCache.invalidateProductCatalog();
 
     res.status(201).json({
       status: 'success',

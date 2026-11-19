@@ -5,6 +5,29 @@ import type { Order, Product, ProductLot } from '../../types';
 import { playBeep, sortItemsByOptimalRoute } from './depositoHelpers';
 import type { BultosData } from './BultosCloseModal';
 import type { StockAdjustModalState } from './DepositoStockAdjustModal';
+import { isSentinelExpiration } from '../stock/lotLabel';
+
+function isLotExpiredForPicking(expirationDate?: string | null): boolean {
+  if (!expirationDate || isSentinelExpiration(expirationDate)) return false;
+  const exp = new Date(expirationDate);
+  if (Number.isNaN(exp.getTime())) return false;
+  const now = new Date();
+  const expDay = Date.UTC(exp.getUTCFullYear(), exp.getUTCMonth(), exp.getUTCDate());
+  const todayDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return expDay <= todayDay;
+}
+
+function sortEligibleLotsFefo(lots: any[]): any[] {
+  return [...lots]
+    .filter((lot) => Number(lot.stock || 0) > 0 && !isLotExpiredForPicking(lot.expirationDate))
+    .sort((a, b) => {
+      const expA = a.expirationDate ? new Date(a.expirationDate).getTime() : 0;
+      const expB = b.expirationDate ? new Date(b.expirationDate).getTime() : 0;
+      const aSu = !a.location || a.location === 'S/U';
+      const bSu = !b.location || b.location === 'S/U';
+      return expA - expB || Number(!aSu) - Number(!bSu) || Number(a.id) - Number(b.id);
+    });
+}
 
 export function useDepositoController(activeTab: string, confirm: any) {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -129,6 +152,19 @@ export function useDepositoController(activeTab: string, confirm: any) {
     }
   }, [selectedOrder]);
 
+  const handleSelectOrder = async (order: Order) => {
+    setErrorMsg(null);
+    setLoading(true);
+    try {
+      const fullOrder = await api.getOrderById(order.id);
+      setSelectedOrder(fullOrder);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al cargar el detalle del pedido.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStartPicking = async (orderId: number) => {
     setErrorMsg(null);
     try {
@@ -144,7 +180,7 @@ export function useDepositoController(activeTab: string, confirm: any) {
   };
 
   const handleFIFOAutoFill = (item: any) => {
-    const productLots = item.product?.lots || [];
+    const productLots = sortEligibleLotsFefo(item.product?.lots || []);
     let remaining = item.quantity;
     const itemAssignments: Record<number, number> = {};
     for (const lot of productLots) {
@@ -163,14 +199,17 @@ export function useDepositoController(activeTab: string, confirm: any) {
     if (!selectedOrder) return;
     const newAssignments = { ...lotAssignments };
     const newConfirmations = { ...confirmedLocations };
+    const lotRemaining: Record<number, number> = {};
     selectedOrder.items.forEach((item: any) => {
       let remaining = item.quantity;
       const itemAssignments: Record<number, number> = {};
-      for (const lot of item.product?.lots || []) {
+      for (const lot of sortEligibleLotsFefo(item.product?.lots || [])) {
         if (remaining <= 0) break;
-        const toTake = Math.min(lot.stock, remaining);
+        const avail = lotRemaining[lot.id] !== undefined ? lotRemaining[lot.id] : Number(lot.stock || 0);
+        const toTake = Math.min(avail, remaining);
         if (toTake > 0) {
           itemAssignments[lot.id] = toTake;
+          lotRemaining[lot.id] = avail - toTake;
           remaining -= toTake;
           if (lot.location && lot.location !== 'S/U') newConfirmations[lot.id] = true;
         }
@@ -296,7 +335,7 @@ export function useDepositoController(activeTab: string, confirm: any) {
     orderSearchQuery, setOrderSearchQuery, routeFilter, setRouteFilter, withdrawalFilter, setWithdrawalFilter, selectedStatus, setSelectedStatus,
     selectedOrderIds, setSelectedOrderIds, showConsolidatedView, setShowConsolidatedView, consolidatedCheckedItems, setConsolidatedCheckedItems,
     consolidatedZone, setConsolidatedZone, subTab, setSubTab, allProducts, pendingPurchaseOrders, generatingPOForProvider, setGeneratingPOForProvider,
-    fetchData, handleStartPicking, handleLotQtyChange, handleFIFOAutoFill, handleFIFOAutoFillAll, handleFinishPicking, handleConfirmBultosAndFinish,
+    fetchData, handleSelectOrder, handleStartPicking, handleLotQtyChange, handleFIFOAutoFill, handleFIFOAutoFillAll, handleFinishPicking, handleConfirmBultosAndFinish,
     handleStockAdjustSubmit, selectedOrdersList, consolidatedItems, handleBatchStartPicking,
   };
 }

@@ -62,6 +62,7 @@ export async function createSupplierInvoice(
       items: req.body.items,
     });
     appCache.invalidateByPrefix('personas_');
+    appCache.invalidateProductCatalog();
     res.status(201).json({ status: 'success', data: { invoice } });
   } catch (error) {
     handleBillingError(res, error, 'Error al guardar el comprobante de compra.');
@@ -78,6 +79,7 @@ export async function deleteSupplierInvoice(
       invoiceId: Number(req.params.id),
     });
     appCache.invalidateByPrefix('personas_');
+    appCache.invalidateProductCatalog();
     res.status(200).json({
       status: 'success',
       message:

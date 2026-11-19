@@ -8,6 +8,7 @@ import {
   decrementStockByProductMapInTx,
   evaluateOrderCartWithWeeklyPromos,
 } from './order-weekly-promos.helper';
+import { lockProductsForUpdate } from '../../utils/db-locks.util';
 
 export interface UpdateOrderDto {
   orderId: number;
@@ -57,8 +58,32 @@ export class OrderEditService {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      if (typeof (tx as any).$queryRaw === 'function') {
+        await (tx as any).$queryRaw`SELECT id FROM "Order" WHERE id = ${order.id} FOR UPDATE`;
+      }
+
+      const freshOrder =
+        typeof (tx.order as any)?.findUnique === 'function'
+          ? await tx.order.findUnique({ where: { id: order.id }, include: { items: true } })
+          : order;
+
+      if (!freshOrder) {
+        const err: any = new Error('Pedido no encontrado.');
+        err.statusCode = 404;
+        throw err;
+      }
+
+      if (freshOrder.status !== OrderStatus.PENDING) {
+        throw new Error('Solo se pueden editar pedidos en estado Pendiente.');
+      }
+
+      await lockProductsForUpdate(tx, [
+        ...freshOrder.items.map((i) => i.productId),
+        ...paidInputItems.map((i) => i.productId),
+      ]);
+
       // 1. Restaurar stock de los ítems anteriores de manera atómica (incluye bonificados previos)
-      for (const oldItem of order.items) {
+      for (const oldItem of freshOrder.items) {
         await tx.product.update({
           where: { id: oldItem.productId },
           data: { stock: { increment: oldItem.quantity } },
@@ -186,7 +211,10 @@ export class OrderEditService {
       await tx.stockMovement.deleteMany({
         where: {
           orderId: order.id,
-          referenceId: `ORDER-${order.id}`,
+          OR: [
+            { referenceId: `ORDER-${order.id}` },
+            { referenceId: { startsWith: 'WEB-ORDER-' } },
+          ],
         },
       });
 

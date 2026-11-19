@@ -14,6 +14,7 @@ import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { mergeOrderBultosPreservingWebMetadata } from '../../engines/web-order-lifecycle.engine';
 import { processOrderPreparedLotAssignments } from './order-lot-picking.helper';
 import { notifyWebOrderStatusForErpOrder } from './web-order-status-bridge.service';
+import { lockProductsForUpdate } from '../../utils/db-locks.util';
 
 export interface UpdateOrderStatusDto {
   orderId: number;
@@ -106,6 +107,14 @@ export class OrderStatusService {
 
       // Evita doble descuento de lotes si el pedido ya estaba en PREPARED
       if (status === OrderStatus.PREPARED && freshOrder.status !== OrderStatus.PREPARED) {
+        const orderItems = await tx.orderItem.findMany({
+          where: { orderId: freshOrder.id },
+          select: { productId: true },
+        });
+        await lockProductsForUpdate(
+          tx,
+          orderItems.map((i) => i.productId),
+        );
         finalTotalAmount = await processOrderPreparedLotAssignments(tx, {
           orderId: freshOrder.id,
           sellerId: freshOrder.sellerId,
@@ -135,38 +144,74 @@ export class OrderStatusService {
           include: { orderItemLots: true },
         });
 
+        await lockProductsForUpdate(
+          tx,
+          items.map((i) => i.productId),
+        );
+
         for (const item of items) {
           await tx.product.update({
             where: { id: item.productId },
             data: { stock: { increment: item.quantity } },
           });
 
-          await tx.stockMovement.create({
-            data: {
-              productId: item.productId,
-              quantity: item.quantity,
-              type: MovementType.IN,
-              orderId: order.id,
-              referenceId: `CANCEL-${order.id}`,
-              userId,
-              reason: `Devolución por cancelación de pedido #${order.id}`,
-            },
-          });
-
           const hasLotsAssigned =
             freshOrder.status === OrderStatus.PREPARING ||
             freshOrder.status === OrderStatus.PREPARED ||
             freshOrder.status === OrderStatus.DELIVERED;
-          if (hasLotsAssigned) {
-            for (const itemLot of item.orderItemLots) {
+          const assignedLots = item.orderItemLots || [];
+
+          if (hasLotsAssigned && assignedLots.length > 0) {
+            let restoredByLots = 0;
+            for (const itemLot of assignedLots) {
               await tx.productLot.update({
                 where: { id: itemLot.productLotId },
                 data: { stock: { increment: itemLot.quantity } },
+              });
+              await tx.stockMovement.create({
+                data: {
+                  productId: item.productId,
+                  quantity: itemLot.quantity,
+                  type: MovementType.IN,
+                  orderId: order.id,
+                  referenceId: `CANCEL-${order.id}`,
+                  userId,
+                  reason: `Devolución por cancelación de pedido #${order.id}`,
+                  productLotId: itemLot.productLotId,
+                },
+              });
+              restoredByLots += itemLot.quantity;
+            }
+
+            const remainingUnlinked = item.quantity - restoredByLots;
+            if (remainingUnlinked > 0) {
+              await tx.stockMovement.create({
+                data: {
+                  productId: item.productId,
+                  quantity: remainingUnlinked,
+                  type: MovementType.IN,
+                  orderId: order.id,
+                  referenceId: `CANCEL-${order.id}`,
+                  userId,
+                  reason: `Devolución por cancelación de pedido #${order.id}`,
+                },
               });
             }
 
             await tx.orderItemLot.deleteMany({
               where: { orderItemId: item.id },
+            });
+          } else {
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                quantity: item.quantity,
+                type: MovementType.IN,
+                orderId: order.id,
+                referenceId: `CANCEL-${order.id}`,
+                userId,
+                reason: `Devolución por cancelación de pedido #${order.id}`,
+              },
             });
           }
         }

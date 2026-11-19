@@ -9,6 +9,7 @@ import {
   computeStockStats
 } from './stock/types';
 import { computeProductWmsBreakdown } from './deposito/wmsStockBreakdown';
+import { isSentinelExpiration } from './stock/lotLabel';
 import { useStockMovements } from './stock/useStockMovements';
 import { useStockAdjustments } from './stock/useStockAdjustments';
 import { useLotManager } from './stock/useLotManager';
@@ -84,9 +85,9 @@ export default function StockDashboard({
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
       matchesStock = (p.lots || []).some((l: any) => {
-        if (l.stock <= 0) return false;
+        if (l.stock <= 0 || isSentinelExpiration(l.expirationDate)) return false;
         const expDate = new Date(l.expirationDate);
-        return expDate > new Date() && expDate <= thirtyDaysFromNow;
+        return !Number.isNaN(expDate.getTime()) && expDate <= thirtyDaysFromNow;
       });
     }
 

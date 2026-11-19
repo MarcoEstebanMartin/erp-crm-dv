@@ -28,7 +28,7 @@ export class ProductReconciliationSubService {
     for (const product of products) {
       const sumLotsStock = product.lots.reduce((sum, lot) => sum + lot.stock, 0);
       const reservedQty = reservationMap.get(product.id) || 0;
-      const theoreticalStock = sumLotsStock - reservedQty;
+      const theoreticalStock = Math.max(0, sumLotsStock - reservedQty);
       const drift = product.stock - theoreticalStock;
 
       if (drift !== 0) {
@@ -64,6 +64,28 @@ export class ProductReconciliationSubService {
         async (tx) => {
           await lockProductsForUpdate(tx, chunkIds);
 
+          const hasLiveProductRead = typeof (tx as any).product?.findMany === 'function';
+          const freshProductById = new Map<number, any>();
+          if (hasLiveProductRead) {
+            const freshProducts = await tx.product.findMany({
+              where: { id: { in: chunkIds } },
+              select: { id: true, sku: true, name: true, stock: true },
+            });
+            for (const fp of freshProducts) freshProductById.set(fp.id, fp);
+          }
+
+          const freshReservedMap = new Map<number, number>();
+          if (typeof (tx as any).orderItem?.groupBy === 'function') {
+            const freshRes = await tx.orderItem.groupBy({
+              by: ['productId'],
+              where: { productId: { in: chunkIds }, order: { status: { in: ['PENDING', 'PREPARING'] } } },
+              _sum: { quantity: true },
+            });
+            for (const row of freshRes) {
+              freshReservedMap.set(row.productId, Number(row._sum?.quantity || 0));
+            }
+          }
+
           const existingLots = await tx.productLot.findMany({
             where: { productId: { in: chunkIds } },
             orderBy: [{ expirationDate: 'desc' }, { stock: 'desc' }],
@@ -81,8 +103,36 @@ export class ProductReconciliationSubService {
 
           for (const item of chunk) {
             const prodLots = lotsByProduct.get(item.id) || [];
+            let effectiveDrift = item.discrepancia;
 
-            if (item.discrepancia > 0) {
+            if (hasLiveProductRead) {
+              const freshProduct = freshProductById.get(item.id);
+              if (!freshProduct) continue;
+
+              const freshSumLots = prodLots.reduce((sum, l) => sum + Number(l.stock || 0), 0);
+              const freshReserved = freshReservedMap.get(item.id) || 0;
+              const freshTheoretical = Math.max(0, freshSumLots - freshReserved);
+
+              if (freshProduct.stock < 0) {
+                await tx.product.update({
+                  where: { id: freshProduct.id },
+                  data: { stock: freshTheoretical },
+                });
+                list.push({
+                  sku: freshProduct.sku || item.sku,
+                  name: freshProduct.name || item.name,
+                  discrepancia: freshTheoretical - freshProduct.stock,
+                  loteModificado: 'S/L',
+                  nuevoStockLote: freshSumLots,
+                });
+                continue;
+              }
+
+              effectiveDrift = freshProduct.stock - freshTheoretical;
+              if (effectiveDrift === 0) continue;
+            }
+
+            if (effectiveDrift > 0) {
               let defaultLot = prodLots.find((l) => isGenericLot(l) && isUnassigned(l));
               if (!defaultLot) {
                 defaultLot = await tx.productLot.create({
@@ -90,14 +140,14 @@ export class ProductReconciliationSubService {
                     productId: item.id,
                     lotNumber: 'S/L',
                     expirationDate: new Date('2036-12-31T00:00:00Z'),
-                    stock: item.discrepancia,
+                    stock: effectiveDrift,
                     location: 'S/U',
                   },
                 });
                 prodLots.push(defaultLot);
                 lotsByProduct.set(item.id, prodLots);
               } else {
-                const newLotStock = defaultLot.stock + item.discrepancia;
+                const newLotStock = defaultLot.stock + effectiveDrift;
                 await tx.productLot.update({
                   where: { id: defaultLot.id },
                   data: { stock: newLotStock },
@@ -107,9 +157,9 @@ export class ProductReconciliationSubService {
 
               movementsBuffer.push({
                 productId: item.id,
-                quantity: item.discrepancia,
+                quantity: effectiveDrift,
                 type: 'ADJUSTMENT',
-                reason: `Conciliación automática de inventario (Desvío corregido: +${item.discrepancia} u.)`,
+                reason: `Conciliación automática de inventario (Desvío corregido: +${effectiveDrift} u.)`,
                 userId,
                 productLotId: defaultLot.id,
               });
@@ -117,12 +167,12 @@ export class ProductReconciliationSubService {
               list.push({
                 sku: item.sku,
                 name: item.name,
-                discrepancia: item.discrepancia,
+                discrepancia: effectiveDrift,
                 loteModificado: 'S/L',
                 nuevoStockLote: defaultLot.stock,
               });
             } else {
-              let remainingToDeduct = Math.abs(item.discrepancia);
+              let remainingToDeduct = Math.abs(effectiveDrift);
               const candidateLots = prodLots.filter((l) => l.stock > 0);
               // Prioridad de descuento: genérico S/L sin ubicar → genérico S/L en rack → lotes de fábrica
               const orderedLots = [

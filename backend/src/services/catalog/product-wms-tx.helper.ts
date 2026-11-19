@@ -33,11 +33,16 @@ export async function executeWmsAssignmentInTx(params: ExecuteWmsRelocationParam
   if (mode === 'STOCK_IN') {
     const requestedLot = params.lotNumber?.trim() || 'S/L';
     const targetRes = resolveTargetLotNumberForLocation(requestedLot, scope.cleanCode, existingLots);
+    const hasExplicitExp = Boolean(params.expirationDateRaw && params.expirationDateRaw.trim());
 
     const targetLot = targetRes.existingTargetLotId
       ? await tx.productLot.update({
           where: { id: targetRes.existingTargetLotId },
-          data: { stock: { increment: qty }, location: scope.cleanCode },
+          data: {
+            stock: { increment: qty },
+            location: scope.cleanCode,
+            ...(hasExplicitExp ? { expirationDate: expDate } : {}),
+          },
         })
       : await tx.productLot.create({
           data: {
@@ -127,6 +132,8 @@ export async function executeWmsAssignmentInTx(params: ExecuteWmsRelocationParam
     }
   }
 
+  const hasExplicitExp = Boolean(params.expirationDateRaw && params.expirationDateRaw.trim());
+
   if (plan.fromUntrackedGap === 0 && plan.steps.length === 1 && plan.steps[0].remainingInSource === 0) {
     const singleStep = plan.steps[0];
     const otherLots = existingLots.filter((l) => l.id !== singleStep.lotId);
@@ -139,8 +146,34 @@ export async function executeWmsAssignmentInTx(params: ExecuteWmsRelocationParam
     if (!targetRes.existingTargetLotId) {
       const movedLot = await tx.productLot.update({
         where: { id: singleStep.lotId },
-        data: { location: scope.cleanCode, lotNumber: targetRes.targetLotNumber },
+        data: {
+          location: scope.cleanCode,
+          lotNumber: targetRes.targetLotNumber,
+          ...(hasExplicitExp ? { expirationDate: expDate } : {}),
+        },
       });
+      if (typeof (tx as any).stockMovement?.create === 'function') {
+        await tx.stockMovement.create({
+          data: {
+            productId: product.id,
+            quantity: -singleStep.takeQty,
+            type: 'OUT',
+            reason: `Traslado interno WMS desde ${singleStep.fromLocation} hacia ${scope.cleanCode}`,
+            userId,
+            productLotId: movedLot.id,
+          },
+        });
+        await tx.stockMovement.create({
+          data: {
+            productId: product.id,
+            quantity: singleStep.takeQty,
+            type: 'IN',
+            reason: `Ubicación interna WMS en ${scope.cleanCode} (origen ${singleStep.fromLocation})`,
+            userId,
+            productLotId: movedLot.id,
+          },
+        });
+      }
       const updatedProduct = await tx.product.update({
         where: { id: product.id },
         data: { defaultLocation: scope.cleanCode },
@@ -149,31 +182,59 @@ export async function executeWmsAssignmentInTx(params: ExecuteWmsRelocationParam
     }
   }
 
-  const preferredBaseLot =
-    params.lotNumber?.trim() ||
-    (plan.steps[0] ? extractBaseLotNumber(plan.steps[0].lotNumber) : 'S/L');
-  const resolvedExpDate = params.expirationDateRaw?.trim()
-    ? expDate
-    : plan.steps[0]?.expirationDate || expDate;
-  const targetRes = resolveTargetLotNumberForLocation(preferredBaseLot, scope.cleanCode, existingLots);
-
-  let targetLot = targetRes.existingTargetLotId
-    ? await tx.productLot.findUniqueOrThrow({ where: { id: targetRes.existingTargetLotId } })
-    : await tx.productLot.create({
-        data: {
-          productId: product.id,
-          lotNumber: targetRes.targetLotNumber,
-          expirationDate: resolvedExpDate,
-          stock: 0,
-          location: scope.cleanCode,
-        },
-      });
+  const workingLots = [...existingLots];
+  const isMultiSource = plan.steps.length > 1 || (plan.steps.length >= 1 && plan.fromUntrackedGap > 0);
+  const isSentinelDate = (d: Date | string | null | undefined) => !d || new Date(d).getUTCFullYear() >= 2036;
+  let lastDestLot: any = null;
 
   for (const step of plan.steps) {
+    const stepBaseLot =
+      !isMultiSource && params.lotNumber?.trim()
+        ? params.lotNumber.trim()
+        : extractBaseLotNumber(step.lotNumber);
+    const stepExpDate = !isMultiSource && hasExplicitExp ? expDate : step.expirationDate;
+    const stepTargetRes = resolveTargetLotNumberForLocation(stepBaseLot, scope.cleanCode, workingLots);
+
     await tx.productLot.update({
       where: { id: step.lotId },
       data: { stock: step.remainingInSource },
     });
+    const srcInWorking = workingLots.find((l) => l.id === step.lotId);
+    if (srcInWorking) srcInWorking.stock = step.remainingInSource;
+
+    let destLot: any;
+    if (stepTargetRes.existingTargetLotId) {
+      const existingDest = workingLots.find((l) => l.id === stepTargetRes.existingTargetLotId);
+      const shouldUpgradeExp =
+        existingDest &&
+        (Number(existingDest.stock || 0) <= 0 ||
+          (isSentinelDate(existingDest.expirationDate) && !isSentinelDate(stepExpDate)));
+      destLot = await tx.productLot.update({
+        where: { id: stepTargetRes.existingTargetLotId },
+        data: {
+          stock: { increment: step.takeQty },
+          location: scope.cleanCode,
+          ...(shouldUpgradeExp ? { expirationDate: stepExpDate } : {}),
+        },
+      });
+      if (existingDest) {
+        existingDest.stock = Number(existingDest.stock || 0) + step.takeQty;
+        if (shouldUpgradeExp) existingDest.expirationDate = stepExpDate;
+      }
+    } else {
+      destLot = await tx.productLot.create({
+        data: {
+          productId: product.id,
+          lotNumber: stepTargetRes.targetLotNumber,
+          expirationDate: stepExpDate,
+          stock: step.takeQty,
+          location: scope.cleanCode,
+        },
+      });
+      workingLots.push({ ...destLot });
+    }
+    lastDestLot = destLot;
+
     await tx.stockMovement.create({
       data: {
         productId: product.id,
@@ -191,12 +252,38 @@ export async function executeWmsAssignmentInTx(params: ExecuteWmsRelocationParam
         type: 'IN',
         reason: `Ubicación interna WMS en ${scope.cleanCode} (origen ${step.fromLocation})`,
         userId,
-        productLotId: targetLot.id,
+        productLotId: destLot.id,
       },
     });
   }
 
   if (plan.fromUntrackedGap > 0) {
+    const gapLotNumber = !isMultiSource && params.lotNumber?.trim() ? params.lotNumber.trim() : 'S/L';
+    const gapExpDate = hasExplicitExp ? expDate : SENTINEL_EXPIRATION;
+    const gapTargetRes = resolveTargetLotNumberForLocation(gapLotNumber, scope.cleanCode, workingLots);
+
+    let gapDestLot: any;
+    if (gapTargetRes.existingTargetLotId) {
+      gapDestLot = await tx.productLot.update({
+        where: { id: gapTargetRes.existingTargetLotId },
+        data: { stock: { increment: plan.fromUntrackedGap }, location: scope.cleanCode },
+      });
+      const existingDest = workingLots.find((l) => l.id === gapTargetRes.existingTargetLotId);
+      if (existingDest) existingDest.stock = Number(existingDest.stock || 0) + plan.fromUntrackedGap;
+    } else {
+      gapDestLot = await tx.productLot.create({
+        data: {
+          productId: product.id,
+          lotNumber: gapTargetRes.targetLotNumber,
+          expirationDate: gapExpDate,
+          stock: plan.fromUntrackedGap,
+          location: scope.cleanCode,
+        },
+      });
+      workingLots.push({ ...gapDestLot });
+    }
+    lastDestLot = gapDestLot;
+
     await tx.stockMovement.create({
       data: {
         productId: product.id,
@@ -204,19 +291,15 @@ export async function executeWmsAssignmentInTx(params: ExecuteWmsRelocationParam
         type: 'ADJUSTMENT',
         reason: `Normalización de lote inicial ubicado en ${scope.cleanCode} (Δ Stock comercial = 0)`,
         userId,
-        productLotId: targetLot.id,
+        productLotId: gapDestLot.id,
       },
     });
   }
 
-  targetLot = await tx.productLot.update({
-    where: { id: targetLot.id },
-    data: { stock: { increment: qty }, location: scope.cleanCode },
-  });
   const updatedProduct = await tx.product.update({
     where: { id: product.id },
     data: { defaultLocation: scope.cleanCode },
   });
 
-  return { product: updatedProduct, lot: targetLot, mode };
+  return { product: updatedProduct, lot: lastDestLot, mode };
 }

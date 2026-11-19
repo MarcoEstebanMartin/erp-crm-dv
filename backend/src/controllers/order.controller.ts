@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../types';
 import { Role, BillingType, OrderStatus, PaymentMethod } from '@prisma/client';
 import { logAudit } from '../utils/audit';
+import { appCache } from '../utils/cache';
 import { OrderService } from '../services/order.service';
 import { DirectInvoiceService } from '../services/directInvoice.service';
 import { OrderQueriesService } from '../services/orders/order-queries.service';
@@ -148,6 +149,7 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
       entityId: result.id,
       newValues: { personaId: result.personaId, total: result.totalAmount, status: result.status },
     });
+    appCache.invalidateProductCatalog();
     res.status(201).json({ status: 'success', data: { order: result } });
   } catch (error: any) {
     respondOrderError(res, error, 400, 'Error al procesar el pedido.');
@@ -186,6 +188,7 @@ export async function confirmArmado(req: AuthenticatedRequest, res: Response): P
       entityId: updatedOrder.id,
       newValues: { totalAmount: updatedOrder.totalAmount, status: updatedOrder.status },
     });
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: { order: updatedOrder }, message: 'Armado confirmado con éxito.' });
   } catch (error: any) {
     respondOrderError(res, error, 400, 'Error al confirmar el armado.');
@@ -206,6 +209,7 @@ export async function updateOrderStatus(req: AuthenticatedRequest, res: Response
       bultosCount: req.body.bultosCount,
       bultosDetails: req.body.bultosDetails,
     });
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: { order: updated } });
   } catch (error: any) {
     respondOrderError(res, error, 400, 'Error al actualizar el estado del pedido.');
@@ -234,6 +238,7 @@ export async function invoiceOrder(req: AuthenticatedRequest, res: Response): Pr
       deliveryMethod: req.body.deliveryMethod,
       markPickedUp: req.body.markPickedUp,
     });
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data });
   } catch (error: any) {
     respondOrderError(res, error, 400, 'Error al facturar el pedido.');
@@ -256,6 +261,7 @@ export async function updateOrder(req: AuthenticatedRequest, res: Response): Pro
       userRole: actor.userRole,
       items: req.body.items,
     });
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: { order } });
   } catch (error: any) {
     respondOrderError(res, error, 400, 'Error al editar el pedido.');
@@ -278,6 +284,7 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
       userRole: actor.userRole,
       ...req.body,
     });
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: { order } });
   } catch (error: any) {
     respondOrderError(res, error, 400, 'Error al emitir factura directa.');

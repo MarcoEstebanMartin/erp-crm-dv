@@ -27,6 +27,7 @@ import {
   notifyWebOrderStatusForErpOrder,
 } from './web-order-status-bridge.service';
 import { OrderStatusService } from './order-status.service';
+import { appCache } from '../../utils/cache';
 
 export type {
   SyncWebOrdersOptions,
@@ -268,6 +269,10 @@ export class ProductionOrderSyncService {
           action: res.alreadyExisted ? 'ALREADY_IMPORTED' : 'IMPORT',
           importedErpOrderId: res.orderId,
         });
+      }
+
+      if (!dryRun && (importedCount > 0 || cancelledInErpCount > 0)) {
+        appCache.invalidateProductCatalog();
       }
 
       return {

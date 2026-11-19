@@ -93,10 +93,31 @@ export class ProductWmsSubService {
           if (!product) continue;
 
           const subQty = Math.max(0, freshLot.stock);
-          const nextProductStock = Math.max(0, product.stock - subQty);
-          const appliedDelta = nextProductStock - product.stock;
-
           await tx.productLot.update({ where: { id: freshLot.id }, data: { stock: 0 } });
+
+          let nextProductStock = Math.max(0, product.stock - subQty);
+          if (typeof (tx.productLot as any).findMany === 'function') {
+            const allProdLots = await tx.productLot.findMany({
+              where: { productId: product.id },
+              select: { id: true, stock: true },
+            });
+            if (Array.isArray(allProdLots) && allProdLots.length > 0) {
+              const physicalRemaining = allProdLots.reduce(
+                (acc, l) => acc + (l.id === freshLot.id ? 0 : Math.max(0, Number(l.stock || 0))),
+                0,
+              );
+              let reservedQty = 0;
+              if (typeof (tx as any).orderItem?.aggregate === 'function') {
+                const resAgg = await tx.orderItem.aggregate({
+                  where: { productId: product.id, order: { status: { in: ['PENDING', 'PREPARING'] } } },
+                  _sum: { quantity: true },
+                });
+                reservedQty = Number(resAgg?._sum?.quantity || 0);
+              }
+              nextProductStock = Math.max(0, physicalRemaining - reservedQty);
+            }
+          }
+          const appliedDelta = nextProductStock - product.stock;
 
           if (subQty > 0) {
             await tx.product.update({ where: { id: product.id }, data: { stock: nextProductStock } });
@@ -157,6 +178,28 @@ export class ProductWmsSubService {
             where: { id: freshLot.id },
             data: { location: 'S/U', lotNumber: targetResolution.targetLotNumber },
           });
+          if (freshLot.stock > 0 && typeof (tx as any).stockMovement?.create === 'function') {
+            await tx.stockMovement.create({
+              data: {
+                productId: freshLot.productId,
+                quantity: -freshLot.stock,
+                type: 'OUT',
+                reason: `Liberación de ubicación ${freshLot.location} hacia S/U`,
+                userId,
+                productLotId: freshLot.id,
+              },
+            });
+            await tx.stockMovement.create({
+              data: {
+                productId: freshLot.productId,
+                quantity: freshLot.stock,
+                type: 'IN',
+                reason: `Recepción en S/U desde ubicación ${freshLot.location}`,
+                userId,
+                productLotId: freshLot.id,
+              },
+            });
+          }
           movedUnits += Math.max(0, freshLot.stock);
         }
       }

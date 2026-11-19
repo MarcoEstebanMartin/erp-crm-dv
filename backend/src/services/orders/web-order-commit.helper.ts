@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { standardizePersonaName } from '../../utils/normalize';
+import { lockProductsForUpdate } from '../../utils/db-locks.util';
 import {
   mapWebOrderStatusToErp,
   translateWebOrderItemsToErpLines,
@@ -196,11 +197,37 @@ export async function commitSingleWebOrderAtomically(params: {
       },
     });
 
+    const qtyByProduct = new Map<number, number>();
     for (const l of translated.lines) {
-      await tx.product.update({
-        where: { id: l.productId },
-        data: { stock: { decrement: l.quantity } },
+      qtyByProduct.set(l.productId, (qtyByProduct.get(l.productId) || 0) + l.quantity);
+    }
+    const touchedProductIds = Array.from(qtyByProduct.keys());
+    await lockProductsForUpdate(tx, touchedProductIds);
+
+    if (touchedProductIds.length > 0 && typeof (tx.product as any).findMany === 'function') {
+      const currentProducts = await tx.product.findMany({
+        where: { id: { in: touchedProductIds } },
+        select: { id: true, stock: true },
       });
+      const stockMap = new Map<number, number>(currentProducts.map((p) => [p.id, p.stock]));
+      for (const [productId, totalQty] of qtyByProduct.entries()) {
+        const currentStock = stockMap.get(productId) ?? 0;
+        await tx.product.update({
+          where: { id: productId },
+          data: { stock: Math.max(0, currentStock - totalQty) },
+        });
+      }
+    } else {
+      for (const [productId, totalQty] of qtyByProduct.entries()) {
+        const prod =
+          typeof (tx.product as any).findUnique === 'function'
+            ? await tx.product.findUnique({ where: { id: productId }, select: { stock: true } })
+            : null;
+        await tx.product.update({
+          where: { id: productId },
+          data: prod ? { stock: Math.max(0, prod.stock - totalQty) } : { stock: { decrement: totalQty } },
+        });
+      }
     }
 
     await tx.stockMovement.createMany({
@@ -209,7 +236,7 @@ export async function commitSingleWebOrderAtomically(params: {
         quantity: -l.quantity,
         type: MovementType.OUT,
         orderId: newOrder.id,
-        referenceId: `WEB-ORDER-${webOrderId}`,
+        referenceId: `ORDER-${newOrder.id}`,
         userId: sellerId,
         reason: `Ingreso ${channelLabel} #${webOrderId} -> Pedido ERP #${newOrder.id}`,
       })),

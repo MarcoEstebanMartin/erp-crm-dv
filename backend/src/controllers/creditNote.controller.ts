@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { Role } from '@prisma/client';
 import { AuthenticatedRequest } from '../types';
 import AppError from '../utils/AppError';
+import { appCache } from '../utils/cache';
 import { creditNoteService } from '../services/credit-notes/credit-note.service';
 import { creditNoteApprovalService } from '../services/credit-notes/credit-note-approval.service';
 
@@ -41,6 +42,9 @@ export async function createCreditNote(req: AuthenticatedRequest, res: Response)
       comments: req.body.comments,
       items: req.body.items,
     });
+    if (creditNote?.status === 'APPROVED' || req.body.reason === 'DEVOLUCION') {
+      appCache.invalidateProductCatalog();
+    }
     res.status(201).json({ status: 'success', data: { creditNote } });
   } catch (error) {
     handleCreditNoteError(res, error, 'Error al guardar la nota de crédito.');
@@ -73,6 +77,7 @@ export async function approveCreditNote(req: AuthenticatedRequest, res: Response
       id: Number(req.params.id),
       adminId: req.user.id,
     });
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: { creditNote } });
   } catch (error) {
     handleCreditNoteError(res, error, 'Error al aprobar la nota de crédito.');

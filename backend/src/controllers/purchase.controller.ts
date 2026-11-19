@@ -54,6 +54,7 @@ export async function receivePurchaseOrder(req: AuthenticatedRequest, res: Respo
       billingType: req.body.billingType,
     });
     appCache.invalidateByPrefix('personas_');
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: { order } });
   } catch (error) {
     handlePurchaseError(res, error, 'Error al procesar la recepción de la orden de compra.');
@@ -105,6 +106,7 @@ export async function confirmDocument(req: AuthenticatedRequest, res: Response):
       billingType: req.body.billingType,
     });
     appCache.invalidateByPrefix('personas_');
+    appCache.invalidateProductCatalog();
     res.status(200).json({ status: 'success', data: result });
   } catch (error) {
     handlePurchaseError(res, error, 'Error al confirmar e ingresar el documento.');

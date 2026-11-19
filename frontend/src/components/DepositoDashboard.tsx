@@ -127,7 +127,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
             loading={c.loading}
             onRefresh={c.fetchData}
             onStartPicking={c.handleStartPicking}
-            onSelectOrder={c.setSelectedOrder}
+            onSelectOrder={c.handleSelectOrder}
             onBatchStartPicking={c.handleBatchStartPicking}
             onOpenConsolidatedView={() => { c.setConsolidatedCheckedItems({}); c.setConsolidatedZone('ALL'); c.setShowConsolidatedView(true); }}
             onToggleSelectAll={() => {
