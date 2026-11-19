@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Download, FileText } from 'lucide-react';
 import { apiClient } from '../api/apiClient';
 
@@ -9,6 +9,8 @@ interface ReceiptViewProps {
 
 const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const verificationToken = searchParams.get('v') || '';
   const activeId = receiptId || id;
   const [receipt, setReceipt] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -17,17 +19,18 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
   useEffect(() => {
     const fetchReceipt = async () => {
       try {
-        const data = await apiClient.get(`/collections/receipt/${activeId}`);
+        const query = verificationToken ? `?v=${encodeURIComponent(verificationToken)}` : '';
+        const data = await apiClient.get(`/collections/receipt/${activeId}${query}`);
         setReceipt(data);
       } catch {
-        setError('El comprobante no existe.');
+        setError('El comprobante no existe o el enlace de verificación es inválido.');
       } finally {
         setLoading(false);
       }
     };
 
     if (activeId) fetchReceipt();
-  }, [activeId]);
+  }, [activeId, verificationToken]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50">Cargando recibo...</div>;

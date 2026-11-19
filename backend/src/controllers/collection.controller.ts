@@ -69,7 +69,12 @@ export const listReceipts = async (req: AuthenticatedRequest, res: Response) => 
 
 export const getReceipt = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const transaction = await receiptService.getReceipt(parseInt(req.params.id as string, 10));
+    const token = typeof req.query.v === 'string' ? req.query.v : undefined;
+    const isAuthenticatedStaff = Boolean(req.user?.id);
+    const transaction = await receiptService.getReceipt(parseInt(req.params.id as string, 10), {
+      token,
+      isAuthenticatedStaff,
+    });
     return res.json(transaction);
   } catch (error) {
     return handleCollectionError(res, error, 'Error al obtener recibo');

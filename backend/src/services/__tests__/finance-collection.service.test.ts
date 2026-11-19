@@ -4,7 +4,7 @@ import prisma from '../../utils/prisma';
 import * as auditModule from '../../utils/audit';
 import { cashDrawerService } from '../finance/cash-drawer.service';
 import { transactionAdminService } from '../finance/transaction-admin.service';
-import { receiptService } from '../collections/receipt.service';
+import { buildOfficeReceiptSecurityMeta, receiptService } from '../collections/receipt.service';
 import { rendicionService } from '../collections/rendicion.service';
 import { expenseService } from '../expenses/expense.service';
 
@@ -113,7 +113,13 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
       user: { id: 2, username: 'preventa1' },
     } as any);
 
-    const receipt = await receiptService.getReceipt(55);
+    // Sin token ni sesión de staff debe rechazar con 404 (protección anti-IDOR)
+    await expect(receiptService.getReceipt(55)).rejects.toThrow(
+      'Comprobante no encontrado o enlace de verificación inválido',
+    );
+
+    const { shareToken } = buildOfficeReceiptSecurityMeta(55);
+    const receipt = await receiptService.getReceipt(55, { token: shareToken });
 
     expect(findUniqueSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -139,6 +145,9 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
     );
     expect((receipt.user as any).passwordHash).toBeUndefined();
     expect((receipt.persona as any).webPin).toBeUndefined();
+    expect(receipt.verificationCode).toMatch(/^DV-[0-9A-F]{4}-[0-9A-F]{4}$/);
+    expect(receipt.publicUrl).toContain(`/recibo/55?v=${shareToken}`);
+    expect(receipt.authenticity.verified).toBe(true);
   });
 
   it('verifyRendicion ejecuta la creación de caja cerrada y acreditación bancaria dentro de una única transacción atómica', async () => {

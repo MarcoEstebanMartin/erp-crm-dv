@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { normalizePublicAppUrl } from '../core/receiptToken';
 dotenv.config();
 
 export type TrustProxySetting = boolean | number | string;
@@ -18,6 +19,8 @@ export interface EnvConfig {
   WHATSAPP_ENABLED: boolean;
   ENABLE_EMBEDDED_STORE: boolean;
   GOOGLE_MAPS_API_KEY?: string;
+  PUBLIC_APP_URL: string;
+  RECEIPT_SIGNING_SECRET: string;
 }
 
 export function parseTrustProxy(rawValue?: string): TrustProxySetting {
@@ -101,6 +104,11 @@ export function validateEnvConfig(sourceEnv: NodeJS.ProcessEnv = process.env): E
     GOOGLE_MAPS_API_KEY:
       (sourceEnv.GOOGLE_MAPS_API_KEY || sourceEnv.VITE_GOOGLE_MAPS_API_KEY || '').trim() ||
       undefined,
+    PUBLIC_APP_URL: normalizePublicAppUrl(
+      sourceEnv.PUBLIC_APP_URL || railwayDomainOrigin || sourceEnv.FRONTEND_URL,
+    ),
+    RECEIPT_SIGNING_SECRET:
+      (sourceEnv.RECEIPT_SIGNING_SECRET || '').trim() || JWT_SECRET,
   };
 }
 

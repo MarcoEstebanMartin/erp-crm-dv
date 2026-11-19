@@ -151,3 +151,30 @@ export function requireRole(allowedRoles: Role[]) {
     next();
   };
 }
+
+/**
+ * Middleware opcional: si el request trae una sesión JWT válida de staff,
+ * la adjunta en `req.user`; si no, continúa como visitante público sin rechazar.
+ */
+export function optionalAuthenticateJWT(
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction,
+): void {
+  const extracted = extractStaffToken(req);
+  if (!extracted) {
+    next();
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(extracted.token, env.JWT_SECRET) as UserPayload;
+    if (decoded?.id) {
+      req.user = decoded;
+    }
+  } catch {
+    // Visitante con cookie vencida o inválida: se trata como no autenticado
+  }
+
+  next();
+}

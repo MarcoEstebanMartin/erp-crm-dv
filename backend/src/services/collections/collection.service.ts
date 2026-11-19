@@ -11,6 +11,7 @@ import AppError from '../../utils/AppError';
 import { personaService } from '../persona.service';
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { buildOfficeReceiptSecurityMeta } from './receipt.service';
 
 export const collectionService = {
   async getPendingCollections(userId: number, userRole?: Role) {
@@ -206,10 +207,12 @@ export const collectionService = {
       });
     });
 
+    const securityMeta = buildOfficeReceiptSecurityMeta(transaction.id);
+
     if (transaction.persona?.phone) {
       const cleanPhone = transaction.persona.phone.replace(/\D/g, '');
       console.log(
-        `[WhatsApp ERP Auto-Send] Registro inicial de cobro a ${transaction.persona.name} (+${cleanPhone}): ${params.hostOrigin}/recibo/${transaction.id}`,
+        `[WhatsApp ERP Auto-Send] Registro inicial de cobro a ${transaction.persona.name} (+${cleanPhone}): ${securityMeta.publicUrl}`,
       );
     }
 
@@ -223,6 +226,9 @@ export const collectionService = {
       },
     });
 
-    return transaction;
+    return {
+      ...transaction,
+      ...securityMeta,
+    };
   },
 };

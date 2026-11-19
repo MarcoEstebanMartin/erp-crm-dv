@@ -10,7 +10,7 @@ import {
   verifyRendicion,
   deleteReceipt,
 } from '../controllers/collection.controller';
-import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { authenticateJWT, optionalAuthenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { publicApiRateLimiter } from '../middlewares/rateLimiter.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
@@ -45,8 +45,8 @@ router.get(
   listReceipts,
 );
 
-// Detalle público sanitizado de un recibo (para compartir comprobante digital)
-router.get('/receipt/:id', publicApiRateLimiter, getReceipt);
+// Detalle público sanitizado de un recibo (exige token HMAC `?v=...` salvo staff autenticado)
+router.get('/receipt/:id', publicApiRateLimiter, optionalAuthenticateJWT, getReceipt);
 
 // Eliminar/anular un recibo erróneo
 router.delete(

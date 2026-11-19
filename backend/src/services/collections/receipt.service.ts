@@ -3,6 +3,30 @@ import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { roundToTwoDecimals } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { env } from '../../config/env.config';
+import {
+  buildPublicReceiptUrl,
+  formatVerificationCode,
+  signReceiptToken,
+  verifyReceiptToken,
+} from '../../core/receiptToken';
+
+export function buildOfficeReceiptSecurityMeta(id: number) {
+  const shareToken = signReceiptToken({
+    kind: 'office',
+    id,
+    secret: env.RECEIPT_SIGNING_SECRET,
+  });
+  return {
+    shareToken,
+    verificationCode: formatVerificationCode(shareToken),
+    publicUrl: buildPublicReceiptUrl({
+      baseUrl: env.PUBLIC_APP_URL,
+      id,
+      token: shareToken,
+    }),
+  };
+}
 
 export const receiptService = {
   /**
@@ -10,7 +34,7 @@ export const receiptService = {
    */
   async listReceipts(limit = 200) {
     const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 500);
-    return prisma.transaction.findMany({
+    const rows = await prisma.transaction.findMany({
       where: {
         type: TransactionType.INCOME,
         personaId: { not: null },
@@ -45,14 +69,35 @@ export const receiptService = {
       orderBy: { createdAt: 'desc' },
       take: safeLimit,
     });
+
+    return rows.map((row) => ({
+      ...row,
+      ...buildOfficeReceiptSecurityMeta(row.id),
+    }));
   },
 
   /**
    * Obtiene un recibo de pago sanitizando campos sensibles (jamás expone passwordHash ni webPin).
+   * Para accesos públicos externos exige token HMAC `?v=...` válido (anti-enumeración IDOR).
    */
-  async getReceipt(id: number) {
-    if (isNaN(id)) {
+  async getReceipt(
+    id: number,
+    options?: { token?: string; isAuthenticatedStaff?: boolean },
+  ) {
+    if (isNaN(id) || id <= 0) {
       throw new AppError('ID de recibo inválido', 400);
+    }
+
+    if (!options?.isAuthenticatedStaff) {
+      const isValid = verifyReceiptToken({
+        kind: 'office',
+        id,
+        token: options?.token,
+        secret: env.RECEIPT_SIGNING_SECRET,
+      });
+      if (!isValid) {
+        throw new AppError('Comprobante no encontrado o enlace de verificación inválido', 404);
+      }
     }
 
     const transaction = await prisma.transaction.findUnique({
@@ -80,7 +125,14 @@ export const receiptService = {
       throw new AppError('Recibo no encontrado', 404);
     }
 
-    return transaction;
+    return {
+      ...transaction,
+      ...buildOfficeReceiptSecurityMeta(transaction.id),
+      authenticity: {
+        verified: true,
+        issuer: 'Distribuidora Don Venancio',
+      },
+    };
   },
 
   async deleteReceipt(params: { adminId: number; userRole: Role; receiptId: number }) {

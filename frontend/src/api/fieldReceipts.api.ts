@@ -121,6 +121,9 @@ export interface OfficeReceiptDTO {
   user?: { id: number; username: string } | null;
   order?: { id: number; invoiceNumber: string | null } | null;
   bankAccount?: { id: number; name: string } | null;
+  shareToken?: string;
+  verificationCode?: string;
+  publicUrl?: string;
 }
 
 function normalizeArgentinaWhatsAppPhone(raw?: string | null): string {
@@ -145,7 +148,7 @@ export function buildOfficeReceiptWhatsAppUrl(receipt: OfficeReceiptDTO): string
   const phone = normalizeArgentinaWhatsAppPhone(receipt.persona?.phone);
   const nro = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
   const total = `$${Math.round(Number(receipt.amount)).toLocaleString('es-AR')}`;
-  const link = `${window.location.origin}/recibo/${receipt.id}`;
+  const link = receipt.publicUrl || `${window.location.origin}/recibo/${receipt.id}`;
   const text = `Hola ${receipt.persona?.name || ''}, te enviamos tu Recibo ${nro} por ${total}.\nComprobante: ${link}`;
   const base = phone ? `https://wa.me/${phone}` : 'https://wa.me/';
   return `${base}?text=${encodeURIComponent(text)}`;
