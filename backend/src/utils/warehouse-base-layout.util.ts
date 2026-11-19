@@ -90,6 +90,13 @@ export function getBaseWarehouseCell(code: string): BaseWarehouseCellRule | null
 }
 
 /**
+ * Devuelve todas las celdas definidas en el plano base (`deposito-mapa.json`).
+ */
+export function listBaseWarehouseCells(): BaseWarehouseCellRule[] {
+  return Array.from(loadBaseWarehouseMap().values());
+}
+
+/**
  * Valida en transacción si una ubicación destino admite ingreso de stock físico:
  * 1) `S/U` siempre es válida.
  * 2) Rechaza tokens prohibidos (`BANO`, `PASILLO`, etc.) y niveles inválidos fuera de `A–F`.

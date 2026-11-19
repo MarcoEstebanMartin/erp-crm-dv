@@ -5,7 +5,15 @@ import prisma from '../utils/prisma';
 import { appCache } from '../utils/cache';
 import { roundToIntegerPeso, roundToTwoDecimals } from '../core/money';
 import { standardizePersonaName } from '../utils/normalize';
-import { validateProductsExcel, validatePricesExcel, validateClientsExcel, ValidationReport } from '../services/excel_validator.service';
+import {
+  validateProductsExcel,
+  validatePricesExcel,
+  validateClientsExcel,
+  validateStockInicialExcel,
+  generateStockInicialTemplateBuffer,
+  ValidationReport,
+} from '../services/excel_validator.service';
+import { commitStockInicialRowsInTx } from '../services/excel/excel-stock-inicial-commit.helper';
 import { productionOutboundBridgeService } from '../services/catalog/production-outbound-bridge.service';
 
 /**
@@ -26,6 +34,8 @@ export async function previewExcel(req: Request, res: Response) {
       report = await validatePricesExcel(fileBuffer);
     } else if (domain === 'CLIENTS') {
       report = await validateClientsExcel(fileBuffer);
+    } else if (domain === 'STOCK_INICIAL') {
+      report = await validateStockInicialExcel(fileBuffer);
     } else {
       report = await validateProductsExcel(fileBuffer);
     }
@@ -37,6 +47,27 @@ export async function previewExcel(req: Request, res: Response) {
   } catch (error: any) {
     console.error('❌ Error al procesar vista previa de Excel:', error);
     return res.status(500).json({ error: 'Error interno al analizar la planilla Excel', details: error.message });
+  }
+}
+
+export async function downloadStockInicialTemplate(_req: Request, res: Response) {
+  try {
+    const buffer = await generateStockInicialTemplateBuffer();
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="Plantilla_Stock_Inicial_DV.xlsx"',
+    );
+    return res.status(200).send(buffer);
+  } catch (error: any) {
+    console.error('❌ Error al generar plantilla de Stock Inicial:', error);
+    return res.status(500).json({
+      error: 'Error interno al generar la plantilla Excel',
+      details: error.message,
+    });
   }
 }
 
@@ -65,8 +96,14 @@ export async function commitExcel(req: Request, res: Response) {
     let updatedCount = 0;
     const touchedProductSkus: string[] = [];
 
-    await prisma.$transaction(async (tx) => {
-      if (domain === 'PRODUCTS') {
+    await prisma.$transaction(
+      async (tx) => {
+        if (domain === 'STOCK_INICIAL') {
+          const stockRes = await commitStockInicialRowsInTx(tx, validRowsToCommit, userId);
+          createdCount = stockRes.createdCount;
+          updatedCount = stockRes.updatedCount;
+          touchedProductSkus.push(...stockRes.touchedSkus);
+        } else if (domain === 'PRODUCTS') {
         // 1. Asegurar existencia de rubros
         const rubroNames = [...new Set(validRowsToCommit.map((r: any) => r.data.rubro).filter(Boolean))];
         const rubroMap = new Map<string, number>();
@@ -189,7 +226,7 @@ export async function commitExcel(req: Request, res: Response) {
           status: 'SUCCESS'
         }
       });
-    });
+    }, { maxWait: 15000, timeout: 60000 });
 
     // Intentar auto-sincronizar / verificar imágenes maestras si la carpeta existe
     try {

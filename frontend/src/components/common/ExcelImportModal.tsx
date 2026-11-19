@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
-import { FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, ArrowRight, Loader2, X, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { FileSpreadsheet, CheckCircle2, XCircle, ArrowRight, Loader2, X, RefreshCw, Download } from 'lucide-react';
 import { apiClient } from '../../api/apiClient';
+import { api } from '../../utils/api';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
+import { formatCleanExpirationDate, isSentinelExpiration } from '../stock/lotLabel';
+
+export type ExcelImportDomain = 'PRODUCTS' | 'PRICES' | 'CLIENTS' | 'STOCK_INICIAL';
 
 interface ExcelImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialDomain?: ExcelImportDomain;
 }
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; dot: string }> = {
@@ -15,17 +20,52 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; do
   ERROR: { label: 'Error', color: '#991b1b', bg: '#fef2f2', dot: '#ef4444' },
 };
 
-export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const [domain, setDomain] = useState<'PRODUCTS' | 'PRICES' | 'CLIENTS'>('PRODUCTS');
+export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialDomain = 'PRODUCTS',
+}) => {
+  const [domain, setDomain] = useState<ExcelImportDomain>(initialDomain);
   const [file, setFile] = useState<File | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loadingCommit, setLoadingCommit] = useState(false);
+  const [downloadingTpl, setDownloadingTpl] = useState(false);
   const [report, setReport] = useState<any | null>(null);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'ERRORS' | 'WARNINGS' | 'CHANGES'>('ALL');
   const [commitMessage, setCommitMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      setDomain(initialDomain);
+      setReport(null);
+      setCommitMessage(null);
+      setErrorMessage(null);
+    }
+  }, [isOpen, initialDomain]);
+
   if (!isOpen) return null;
+
+  const handleDownloadTemplate = async () => {
+    setDownloadingTpl(true);
+    setErrorMessage(null);
+    try {
+      const blob = await api.downloadStockInicialTemplate();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Plantilla_Stock_Inicial_DV.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'No se pudo descargar la plantilla.');
+    } finally {
+      setDownloadingTpl(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -123,14 +163,28 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onCl
                 className="select"
                 value={domain}
                 onChange={(e) => {
-                  setDomain(e.target.value as any);
+                  setDomain(e.target.value as ExcelImportDomain);
                   setReport(null);
+                  setCommitMessage(null);
                 }}
               >
                 <option value="PRODUCTS">Productos</option>
                 <option value="PRICES">Lista de Precios</option>
                 <option value="CLIENTS">Clientes</option>
+                <option value="STOCK_INICIAL">Stock Inicial (Lotes + Mapa WMS)</option>
               </select>
+              {domain === 'STOCK_INICIAL' && (
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  disabled={downloadingTpl}
+                  className="btn btn-secondary"
+                  style={{ marginTop: '8px', width: '100%', fontSize: '0.78rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <Download size={14} aria-hidden="true" />
+                  {downloadingTpl ? 'Generando...' : 'Descargar plantilla (.xlsx)'}
+                </button>
+              )}
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -224,20 +278,37 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onCl
               <div className="table-container table-container--sticky" role="region" aria-label="Vista previa de planilla" tabIndex={0} style={{ maxHeight: '280px', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
                 <table style={{ width: '100%', fontSize: '0.8rem' }}>
                   <thead>
-                    <tr>
-                      <th scope="col">Fila</th>
-                      <th scope="col">Estado</th>
-                      <th scope="col">Acción</th>
-                      <th scope="col">SKU</th>
-                      <th scope="col">Descripción</th>
-                      <th scope="col" style={{ textAlign: 'right' }}>Costo</th>
-                      <th scope="col" style={{ textAlign: 'right' }}>Lista A</th>
-                      <th scope="col">Mensajes</th>
-                    </tr>
+                    {domain === 'STOCK_INICIAL' ? (
+                      <tr>
+                        <th scope="col">Fila</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Acción</th>
+                        <th scope="col">Ubicación</th>
+                        <th scope="col">SKU</th>
+                        <th scope="col">Producto</th>
+                        <th scope="col">Lote / Venc.</th>
+                        <th scope="col" style={{ textAlign: 'right' }}>Cantidad</th>
+                        <th scope="col">Mensajes</th>
+                      </tr>
+                    ) : (
+                      <tr>
+                        <th scope="col">Fila</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Acción</th>
+                        <th scope="col">SKU</th>
+                        <th scope="col">Descripción</th>
+                        <th scope="col" style={{ textAlign: 'right' }}>Costo</th>
+                        <th scope="col" style={{ textAlign: 'right' }}>Lista A</th>
+                        <th scope="col">Mensajes</th>
+                      </tr>
+                    )}
                   </thead>
                   <tbody>
                     {filteredRows.map((r: any, idx: number) => {
                       const st = STATUS_META[r.status] || { label: r.status, color: '#374151', bg: '#F3F4F6', dot: '#9CA3AF' };
+                      const expTxt = isSentinelExpiration(r.data?.expirationDate)
+                        ? 'Sin vto.'
+                        : formatCleanExpirationDate(r.data?.expirationDate);
                       return (
                         <tr key={idx}>
                           <td className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>#{r.rowIndex}</td>
@@ -252,14 +323,26 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onCl
                             {r.action === 'UPDATE' && <span style={{ color: '#2563eb' }}>~ Actualizar</span>}
                             {r.action === 'NONE' && <span style={{ color: 'var(--text-secondary)' }}>-</span>}
                           </td>
-                          <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{r.data.sku || '---'}</td>
-                          <td>{r.data.name || '---'}</td>
-                          <td className="tabular-nums" style={{ textAlign: 'right' }}>
-                            ${Number(r.data.costPrice || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="tabular-nums" style={{ textAlign: 'right' }}>
-                            ${Number(r.data.listPrice || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                          </td>
+                          {domain === 'STOCK_INICIAL' ? (
+                            <>
+                              <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{r.data.location || 'S/U'}</td>
+                              <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{r.data.sku || '---'}</td>
+                              <td>{r.data.name || '---'}</td>
+                              <td style={{ fontSize: '0.75rem' }}>{r.data.lotNumber || 'S/L'} · {expTxt}</td>
+                              <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700 }}>{r.data.quantity || 0} u.</td>
+                            </>
+                          ) : (
+                            <>
+                              <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{r.data.sku || '---'}</td>
+                              <td>{r.data.name || '---'}</td>
+                              <td className="tabular-nums" style={{ textAlign: 'right' }}>
+                                ${Number(r.data.costPrice || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="tabular-nums" style={{ textAlign: 'right' }}>
+                                ${Number(r.data.listPrice || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                              </td>
+                            </>
+                          )}
                           <td>
                             {r.messages && r.messages.length > 0 ? (
                               <span style={{ color: r.status === 'ERROR' ? '#b91c1c' : '#b45309' }}>

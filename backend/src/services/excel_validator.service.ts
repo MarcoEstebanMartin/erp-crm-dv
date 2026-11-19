@@ -12,3 +12,7 @@ export {
 } from './excel/excel-products-prices.validator';
 
 export { validateClientsExcel } from './excel/excel-clients.validator';
+export {
+  validateStockInicialExcel,
+  generateStockInicialTemplateBuffer,
+} from './excel/excel-stock-inicial.validator';

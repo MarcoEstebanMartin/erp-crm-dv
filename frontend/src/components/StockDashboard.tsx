@@ -21,6 +21,8 @@ import ProductKardexDrawer from './stock/ProductKardexDrawer';
 import StockAdjustModal from './stock/StockAdjustModal';
 import LotManagerModal from './stock/LotManagerModal';
 import QuickInventoryFloatingBar from './stock/QuickInventoryFloatingBar';
+import { ExcelImportModal } from './common/ExcelImportModal';
+import { StockDriftAlertBanner } from './stock/StockDriftAlertBanner';
 
 export type { StockDashboardProps };
 
@@ -33,6 +35,8 @@ export default function StockDashboard({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRubro, setSelectedRubro] = useState('');
   const [stockFilter, setStockFilter] = useState<StockFilterType>('all');
+  const [showStockImportModal, setShowStockImportModal] = useState(false);
+  const [auditRefreshTick, setAuditRefreshTick] = useState(0);
 
   const role = userRole ?? api.getCurrentUser()?.role ?? '';
   const canViewCosts = role === 'ADMIN' || role === 'FACTURACION';
@@ -153,6 +157,15 @@ export default function StockDashboard({
         </div>
       )}
 
+      <StockDriftAlertBanner
+        isAdmin={role === 'ADMIN'}
+        refreshToken={auditRefreshTick}
+        onReconciled={async () => {
+          await onRefresh();
+          setAuditRefreshTick((t) => t + 1);
+        }}
+      />
+
       <StockKpiCards
         stats={stats}
         filteredCount={filteredProducts.length}
@@ -180,6 +193,8 @@ export default function StockDashboard({
         showGlobalMovements={movements.showGlobalMovements}
         onToggleGlobalMovements={() => movements.setShowGlobalMovements(!movements.showGlobalMovements)}
         canMutateStock={canMutateStock}
+        canImportStock={role === 'ADMIN'}
+        onOpenExcelImport={() => setShowStockImportModal(true)}
       />
 
       <StockInventoryTable
@@ -255,6 +270,18 @@ export default function StockDashboard({
           loading={adjustments.loadingAdjust}
           onDiscard={() => adjustments.setPendingAdjustments({})}
           onSave={adjustments.handleSaveQuickInventory}
+        />
+      )}
+
+      {role === 'ADMIN' && (
+        <ExcelImportModal
+          isOpen={showStockImportModal}
+          initialDomain="STOCK_INICIAL"
+          onClose={() => setShowStockImportModal(false)}
+          onSuccess={() => {
+            void onRefresh();
+            setAuditRefreshTick((t) => t + 1);
+          }}
         />
       )}
 

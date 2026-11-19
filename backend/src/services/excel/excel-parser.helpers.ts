@@ -7,7 +7,7 @@ export interface RowValidationResult {
 }
 
 export interface ValidationReport {
-  domain: 'PRODUCTS' | 'PRICES' | 'CLIENTS';
+  domain: 'PRODUCTS' | 'PRICES' | 'CLIENTS' | 'STOCK_INICIAL';
   summary: {
     totalRows: number;
     validCount: number;
@@ -63,4 +63,69 @@ export function normalizeSku(raw: any): string {
 export function sanitizeText(raw: any): string {
   if (raw === undefined || raw === null) return '';
   return raw.toString().trim();
+}
+
+const SENTINEL_ISO = '2036-12-31T00:00:00.000Z';
+
+/**
+ * Parsea fechas DD/MM/AAAA, DD-MM-AAAA, AAAA-MM-DD o Date nativo a ISO UTC exacto (medianoche).
+ * Vacío / '-' / 'S/V' / 'SIN VENCIMIENTO' devuelven la fecha centinela oficial 2036-12-31.
+ */
+export function parseExcelDateToUtcIso(raw: any): {
+  iso: string | null;
+  isSentinel: boolean;
+  invalid: boolean;
+} {
+  if (raw === undefined || raw === null) {
+    return { iso: SENTINEL_ISO, isSentinel: true, invalid: false };
+  }
+
+  let y = 0;
+  let m = 0;
+  let d = 0;
+
+  if (raw instanceof Date) {
+    if (Number.isNaN(raw.getTime())) {
+      return { iso: null, isSentinel: false, invalid: true };
+    }
+    y = raw.getUTCFullYear();
+    m = raw.getUTCMonth() + 1;
+    d = raw.getUTCDate();
+  } else {
+    const str = String(raw).trim();
+    const upper = str.toUpperCase();
+    if (!upper || upper === '-' || upper === 'S/V' || upper === 'SIN VENCIMIENTO') {
+      return { iso: SENTINEL_ISO, isSentinel: true, invalid: false };
+    }
+
+    const dmy = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(str);
+    const ymd = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/.exec(str);
+    if (dmy) {
+      d = Number(dmy[1]);
+      m = Number(dmy[2]);
+      y = Number(dmy[3]);
+    } else if (ymd) {
+      y = Number(ymd[1]);
+      m = Number(ymd[2]);
+      d = Number(ymd[3]);
+    } else {
+      return { iso: null, isSentinel: false, invalid: true };
+    }
+  }
+
+  if (y < 2020 || y > 2099 || m < 1 || m > 12 || d < 1 || d > 31) {
+    return { iso: null, isSentinel: false, invalid: true };
+  }
+
+  const check = new Date(Date.UTC(y, m - 1, d));
+  if (
+    check.getUTCFullYear() !== y ||
+    check.getUTCMonth() !== m - 1 ||
+    check.getUTCDate() !== d
+  ) {
+    return { iso: null, isSentinel: false, invalid: true };
+  }
+
+  const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T00:00:00.000Z`;
+  return { iso, isSentinel: y >= 2036, invalid: false };
 }

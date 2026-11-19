@@ -113,7 +113,7 @@ export const adjustStockBatchSchema = z.object({
           ),
       )
       .min(1, 'Debe enviar al menos un ajuste de stock')
-      .max(250, 'Máximo 250 ajustes por bloque transaccional'),
+      .max(1000, 'Máximo 1000 ajustes por bloque transaccional'),
   }),
 });
 

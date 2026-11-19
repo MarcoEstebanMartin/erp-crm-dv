@@ -1,4 +1,4 @@
-import { Search, History, ClipboardList, X } from 'lucide-react';
+import { Search, History, ClipboardList, X, FileSpreadsheet } from 'lucide-react';
 import type { StockFilterType } from './types';
 
 interface StockFiltersBarProps {
@@ -16,6 +16,8 @@ interface StockFiltersBarProps {
   showGlobalMovements: boolean;
   onToggleGlobalMovements: () => void;
   canMutateStock?: boolean;
+  canImportStock?: boolean;
+  onOpenExcelImport?: () => void;
 }
 
 const FILTER_OPTIONS: { id: StockFilterType; label: string; activeColor: string }[] = [
@@ -42,6 +44,8 @@ export default function StockFiltersBar({
   showGlobalMovements,
   onToggleGlobalMovements,
   canMutateStock = true,
+  canImportStock = false,
+  onOpenExcelImport,
 }: StockFiltersBarProps) {
   return (
     <div
@@ -141,6 +145,25 @@ export default function StockFiltersBar({
             >
               {isQuickInventoryMode ? <X size={15} /> : <ClipboardList size={15} />}
               <span>{isQuickInventoryMode ? 'Cancelar Inventario' : 'Inventario Rápido'}</span>
+            </button>
+          )}
+
+          {canImportStock && onOpenExcelImport && (
+            <button
+              className="btn btn-secondary"
+              type="button"
+              style={{
+                height: '38px',
+                borderRadius: '6px',
+                padding: '0 14px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+              onClick={onOpenExcelImport}
+            >
+              <FileSpreadsheet size={15} aria-hidden="true" />
+              <span>Importar Excel</span>
             </button>
           )}
 

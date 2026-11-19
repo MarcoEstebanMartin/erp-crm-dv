@@ -415,6 +415,28 @@ export const api = {
     });
   },
 
+  auditStockDrift: async (): Promise<{ count: number; products: any[] }> => {
+    const res = await request('/products/stock/reconcile-audit');
+    return res || { count: 0, products: [] };
+  },
+
+  reconcileStockDrift: async () => {
+    return request('/products/stock/reconcile', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  },
+
+  downloadStockInicialTemplate: async (): Promise<Blob> => {
+    const res = await fetch(`${API_BASE_URL}/admin/excel/template/stock-inicial`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      throw new Error('No se pudo descargar la plantilla Excel de Stock Inicial.');
+    }
+    return res.blob();
+  },
+
 
   updateLot: async (lotId: number, lotData: { lotNumber?: string; expirationDate?: string; location?: string }) => {
     const res = await request(`/products/lots/${lotId}`, {
