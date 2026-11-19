@@ -103,7 +103,13 @@ export const routeSettlementService = {
       where: { id: input.routeId },
       include: {
         orders: {
-          include: { persona: { select: { id: true, name: true, cuit: true } } },
+          include: {
+            persona: { select: { id: true, name: true, cuit: true } },
+            transactions: {
+              where: { type: TransactionType.INCOME },
+              select: { amount: true },
+            },
+          },
         },
         fieldReceipts: {
           where: { status: { not: 'VOIDED' } },
@@ -146,12 +152,20 @@ export const routeSettlementService = {
     }));
 
     const evaluation = evaluateRouteSettlementActions(
-      route.orders.map((o) => ({
-        id: o.id,
-        personaId: o.personaId,
-        clientName: o.persona?.name || `Cliente #${o.personaId}`,
-        totalAmount: o.totalAmount.toString(),
-      })),
+      route.orders.map((o) => {
+        const alreadyPaid = (o.transactions || []).reduce(
+          (sum, t) => sum + roundToIntegerPeso(t.amount.toString()).toNumber(),
+          0,
+        );
+        return {
+          id: o.id,
+          personaId: o.personaId,
+          clientName: o.persona?.name || `Cliente #${o.personaId}`,
+          invoiceLabel: o.invoiceNumber || `INT-${o.id.toString().padStart(5, '0')}`,
+          totalAmount: o.totalAmount.toString(),
+          alreadyPaidAmount: alreadyPaid,
+        };
+      }),
       activeFieldReceipts,
       input.settlements,
     );

@@ -12,7 +12,9 @@ export interface RouteOrderSettlementInput {
   id: number;
   personaId: number;
   clientName: string;
+  invoiceLabel?: string;
   totalAmount: NumericInput;
+  alreadyPaidAmount?: NumericInput;
 }
 
 export interface RouteFieldReceiptPaymentInput {
@@ -47,7 +49,7 @@ export interface ClientRouteReceiptSummary {
 }
 
 export interface RouteSettlementConflict {
-  code: 'DOUBLE_COLLECTION_CONFLICT';
+  code: 'DOUBLE_COLLECTION_CONFLICT' | 'ORDER_ALREADY_PAID';
   orderId: number;
   personaId: number;
   clientName: string;
@@ -203,7 +205,23 @@ export function evaluateRouteSettlementActions(
 
     const clientSummary = receiptsByClient[order.personaId] ?? null;
     const hasActiveFieldReceipt = Boolean(clientSummary && clientSummary.totalCollected.gt(0));
+    const alreadyPaidOnOrder = roundToIntegerPeso(order.alreadyPaidAmount ?? 0);
+    const isOrderAlreadyPaid = orderTotal.gt(0) && alreadyPaidOnOrder.gte(orderTotal);
     const method = normalizePaymentMethod(submission.paymentMethod);
+
+    if (isOrderAlreadyPaid && MANUAL_COLLECTION_METHODS.has(method)) {
+      const invoiceText = order.invoiceLabel || `Pedido #${order.id}`;
+      conflicts.push({
+        code: 'ORDER_ALREADY_PAID',
+        orderId: order.id,
+        personaId: order.personaId,
+        clientName: order.clientName,
+        receiptNumbers: [],
+        alreadyCollectedAmount: alreadyPaidOnOrder.toNumber(),
+        message: `Doble cobro bloqueado para ${order.clientName}: el comprobante ${invoiceText} ya fue cobrado previamente ($${alreadyPaidOnOrder.toNumber().toLocaleString('es-AR')}).`,
+      });
+      continue;
+    }
 
     if (hasActiveFieldReceipt && MANUAL_COLLECTION_METHODS.has(method)) {
       const collectedNum = clientSummary!.totalCollected.toNumber();

@@ -11,6 +11,7 @@ import AppError from '../../utils/AppError';
 import { personaService } from '../persona.service';
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { assertCollectionAllowed } from './collection-guard.service';
 import { generateUniqueVerificationCode } from '../../core/receiptToken';
 import { buildOfficeReceiptSecurityMeta } from './receipt.service';
 
@@ -125,22 +126,6 @@ export const collectionService = {
     }
 
     const roundedAmount = roundToTwoDecimals(params.amount).toNumber();
-    const fifteenSecondsAgo = new Date(Date.now() - 15000);
-    const duplicateTx = await prisma.transaction.findFirst({
-      where: {
-        personaId: client.id,
-        amount: roundedAmount,
-        paymentMethod: params.paymentMethod,
-        type: TransactionType.INCOME,
-        createdAt: { gte: fifteenSecondsAgo },
-      },
-    });
-    if (duplicateTx) {
-      throw new AppError(
-        'Ya se registró un cobro idéntico para este cliente hace instantes.',
-        400,
-      );
-    }
 
     let orderNumberDesc = '';
     let finalBillingType = params.billingType;
@@ -156,6 +141,13 @@ export const collectionService = {
     const checkInfoStr = params.checkNumber ? ` (Cheque N° ${params.checkNumber})` : '';
 
     const transaction = await prisma.$transaction(async (tx) => {
+      await assertCollectionAllowed(tx, {
+        personaId: client.id,
+        amount: roundedAmount,
+        allowCreditOnAccount: Boolean(params.isCreditOnAccount),
+        orderId: params.orderId ? Number(params.orderId) : null,
+      });
+
       const newTx = await tx.transaction.create({
         data: {
           userId: params.userId,

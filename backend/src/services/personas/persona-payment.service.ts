@@ -13,6 +13,7 @@ import {
   toDecimal,
 } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { assertCollectionAllowed } from '../collections/collection-guard.service';
 
 export class PersonaPaymentSubService {
   /**
@@ -77,26 +78,16 @@ export class PersonaPaymentSubService {
       : toDecimal(0);
     const effectiveAppliedDec = roundToTwoDecimals(toDecimal(totalPaymentAmount).plus(retencionesSumDec));
 
-    // Control de duplicados (Idempotencia) para cobro individual de clientes (15s)
-    if (resolvedType === TransactionType.INCOME && paymentItems.length === 1) {
-      const fifteenSecondsAgo = new Date(Date.now() - 15000);
-      const duplicateTx = await prisma.transaction.findFirst({
-        where: {
-          personaId: persona.id,
-          amount: paymentItems[0].amount,
-          paymentMethod: paymentItems[0].paymentMethod,
-          type: TransactionType.INCOME,
-          createdAt: { gte: fifteenSecondsAgo },
-        },
-      });
-      if (duplicateTx) {
-        throw new Error(
-          'Ya se registró un cobro idéntico para este cliente hace instantes. Por favor, verifica el historial.',
-        );
-      }
-    }
-
     const result = await prisma.$transaction(async (tx) => {
+      if (resolvedType === TransactionType.INCOME) {
+        await assertCollectionAllowed(tx, {
+          personaId: persona.id,
+          amount: effectiveAppliedDec,
+          allowCreditOnAccount: Boolean(data.isCreditOnAccount || data.allowCreditOnAccount),
+          orderId: orderId ? Number(orderId) : null,
+        });
+      }
+
       let invoiceNumberToLog = '';
       if (supplierInvoiceId) {
         const supplierInvoice = await tx.supplierInvoice.findUnique({

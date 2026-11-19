@@ -93,6 +93,31 @@ describe('route-settlement.engine', () => {
     expect(result.conflicts[0].message).toContain('REC-C-0000001');
   });
 
+  it('bloquea con alarma ORDER_ALREADY_PAID si el pedido ya fue cobrado al contado al facturar', () => {
+    const ordersWithPrepaid: RouteOrderSettlementInput[] = [
+      {
+        id: 10,
+        personaId: 100,
+        clientName: 'Kiosco Centro',
+        invoiceLabel: '00001-00000010',
+        totalAmount: 10000,
+        alreadyPaidAmount: 10000,
+      },
+    ];
+
+    const result = evaluateRouteSettlementActions(ordersWithPrepaid, [], [
+      { orderId: 10, paymentMethod: 'CASH' },
+    ]);
+
+    expect(result.conflicts).toHaveLength(1);
+    expect(result.conflicts[0]).toMatchObject({
+      code: 'ORDER_ALREADY_PAID',
+      orderId: 10,
+      alreadyCollectedAmount: 10000,
+    });
+    expect(result.conflicts[0].message).toContain('ya fue cobrado previamente');
+  });
+
   it('permite liquidar sin duplicar cobro cuando el cliente con recibo viene como FIELD_RECEIPT y los demás en C/C o cobro excepcional', () => {
     const result = evaluateRouteSettlementActions(sampleOrders, sampleReceipts, [
       { orderId: 10, paymentMethod: 'FIELD_RECEIPT' },

@@ -11,6 +11,7 @@ import { logAudit } from '../../utils/audit';
 import { roundToTwoDecimals } from '../../core/money';
 import { calculateDrawerClosingBalance } from '../../engines/drawer-arqueo.engine';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { assertCollectionAllowed } from '../collections/collection-guard.service';
 import { generateUniqueVerificationCode } from '../../core/receiptToken';
 
 export interface IncomingDrawerReceipt {
@@ -113,6 +114,11 @@ export const cashDrawerService = {
           }
 
           const receiptAmt = roundToTwoDecimals(r.amount).toNumber();
+          await assertCollectionAllowed(tx, {
+            personaId: clientId,
+            amount: receiptAmt,
+            allowCreditOnAccount: Boolean((r as any).isCreditOnAccount),
+          });
           const method = (r.paymentMethod as PaymentMethod) || PaymentMethod.CASH;
           const billing = normalizeReceiptBillingType(r.billingType);
           const checkSuffix = r.checkNumber ? ` (Cheque N° ${String(r.checkNumber).trim()})` : '';

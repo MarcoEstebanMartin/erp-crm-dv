@@ -15,6 +15,7 @@ import {
   evaluateSettlementArqueo,
 } from '../engines/fieldReceipts.engine';
 import { recordLedgerMovement } from './ledger/account-ledger.service';
+import { assertCollectionAllowed } from './collections/collection-guard.service';
 import { generateUniqueVerificationCode } from '../core/receiptToken';
 import {
   ApproveSettlementInput,
@@ -121,6 +122,14 @@ export const fieldReceiptsService = {
         throw new AppError('Cliente no encontrado', 404);
       }
 
+      const totalNum = breakdown.totalAmount.toNumber();
+      await assertCollectionAllowed(tx, {
+        personaId: input.personaId,
+        amount: totalNum,
+        deliveryRouteId: input.deliveryRouteId ?? null,
+        allowCreditOnAccount: false,
+      });
+
       let settlement = await tx.collectorSettlement.findFirst({
         where: { collectorUserId, status: 'OPEN' },
         orderBy: { id: 'desc' },
@@ -135,7 +144,6 @@ export const fieldReceiptsService = {
         });
       }
 
-      const totalNum = breakdown.totalAmount.toNumber();
       const primaryMethod = input.payments[0].paymentMethod as PaymentMethod;
 
       const createdReceipt = await tx.fieldReceipt.create({
