@@ -101,7 +101,31 @@ export default function DrawersHistoryTable({
                 });
 
                 const isDepo = d.drawerType === 'DEPOSITO' || d.branch === 'DEPOSITO';
+                const isCentral =
+                  d.drawerType === 'CENTRAL' || d.branch === 'CENTRAL' || d.branch === 'CONSOLIDADA';
                 const isRep = d.drawerType === 'REPARTIDOR' || d.branch?.startsWith('REPARTIDOR');
+
+                const badgeBg = isCentral
+                  ? '#fef3c7'
+                  : isDepo
+                  ? '#f1f5f9'
+                  : isRep
+                  ? '#ecfdf5'
+                  : '#eff6ff';
+                const badgeColor = isCentral
+                  ? '#92400e'
+                  : isDepo
+                  ? '#475569'
+                  : isRep
+                  ? '#047857'
+                  : '#1d4ed8';
+                const badgeLabel = isCentral
+                  ? 'Caja Grande'
+                  : isDepo
+                  ? 'Oficina'
+                  : isRep
+                  ? 'Repartidor'
+                  : 'Vendedor';
 
                 return (
                   <tr
@@ -123,17 +147,17 @@ export default function DrawersHistoryTable({
                             borderRadius: '12px',
                             fontSize: '0.72rem',
                             fontWeight: 600,
-                            backgroundColor: isDepo ? '#f1f5f9' : isRep ? '#ecfdf5' : '#eff6ff',
-                            color: isDepo ? '#475569' : isRep ? '#047857' : '#1d4ed8',
+                            backgroundColor: badgeBg,
+                            color: badgeColor,
                           }}
                         >
-                          {isDepo ? 'Oficina' : isRep ? 'Repartidor' : 'Vendedor'}
+                          {badgeLabel}
                         </span>
                       </div>
                       <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                        {d.branch === 'DEPOSITO' ? 'Caja Oficina' : formatResponsibleName(d)}
+                        {isDepo ? 'Caja Oficina' : isCentral ? 'Caja Grande' : formatResponsibleName(d)}
                       </div>
-                      {d.routeNote && (
+                      {!isDepo && !isCentral && d.routeNote && (
                         <div style={{ fontSize: '0.78rem', color: '#0284c7', marginTop: '3px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <MapPin size={12} color="#0284c7" aria-hidden="true" />
                           <span>{d.routeNote}</span>
