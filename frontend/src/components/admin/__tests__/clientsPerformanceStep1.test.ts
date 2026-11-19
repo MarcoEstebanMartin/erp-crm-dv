@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
+  OFFICIAL_CITIES,
   PERSONA_ROLE_TABS,
   computeClientLocationAndRouteCounts,
   filterClientsInMemory,
@@ -158,5 +159,13 @@ describe('Paso 1 Velocidad en Clientes — Buscador Fonético RAM, Conteos O(N) 
     expect(clientsTabSrc.split(/\r?\n/).length).toBeLessThanOrEqual(300);
     expect(tableSrc.split(/\r?\n/).length).toBeLessThanOrEqual(300);
     expect(helpersSrc.split(/\r?\n/).length).toBeLessThanOrEqual(300);
+  });
+
+  it('OFFICIAL_CITIES está ordenada alfabéticamente (es-AR) para el selector de Localidades', () => {
+    const collator = new Intl.Collator('es-AR', { sensitivity: 'base' });
+    const expected = [...OFFICIAL_CITIES].sort(collator.compare);
+    expect(OFFICIAL_CITIES).toEqual(expected);
+    expect(OFFICIAL_CITIES[0]).toBe('BANDERALÓ');
+    expect(OFFICIAL_CITIES[OFFICIAL_CITIES.length - 1]).toBe('VILLA SAUZE');
   });
 });
