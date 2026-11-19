@@ -151,21 +151,28 @@ export class PersonaPaymentSubService {
         let cashDrawerId: number | null = null;
         if (item.paymentMethod === PaymentMethod.CASH) {
           const activeDrawer =
-            (await tx.cashDrawer.findFirst({ where: { userId, status: 'OPEN' } })) ||
-            (await tx.cashDrawer.findFirst({ where: { status: 'OPEN' } }));
+            (await tx.cashDrawer.findFirst({
+              where: {
+                status: 'OPEN',
+                OR: [{ branch: 'DEPOSITO' }, { drawerType: 'DEPOSITO' }],
+              },
+              orderBy: { openedAt: 'desc' },
+            })) ||
+            (await tx.cashDrawer.findFirst({
+              where: { userId, status: 'OPEN', drawerType: { not: 'CENTRAL' } },
+              orderBy: { openedAt: 'desc' },
+            })) ||
+            (await tx.cashDrawer.findFirst({
+              where: { status: 'OPEN', drawerType: { not: 'CENTRAL' } },
+              orderBy: { openedAt: 'desc' },
+            }));
 
           if (!activeDrawer) {
-            const user = await tx.user.findUnique({ where: { id: userId } });
-            if (user && (user.role === Role.ADMIN || user.role === Role.FACTURACION)) {
-              cashDrawerId = null;
-            } else {
-              throw new Error(
-                'Debés tener una Caja Abierta antes de registrar cobros/pagos en efectivo.',
-              );
-            }
-          } else {
-            cashDrawerId = activeDrawer.id;
+            throw new Error(
+              'No hay una Caja Oficina abierta. Abrí la Caja Oficina antes de registrar cobros o pagos en efectivo.',
+            );
           }
+          cashDrawerId = activeDrawer.id;
         }
 
         let bankAccountId: number | null = null;

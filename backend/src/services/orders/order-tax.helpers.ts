@@ -243,14 +243,28 @@ export async function resolveAndSettleOrderPayment(
   if (paymentMethod === 'CASH') {
     const activeDrawer = explicitCashDrawerId
       ? await tx.cashDrawer.findFirst({ where: { id: explicitCashDrawerId, status: 'OPEN' } })
-      : await tx.cashDrawer.findFirst({ where: { userId: adminId, status: 'OPEN' } });
+      : (await tx.cashDrawer.findFirst({
+          where: {
+            status: 'OPEN',
+            OR: [{ branch: 'DEPOSITO' }, { drawerType: 'DEPOSITO' }],
+          },
+          orderBy: { openedAt: 'desc' },
+        })) ||
+        (await tx.cashDrawer.findFirst({
+          where: { userId: adminId, status: 'OPEN', drawerType: { not: 'CENTRAL' } },
+          orderBy: { openedAt: 'desc' },
+        })) ||
+        (await tx.cashDrawer.findFirst({
+          where: { status: 'OPEN', drawerType: { not: 'CENTRAL' } },
+          orderBy: { openedAt: 'desc' },
+        }));
 
-    if (!activeDrawer && userRole !== 'ADMIN' && userRole !== 'FACTURACION') {
+    if (!activeDrawer) {
       throw new Error(
-        'Debe abrir la Caja o seleccionar una caja operativa válida antes de registrar cobros en efectivo.',
+        'No hay una Caja Oficina abierta. Abrí la Caja Oficina antes de registrar cobros en efectivo.',
       );
     }
-    cashDrawerId = activeDrawer?.id;
+    cashDrawerId = activeDrawer.id;
   } else if (paymentMethod === 'BANK_TRANSFER') {
     const selectedBankId = bankAccountId
       ? Number(bankAccountId)
