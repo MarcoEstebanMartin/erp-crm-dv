@@ -81,8 +81,16 @@ export function formatFieldPaymentsSummary(
   return labels.join(' + ');
 }
 
+const EPHEMERAL_HOST_SUFFIXES = [
+  '.trycloudflare.com',
+  '.ngrok-free.app',
+  '.ngrok.io',
+  '.loca.lt',
+];
+
 /**
- * Garantiza que los enlaces enviados por WhatsApp nunca salgan con `localhost`.
+ * Garantiza que los enlaces enviados por WhatsApp nunca salgan con `localhost`
+ * ni con túneles temporales muertos (trycloudflare / ngrok).
  */
 export function resolvePublicReceiptOrigin(rawOrigin?: string | null): string {
   const trimmed = (rawOrigin || '').trim().replace(/\/+$/, '');
@@ -91,7 +99,12 @@ export function resolvePublicReceiptOrigin(rawOrigin?: string | null): string {
   try {
     const parsed = new URL(trimmed);
     const host = parsed.hostname.toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') {
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      EPHEMERAL_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))
+    ) {
       return DEFAULT_PUBLIC_RECEIPT_ORIGIN;
     }
     return `${parsed.protocol}//${parsed.host}`;

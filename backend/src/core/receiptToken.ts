@@ -7,9 +7,22 @@ const TOKEN_HEX_LENGTH = 16;
 
 export const DEFAULT_PUBLIC_APP_URL = 'https://erp-dv-prueba-production.up.railway.app';
 
+const EPHEMERAL_HOST_SUFFIXES = [
+  '.trycloudflare.com',
+  '.ngrok-free.app',
+  '.ngrok.io',
+  '.loca.lt',
+];
+
+function isNonPublicHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') return true;
+  return EPHEMERAL_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
+}
+
 /**
  * Normaliza la URL base pública para compartir comprobantes, evitando barras finales
- * y cayendo al dominio de producción oficial si se pasa vacío o localhost.
+ * y cayendo al dominio de producción oficial si se pasa vacío, localhost o túneles temporales.
  */
 export function normalizePublicAppUrl(rawUrl?: string | null): string {
   const trimmed = (rawUrl || '').trim().replace(/\/+$/, '');
@@ -17,8 +30,7 @@ export function normalizePublicAppUrl(rawUrl?: string | null): string {
 
   try {
     const parsed = new URL(trimmed);
-    const host = parsed.hostname.toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') {
+    if (isNonPublicHost(parsed.hostname)) {
       return DEFAULT_PUBLIC_APP_URL;
     }
     return `${parsed.protocol}//${parsed.host}${parsed.pathname.replace(/\/+$/, '')}`;

@@ -56,9 +56,13 @@ describe('receiptToken (HMAC-SHA256 anti-estafas)', () => {
     expect(formatVerificationCode(token)).toBe('DV-8F3A-9C12');
   });
 
-  it('normaliza URLs públicas y bloquea localhost cayendo al dominio oficial', () => {
+  it('normaliza URLs públicas y bloquea localhost o túneles efímeros cayendo al dominio oficial', () => {
     expect(normalizePublicAppUrl('http://localhost:5174')).toBe(DEFAULT_PUBLIC_APP_URL);
     expect(normalizePublicAppUrl('http://127.0.0.1:3000/')).toBe(DEFAULT_PUBLIC_APP_URL);
+    expect(normalizePublicAppUrl('https://briefs-ones.trycloudflare.com')).toBe(
+      DEFAULT_PUBLIC_APP_URL,
+    );
+    expect(normalizePublicAppUrl('https://abc123.ngrok-free.app')).toBe(DEFAULT_PUBLIC_APP_URL);
     expect(normalizePublicAppUrl('')).toBe(DEFAULT_PUBLIC_APP_URL);
     expect(normalizePublicAppUrl('https://erp.donvenancio.com.ar///')).toBe(
       'https://erp.donvenancio.com.ar',

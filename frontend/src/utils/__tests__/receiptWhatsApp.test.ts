@@ -17,11 +17,14 @@ describe('receiptWhatsApp (mensajes profesionales, minimalistas y sin localhost)
     expect(formatCustomerDisplayName('   ')).toBe('Cliente');
   });
 
-  it('jamás emite localhost en el origen público', () => {
+  it('jamás emite localhost ni túneles temporales en el origen público', () => {
     expect(resolvePublicReceiptOrigin('http://localhost:5174')).toBe(
       DEFAULT_PUBLIC_RECEIPT_ORIGIN,
     );
     expect(resolvePublicReceiptOrigin('http://127.0.0.1:5173')).toBe(
+      DEFAULT_PUBLIC_RECEIPT_ORIGIN,
+    );
+    expect(resolvePublicReceiptOrigin('https://briefs-ones.trycloudflare.com')).toBe(
       DEFAULT_PUBLIC_RECEIPT_ORIGIN,
     );
     expect(resolvePublicReceiptOrigin('https://erp.donvenancio.com.ar/')).toBe(
