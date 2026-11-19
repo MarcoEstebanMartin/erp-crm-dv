@@ -118,6 +118,25 @@ describe('route-settlement.engine', () => {
     expect(result.conflicts[0].message).toContain('ya fue cobrado previamente');
   });
 
+  it('permite marcar NOT_DELIVERED (vuelve a depósito) y bloquea si el cliente ya tiene recibo en calle', () => {
+    const okRes = evaluateRouteSettlementActions(sampleOrders, sampleReceipts, [
+      { orderId: 10, paymentMethod: 'FIELD_RECEIPT' },
+      { orderId: 11, paymentMethod: 'NOT_DELIVERED' },
+      { orderId: 12, paymentMethod: 'CREDITO' },
+    ]);
+
+    expect(okRes.conflicts).toHaveLength(0);
+    expect(okRes.actionsByOrderId[11].action).toBe('RETURN_TO_DEPOT');
+    expect(okRes.totals.notDeliveredCount).toBe(1);
+    expect(okRes.totals.notDeliveredTotal.toNumber()).toBe(25000);
+
+    const blockedRes = evaluateRouteSettlementActions(sampleOrders, sampleReceipts, [
+      { orderId: 10, paymentMethod: 'NOT_DELIVERED' }, // Cliente 100 ya tiene REC-C-0000001
+    ]);
+    expect(blockedRes.conflicts).toHaveLength(1);
+    expect(blockedRes.conflicts[0].code).toBe('CANNOT_RETURN_PAID_ORDER');
+  });
+
   it('permite liquidar sin duplicar cobro cuando el cliente con recibo viene como FIELD_RECEIPT y los demás en C/C o cobro excepcional', () => {
     const result = evaluateRouteSettlementActions(sampleOrders, sampleReceipts, [
       { orderId: 10, paymentMethod: 'FIELD_RECEIPT' },

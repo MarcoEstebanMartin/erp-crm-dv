@@ -273,21 +273,17 @@ export const deliveryRouteService = {
     if (!status || !['PENDING', 'IN_TRANSIT', 'COMPLETED'].includes(status)) {
       throw new AppError('Estado inválido.', 400);
     }
+    if (status === 'COMPLETED') {
+      throw new AppError(
+        'Para finalizar un viaje debés usar "Rendir / Liquidar Viaje" para registrar entregas, cuenta corriente y pedidos no entregados.',
+        400,
+      );
+    }
 
-    const route = await prisma.$transaction(async (tx) => {
-      const updatedRoute = await tx.deliveryRoute.update({
-        where: { id: routeId },
-        data: { status },
-        include: { orders: true },
-      });
-
-      if (status === 'COMPLETED' && updatedRoute.orders.length > 0) {
-        await tx.order.updateMany({
-          where: { deliveryRouteId: updatedRoute.id, status: { not: 'CANCELLED' } },
-          data: { status: 'DELIVERED', deliveredAt: new Date() },
-        });
-      }
-      return updatedRoute;
+    const route = await prisma.deliveryRoute.update({
+      where: { id: routeId },
+      data: { status },
+      include: { orders: true },
     });
 
     if (userId) {

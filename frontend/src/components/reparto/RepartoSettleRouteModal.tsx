@@ -108,6 +108,16 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                 ${totals.totalCredit.toLocaleString('es-AR')}
               </div>
             </div>
+            {totals.notDeliveredCount > 0 && (
+              <div style={{ padding: '10px 12px', borderRadius: '6px', border: '1px solid #fecaca', backgroundColor: '#fff5f5' }}>
+                <div style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 600 }}>
+                  No Entregados ({totals.notDeliveredCount})
+                </div>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#b91c1c' }}>
+                  ${totals.totalNotDelivered.toLocaleString('es-AR')}
+                </div>
+              </div>
+            )}
           </div>
 
           <form onSubmit={onSubmit}>
@@ -181,6 +191,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                               <option value="CASH">Efectivo</option>
                               <option value="BANK_TRANSFER">Transferencia</option>
                               <option value="CHECK">Cheque</option>
+                              <option value="NOT_DELIVERED">No Entregado</option>
                             </select>
                           )}
                         </td>
@@ -277,6 +288,11 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                           )}
                           {set.paymentMethod === 'CREDITO' && (
                             <span style={{ fontSize: '0.72rem', color: '#b78103', fontWeight: 600 }}>Deuda en C/C</span>
+                          )}
+                          {set.paymentMethod === 'NOT_DELIVERED' && (
+                            <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 700 }}>
+                              Vuelve a depósito (reprogramar)
+                            </span>
                           )}
                         </td>
                       </tr>

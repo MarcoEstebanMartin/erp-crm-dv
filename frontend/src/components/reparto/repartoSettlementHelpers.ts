@@ -13,7 +13,7 @@ export interface RouteSettlementRow {
   clientName: string;
   invoiceNumber: string;
   amount: number;
-  paymentMethod: 'FIELD_RECEIPT' | 'CREDITO' | 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+  paymentMethod: 'FIELD_RECEIPT' | 'CREDITO' | 'CASH' | 'BANK_TRANSFER' | 'CHECK' | 'NOT_DELIVERED';
   lockedByFieldReceipt: boolean;
   fieldReceipts: ClientFieldReceiptSummary | null;
   bankAccountId: string | number;
@@ -29,6 +29,8 @@ export interface RouteSettlementTotals {
   totalTransfer: number;
   totalCheck: number;
   totalCredit: number;
+  totalNotDelivered: number;
+  notDeliveredCount: number;
   fieldReceiptOrdersCount: number;
 }
 
@@ -112,6 +114,8 @@ export function computeRouteSettlementTotals(
   let totalTransfer = 0;
   let totalCheck = 0;
   let totalCredit = 0;
+  let totalNotDelivered = 0;
+  let notDeliveredCount = 0;
   let fieldReceiptOrdersCount = 0;
   const countedFieldClients = new Set<number>();
 
@@ -133,6 +137,9 @@ export function computeRouteSettlementTotals(
       totalTransfer += amt;
     } else if (row.paymentMethod === 'CHECK') {
       totalCheck += amt;
+    } else if (row.paymentMethod === 'NOT_DELIVERED') {
+      totalNotDelivered += amt;
+      notDeliveredCount += 1;
     } else {
       totalCredit += amt;
     }
@@ -144,6 +151,8 @@ export function computeRouteSettlementTotals(
     totalTransfer,
     totalCheck,
     totalCredit,
+    totalNotDelivered,
+    notDeliveredCount,
     fieldReceiptOrdersCount,
   };
 }

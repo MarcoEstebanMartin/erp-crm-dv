@@ -69,6 +69,13 @@ describe('Paso 3 — Prellenado y totales de Liquidación de Viaje', () => {
     expect(totals.totalCheck).toBe(12000);
     expect(totals.totalCredit).toBe(8000);
     expect(totals.fieldReceiptOrdersCount).toBe(2);
+
+    // Marcamos Almacén B como No Entregado (vuelve a depósito)
+    rows[2].paymentMethod = 'NOT_DELIVERED';
+    const totalsWithReturn = computeRouteSettlementTotals(rows);
+    expect(totalsWithReturn.notDeliveredCount).toBe(1);
+    expect(totalsWithReturn.totalNotDelivered).toBe(8000);
+    expect(totalsWithReturn.totalCredit).toBe(0);
   });
 
   it('formatea el desglose del recibo de calle en texto compacto', () => {

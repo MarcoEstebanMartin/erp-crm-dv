@@ -6,7 +6,8 @@ export type RouteSettlementPaymentMethod =
   | 'BANK_TRANSFER'
   | 'CHECK'
   | 'CREDITO'
-  | 'FIELD_RECEIPT';
+  | 'FIELD_RECEIPT'
+  | 'NOT_DELIVERED';
 
 export interface RouteOrderSettlementInput {
   id: number;
@@ -49,7 +50,7 @@ export interface ClientRouteReceiptSummary {
 }
 
 export interface RouteSettlementConflict {
-  code: 'DOUBLE_COLLECTION_CONFLICT' | 'ORDER_ALREADY_PAID';
+  code: 'DOUBLE_COLLECTION_CONFLICT' | 'ORDER_ALREADY_PAID' | 'CANNOT_RETURN_PAID_ORDER';
   orderId: number;
   personaId: number;
   clientName: string;
@@ -61,7 +62,8 @@ export interface RouteSettlementConflict {
 export type OrderSettlementActionType =
   | 'CREATE_OFFICE_TRANSACTION'
   | 'KEEP_FIELD_RECEIPT'
-  | 'LEAVE_ON_CREDIT';
+  | 'LEAVE_ON_CREDIT'
+  | 'RETURN_TO_DEPOT';
 
 export interface EvaluatedOrderSettlementAction {
   orderId: number;
@@ -86,6 +88,8 @@ export interface RouteSettlementEvaluationResult {
     officeCheck: Decimal;
     officeTotal: Decimal;
     creditAccountTotal: Decimal;
+    notDeliveredTotal: Decimal;
+    notDeliveredCount: number;
   };
 }
 
@@ -110,7 +114,8 @@ function normalizePaymentMethod(raw?: string | null): RouteSettlementPaymentMeth
     upper === 'BANK_TRANSFER' ||
     upper === 'CHECK' ||
     upper === 'CREDITO' ||
-    upper === 'FIELD_RECEIPT'
+    upper === 'FIELD_RECEIPT' ||
+    upper === 'NOT_DELIVERED'
   ) {
     return upper;
   }
@@ -195,6 +200,8 @@ export function evaluateRouteSettlementActions(
   let officeTransfer = new Decimal(0);
   let officeCheck = new Decimal(0);
   let creditAccountTotal = new Decimal(0);
+  let notDeliveredTotal = new Decimal(0);
+  let notDeliveredCount = 0;
 
   for (const order of orders) {
     const orderTotal = roundToIntegerPeso(order.totalAmount);
@@ -208,6 +215,33 @@ export function evaluateRouteSettlementActions(
     const alreadyPaidOnOrder = roundToIntegerPeso(order.alreadyPaidAmount ?? 0);
     const isOrderAlreadyPaid = orderTotal.gt(0) && alreadyPaidOnOrder.gte(orderTotal);
     const method = normalizePaymentMethod(submission.paymentMethod);
+
+    if (method === 'NOT_DELIVERED') {
+      if (hasActiveFieldReceipt) {
+        const codes = clientSummary!.receiptNumbers.join(', ');
+        conflicts.push({
+          code: 'CANNOT_RETURN_PAID_ORDER',
+          orderId: order.id,
+          personaId: order.personaId,
+          clientName: order.clientName,
+          receiptNumbers: clientSummary!.receiptNumbers,
+          alreadyCollectedAmount: clientSummary!.totalCollected.toNumber(),
+          message: `No se puede marcar como No Entregado a ${order.clientName} porque ya tiene recibo en calle (${codes}) en este viaje. Anulá el recibo primero.`,
+        });
+        continue;
+      }
+      notDeliveredTotal = notDeliveredTotal.plus(orderTotal);
+      notDeliveredCount += 1;
+      actionsByOrderId[order.id] = {
+        orderId: order.id,
+        personaId: order.personaId,
+        action: 'RETURN_TO_DEPOT',
+        paymentMethod: 'NOT_DELIVERED',
+        orderTotal,
+        fieldReceiptSummary: null,
+      };
+      continue;
+    }
 
     if (isOrderAlreadyPaid && MANUAL_COLLECTION_METHODS.has(method)) {
       const invoiceText = order.invoiceLabel || `Pedido #${order.id}`;
@@ -288,6 +322,8 @@ export function evaluateRouteSettlementActions(
       officeCheck,
       officeTotal,
       creditAccountTotal,
+      notDeliveredTotal,
+      notDeliveredCount,
     },
   };
 }

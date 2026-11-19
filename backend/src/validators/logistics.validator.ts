@@ -96,9 +96,10 @@ export const settleDeliveryRouteSchema = z.object({
         .object({
           orderId: z.coerce.number().int().positive(),
           paymentMethod: z
-            .enum(['CASH', 'BANK_TRANSFER', 'CHECK', 'CREDITO', 'FIELD_RECEIPT'])
+            .enum(['CASH', 'BANK_TRANSFER', 'CHECK', 'CREDITO', 'FIELD_RECEIPT', 'NOT_DELIVERED'])
             .optional()
             .nullable(),
+          notDeliveredReason: z.string().trim().max(300).optional().nullable(),
           bankAccountId: optionalPositiveInt,
           checkNumber: z.string().max(120).optional().nullable(),
           checkIssuer: z.string().max(200).optional().nullable(),

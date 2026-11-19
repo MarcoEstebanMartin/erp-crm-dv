@@ -181,6 +181,7 @@ export const routeSettlementService = {
     for (const order of route.orders) {
       const set = input.settlements.find((s) => Number(s.orderId) === order.id);
       if (!set) continue;
+      if (evaluation.actionsByOrderId[order.id]?.action === 'RETURN_TO_DEPOT') continue;
 
       if (order.status === OrderStatus.PREPARED && order.billingType === BillingType.OFFICIAL) {
         try {
@@ -207,10 +208,25 @@ export const routeSettlementService = {
       }
     }
 
+    const returnedToDepotOrderIds: number[] = [];
+
     await prisma.$transaction(async (tx) => {
       for (const order of route.orders) {
         const set = input.settlements.find((s) => Number(s.orderId) === order.id);
         if (!set) continue;
+
+        const evaluatedAction = evaluation.actionsByOrderId[order.id];
+        if (evaluatedAction?.action === 'RETURN_TO_DEPOT') {
+          await tx.order.update({
+            where: { id: order.id },
+            data: {
+              deliveryRouteId: null,
+              deliverySequence: null,
+            },
+          });
+          returnedToDepotOrderIds.push(order.id);
+          continue;
+        }
 
         const totalAmount = roundToIntegerPeso(order.totalAmount.toString()).toNumber();
 
@@ -259,7 +275,6 @@ export const routeSettlementService = {
           });
         }
 
-        const evaluatedAction = evaluation.actionsByOrderId[order.id];
         if (evaluatedAction?.action === 'CREATE_OFFICE_TRANSACTION') {
           const { cashDrawerId, bankAccountId, txDescription } =
             await resolveRoutePaymentDestination(
@@ -311,7 +326,11 @@ export const routeSettlementService = {
 
     for (const order of route.orders) {
       const set = input.settlements.find((s) => Number(s.orderId) === order.id);
-      if (set && order.status === OrderStatus.PREPARED) {
+      if (
+        set &&
+        evaluation.actionsByOrderId[order.id]?.action !== 'RETURN_TO_DEPOT' &&
+        order.status === OrderStatus.PREPARED
+      ) {
         notifyWebOrderStatusForErpOrder(
           order,
           OrderStatus.DELIVERED,
@@ -329,6 +348,7 @@ export const routeSettlementService = {
         status: 'COMPLETED',
         fieldReceiptsCount: activeFieldReceipts.length,
         fieldReceiptsTotal: evaluation.totals.fieldTotal.toNumber(),
+        returnedToDepotOrderIds,
         cashDeclared: normalizeOptionalPeso(input.cashDeclared),
         checksDeclared: normalizeOptionalPeso(input.checksDeclared),
         transfersDeclared: normalizeOptionalPeso(input.transfersDeclared),
