@@ -28,7 +28,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
       isOpen={show && Boolean(settleRoute)}
       onClose={onClose}
       ariaLabelledBy="reparto-settle-modal-title"
-      style={{ maxWidth: '1000px', width: '90vw', padding: '24px' }}
+      style={{ maxWidth: '1160px', width: '94vw', padding: '24px' }}
     >
       {settleRoute && (
         <>
@@ -62,7 +62,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                 role="region"
                 aria-label="Entregas y cobros del viaje"
                 tabIndex={0}
-                style={{ maxHeight: '350px', overflowY: 'auto' }}
+                style={{ maxHeight: '58vh', minHeight: '360px', overflowY: 'auto' }}
               >
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                   <thead>
@@ -86,7 +86,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                             value={set.paymentMethod}
                             onChange={(e) => {
                               const val = e.target.value;
-                              setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, paymentMethod: val } : s));
+                              setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, paymentMethod: val, isEcheq: val === 'CHECK' ? Boolean(s.isEcheq) : false } : s));
                             }}
                           >
                             <option value="CASH">Efectivo</option>
@@ -111,7 +111,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                             </select>
                           )}
                           {set.paymentMethod === 'CHECK' && (
-                            <div style={{ display: 'flex', gap: '4px' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                               <input
                                 type="text"
                                 aria-label={`Número de cheque ${set.clientName}`}
@@ -120,7 +120,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                                 autoCapitalize="none"
                                 spellCheck={false}
                                 className="input tabular-nums"
-                                style={{ padding: '2px 4px', fontSize: '0.72rem', height: '28px', width: '70px' }}
+                                style={{ padding: '2px 6px', fontSize: '0.76rem', height: '28px', width: '105px' }}
                                 value={set.checkNumber}
                                 onChange={(e) => {
                                   const val = e.target.value;
@@ -133,7 +133,7 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                                 aria-label={`Emisor de cheque ${set.clientName}`}
                                 placeholder="Emisor"
                                 className="input"
-                                style={{ padding: '2px 4px', fontSize: '0.72rem', height: '28px', width: '80px' }}
+                                style={{ padding: '2px 6px', fontSize: '0.76rem', height: '28px', flex: '1 1 120px', minWidth: '110px' }}
                                 value={set.checkIssuer}
                                 onChange={(e) => {
                                   const val = e.target.value;
@@ -141,6 +141,36 @@ export const RepartoSettleRouteModal: FC<RepartoSettleRouteModalProps> = ({
                                 }}
                                 required
                               />
+                              <label
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  fontSize: '0.76rem',
+                                  fontWeight: 600,
+                                  color: set.isEcheq ? '#0369a1' : 'var(--text-secondary)',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap',
+                                  padding: '0 8px',
+                                  height: '28px',
+                                  borderRadius: '4px',
+                                  border: `1px solid ${set.isEcheq ? '#7dd3fc' : 'var(--border-color)'}`,
+                                  backgroundColor: set.isEcheq ? '#f0f9ff' : 'transparent',
+                                  userSelect: 'none',
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Es eCheq ${set.clientName}`}
+                                  checked={Boolean(set.isEcheq)}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setSettlements(prev => prev.map((s, i) => i === idx ? { ...s, isEcheq: checked } : s));
+                                  }}
+                                  style={{ width: '14px', height: '14px', margin: 0, accentColor: '#0284c7', cursor: 'pointer' }}
+                                />
+                                <span>eCheq</span>
+                              </label>
                             </div>
                           )}
                           {set.paymentMethod === 'CASH' && (

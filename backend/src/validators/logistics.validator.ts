@@ -99,6 +99,7 @@ export const settleDeliveryRouteSchema = z.object({
           bankAccountId: optionalPositiveInt,
           checkNumber: z.string().max(120).optional().nullable(),
           checkIssuer: z.string().max(200).optional().nullable(),
+          isEcheq: z.boolean().optional().default(false),
         })
         .passthrough(),
     ),

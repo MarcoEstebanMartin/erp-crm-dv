@@ -64,6 +64,7 @@ export function useRepartoGpsAndSettle({
       bankAccountId: bankAccounts[0]?.id || '',
       checkNumber: '',
       checkIssuer: '',
+      isEcheq: false,
       checkAmount: Number(o.totalAmount),
     })));
     setShowSettleModal(true);

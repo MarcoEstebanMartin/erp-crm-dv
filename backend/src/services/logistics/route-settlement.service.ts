@@ -16,6 +16,7 @@ export interface RouteOrderSettlementItem {
   bankAccountId?: number | null;
   checkNumber?: string | null;
   checkIssuer?: string | null;
+  isEcheq?: boolean | null;
 }
 
 export interface SettleDeliveryRouteInput {
@@ -75,8 +76,12 @@ async function resolveRoutePaymentDestination(
       null;
   } else if (paymentMethod === 'CHECK') {
     const defaultBank = await tx.bankAccount.findFirst({ select: { id: true } });
-    bankAccountId = defaultBank?.id ?? null;
-    txDescription = `Rendición Reparto - Cheque N° ${settlement.checkNumber || 'S/N'} (Emisor: ${settlement.checkIssuer || 'Desconocido'}) - Chofer: ${driverName} - Ruta #${routeId}`;
+    bankAccountId = settlement.bankAccountId || defaultBank?.id || null;
+    const rawIssuer = (settlement.checkIssuer || 'Desconocido').trim() || 'Desconocido';
+    const isEcheq = Boolean(settlement.isEcheq) || /\(echeq\)|e-?cheq/i.test(rawIssuer);
+    const issuerLabel =
+      isEcheq && !/\(echeq\)|e-?cheq/i.test(rawIssuer) ? `${rawIssuer} (Echeq)` : rawIssuer;
+    txDescription = `Rendición Reparto - Cheque N° ${settlement.checkNumber || 'S/N'} (Emisor: ${issuerLabel}) - Chofer: ${driverName} - Ruta #${routeId}`;
   }
 
   return { cashDrawerId, bankAccountId, txDescription };

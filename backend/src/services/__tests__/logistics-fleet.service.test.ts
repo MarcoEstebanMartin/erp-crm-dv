@@ -206,4 +206,67 @@ describe('Logística y Flota Services (Decimal.js, AccountLedger y Sanitización
       data: { currentOdometer: 125400 },
     });
   });
+
+  it('settleDeliveryRoute marca (Echeq) en descripción cuando CHECK tiene isEcheq=true y lo omite si es cheque físico', async () => {
+    vi.spyOn(prisma.deliveryRoute, 'findUnique').mockResolvedValue({
+      id: 4,
+      driverName: 'Miguel Alberca',
+      status: 'IN_TRANSIT',
+      orders: [
+        {
+          id: 53,
+          personaId: 21,
+          status: OrderStatus.DELIVERED,
+          deliveredAt: new Date(),
+          billingType: BillingType.INTERNAL,
+          totalAmount: '50000.00',
+          invoiceNumber: 'INT-00053',
+          persona: { id: 21, name: 'RUPP TERESA ALEJANDRA', cuit: null },
+        },
+        {
+          id: 54,
+          personaId: 22,
+          status: OrderStatus.DELIVERED,
+          deliveredAt: new Date(),
+          billingType: BillingType.INTERNAL,
+          totalAmount: '30000.00',
+          invoiceNumber: 'INT-00054',
+          persona: { id: 22, name: 'CLIENTE FISICO', cuit: null },
+        },
+      ],
+    } as any);
+
+    const createdTxs: any[] = [];
+    const mockTx: any = {
+      order: { update: vi.fn().mockResolvedValue({}) },
+      bankAccount: { findFirst: vi.fn().mockResolvedValue({ id: 2 }) },
+      persona: { update: vi.fn().mockResolvedValue({ id: 21, outstandingBalance: '0.00' }) },
+      accountLedger: { create: vi.fn().mockResolvedValue({ id: 1 }) },
+      transaction: {
+        create: vi.fn().mockImplementation(({ data }) => {
+          createdTxs.push(data);
+          return Promise.resolve({ id: 800 + createdTxs.length, movementId: 90 + createdTxs.length, ...data });
+        }),
+        update: vi.fn().mockResolvedValue({}),
+      },
+      deliveryRoute: { update: vi.fn().mockResolvedValue({ id: 4, status: 'COMPLETED' }) },
+    };
+
+    vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+    await routeSettlementService.settleDeliveryRoute({
+      routeId: 4,
+      userId: 1,
+      settlements: [
+        { orderId: 53, paymentMethod: 'CHECK', checkNumber: '123456', checkIssuer: 'Banco Nación', isEcheq: true },
+        { orderId: 54, paymentMethod: 'CHECK', checkNumber: '654321', checkIssuer: 'Banco Provincia', isEcheq: false },
+      ],
+      checksDeclared: 80000,
+    });
+
+    expect(createdTxs).toHaveLength(2);
+    expect(createdTxs[0].description).toContain('(Emisor: Banco Nación (Echeq))');
+    expect(createdTxs[1].description).toContain('(Emisor: Banco Provincia)');
+    expect(createdTxs[1].description).not.toContain('Echeq');
+  });
 });
