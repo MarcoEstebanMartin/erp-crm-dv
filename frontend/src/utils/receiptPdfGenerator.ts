@@ -37,7 +37,9 @@ export interface PublicReceiptData {
   };
 }
 
-export function buildReceiptPdfFilename(receipt: Pick<PublicReceiptData, 'id' | 'receiptNumber'>): string {
+export function buildReceiptPdfFilename(
+  receipt: Pick<PublicReceiptData, 'id' | 'receiptNumber'>,
+): string {
   const raw = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
   const safe = raw.replace(/[^A-Za-z0-9_-]/g, '');
   return `Recibo-${safe}.pdf`;
@@ -59,13 +61,12 @@ export function formatReceiptDateTimeAr(isoDate: string): string {
 }
 
 /**
- * Genera el comprobante oficial en PDF con estética minimalista y QR de verificación
- * generado 100% localmente en el navegador (sin enviar enlaces a servicios externos).
+ * Genera el comprobante oficial en PDF con formato móvil compacto (105 mm de ancho,
+ * estilo recibo bancario / Mercado Pago) para lectura nítida en celular sin hacer zoom.
  */
 export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promise<Blob> {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const marginX = 24;
+  const pageWidth = 105;
+  const marginX = 8;
   const contentWidth = pageWidth - marginX * 2;
 
   const receiptNo = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
@@ -74,55 +75,9 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
   const methodLabel = formatPaymentMethodLabel(receipt.paymentMethod, receipt.bankAccount?.name);
   const dateTimeLabel = formatReceiptDateTimeAr(receipt.createdAt);
   const verificationCode = receipt.verificationCode || '';
-  const verifyUrl = receipt.publicUrl || (typeof window !== 'undefined' ? window.location.href : '');
+  const verifyUrl =
+    receipt.publicUrl || (typeof window !== 'undefined' ? window.location.href : '');
 
-  // Encabezado sobrio
-  doc.setFillColor(24, 24, 27); // zinc-900
-  doc.roundedRect(marginX, 22, 11, 11, 2, 2, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('DV', marginX + 5.5, 29.2, { align: 'center' });
-
-  doc.setTextColor(24, 24, 27);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('Distribuidora Don Venancio', marginX + 15, 27.5);
-
-  doc.setTextColor(113, 113, 122); // zinc-500
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  doc.text('Recibo de Cobro', marginX + 15, 32.5);
-
-  // Número a la derecha
-  doc.setTextColor(24, 24, 27);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text(receiptNo, pageWidth - marginX, 27.5, { align: 'right' });
-
-  // Línea divisoria 1px
-  doc.setDrawColor(228, 228, 231); // zinc-200
-  doc.setLineWidth(0.3);
-  doc.line(marginX, 40, pageWidth - marginX, 40);
-
-  // Bloque de monto + badge oficial
-  doc.setFillColor(236, 253, 245); // emerald-50
-  doc.setDrawColor(167, 243, 208); // emerald-200
-  doc.roundedRect(marginX, 49, 48, 7.5, 3.5, 3.5, 'FD');
-  doc.setTextColor(4, 120, 87); // emerald-700
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.text('COMPROBANTE OFICIAL', marginX + 24, 54, { align: 'center' });
-
-  doc.setTextColor(24, 24, 27);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
-  doc.text(amountText, marginX, 71);
-
-  doc.setDrawColor(228, 228, 231);
-  doc.line(marginX, 79, pageWidth - marginX, 79);
-
-  // Detalle limpio en 2 columnas
   const rows: Array<[string, string]> = [
     ['Cliente', customerName],
     ...(receipt.persona?.cuit ? [['CUIT', receipt.persona.cuit] as [string, string]] : []),
@@ -132,82 +87,166 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
     ...(receipt.user?.username ? [['Emitido por', receipt.user.username] as [string, string]] : []),
   ];
 
-  let y = 91;
-  for (const [label, value] of rows) {
-    doc.setTextColor(113, 113, 122);
+  // Calculamos el alto exacto del comprobante para eliminar espacio muerto inferior
+  const measureDoc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pageWidth, 200] });
+  measureDoc.setFont('helvetica', 'bold');
+  measureDoc.setFontSize(10.5);
+
+  const measuredRows = rows.map(([label, value]) => {
+    const wrapped = measureDoc.splitTextToSize(value, contentWidth - 28) as string[];
+    const height = Math.max(10.5, wrapped.length * 4.8 + 5.2);
+    return { label, wrapped, height };
+  });
+
+  const rowsStartY = 64;
+  const rowsTotalHeight = measuredRows.reduce((acc, r) => acc + r.height, 0);
+  const qrBoxY = rowsStartY + rowsTotalHeight + 5;
+  const qrBoxHeight = 32;
+  const pageHeight = Math.max(150, Math.ceil(qrBoxY + qrBoxHeight + 10));
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: [pageWidth, pageHeight],
+  });
+
+  // Fondo blanco limpio + encabezado institucional
+  doc.setFillColor(17, 24, 39); // gray-900
+  doc.roundedRect(marginX, 9, 11, 11, 2.2, 2.2, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('DV', marginX + 5.5, 16, { align: 'center' });
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('Don Venancio', marginX + 14, 13.8);
+
+  doc.setTextColor(107, 114, 128);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Recibo de Cobro', marginX + 14, 18.8);
+
+  // Número de recibo en pill superior derecha
+  doc.setFillColor(243, 244, 246);
+  doc.roundedRect(pageWidth - marginX - 27, 10.5, 27, 7.5, 1.8, 1.8, 'F');
+  doc.setTextColor(55, 65, 81);
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(8.5);
+  doc.text(receiptNo, pageWidth - marginX - 13.5, 15.4, { align: 'center' });
+
+  // Línea divisoria 1px
+  doc.setDrawColor(229, 231, 235);
+  doc.setLineWidth(0.3);
+  doc.line(marginX, 25, pageWidth - marginX, 25);
+
+  // Bloque central de monto (grande y legible en celular)
+  doc.setFillColor(236, 253, 245);
+  doc.setDrawColor(167, 243, 208);
+  doc.roundedRect(pageWidth / 2 - 24, 30, 48, 7.2, 3.6, 3.6, 'FD');
+  doc.setTextColor(4, 120, 87);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('COMPROBANTE OFICIAL', pageWidth / 2, 34.8, { align: 'center' });
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(26);
+  doc.text(amountText, pageWidth / 2, 50.5, { align: 'center' });
+
+  doc.setDrawColor(229, 231, 235);
+  doc.line(marginX, 57, pageWidth - marginX, 57);
+
+  // Detalle limpio con tipografía grande para celular
+  let y = rowsStartY;
+  for (let i = 0; i < measuredRows.length; i += 1) {
+    const row = measuredRows[i];
+    doc.setTextColor(107, 114, 128);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(label, marginX, y);
+    doc.setFontSize(9.5);
+    doc.text(row.label, marginX, y);
 
-    doc.setTextColor(24, 24, 27);
+    doc.setTextColor(17, 24, 39);
     doc.setFont('helvetica', 'bold');
-    const wrapped = doc.splitTextToSize(value, contentWidth - 48);
-    doc.text(wrapped, pageWidth - marginX, y, { align: 'right' });
+    doc.setFontSize(10.5);
+    doc.text(row.wrapped, pageWidth - marginX, y, { align: 'right' });
 
-    const rowHeight = Math.max(10, wrapped.length * 5.2 + 4);
-    doc.setDrawColor(244, 244, 245);
-    doc.line(marginX, y + rowHeight - 5.5, pageWidth - marginX, y + rowHeight - 5.5);
-    y += rowHeight;
+    if (i < measuredRows.length - 1) {
+      doc.setDrawColor(243, 244, 246);
+      doc.line(marginX, y + row.height - 4.2, pageWidth - marginX, y + row.height - 4.2);
+    }
+    y += row.height;
   }
 
-  // Bloque inferior anti-estafas con QR
-  const qrBoxY = Math.max(y + 10, 178);
-  doc.setFillColor(250, 250, 250);
-  doc.setDrawColor(228, 228, 231);
-  doc.roundedRect(marginX, qrBoxY, contentWidth, 38, 3, 3, 'FD');
+  // Bloque inferior de verificación (QR + Código único destacado)
+  doc.setFillColor(249, 250, 251);
+  doc.setDrawColor(229, 231, 235);
+  doc.roundedRect(marginX, qrBoxY, contentWidth, qrBoxHeight, 2.8, 2.8, 'FD');
 
   if (verifyUrl) {
     try {
       const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
         width: 220,
         margin: 1,
-        color: { dark: '#18181B', light: '#FAFAFA' },
+        color: { dark: '#111827', light: '#F9FAFB' },
       });
-      doc.addImage(qrDataUrl, 'PNG', marginX + 5, qrBoxY + 4, 30, 30);
+      doc.addImage(qrDataUrl, 'PNG', marginX + 4, qrBoxY + 4, 24, 24);
     } catch {
       // Si el entorno sin canvas falla, continuamos con el código textual sin romper la descarga
     }
   }
 
-  const textStartX = marginX + 41;
-  doc.setTextColor(113, 113, 122);
-  doc.setFont('helvetica', 'normal');
+  const textStartX = marginX + 32;
+  doc.setTextColor(4, 120, 87);
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.text('Código único de verificación', textStartX, qrBoxY + 13);
+  doc.text('Código único de verificación', textStartX, qrBoxY + 10.5);
 
   if (verificationCode) {
-    doc.setTextColor(24, 24, 27);
+    doc.setTextColor(17, 24, 39);
     doc.setFont('courier', 'bold');
-    doc.setFontSize(13);
-    doc.text(verificationCode, textStartX, qrBoxY + 22);
+    doc.setFontSize(10.5);
+    doc.text(verificationCode, textStartX, qrBoxY + 18);
   }
 
-  doc.setTextColor(113, 113, 122);
+  doc.setTextColor(107, 114, 128);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('Distribuidora Don Venancio · Registro inmutable', textStartX, qrBoxY + 30);
+  doc.setFontSize(7.5);
+  doc.text('Don Venancio · Registro inmutable', textStartX, qrBoxY + 25.5);
 
   return doc.output('blob');
 }
 
-export async function downloadReceiptPdf(receipt: PublicReceiptData): Promise<void> {
-  const blob = await generateReceiptPdfBlob(receipt);
+function triggerBrowserPdfDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = buildReceiptPdfFilename(receipt);
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+export async function downloadReceiptPdf(receipt: PublicReceiptData): Promise<void> {
+  const blob = await generateReceiptPdfBlob(receipt);
+  triggerBrowserPdfDownload(blob, buildReceiptPdfFilename(receipt));
+}
+
+export interface ShareReceiptPdfOptions {
+  shareText?: string;
+  whatsappUrl?: string;
+}
+
 /**
- * En celulares compatibles comparte el archivo PDF directo a WhatsApp vía Web Share API;
- * en PC descarga el PDF instantáneamente.
+ * Flujo unificado de envío de recibo en PDF:
+ * - En celular compatible: comparte el archivo PDF (+ texto corto) directo a WhatsApp vía Web Share API.
+ * - En PC: descarga el PDF automáticamente y, si se provee `whatsappUrl`, abre el chat del cliente en WhatsApp Web.
  */
 export async function shareOrDownloadReceiptPdf(
   receipt: PublicReceiptData,
+  options?: ShareReceiptPdfOptions,
 ): Promise<'shared' | 'downloaded'> {
   const blob = await generateReceiptPdfBlob(receipt);
   const filename = buildReceiptPdfFilename(receipt);
@@ -221,19 +260,16 @@ export async function shareOrDownloadReceiptPdf(
     ) {
       await navigator.share({
         title: `Recibo ${receipt.receiptNumber || `REC-${receipt.id}`}`,
+        ...(options?.shareText ? { text: options.shareText } : {}),
         files: [file],
       });
       return 'shared';
     }
   }
 
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  triggerBrowserPdfDownload(blob, filename);
+  if (options?.whatsappUrl && typeof window !== 'undefined') {
+    window.open(options.whatsappUrl, '_blank', 'noopener,noreferrer');
+  }
   return 'downloaded';
 }

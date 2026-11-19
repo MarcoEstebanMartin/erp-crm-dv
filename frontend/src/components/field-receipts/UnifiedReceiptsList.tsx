@@ -6,7 +6,12 @@ import {
   type FieldReceiptDTO,
   type OfficeReceiptDTO,
 } from '../../api/fieldReceipts.api';
-import { shareOrDownloadReceiptPdf } from '../../utils/receiptPdfGenerator';
+import {
+  downloadReceiptPdf,
+  shareOrDownloadReceiptPdf,
+  type PublicReceiptData,
+} from '../../utils/receiptPdfGenerator';
+import { buildOfficeReceiptWhatsAppMessage } from '../../utils/receiptWhatsApp';
 
 type ReceiptOriginFilter = 'ALL' | 'OFFICE' | 'FIELD';
 
@@ -70,27 +75,43 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
   const [search, setSearch] = useState('');
   const [busyPdfKey, setBusyPdfKey] = useState<string | null>(null);
 
-  const handleOfficePdf = async (row: UnifiedReceiptRow) => {
+  const toPublicReceiptData = (r: OfficeReceiptDTO): PublicReceiptData => ({
+    id: r.id,
+    receiptNumber: r.receiptNumber,
+    amount: r.amount,
+    paymentMethod: r.paymentMethod,
+    description: r.description,
+    createdAt: r.createdAt,
+    verified: r.verified,
+    verificationCode: r.verificationCode,
+    publicUrl: r.publicUrl,
+    persona: r.persona ? { id: r.persona.id, name: r.persona.name } : null,
+    user: r.user,
+    bankAccount: r.bankAccount,
+  });
+
+  const handleOfficePdfDownload = async (row: UnifiedReceiptRow) => {
     const r = row.officeReceipt;
     if (!r || busyPdfKey) return;
-    setBusyPdfKey(row.key);
+    setBusyPdfKey(`pdf-${row.key}`);
     try {
-      await shareOrDownloadReceiptPdf({
-        id: r.id,
-        receiptNumber: r.receiptNumber,
-        amount: r.amount,
-        paymentMethod: r.paymentMethod,
-        description: r.description,
-        createdAt: r.createdAt,
-        verified: r.verified,
-        verificationCode: r.verificationCode,
-        publicUrl: r.publicUrl,
-        persona: r.persona ? { id: r.persona.id, name: r.persona.name } : null,
-        user: r.user,
-        bankAccount: r.bankAccount,
+      await downloadReceiptPdf(toPublicReceiptData(r));
+    } finally {
+      setBusyPdfKey(null);
+    }
+  };
+
+  const handleOfficeWhatsAppPdf = async (row: UnifiedReceiptRow) => {
+    const r = row.officeReceipt;
+    if (!r || busyPdfKey) return;
+    setBusyPdfKey(`wa-${row.key}`);
+    try {
+      await shareOrDownloadReceiptPdf(toPublicReceiptData(r), {
+        shareText: buildOfficeReceiptWhatsAppMessage(r),
+        whatsappUrl: row.whatsappUrl,
       });
     } catch {
-      // Usuario canceló compartir o error transitorio
+      // Usuario canceló compartir en el celular
     } finally {
       setBusyPdfKey(null);
     }
@@ -271,8 +292,8 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                       {row.officeReceipt && !row.isVoided && (
                         <button
                           type="button"
-                          onClick={() => void handleOfficePdf(row)}
-                          disabled={busyPdfKey === row.key}
+                          onClick={() => void handleOfficePdfDownload(row)}
+                          disabled={busyPdfKey === `pdf-${row.key}`}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -284,11 +305,11 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                             color: '#fff',
                             fontSize: '0.75rem',
                             fontWeight: 600,
-                            cursor: busyPdfKey === row.key ? 'wait' : 'pointer',
-                            opacity: busyPdfKey === row.key ? 0.65 : 1,
+                            cursor: busyPdfKey === `pdf-${row.key}` ? 'wait' : 'pointer',
+                            opacity: busyPdfKey === `pdf-${row.key}` ? 0.65 : 1,
                           }}
                         >
-                          <FileDown size={12} aria-hidden="true" /> {busyPdfKey === row.key ? 'PDF…' : 'PDF'}
+                          <FileDown size={12} aria-hidden="true" /> {busyPdfKey === `pdf-${row.key}` ? 'PDF…' : 'PDF'}
                         </button>
                       )}
                       {row.viewUrl && (
@@ -301,7 +322,30 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                           <ExternalLink size={12} aria-hidden="true" /> Ver
                         </a>
                       )}
-                      {!row.isVoided && (
+                      {!row.isVoided && row.officeReceipt && (
+                        <button
+                          type="button"
+                          onClick={() => void handleOfficeWhatsAppPdf(row)}
+                          disabled={busyPdfKey === `wa-${row.key}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #16a34a',
+                            background: '#fff',
+                            color: '#15803d',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            cursor: busyPdfKey === `wa-${row.key}` ? 'wait' : 'pointer',
+                            opacity: busyPdfKey === `wa-${row.key}` ? 0.65 : 1,
+                          }}
+                        >
+                          <Send size={12} aria-hidden="true" /> {busyPdfKey === `wa-${row.key}` ? 'Enviando…' : 'WhatsApp'}
+                        </button>
+                      )}
+                      {!row.isVoided && !row.officeReceipt && (
                         <a
                           href={row.whatsappUrl}
                           target="_blank"
