@@ -7,7 +7,7 @@ import {
   parseWmsLocationScope,
   resolveTargetLotNumberForLocation,
 } from '../../engines/stock.engine';
-import { validateSlotAllowsStockAssignment } from '../../engines/warehouse-layout.engine';
+import { assertSlotAcceptsStockInTx } from '../../utils/warehouse-base-layout.util';
 import { executeWmsAssignmentInTx } from './product-wms-tx.helper';
 
 export interface ClearWmsLocationInput {
@@ -267,13 +267,7 @@ export class ProductWmsSubService {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      if (typeof (tx as any).warehouseCell?.findUnique === 'function') {
-        const customCell = await tx.warehouseCell.findUnique({ where: { code: scope.baseSlotCode } });
-        const slotCheck = validateSlotAllowsStockAssignment(customCell, scope.cleanCode);
-        if (!slotCheck.allowed) {
-          throw new Error(slotCheck.reason || 'El slot seleccionado no admite mercadería.');
-        }
-      }
+      await assertSlotAcceptsStockInTx(tx, scope.cleanCode);
 
       await lockProductsForUpdate(tx, [productId]);
 

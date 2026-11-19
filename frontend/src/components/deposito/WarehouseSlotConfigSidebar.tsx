@@ -41,7 +41,7 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
     setIsStorage(Boolean(cell.is_storage));
     setLevels(cell.is_storage && cell.val ? cell.val : 'A-B-C');
     setChamber(
-      cell.chamber && cell.chamber !== 'GENERAL'
+      cell.chamber && cell.chamber !== 'GENERAL' && cell.chamber !== 'BANO'
         ? cell.chamber
         : cell.dep_id === 'D2'
           ? 'D2_GENERAL'
@@ -188,7 +188,7 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
                 <label htmlFor="wms-cfg-chamber" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Sector</label>
                 <select id="wms-cfg-chamber" className="form-control" value={chamber} onChange={(e) => setChamber(e.target.value)} style={{ fontSize: '0.78rem', height: '34px' }}>
                   {Object.entries(SECTORS_INFO)
-                    .filter(([k]) => k !== 'GENERAL')
+                    .filter(([k]) => k !== 'GENERAL' && k !== 'BANO')
                     .map(([k, info]) => (
                       <option key={k} value={k}>{info.label}</option>
                     ))}

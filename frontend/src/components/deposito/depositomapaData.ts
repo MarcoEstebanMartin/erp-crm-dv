@@ -83,7 +83,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 1,
@@ -92,7 +92,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 1,
@@ -101,7 +101,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 1,
@@ -110,7 +110,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 1,
@@ -119,7 +119,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 1,
@@ -292,7 +292,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 2,
@@ -301,7 +301,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 2,
@@ -310,7 +310,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 2,
@@ -319,7 +319,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 2,
@@ -328,7 +328,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 2,
@@ -501,7 +501,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 3,
@@ -528,7 +528,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 3,
@@ -537,7 +537,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_1"
+      "chamber": "CAMARA_2"
     },
     {
       "r": 3,
@@ -910,7 +910,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 5,
@@ -937,7 +937,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 5,
@@ -1005,9 +1005,9 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
     {
       "r": 5,
       "c": 17,
-      "val": "A",
-      "fill": "#B6D7A8",
-      "is_storage": true,
+      "val": "",
+      "fill": "#FFFFFF",
+      "is_storage": false,
       "dep_id": "D1",
       "chamber": "BANO"
     },
@@ -1119,7 +1119,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 6,
@@ -1128,16 +1128,16 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 6,
       "c": 8,
       "val": "",
-      "fill": "#B6D7A8",
+      "fill": "#FFFFFF",
       "is_storage": false,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 6,
@@ -1146,7 +1146,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 6,
@@ -1328,7 +1328,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 7,
@@ -1337,7 +1337,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 7,
@@ -1346,7 +1346,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 7,
@@ -1355,7 +1355,7 @@ export const DEPOSITO_MATRIX: SlotCellData[][] = [
       "fill": "#B6D7A8",
       "is_storage": true,
       "dep_id": "D1",
-      "chamber": "CAMARA_2"
+      "chamber": "CAMARA_1"
     },
     {
       "r": 7,
@@ -6730,7 +6730,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 7,
     "nivel": "A-B-C",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R01-C08",
@@ -6740,7 +6740,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 8,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R01-C09",
@@ -6750,7 +6750,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 9,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R01-C10",
@@ -6760,7 +6760,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 10,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R01-C11",
@@ -6770,7 +6770,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 11,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R02-C04",
@@ -6790,7 +6790,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 7,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R02-C08",
@@ -6800,7 +6800,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 8,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R02-C09",
@@ -6810,7 +6810,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 9,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R02-C10",
@@ -6820,7 +6820,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 10,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R02-C11",
@@ -6830,7 +6830,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 11,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R03-C04",
@@ -6850,7 +6850,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 7,
     "nivel": "A-B-C",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R03-C10",
@@ -6860,7 +6860,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 10,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R03-C11",
@@ -6870,7 +6870,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 11,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_1"
+    "chamber": "CAMARA_2"
   },
   {
     "code": "D1-R05-C06",
@@ -6880,7 +6880,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 6,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R05-C09",
@@ -6890,7 +6890,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 9,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R05-C11",
@@ -6931,16 +6931,6 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "nivel": "A",
     "fill": "#B6D7A8",
     "chamber": "CAMARA_3"
-  },
-  {
-    "code": "D1-R05-C17",
-    "dep_id": "D1",
-    "deposito": "Depósito 1",
-    "row": 5,
-    "col": 17,
-    "nivel": "A",
-    "fill": "#B6D7A8",
-    "chamber": "BANO"
   },
   {
     "code": "D1-R06-C01",
@@ -6990,7 +6980,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 6,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R06-C07",
@@ -7000,7 +6990,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 7,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R06-C09",
@@ -7010,7 +7000,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 9,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R06-C11",
@@ -7080,7 +7070,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 6,
     "nivel": "A-B-C-D-E-F",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R07-C07",
@@ -7090,7 +7080,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 7,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R07-C08",
@@ -7100,7 +7090,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 8,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R07-C09",
@@ -7110,7 +7100,7 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
     "col": 9,
     "nivel": "A",
     "fill": "#B6D7A8",
-    "chamber": "CAMARA_2"
+    "chamber": "CAMARA_1"
   },
   {
     "code": "D1-R07-C11",

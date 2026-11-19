@@ -1,15 +1,67 @@
 import prisma from '../../utils/prisma';
 import { logAudit } from '../../utils/audit';
 import { appCache } from '../../utils/cache';
-import { doesLotMatchWmsScope } from '../../engines/stock.engine';
+import {
+  doesLotMatchWmsScope,
+  normalizeWmsLocationCode,
+} from '../../engines/stock.engine';
 import {
   buildCanonicalSlotCode,
   validateCellMutationAgainstStock,
+  validateSlotAllowsStockAssignment,
+  validateStorageChamberRule,
   type WarehouseChamberCode,
   type WarehouseDepId,
 } from '../../engines/warehouse-layout.engine';
+import { getBaseWarehouseCell } from '../../utils/warehouse-base-layout.util';
 
 const WAREHOUSE_LAYOUT_CACHE_KEY = 'warehouse_cells_layout_v1';
+
+async function clearOrphanedDefaultLocationsInTx(
+  tx: any,
+  slotCode: string,
+  targetRule: { isStorage: boolean; levels: string },
+): Promise<number> {
+  if (typeof tx?.product?.findMany !== 'function' || typeof tx?.product?.update !== 'function') {
+    return 0;
+  }
+
+  const products = await tx.product.findMany({
+    where: {
+      OR: [
+        { defaultLocation: slotCode },
+        { defaultLocation: { startsWith: `${slotCode}-` } },
+      ],
+    },
+    select: { id: true, defaultLocation: true },
+  });
+
+  let clearedCount = 0;
+  for (const prod of products || []) {
+    const normDefault = normalizeWmsLocationCode(prod.defaultLocation);
+    if (!doesLotMatchWmsScope(normDefault, slotCode)) continue;
+    const stillAllowed =
+      targetRule.isStorage &&
+      validateSlotAllowsStockAssignment(
+        {
+          code: slotCode,
+          isStorage: targetRule.isStorage,
+          isBlocked: false,
+          levels: targetRule.levels,
+        },
+        normDefault,
+      ).allowed;
+
+    if (!stillAllowed) {
+      await tx.product.update({
+        where: { id: prod.id },
+        data: { defaultLocation: null },
+      });
+      clearedCount += 1;
+    }
+  }
+  return clearedCount;
+}
 
 export interface UpsertWarehouseCellInput {
   depId: WarehouseDepId;
@@ -53,7 +105,12 @@ export class WarehouseLayoutService {
         ? Math.trunc(Number(input.maxUnits))
         : null;
 
-    const saved = await prisma.$transaction(async (tx) => {
+    const chamberCheck = validateStorageChamberRule(input.isStorage, nextChamber);
+    if (!chamberCheck.allowed) {
+      throw new Error(chamberCheck.reason || 'Sector inválido para almacenamiento.');
+    }
+
+    const { saved, clearedDefaults } = await prisma.$transaction(async (tx) => {
       const candidateLots = await tx.productLot.findMany({
         where: {
           stock: { gt: 0 },
@@ -77,7 +134,7 @@ export class WarehouseLayoutService {
         throw new Error(safety.reason || 'Operación bloqueada por mercadería activa en el slot.');
       }
 
-      return tx.warehouseCell.upsert({
+      const upserted = await tx.warehouseCell.upsert({
         where: { code },
         update: {
           depId: input.depId,
@@ -107,9 +164,19 @@ export class WarehouseLayoutService {
           updatedById: userId,
         },
       });
+
+      const clearedCount = await clearOrphanedDefaultLocationsInTx(tx, code, {
+        isStorage: input.isStorage,
+        levels: nextLevels,
+      });
+
+      return { saved: upserted, clearedDefaults: clearedCount };
     });
 
     appCache.del(WAREHOUSE_LAYOUT_CACHE_KEY);
+    if (clearedDefaults > 0) {
+      appCache.invalidateProductCatalog();
+    }
 
     await logAudit({
       userId,
@@ -136,9 +203,9 @@ export class WarehouseLayoutService {
   ) {
     const cleanCode = code.trim().toUpperCase();
 
-    const deleted = await prisma.$transaction(async (tx) => {
+    const { deleted, clearedDefaults } = await prisma.$transaction(async (tx) => {
       const existing = await tx.warehouseCell.findUnique({ where: { code: cleanCode } });
-      if (!existing) return null;
+      if (!existing) return { deleted: null, clearedDefaults: 0 };
 
       const candidateLots = await tx.productLot.findMany({
         where: {
@@ -152,7 +219,10 @@ export class WarehouseLayoutService {
         doesLotMatchWmsScope(l.location, cleanCode),
       );
 
-      const targetState = fallbackBlueprint || { isStorage: false, levels: '' };
+      const baseCell = getBaseWarehouseCell(cleanCode);
+      const targetState = baseCell
+        ? { isStorage: baseCell.isStorage, levels: baseCell.levels }
+        : fallbackBlueprint || { isStorage: false, levels: '' };
       const safety = validateCellMutationAgainstStock({
         cellCode: cleanCode,
         nextIsStorage: targetState.isStorage,
@@ -164,10 +234,15 @@ export class WarehouseLayoutService {
         throw new Error(safety.reason || 'No se puede restaurar mientras tenga mercadería activa.');
       }
 
-      return tx.warehouseCell.delete({ where: { code: cleanCode } });
+      const deletedRow = await tx.warehouseCell.delete({ where: { code: cleanCode } });
+      const clearedCount = await clearOrphanedDefaultLocationsInTx(tx, cleanCode, targetState);
+      return { deleted: deletedRow, clearedDefaults: clearedCount };
     });
 
     appCache.del(WAREHOUSE_LAYOUT_CACHE_KEY);
+    if (clearedDefaults > 0) {
+      appCache.invalidateProductCatalog();
+    }
 
     if (deleted) {
       await logAudit({

@@ -16,6 +16,7 @@ const { prismaMock } = vi.hoisted(() => {
     },
     product: {
       findUnique: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
       update: vi.fn(),
     },
     orderItem: {
@@ -37,7 +38,9 @@ import {
   buildCanonicalSlotCode,
   extractSupportedLevels,
   validateCellMutationAgainstStock,
+  validateRequestedWmsLocationFormat,
   validateSlotAllowsStockAssignment,
+  validateStorageChamberRule,
 } from '../../engines/warehouse-layout.engine';
 import {
   upsertWarehouseCellSchema,
@@ -45,6 +48,9 @@ import {
 } from '../../validators/warehouse-layout.validator';
 import { warehouseLayoutService } from '../catalog/warehouse-layout.service';
 import { productWmsSubService } from '../catalog/product-wms.service';
+import { productStockSubService } from '../catalog/product-stock.service';
+import { applyPurchaseStockInTx } from '../purchases/purchase-stock-tx.helper';
+import { assertSlotAcceptsStockInTx, getBaseWarehouseCell } from '../../utils/warehouse-base-layout.util';
 
 describe('Warehouse Layout Engine & Editable Slots Safety', () => {
   beforeEach(() => {
@@ -212,5 +218,138 @@ describe('Warehouse Layout Engine & Editable Slots Safety', () => {
         71,
       ),
     ).rejects.toThrow(/bloqueado temporalmente/);
+  });
+
+  it('valida el plano base limpio (deposito-mapa.json) contra pasillos, carteles, baño y niveles inexistentes', async () => {
+    expect(getBaseWarehouseCell('D1-R01-C11')?.chamber).toBe('CAMARA_2');
+    expect(getBaseWarehouseCell('D1-R07-C06')?.chamber).toBe('CAMARA_1');
+    expect(getBaseWarehouseCell('D1-R05-C17')?.isStorage).toBe(false);
+    expect(getBaseWarehouseCell('D1-R06-C08')?.isStorage).toBe(false);
+
+    expect(validateRequestedWmsLocationFormat('BAÑO').allowed).toBe(false);
+    expect(validateRequestedWmsLocationFormat('D1-R01-C04-Z').allowed).toBe(false);
+    expect(validateStorageChamberRule(true, 'BANO').allowed).toBe(false);
+
+    const baseTx = { warehouseCell: { findUnique: vi.fn().mockResolvedValue(null) } };
+
+    // Válidos en plano base corregido
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R01-C11-A')).resolves.toBeUndefined();
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R07-C06-F')).resolves.toBeUndefined();
+
+    // Inválidos: pasillo, cartel, baño, ex-celda verde no-storage, piso B en slot solo A, fuera de mapa
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R01-C01-A')).rejects.toThrow(/Pasillo/);
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R03-C08-A')).rejects.toThrow(/Pasillo/);
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R06-C17-A')).rejects.toThrow(/Pasillo/);
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R05-C17-A')).rejects.toThrow(/Pasillo/);
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R06-C08-A')).rejects.toThrow(/Pasillo/);
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R01-C11-B')).rejects.toThrow(/Nivel B/);
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R01-C04-Z')).rejects.toThrow(/niveles permitidos/);
+    await expect(assertSlotAcceptsStockInTx(baseTx, 'D1-R99-C99-A')).rejects.toThrow(/no existe/);
+
+    // Override en DB habilita un pasillo original (D1-R01-C01) como rack A-B
+    const overrideTx = {
+      warehouseCell: {
+        findUnique: vi.fn().mockResolvedValue({
+          code: 'D1-R01-C01',
+          isStorage: true,
+          isBlocked: false,
+          levels: 'A-B',
+        }),
+      },
+    };
+    await expect(assertSlotAcceptsStockInTx(overrideTx, 'D1-R01-C01-B')).resolves.toBeUndefined();
+  });
+
+  it('upsertCell bloquea sector BANO para storage, limpia defaultLocation huérfano y deleteCellOverride respeta el plano base', async () => {
+    await expect(
+      warehouseLayoutService.upsertCell(
+        { depId: 'D1', row: 5, col: 17, isStorage: true, levels: 'A', chamber: 'BANO' },
+        71,
+      ),
+    ).rejects.toThrow(/Baño/);
+
+    // Pasar D1-R01-C04 a pasillo limpia defaultLocation huérfano de productos sin tocar falsos vecinos C040
+    prismaMock.productLot.findMany.mockResolvedValueOnce([]);
+    prismaMock.warehouseCell.upsert.mockResolvedValueOnce({
+      id: 2,
+      code: 'D1-R01-C04',
+      isStorage: false,
+      levels: '',
+      chamber: 'GENERAL',
+      label: 'Pasillo',
+      isBlocked: false,
+    });
+    prismaMock.product.findMany.mockResolvedValueOnce([
+      { id: 10, defaultLocation: 'D1-R01-C04-A' },
+      { id: 11, defaultLocation: 'D1-R01-C040-A' },
+    ]);
+
+    await warehouseLayoutService.upsertCell(
+      { depId: 'D1', row: 1, col: 4, isStorage: false, levels: '', chamber: 'GENERAL', label: 'Pasillo' },
+      71,
+    );
+    expect(prismaMock.product.update).toHaveBeenCalledTimes(1);
+    expect(prismaMock.product.update).toHaveBeenCalledWith({
+      where: { id: 10 },
+      data: { defaultLocation: null },
+    });
+
+    // deleteCellOverride sobre ex-pasillo base D1-R01-C01 rechaza revertir si todavía hay stock aunque el cliente mande fallbackBlueprint falso
+    prismaMock.warehouseCell.findUnique.mockResolvedValueOnce({ id: 3, code: 'D1-R01-C01' });
+    prismaMock.productLot.findMany.mockResolvedValueOnce([
+      { lotNumber: 'L-1', stock: 8, location: 'D1-R01-C01-A' },
+    ]);
+    await expect(
+      warehouseLayoutService.deleteCellOverride('D1-R01-C01', 71, { isStorage: true, levels: 'A-B' }),
+    ).rejects.toThrow(/8 u\. ubicadas/);
+  });
+
+  it('adjustStock positivo y applyPurchaseStockInTx rechazan ubicaciones pasillo/inválidas pero permiten descargas negativas', async () => {
+    prismaMock.product.findUnique.mockResolvedValue({
+      id: 50,
+      name: 'Queso Tybo',
+      stock: 10,
+      defaultLocation: 'D1-R01-C01-A',
+    });
+    prismaMock.productLot.findMany.mockResolvedValue([
+      { id: 501, productId: 50, lotNumber: 'L-1', stock: 10, location: 'D1-R01-C01-A', expirationDate: new Date('2027-01-01') },
+    ]);
+    prismaMock.warehouseCell.findUnique.mockResolvedValue(null);
+
+    await expect(
+      productStockSubService.adjustStock(
+        50,
+        { quantityChange: 5, location: 'D1-R01-C01-A', lotNumber: 'L-1' },
+        71,
+      ),
+    ).rejects.toThrow(/Pasillo/);
+
+    await expect(
+      applyPurchaseStockInTx(prismaMock, {
+        userId: 71,
+        purchaseOrderId: 9,
+        reason: 'Compra',
+        items: [{ productId: 50, quantity: 5, location: 'D1-R05-C17-A' }],
+      }),
+    ).rejects.toThrow(/Pasillo/);
+
+    // Ajuste negativo sobre mercadería existente en ubicación heredada sí permite vaciarla
+    prismaMock.productLot.findUnique.mockResolvedValueOnce({
+      id: 501,
+      productId: 50,
+      lotNumber: 'L-1',
+      stock: 10,
+      location: 'D1-R01-C01-A',
+    });
+    prismaMock.productLot.update.mockResolvedValueOnce({ id: 501, stock: 6 });
+    prismaMock.stockMovement.create.mockResolvedValueOnce({ id: 88 });
+    prismaMock.product.update.mockResolvedValueOnce({ id: 50, stock: 6 });
+
+    const res = await productStockSubService.adjustStock(
+      50,
+      { quantityChange: -4, location: 'D1-R01-C01-A', lotId: 501 },
+      71,
+    );
+    expect(res.movement.id).toBe(88);
   });
 });

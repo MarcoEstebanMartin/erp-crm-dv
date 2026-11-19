@@ -5,20 +5,8 @@ import { lockProductsForUpdate } from '../utils/db-locks.util';
 import {
   extractBaseLotNumber,
   normalizeWmsLocationCode,
-  parseWmsLocationScope,
 } from '../engines/stock.engine';
-import { validateSlotAllowsStockAssignment } from '../engines/warehouse-layout.engine';
-
-/** Rechaza ubicaciones WMS bloqueadas o no habilitadas para mercadería (S/U siempre es válida). */
-async function assertSlotAcceptsStock(tx: Prisma.TransactionClient, location: string) {
-  if (location === 'S/U' || typeof (tx as any).warehouseCell?.findUnique !== 'function') return;
-  const locScope = parseWmsLocationScope(location);
-  const customCell = await tx.warehouseCell.findUnique({ where: { code: locScope.baseSlotCode } });
-  const slotCheck = validateSlotAllowsStockAssignment(customCell, location);
-  if (!slotCheck.allowed) {
-    throw new Error(slotCheck.reason || 'El slot destino no admite mercadería.');
-  }
-}
+import { assertSlotAcceptsStockInTx } from '../utils/warehouse-base-layout.util';
 
 /** Asientos simétricos OUT/IN (Δ Product.stock = 0) para que todo traslado físico quede en el Kardex. */
 async function recordInternalTransfer(
@@ -68,7 +56,7 @@ export class LotService {
       const nextExp = expirationDate ? new Date(expirationDate) : undefined;
       if (nextExp && isNaN(nextExp.getTime())) throw new Error('Fecha de vencimiento inválida.');
 
-      if (nextLocation !== prevLocation) await assertSlotAcceptsStock(tx, nextLocation);
+      if (nextLocation !== prevLocation) await assertSlotAcceptsStockInTx(tx, nextLocation);
 
       const collision = await tx.productLot.findUnique({
         where: {
@@ -234,7 +222,7 @@ export class LotService {
             `La fecha de vencimiento es requerida para crear el lote de destino "${cleanToLot}".`,
           );
         }
-        await assertSlotAcceptsStock(tx, targetLocation);
+        await assertSlotAcceptsStockInTx(tx, targetLocation);
         toLot = await tx.productLot.create({
           data: {
             productId,
@@ -244,6 +232,14 @@ export class LotService {
             location: targetLocation,
           },
         });
+      } else {
+        const resolvedDestLoc = normalizeWmsLocationCode(toLot.location);
+        if (
+          resolvedDestLoc !== 'S/U' &&
+          resolvedDestLoc !== normalizeWmsLocationCode(fromLot.location)
+        ) {
+          await assertSlotAcceptsStockInTx(tx, resolvedDestLoc);
+        }
       }
 
       if (fromLot.id === toLot.id) {

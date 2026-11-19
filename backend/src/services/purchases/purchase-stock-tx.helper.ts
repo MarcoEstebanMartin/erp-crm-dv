@@ -2,6 +2,7 @@ import AppError from '../../utils/AppError';
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
 import { extractBaseLotNumber, normalizeWmsLocationCode } from '../../engines/stock.engine';
 import { lockProductsForUpdate } from '../../utils/db-locks.util';
+import { assertSlotAcceptsStockInTx } from '../../utils/warehouse-base-layout.util';
 
 export const DEFAULT_SENTINEL_EXPIRATION = new Date('2036-12-31T00:00:00Z');
 
@@ -60,6 +61,9 @@ export async function applyPurchaseStockInTx(
     });
 
     const { lotNumber, expirationDate, location } = resolveCleanPurchaseLot(item);
+    if (location !== 'S/U') {
+      await assertSlotAcceptsStockInTx(tx, location);
+    }
     let lot = await tx.productLot.findUnique({ where: { productId_lotNumber_location: { productId, lotNumber, location } } });
     lot = lot
       ? await tx.productLot.update({ where: { id: lot.id }, data: { stock: { increment: qty } } })

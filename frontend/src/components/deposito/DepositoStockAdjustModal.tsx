@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 import type { Product } from '../../types';
-import { LOCATION_MAP } from './depositoHelpers';
+import { KNOWN_WMS_LOCATION_SET, WMS_LOCATION_GROUPS } from './depositoHelpers';
 import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
 
 export interface StockAdjustModalState {
@@ -127,54 +127,61 @@ export const DepositoStockAdjustModal: React.FC<DepositoStockAdjustModalProps> =
             </select>
           </div>
 
-          {(stockModal.lotNumber || stockModal.isNewLot) && (
-            <div className="form-group">
-              <label htmlFor="deposito-adjust-location">Ubicación</label>
-              <select
-                id="deposito-adjust-location"
-                className="select"
-                value={
-                  Object.keys(LOCATION_MAP).includes(stockModal.location)
-                    ? stockModal.location
-                    : stockModal.location && stockModal.location !== 'S/U'
-                      ? '__custom__'
-                      : 'S/U'
-                }
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === '__custom__') {
-                    setStockModal({ ...stockModal, location: '' });
-                  } else {
-                    setStockModal({ ...stockModal, location: val });
-                  }
-                }}
-              >
-                {Object.entries(LOCATION_MAP).map(([key, info]) => (
-                  <option key={key} value={key}>
-                    {info.label}
-                  </option>
-                ))}
-                <option value="__custom__">Personalizada / Otra...</option>
-              </select>
+          {(stockModal.lotNumber || stockModal.isNewLot) && (() => {
+            const normalizedLoc = (stockModal.location || '').trim().toUpperCase();
+            const isStandardLoc = normalizedLoc === '' || normalizedLoc === 'S/U' || KNOWN_WMS_LOCATION_SET.has(normalizedLoc);
+            const selectVal = normalizedLoc === '' || normalizedLoc === 'S/U'
+              ? 'S/U'
+              : KNOWN_WMS_LOCATION_SET.has(normalizedLoc)
+                ? normalizedLoc
+                : '__custom__';
+            return (
+              <div className="form-group">
+                <label htmlFor="deposito-adjust-location">Ubicación</label>
+                <select
+                  id="deposito-adjust-location"
+                  className="select"
+                  value={selectVal}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '__custom__') {
+                      setStockModal({ ...stockModal, location: isStandardLoc ? '' : normalizedLoc });
+                    } else {
+                      setStockModal({ ...stockModal, location: val });
+                    }
+                  }}
+                >
+                  <option value="S/U">Sin Ubicación (S/U)</option>
+                  {WMS_LOCATION_GROUPS.map((group) => (
+                    <optgroup key={group.chamber} label={group.label}>
+                      {group.options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                  <option value="__custom__">Otra / Personalizada...</option>
+                </select>
 
-              {(!Object.keys(LOCATION_MAP).includes(stockModal.location) ||
-                stockModal.location === '') && (
-                <input
-                  id="deposito-adjust-custom-location"
-                  type="text"
-                  className="input"
-                  aria-label="Ubicación personalizada"
-                  autoCorrect="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  style={{ marginTop: '8px' }}
-                  placeholder="Código de ubicación"
-                  value={stockModal.location || ''}
-                  onChange={(e) => setStockModal({ ...stockModal, location: e.target.value })}
-                />
-              )}
-            </div>
-          )}
+                {selectVal === '__custom__' && (
+                  <input
+                    id="deposito-adjust-custom-location"
+                    type="text"
+                    className="input"
+                    aria-label="Ubicación personalizada"
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    style={{ marginTop: '8px' }}
+                    placeholder="Código de ubicación"
+                    value={stockModal.location || ''}
+                    onChange={(e) => setStockModal({ ...stockModal, location: e.target.value })}
+                  />
+                )}
+              </div>
+            );
+          })()}
 
           {stockModal.isNewLot && (
             <div

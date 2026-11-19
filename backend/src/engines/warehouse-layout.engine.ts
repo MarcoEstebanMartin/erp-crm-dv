@@ -3,6 +3,9 @@ import { parseWmsLocationScope } from './stock.engine';
 export const VALID_WAREHOUSE_IDS = ['D1', 'D2', 'D3'] as const;
 export type WarehouseDepId = (typeof VALID_WAREHOUSE_IDS)[number];
 
+const SLOT_LIKE_REGEX = /^(D\d+-R\d{2}-C\d{2})(?:-(.+))?$/;
+const FORBIDDEN_LOCATION_TOKENS = new Set(['BANO', 'BAÑO', 'PASILLO', 'SANITARIOS']);
+
 export const VALID_LEVEL_PRESETS = ['A', 'A-B', 'A-B-C', 'A-B-C-D', 'A-B-C-D-E-F'] as const;
 export type WarehouseLevelPreset = (typeof VALID_LEVEL_PRESETS)[number];
 
@@ -130,5 +133,62 @@ export function validateSlotAllowsStockAssignment(
     };
   }
 
+  return { allowed: true };
+}
+
+/**
+ * Valida formato básico de ubicación WMS y bloquea tokens prohibidos o niveles fuera de A–F.
+ */
+export function validateRequestedWmsLocationFormat(requestedLocationCode: string): {
+  allowed: boolean;
+  reason?: string;
+  baseSlotCode?: string;
+  isSlotLike: boolean;
+} {
+  const clean = String(requestedLocationCode || '').trim().toUpperCase();
+  if (!clean || clean === 'S/U') {
+    return { allowed: true, isSlotLike: false };
+  }
+
+  if (FORBIDDEN_LOCATION_TOKENS.has(clean)) {
+    return {
+      allowed: false,
+      isSlotLike: false,
+      reason: `La ubicación "${clean}" corresponde a un sector no habilitado para mercadería.`,
+    };
+  }
+
+  const match = SLOT_LIKE_REGEX.exec(clean);
+  if (!match) {
+    return { allowed: true, isSlotLike: false };
+  }
+
+  const baseSlotCode = match[1];
+  const levelSuffix = match[2];
+  if (levelSuffix !== undefined && !/^[A-F]$/.test(levelSuffix)) {
+    return {
+      allowed: false,
+      isSlotLike: true,
+      baseSlotCode,
+      reason: `El nivel "${levelSuffix}" en ${clean} no es válido. Los niveles permitidos son A a F.`,
+    };
+  }
+
+  return { allowed: true, isSlotLike: true, baseSlotCode };
+}
+
+/**
+ * Impide configurar un slot de almacenamiento dentro del sector Baño / Sanitarios.
+ */
+export function validateStorageChamberRule(
+  isStorage: boolean,
+  chamber?: string,
+): { allowed: boolean; reason?: string } {
+  if (isStorage && chamber === 'BANO') {
+    return {
+      allowed: false,
+      reason: 'No se puede configurar un slot de mercadería en el sector Baño / Sanitarios.',
+    };
+  }
   return { allowed: true };
 }

@@ -5,6 +5,7 @@ import {
   orderPositiveLotsForDeduction,
   resolveAdjustmentLot,
 } from '../../engines/stock.engine';
+import { assertSlotAcceptsStockInTx } from '../../utils/warehouse-base-layout.util';
 
 export type StockAdjustMode = 'DELTA' | 'VACATE_LOT';
 
@@ -192,6 +193,9 @@ export async function executeAtomicStockAdjustmentsInTx(
     let lastLotRemaining = 0;
 
     if (requestedDelta > 0) {
+      if (cleanLoc !== 'S/U') {
+        await assertSlotAcceptsStockInTx(tx, cleanLoc);
+      }
       const res = resolveAdjustmentLot({
         lots: lotEntry.lots, preselectedLot, lotNumber: item.lotNumber, location: cleanLoc, change: requestedDelta,
       });

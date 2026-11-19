@@ -105,7 +105,14 @@ export function mergeWarehouseLayout(customCells: WarehouseCellOverride[] = []) 
 
       const isStorage = Boolean(ov.isStorage);
       const displayVal = isStorage ? ov.levels || 'A' : ov.label || '';
-      const resolvedFill = ov.fill || (isStorage ? baseCell.fill || '#FFFFFF' : '#FFFFFF');
+      const depCode = ov.depId || baseCell.dep_id;
+      const defaultFillByDep =
+        depCode === 'D2' ? '#FCE5CD' : depCode === 'D3' ? '#D9D2E9' : '#B6D7A8';
+      const baseNonWhiteFill =
+        baseCell.fill && baseCell.fill.toUpperCase() !== '#FFFFFF'
+          ? baseCell.fill
+          : defaultFillByDep;
+      const resolvedFill = ov.fill || (isStorage ? baseNonWhiteFill : '#FFFFFF');
       const resolvedChamber = ov.chamber || (isStorage ? baseCell.chamber || 'ESTANTERIA' : 'GENERAL');
 
       const mergedCell: MergedSlotCellData = {
