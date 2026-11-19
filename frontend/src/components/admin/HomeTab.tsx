@@ -8,7 +8,6 @@ import {
 } from '../../hooks/queries';
 import WeeklyScheduleModal from '../modals/WeeklyScheduleModal';
 import { HomePendingCashCard } from './home/HomePendingCashCard';
-import { HomeWeeklySalesCard } from './home/HomeWeeklySalesCard';
 import { HomeQuickActionsGrid } from './home/HomeQuickActionsGrid';
 import { HomeWeeklyScheduleRibbon } from './home/HomeWeeklyScheduleRibbon';
 import { FleetExpenseQuickModal } from './home/FleetExpenseQuickModal';
@@ -188,8 +187,6 @@ export default function HomeTab({
         .home-stat-btn { cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
         .home-stat-btn:hover { transform: translateY(-1px); border-color: #cbd5e1 !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important; }
         .home-compact-section { margin-top: 20px; width: 100%; }
-        .home-bottom-grid { margin-top: 20px; width: 100%; display: grid; grid-template-columns: 1fr; gap: 16px; align-items: start; }
-        @media (min-width: 900px) { .home-bottom-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
       `}</style>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '22px' }}>
@@ -259,7 +256,7 @@ export default function HomeTab({
         />
       </div>
 
-      <div className="home-bottom-grid">
+      <div className="home-compact-section">
         <HomePendingCashCard
           sellers={pendingRendicionesDetails.sellers}
           routes={pendingRendicionesDetails.routes}
@@ -269,7 +266,6 @@ export default function HomeTab({
             void queryClient.invalidateQueries({ queryKey: HOME_QUERY_KEYS.pendingRendiciones })
           }
         />
-        <HomeWeeklySalesCard />
       </div>
 
       <FleetExpenseQuickModal isOpen={showGastoModal} onClose={() => setShowGastoModal(false)} onSuccessMsg={(msg) => setSuccessMsg?.(msg)} />

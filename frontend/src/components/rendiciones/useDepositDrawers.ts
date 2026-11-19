@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../../utils/api';
+import { computeArDatePreset } from '../reports/reportDateHelpers';
 import type { CajaActionModalState } from './types';
 
 export function useDepositDrawers() {
@@ -14,12 +15,8 @@ export function useDepositDrawers() {
   const [inspectTxs, setInspectTxs] = useState<any[]>([]);
   const [loadingTxs, setLoadingTxs] = useState(false);
 
-  const [filterStartDate, setFilterStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().split('T')[0];
-  });
-  const [filterEndDate, setFilterEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [filterStartDate, setFilterStartDate] = useState(() => computeArDatePreset('this_week').startDate);
+  const [filterEndDate, setFilterEndDate] = useState(() => computeArDatePreset('this_week').endDate);
 
   const filteredHistory = historicalDrawers.filter((d: any) => {
     const closedDate = new Date(d.closedAt);

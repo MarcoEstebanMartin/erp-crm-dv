@@ -11,6 +11,7 @@ import { FinanzasTransferenciasTab } from './finanzas/FinanzasTransferenciasTab'
 import { FinanzasCierresHistoryTab } from './finanzas/FinanzasCierresHistoryTab';
 import { FinanzasPeriodKpiCards } from './finanzas/FinanzasPeriodKpiCards';
 import { WeeklySalesByCityModal } from './finanzas/WeeklySalesByCityModal';
+import { computeArDatePreset } from './reports/reportDateHelpers';
 import { useWeeklySalesQuery } from '../hooks/queries';
 
 export default function FinanzasDashboard() {
@@ -38,8 +39,8 @@ export default function FinanzasDashboard() {
   const [reconModalOpen, setReconModalOpen] = useState(false);
   const [reconBankId, setReconBankId] = useState('');
 
-  const [filterStartDate, setFilterStartDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().split('T')[0]; });
-  const [filterEndDate, setFilterEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [filterStartDate, setFilterStartDate] = useState(() => computeArDatePreset('this_week').startDate);
+  const [filterEndDate, setFilterEndDate] = useState(() => computeArDatePreset('this_week').endDate);
 
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [expenseAmount, setExpenseAmount] = useState('');
