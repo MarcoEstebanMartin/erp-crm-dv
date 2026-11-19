@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'dv-pwa-shell-v3';
+const SHELL_CACHE = 'dv-pwa-shell-v4';
 const MEDIA_CACHE = 'dv-pwa-media-v1';
 const MAX_MEDIA_ENTRIES = 260;
 
@@ -6,8 +6,9 @@ const CORE_SHELL_URLS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/favicon.svg',
-  '/logo-don-venancio.png',
+  '/pwa-icon-192.png',
+  '/pwa-icon-512.png',
+  '/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {
