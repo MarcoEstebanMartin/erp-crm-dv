@@ -62,6 +62,7 @@ export async function createExpense(req: AuthenticatedRequest, res: Response): P
       description: req.body.description,
       date: req.body.date,
       paymentMethod: req.body.paymentMethod as PaymentMethod,
+      cashSource: req.body.cashSource || null,
       cashDrawerId: req.body.cashDrawerId ? Number(req.body.cashDrawerId) : null,
       bankAccountId: req.body.bankAccountId ? Number(req.body.bankAccountId) : null,
       vehicleId: req.body.vehicleId ? Number(req.body.vehicleId) : null,

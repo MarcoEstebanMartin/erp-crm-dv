@@ -27,7 +27,7 @@ export default function CajaOpenModal({
       style={{ maxWidth: '400px', width: '92vw', padding: '24px' }}
     >
       <div className="modal-header" style={{ marginBottom: '16px' }}>
-        <h3 id="caja-open-title" style={{ margin: 0 }}>Apertura de Caja Depósito</h3>
+        <h3 id="caja-open-title" style={{ margin: 0 }}>Apertura de Caja Oficina</h3>
         <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose} aria-label="Cerrar">
           <X size={18} aria-hidden="true" />
         </button>

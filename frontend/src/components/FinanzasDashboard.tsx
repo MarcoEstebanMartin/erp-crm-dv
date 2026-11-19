@@ -41,6 +41,7 @@ export default function FinanzasDashboard() {
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDescription, setExpenseDescription] = useState('');
+  const [expenseCashSource, setExpenseCashSource] = useState<'CAJA_GRANDE' | 'CAJA_OFICINA'>('CAJA_GRANDE');
   const [expensePaymentMethod, setExpensePaymentMethod] = useState('CASH');
   const [expenseBillingType, setExpenseBillingType] = useState('INTERNAL');
   const [modalError, setModalError] = useState<string | null>(null);
@@ -105,8 +106,8 @@ export default function FinanzasDashboard() {
     if (!expenseDescription.trim()) return setModalError('La descripción del gasto es obligatoria.');
     setSubmittingExpense(true); setModalError(null);
     try {
-      await api.createExpense(amount, expenseDescription.trim(), expensePaymentMethod, expenseBillingType);
-      setExpenseModalOpen(false); setExpenseAmount(''); setExpenseDescription(''); setExpensePaymentMethod('CASH'); setExpenseBillingType('INTERNAL');
+      await api.createExpense(amount, expenseDescription.trim(), expensePaymentMethod, expenseBillingType, expenseCashSource);
+      setExpenseModalOpen(false); setExpenseAmount(''); setExpenseDescription(''); setExpenseCashSource('CAJA_GRANDE'); setExpensePaymentMethod('CASH'); setExpenseBillingType('INTERNAL');
       fetchFinancialData();
     } catch (err: any) { setModalError(err.message || 'Error al guardar el gasto.'); } finally { setSubmittingExpense(false); }
   };
@@ -164,21 +165,9 @@ export default function FinanzasDashboard() {
             type="button"
             onClick={() => { setModalCategory(card.key); setModalTitle(card.label); setModalMovements(card.items); setDetailModalOpen(true); }}
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'stretch',
-              justifyContent: 'space-between',
-              gap: '10px',
-              padding: '16px 18px',
-              backgroundColor: card.bg,
-              border: `1px solid ${card.border}`,
-              borderRadius: '12px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              font: 'inherit',
-              width: '100%',
-              minWidth: 0,
-              boxShadow: 'none',
+              display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'space-between',
+              gap: '10px', padding: '16px 18px', backgroundColor: card.bg, border: `1px solid ${card.border}`,
+              borderRadius: '12px', cursor: 'pointer', textAlign: 'left', font: 'inherit', width: '100%', minWidth: 0, boxShadow: 'none',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', width: '100%' }}>
@@ -280,6 +269,7 @@ export default function FinanzasDashboard() {
       <FinanzasExpenseModal
         isOpen={expenseModalOpen} onClose={() => { setModalError(null); setExpenseModalOpen(false); }}
         expenseAmount={expenseAmount} setExpenseAmount={setExpenseAmount} expenseDescription={expenseDescription} setExpenseDescription={setExpenseDescription}
+        expenseCashSource={expenseCashSource} setExpenseCashSource={setExpenseCashSource}
         expensePaymentMethod={expensePaymentMethod} setExpensePaymentMethod={setExpensePaymentMethod} expenseBillingType={expenseBillingType} setExpenseBillingType={setExpenseBillingType}
         modalError={modalError} submitting={submittingExpense} onSubmit={handleCreateExpense}
       />

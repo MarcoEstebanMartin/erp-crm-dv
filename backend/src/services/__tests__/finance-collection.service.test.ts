@@ -3,6 +3,7 @@ import { BillingType, PaymentMethod, TransactionType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import * as auditModule from '../../utils/audit';
 import { cashDrawerService } from '../finance/cash-drawer.service';
+import { transactionAdminService } from '../finance/transaction-admin.service';
 import { receiptService } from '../collections/receipt.service';
 import { rendicionService } from '../collections/rendicion.service';
 import { expenseService } from '../expenses/expense.service';
@@ -238,5 +239,157 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
 
     expect(savedExpenseData.cashDrawerId).toBe(19);
     expect(savedExpenseData.transactionId).toBe(500);
+  });
+
+  it('createCentralExpense descuenta de Caja Grande (cashDrawerId: null) cuando cashSource es CAJA_GRANDE', async () => {
+    const createTxSpy = vi
+      .spyOn(prisma.transaction, 'create')
+      .mockResolvedValue({ id: 901, paymentMethod: PaymentMethod.CASH, billingType: BillingType.INTERNAL } as any);
+    const auditSpy = vi.spyOn(prisma.auditLog, 'create').mockResolvedValue({ id: 1 } as any);
+
+    await transactionAdminService.createCentralExpense({
+      userId: 1,
+      amount: 150000,
+      description: 'Luz',
+      paymentMethod: PaymentMethod.CASH,
+      billingType: BillingType.INTERNAL,
+      cashSource: 'CAJA_GRANDE',
+    });
+
+    expect(createTxSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: TransactionType.OUTCOME,
+          amount: 150000,
+          cashDrawerId: null,
+        }),
+      }),
+    );
+    expect(auditSpy).toHaveBeenCalledOnce();
+  });
+
+  it('createCentralExpense descuenta de Caja Oficina abierta (branch DEPOSITO) cuando cashSource es CAJA_OFICINA', async () => {
+    vi.spyOn(prisma.cashDrawer, 'findFirst').mockResolvedValue({
+      id: 3,
+      branch: 'DEPOSITO',
+      drawerType: 'DEPOSITO',
+      status: 'OPEN',
+    } as any);
+    const createTxSpy = vi
+      .spyOn(prisma.transaction, 'create')
+      .mockResolvedValue({ id: 902, paymentMethod: PaymentMethod.CASH, billingType: BillingType.INTERNAL } as any);
+    vi.spyOn(prisma.auditLog, 'create').mockResolvedValue({ id: 2 } as any);
+
+    await transactionAdminService.createCentralExpense({
+      userId: 1,
+      amount: 45000,
+      description: 'Artículos de limpieza',
+      paymentMethod: PaymentMethod.CASH,
+      billingType: BillingType.INTERNAL,
+      cashSource: 'CAJA_OFICINA',
+    });
+
+    expect(createTxSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: TransactionType.OUTCOME,
+          amount: 45000,
+          cashDrawerId: 3,
+        }),
+      }),
+    );
+  });
+
+  it('createCentralExpense rechaza gasto desde Caja Oficina si no hay Caja Oficina abierta', async () => {
+    vi.spyOn(prisma.cashDrawer, 'findFirst').mockResolvedValue(null);
+
+    await expect(
+      transactionAdminService.createCentralExpense({
+        userId: 1,
+        amount: 20000,
+        description: 'Flete',
+        paymentMethod: PaymentMethod.CASH,
+        cashSource: 'CAJA_OFICINA',
+      }),
+    ).rejects.toThrow('No hay una Caja Oficina abierta');
+  });
+
+  it('expenseService.createExpense con cashSource CAJA_GRANDE registra OUTCOME sin requerir caja abierta', async () => {
+    let savedTxData: any = null;
+    let savedExpenseData: any = null;
+
+    const mockTx: any = {
+      cashDrawer: {
+        findFirst: vi.fn(),
+        findUnique: vi.fn(),
+      },
+      transaction: {
+        create: vi.fn().mockImplementation(({ data }) => {
+          savedTxData = data;
+          return Promise.resolve({ id: 601 });
+        }),
+      },
+      expense: {
+        create: vi.fn().mockImplementation(({ data }) => {
+          savedExpenseData = data;
+          return Promise.resolve({ id: 88, ...data });
+        }),
+      },
+    };
+
+    vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+    await expenseService.createExpense({
+      userId: 1,
+      amount: 80000,
+      categoryId: 3,
+      description: 'Alquiler',
+      paymentMethod: PaymentMethod.CASH,
+      cashSource: 'CAJA_GRANDE',
+    });
+
+    expect(mockTx.cashDrawer.findFirst).not.toHaveBeenCalled();
+    expect(savedTxData.cashDrawerId).toBeNull();
+    expect(savedExpenseData.cashDrawerId).toBeUndefined();
+    expect(savedExpenseData.transactionId).toBe(601);
+  });
+
+  it('expenseService.createExpense con cashSource CAJA_OFICINA imputa el gasto en la Caja Oficina abierta', async () => {
+    let savedTxData: any = null;
+    let savedExpenseData: any = null;
+
+    const mockTx: any = {
+      cashDrawer: {
+        findFirst: vi.fn().mockResolvedValue({ id: 3, branch: 'DEPOSITO', drawerType: 'DEPOSITO', status: 'OPEN' }),
+        findUnique: vi.fn(),
+      },
+      transaction: {
+        create: vi.fn().mockImplementation(({ data }) => {
+          savedTxData = data;
+          return Promise.resolve({ id: 602 });
+        }),
+      },
+      expense: {
+        create: vi.fn().mockImplementation(({ data }) => {
+          savedExpenseData = data;
+          return Promise.resolve({ id: 89, ...data });
+        }),
+      },
+    };
+
+    vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+    await expenseService.createExpense({
+      userId: 1,
+      amount: 12000,
+      categoryId: 3,
+      description: 'Viáticos',
+      paymentMethod: PaymentMethod.CASH,
+      cashSource: 'CAJA_OFICINA',
+    });
+
+    expect(savedTxData.cashDrawerId).toBe(3);
+    expect(savedExpenseData.cashDrawerId).toBe(3);
+    expect(savedExpenseData.transactionId).toBe(602);
   });
 });

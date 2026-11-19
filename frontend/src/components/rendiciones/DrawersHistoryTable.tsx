@@ -127,11 +127,11 @@ export default function DrawersHistoryTable({
                             color: isDepo ? '#475569' : isRep ? '#047857' : '#1d4ed8',
                           }}
                         >
-                          {isDepo ? 'Depósito' : isRep ? 'Repartidor' : 'Vendedor'}
+                          {isDepo ? 'Oficina' : isRep ? 'Repartidor' : 'Vendedor'}
                         </span>
                       </div>
                       <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                        {d.branch === 'DEPOSITO' ? 'Caja Depósito' : formatResponsibleName(d)}
+                        {d.branch === 'DEPOSITO' ? 'Caja Oficina' : formatResponsibleName(d)}
                       </div>
                       {d.routeNote && (
                         <div style={{ fontSize: '0.78rem', color: '#0284c7', marginTop: '3px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>

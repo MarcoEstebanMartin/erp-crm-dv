@@ -37,6 +37,7 @@ export function useGastosController() {
   const [newDescription, setNewDescription] = useState('');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [newPaymentMethod, setNewPaymentMethod] = useState('CASH');
+  const [newCashSource, setNewCashSource] = useState<'CAJA_GRANDE' | 'CAJA_OFICINA'>('CAJA_GRANDE');
   const [newBankAccountId, setNewBankAccountId] = useState('');
   const [newVehicleId, setNewVehicleId] = useState('');
   const [newBillingType, setNewBillingType] = useState('INTERNAL');
@@ -78,7 +79,7 @@ export function useGastosController() {
   const resetForm = () => {
     setNewAmount(''); setNewCategoryId(''); setNewDescription('');
     setNewDate(new Date().toISOString().split('T')[0]);
-    setNewPaymentMethod('CASH'); setNewBankAccountId(''); setNewVehicleId(''); setNewBillingType('INTERNAL');
+    setNewPaymentMethod('CASH'); setNewCashSource('CAJA_GRANDE'); setNewBankAccountId(''); setNewVehicleId(''); setNewBillingType('INTERNAL');
   };
 
   const handleCreateExpense = async (e: React.FormEvent) => {
@@ -93,6 +94,7 @@ export function useGastosController() {
       await api.createExpenseNew({
         amount, categoryId: Number(newCategoryId), description: newDescription.trim(),
         date: newDate ? new Date(newDate).toISOString() : undefined, paymentMethod: newPaymentMethod,
+        cashSource: newPaymentMethod === 'CASH' ? newCashSource : undefined,
         bankAccountId: newPaymentMethod === 'BANK_TRANSFER' ? Number(newBankAccountId) : undefined,
         vehicleId: newVehicleId ? Number(newVehicleId) : undefined, billingType: newBillingType,
       });
@@ -180,7 +182,7 @@ export function useGastosController() {
     copySourceYear, setCopySourceYear, copySourceMonth, setCopySourceMonth, copyTargetDate, setCopyTargetDate,
     sourceExpenses, setSourceExpenses, loadingSource, submittingCopy,
     newAmount, setNewAmount, newCategoryId, setNewCategoryId, newDescription, setNewDescription, newDate, setNewDate,
-    newPaymentMethod, setNewPaymentMethod, newBankAccountId, setNewBankAccountId, newVehicleId, setNewVehicleId, newBillingType, setNewBillingType,
+    newPaymentMethod, setNewPaymentMethod, newCashSource, setNewCashSource, newBankAccountId, setNewBankAccountId, newVehicleId, setNewVehicleId, newBillingType, setNewBillingType,
     selectedFile, importing, totalGasto, sortedCategories,
     fetchSourceExpenses, openCopyModal, handleCreateExpense, handleDeleteExpense, handleFileChange, handleImportExcel, handleExecuteCopy,
   };

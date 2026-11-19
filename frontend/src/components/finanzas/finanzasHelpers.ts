@@ -1,4 +1,4 @@
-import { formatResponsibleName } from '../../utils/formatters';
+import { formatDrawerBranchLabel, formatResponsibleName } from '../../utils/formatters';
 
 export const isEcheqTx = (t: any): boolean =>
   t?.paymentMethod === 'CHECK' && /\(echeq\)|e-?cheq/i.test(String(t?.description || ''));
@@ -6,11 +6,7 @@ export const isEcheqTx = (t: any): boolean =>
 export const isBankReconcilableTx = (t: any): boolean =>
   t?.type === 'INCOME' && (t?.paymentMethod === 'BANK_TRANSFER' || isEcheqTx(t));
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: 'Efectivo',
-  CHECK: 'Cheque',
-  BANK_TRANSFER: 'Transferencia',
-};
+const PAYMENT_METHOD_LABELS: Record<string, string> = { CASH: 'Efectivo', CHECK: 'Cheque', BANK_TRANSFER: 'Transferencia' };
 
 /** Normaliza los nombres de medios de pago con capitalización uniforme para tablas y modales. */
 export const formatPaymentMethodLabel = (method?: string | null): string =>
@@ -195,7 +191,7 @@ export const computeFilteredMetricsAndLedger = (
   const detailedCashItems: any[] = [];
   const detailedCheckItems: any[] = [];
   closedInPeriod.forEach((d: any) => {
-    const branchLabel = d.branch ? (d.branch.toLowerCase().startsWith('caja:') ? d.branch : `Caja: ${d.branch}`) : `Caja: ${d.user?.username || 'Central'}`;
+    const branchLabel = d.branch ? (d.branch.toUpperCase() === 'DEPOSITO' ? formatDrawerBranchLabel(d.branch) : d.branch.toLowerCase().startsWith('caja:') ? d.branch : `Caja: ${d.branch}`) : `Caja: ${d.user?.username || 'Central'}`;
     if (d.transactions?.length > 0) {
       d.transactions.forEach((t: any) => {
         const isInc = t.type === 'INCOME';

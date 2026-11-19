@@ -40,7 +40,7 @@ export default function InspectDrawerModal({
           <div className="modal-header" style={{ marginBottom: '20px' }}>
             <h3 id="inspect-drawer-title" style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
               {inspectDrawer.status === 'OPEN' ? 'Caja Activa: ' : 'Arqueo: '}
-              {inspectDrawer.branch === 'DEPOSITO' ? 'Caja Depósito' : inspectDrawer.branch}
+              {inspectDrawer.branch === 'DEPOSITO' ? 'Caja Oficina' : inspectDrawer.branch}
             </h3>
             <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose} aria-label="Cerrar">
               <X size={18} aria-hidden="true" />
@@ -181,8 +181,16 @@ export default function InspectDrawerModal({
                               : t.paymentMethod}
                           </span>
                         </td>
-                        <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
-                          ${Number(t.amount).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                        <td
+                          className="tabular-nums"
+                          style={{
+                            textAlign: 'right',
+                            fontWeight: 600,
+                            fontFamily: 'monospace',
+                            color: t.type === 'OUTCOME' ? '#c53030' : 'inherit',
+                          }}
+                        >
+                          {t.type === 'OUTCOME' ? '-' : ''}${Number(t.amount).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                         </td>
                       </tr>
                     ))}

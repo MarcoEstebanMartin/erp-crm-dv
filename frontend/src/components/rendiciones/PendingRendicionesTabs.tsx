@@ -98,7 +98,7 @@ export default function PendingRendicionesTabs({
           onKeyDown={(e) => handleTabKeyDown(e, 2)}
         >
           <Lock size={15} aria-hidden="true" />
-          Caja Depósito
+          Caja Oficina
         </button>
       </div>
 

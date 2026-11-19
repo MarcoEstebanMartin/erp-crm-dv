@@ -21,6 +21,8 @@ interface GastosCreateModalProps {
   setNewDescription: (v: string) => void;
   newPaymentMethod: string;
   setNewPaymentMethod: (v: string) => void;
+  newCashSource: 'CAJA_GRANDE' | 'CAJA_OFICINA';
+  setNewCashSource: (v: 'CAJA_GRANDE' | 'CAJA_OFICINA') => void;
   newBillingType: string;
   setNewBillingType: (v: string) => void;
   newBankAccountId: string;
@@ -34,6 +36,7 @@ export function GastosCreateModal({
   isOpen, onClose, submitting, errorMsg, categories, bankAccounts, vehicles,
   newAmount, setNewAmount, newDate, setNewDate, newCategoryId, setNewCategoryId,
   newDescription, setNewDescription, newPaymentMethod, setNewPaymentMethod,
+  newCashSource, setNewCashSource,
   newBillingType, setNewBillingType, newBankAccountId, setNewBankAccountId,
   newVehicleId, setNewVehicleId, onSubmit,
 }: GastosCreateModalProps) {
@@ -122,6 +125,21 @@ export function GastosCreateModal({
             </select>
           </div>
         </div>
+
+        {newPaymentMethod === 'CASH' && (
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label htmlFor="gasto-new-cash-source">Caja</label>
+            <select
+              id="gasto-new-cash-source"
+              className="select"
+              value={newCashSource}
+              onChange={(e) => setNewCashSource(e.target.value as 'CAJA_GRANDE' | 'CAJA_OFICINA')}
+            >
+              <option value="CAJA_GRANDE">Caja Grande</option>
+              <option value="CAJA_OFICINA">Caja Oficina</option>
+            </select>
+          </div>
+        )}
 
         {newPaymentMethod === 'BANK_TRANSFER' && (
           <div className="form-group" style={{ marginBottom: 0 }}>

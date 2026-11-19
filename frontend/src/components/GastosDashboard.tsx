@@ -121,6 +121,8 @@ export default function GastosDashboard() {
         setNewDescription={g.setNewDescription}
         newPaymentMethod={g.newPaymentMethod}
         setNewPaymentMethod={g.setNewPaymentMethod}
+        newCashSource={g.newCashSource}
+        setNewCashSource={g.setNewCashSource}
         newBillingType={g.newBillingType}
         setNewBillingType={g.setNewBillingType}
         newBankAccountId={g.newBankAccountId}

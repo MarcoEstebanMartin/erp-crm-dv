@@ -84,6 +84,7 @@ export const createCentralExpenseSchema = z.object({
     description: z.string().trim().min(1, 'La descripción del gasto es obligatoria.').max(500),
     paymentMethod: z.string().optional(),
     billingType: z.string().optional(),
+    cashSource: z.enum(['CAJA_GRANDE', 'CAJA_OFICINA']).optional(),
   }),
 });
 

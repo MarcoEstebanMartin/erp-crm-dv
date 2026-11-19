@@ -1026,10 +1026,16 @@ export const api = {
     return res.transactions;
   },
 
-  createExpense: async (amount: number, description: string, paymentMethod: string, billingType: string) => {
+  createExpense: async (
+    amount: number,
+    description: string,
+    paymentMethod: string,
+    billingType: string,
+    cashSource: 'CAJA_GRANDE' | 'CAJA_OFICINA' = 'CAJA_GRANDE',
+  ) => {
     return await request('/finance/expenses', {
       method: 'POST',
-      body: JSON.stringify({ amount, description, paymentMethod, billingType })
+      body: JSON.stringify({ amount, description, paymentMethod, billingType, cashSource })
     });
   },
 
@@ -1059,7 +1065,7 @@ export const api = {
     return res?.data?.expenses || res?.expenses || [];
   },
 
-  createExpenseNew: async (data: { amount: number; categoryId: number; description: string; date?: string; paymentMethod: string; cashDrawerId?: number; bankAccountId?: number; vehicleId?: number; billingType?: string }) => {
+  createExpenseNew: async (data: { amount: number; categoryId: number; description: string; date?: string; paymentMethod: string; cashSource?: 'CAJA_GRANDE' | 'CAJA_OFICINA'; cashDrawerId?: number; bankAccountId?: number; vehicleId?: number; billingType?: string }) => {
     return await request('/expenses', {
       method: 'POST',
       body: JSON.stringify(data)

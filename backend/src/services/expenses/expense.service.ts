@@ -88,6 +88,7 @@ export const expenseService = {
     description: string;
     date?: string | null;
     paymentMethod: PaymentMethod;
+    cashSource?: 'CAJA_GRANDE' | 'CAJA_OFICINA' | null;
     cashDrawerId?: number | null;
     bankAccountId?: number | null;
     vehicleId?: number | null;
@@ -106,38 +107,72 @@ export const expenseService = {
       let resolvedBankAccountId: number | undefined;
 
       if (params.paymentMethod === PaymentMethod.CASH) {
-        let activeDrawerId = params.cashDrawerId ? Number(params.cashDrawerId) : null;
-        if (!activeDrawerId) {
-          const activeDrawer = await tx.cashDrawer.findFirst({
-            where: { userId: params.userId, status: 'OPEN' },
+        if (params.cashSource === 'CAJA_GRANDE') {
+          const trans = await tx.transaction.create({
+            data: {
+              userId: params.userId,
+              billingType: (params.billingType as BillingType) || BillingType.INTERNAL,
+              type: TransactionType.OUTCOME,
+              paymentMethod: PaymentMethod.CASH,
+              amount: expAmount,
+              description: `Gasto: ${params.description.trim()}`,
+              cashDrawerId: null,
+              verified: true,
+            },
           });
-          if (!activeDrawer) {
-            throw new AppError('Debe abrir una caja antes de registrar un gasto en efectivo.', 400);
+          transactionId = trans.id;
+        } else {
+          let activeDrawer: any = null;
+
+          if (params.cashSource === 'CAJA_OFICINA') {
+            activeDrawer = await tx.cashDrawer.findFirst({
+              where: {
+                status: 'OPEN',
+                OR: [{ branch: 'DEPOSITO' }, { drawerType: 'DEPOSITO' }],
+              },
+              orderBy: { openedAt: 'desc' },
+            });
+            if (!activeDrawer) {
+              throw new AppError(
+                'No hay una Caja Oficina abierta. Abrí Caja Oficina para registrar gastos desde ella.',
+                400,
+              );
+            }
+          } else {
+            let activeDrawerId = params.cashDrawerId ? Number(params.cashDrawerId) : null;
+            if (!activeDrawerId) {
+              const userDrawer = await tx.cashDrawer.findFirst({
+                where: { userId: params.userId, status: 'OPEN' },
+              });
+              if (!userDrawer) {
+                throw new AppError('Debe abrir una caja antes de registrar un gasto en efectivo.', 400);
+              }
+              activeDrawerId = userDrawer.id;
+            }
+
+            activeDrawer = await tx.cashDrawer.findUnique({ where: { id: activeDrawerId } });
+            if (!activeDrawer || activeDrawer.status === 'CLOSED') {
+              throw new AppError('La caja seleccionada no está abierta.', 400);
+            }
           }
-          activeDrawerId = activeDrawer.id;
-        }
 
-        const activeDrawer = await tx.cashDrawer.findUnique({ where: { id: activeDrawerId } });
-        if (!activeDrawer || activeDrawer.status === 'CLOSED') {
-          throw new AppError('La caja seleccionada no está abierta.', 400);
+          resolvedCashDrawerId = activeDrawer.id;
+          const trans = await tx.transaction.create({
+            data: {
+              userId: params.userId,
+              billingType:
+                (params.billingType as BillingType) ||
+                (activeDrawer.branch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL),
+              type: TransactionType.OUTCOME,
+              paymentMethod: PaymentMethod.CASH,
+              amount: expAmount,
+              description: `Gasto: ${params.description.trim()}`,
+              cashDrawerId: activeDrawer.id,
+              verified: true,
+            },
+          });
+          transactionId = trans.id;
         }
-
-        resolvedCashDrawerId = activeDrawer.id;
-        const trans = await tx.transaction.create({
-          data: {
-            userId: params.userId,
-            billingType:
-              (params.billingType as BillingType) ||
-              (activeDrawer.branch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL),
-            type: TransactionType.OUTCOME,
-            paymentMethod: PaymentMethod.CASH,
-            amount: expAmount,
-            description: `Gasto: ${params.description.trim()}`,
-            cashDrawerId: activeDrawer.id,
-            verified: true,
-          },
-        });
-        transactionId = trans.id;
       } else if (params.paymentMethod === PaymentMethod.BANK_TRANSFER) {
         if (!params.bankAccountId) {
           throw new AppError('Debe seleccionar una cuenta bancaria para pagos por transferencia.', 400);

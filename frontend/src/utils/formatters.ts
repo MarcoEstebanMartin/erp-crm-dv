@@ -1,4 +1,15 @@
 /**
+ * Formatea el nombre visible de la caja física (ej. "DEPOSITO" -> "Caja Oficina").
+ */
+export function formatDrawerBranchLabel(branch?: string | null): string {
+  const raw = (branch || '').trim();
+  if (!raw) return 'Caja';
+  const upper = raw.toUpperCase();
+  if (upper === 'DEPOSITO' || upper === 'DEPÓSITO') return 'Caja Oficina';
+  return raw;
+}
+
+/**
  * Formatea el nombre del responsable de un cierre de caja o movimiento financiero
  * priorizando el Nombre y Apellido del legajo de empleado (ej. "Diego Lejarza", "Agustín Montiel", "Fabián Maya").
  */
@@ -36,6 +47,7 @@ export function formatResponsibleName(d: any): string {
   if (lower === 'thiago' || lower === 'tiago' || lower === 'thiago balmaceda') return 'Tiago Balmaceda';
   if (lower === 'rocio' || lower === 'rocío' || lower === 'rocio aliendro') return 'Rocío Aliendro';
   if (lower === 'miguel' || lower === 'miguel alberca') return 'Miguel Alberca';
+  if (lower === 'deposito' || lower === 'depósito') return 'Caja Oficina';
   if (lower === 'oficina') return 'Oficina Central';
   if (lower === 'admin' || lower === 'administrador') return 'Administración';
 

@@ -265,6 +265,7 @@ export async function createExpense(req: AuthenticatedRequest, res: Response): P
       description: req.body.description,
       paymentMethod: req.body.paymentMethod,
       billingType: req.body.billingType,
+      cashSource: req.body.cashSource,
     });
     res.status(201).json({ status: 'success', data: { transaction } });
   } catch (error) {

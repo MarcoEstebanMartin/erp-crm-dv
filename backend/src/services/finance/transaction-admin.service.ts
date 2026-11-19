@@ -170,9 +170,30 @@ export const transactionAdminService = {
     description: string;
     paymentMethod?: string;
     billingType?: string;
+    cashSource?: 'CAJA_GRANDE' | 'CAJA_OFICINA';
   }) {
     const expAmount = roundToIntegerPeso(params.amount).toNumber();
     if (expAmount <= 0) throw new AppError('El monto del gasto debe ser mayor a 0.', 400);
+
+    const resolvedSource = params.cashSource === 'CAJA_OFICINA' ? 'CAJA_OFICINA' : 'CAJA_GRANDE';
+    let cashDrawerId: number | null = null;
+
+    if (resolvedSource === 'CAJA_OFICINA') {
+      const oficinaDrawer = await prisma.cashDrawer.findFirst({
+        where: {
+          status: 'OPEN',
+          OR: [{ branch: 'DEPOSITO' }, { drawerType: 'DEPOSITO' }],
+        },
+        orderBy: { openedAt: 'desc' },
+      });
+      if (!oficinaDrawer) {
+        throw new AppError(
+          'No hay una Caja Oficina abierta. Abrí Caja Oficina para registrar gastos desde ella.',
+          400,
+        );
+      }
+      cashDrawerId = oficinaDrawer.id;
+    }
 
     const transaction = await prisma.transaction.create({
       data: {
@@ -182,6 +203,7 @@ export const transactionAdminService = {
         billingType: (params.billingType as BillingType) || BillingType.INTERNAL,
         amount: expAmount,
         description: params.description.trim(),
+        cashDrawerId,
         verified: true,
       },
     });
@@ -197,6 +219,8 @@ export const transactionAdminService = {
           description: params.description.trim(),
           paymentMethod: transaction.paymentMethod,
           billingType: transaction.billingType,
+          cashSource: resolvedSource,
+          cashDrawerId,
         },
       },
     });

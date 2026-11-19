@@ -33,7 +33,7 @@ export default function CajaDepositoTab({
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '8px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Caja Depósito</h3>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>Caja Oficina</h3>
           <div
             style={{
               backgroundColor: isOpen ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',

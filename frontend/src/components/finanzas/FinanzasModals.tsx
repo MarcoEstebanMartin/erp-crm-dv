@@ -10,6 +10,8 @@ export const FinanzasExpenseModal: React.FC<{
   setExpenseAmount: (v: string) => void;
   expenseDescription: string;
   setExpenseDescription: (v: string) => void;
+  expenseCashSource: 'CAJA_GRANDE' | 'CAJA_OFICINA';
+  setExpenseCashSource: (v: 'CAJA_GRANDE' | 'CAJA_OFICINA') => void;
   expensePaymentMethod: string;
   setExpensePaymentMethod: (v: string) => void;
   expenseBillingType: string;
@@ -19,6 +21,7 @@ export const FinanzasExpenseModal: React.FC<{
   onSubmit: (e: React.FormEvent) => void;
 }> = ({
   isOpen, onClose, expenseAmount, setExpenseAmount, expenseDescription, setExpenseDescription,
+  expenseCashSource, setExpenseCashSource,
   expensePaymentMethod, setExpensePaymentMethod, expenseBillingType, setExpenseBillingType,
   modalError, submitting, onSubmit,
 }) => (
@@ -49,6 +52,18 @@ export const FinanzasExpenseModal: React.FC<{
       <div className="form-group" style={{ marginBottom: '14px' }}>
         <label htmlFor="fin-expense-description">Concepto</label>
         <input id="fin-expense-description" type="text" className="input" required placeholder="Concepto del gasto" value={expenseDescription} onChange={(e) => setExpenseDescription(e.target.value)} />
+      </div>
+      <div className="form-group" style={{ marginBottom: '14px' }}>
+        <label htmlFor="fin-expense-source">Caja</label>
+        <select
+          id="fin-expense-source"
+          className="select"
+          value={expenseCashSource}
+          onChange={(e) => setExpenseCashSource(e.target.value as 'CAJA_GRANDE' | 'CAJA_OFICINA')}
+        >
+          <option value="CAJA_GRANDE">Caja Grande</option>
+          <option value="CAJA_OFICINA">Caja Oficina</option>
+        </select>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
         <div>

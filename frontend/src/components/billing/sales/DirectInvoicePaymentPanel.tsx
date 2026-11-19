@@ -2,6 +2,7 @@ import React from 'react';
 import { Store, Truck } from 'lucide-react';
 import type { DirectBillingTotals, DirectInvoiceFormState } from './sales.types';
 import { DirectInvoiceSummaryFooter } from './DirectInvoiceSummaryFooter';
+import { formatDrawerBranchLabel } from '../../../utils/formatters';
 
 interface DirectInvoicePaymentPanelProps {
   directInvoiceForm: DirectInvoiceFormState;
@@ -181,7 +182,7 @@ export function DirectInvoicePaymentPanel({
                 >
                   {activeDrawers.map((d) => (
                     <option key={d.id} value={d.id}>
-                      #{d.id} · {d.branch}
+                      #{d.id} · {formatDrawerBranchLabel(d.branch)}
                     </option>
                   ))}
                 </select>
