@@ -4,7 +4,9 @@ import ArqueoCajaModal from './ArqueoCajaModal';
 import type { RendicionesTabType, RouteGroup, SellerGroup } from './rendiciones/types';
 import { useRendicionesAudit } from './rendiciones/useRendicionesAudit';
 import { useDepositDrawers } from './rendiciones/useDepositDrawers';
+import { useFieldRendiciones } from './rendiciones/useFieldRendiciones';
 import PendingRendicionesTabs from './rendiciones/PendingRendicionesTabs';
+import { PendingFieldTransfersCard } from './rendiciones/FieldSettlementCards';
 import RendicionAuditModal from './rendiciones/RendicionAuditModal';
 import DrawersHistoryTable from './rendiciones/DrawersHistoryTable';
 import CajaOpenModal from './rendiciones/CajaOpenModal';
@@ -19,27 +21,33 @@ const RendicionesDashboard: React.FC = () => {
 
   const audit = useRendicionesAudit();
   const deposit = useDepositDrawers();
+  const field = useFieldRendiciones();
 
   useEffect(() => {
     audit.fetchRendiciones();
     deposit.fetchDrawers();
+    void field.fetchFieldRendiciones();
   }, []);
 
+  const sellersTotalCount = audit.sellers.length + field.sellerFieldSettlements.length;
+  const driversTotalCount = audit.routes.length + field.driverFieldSettlements.length;
+
   useEffect(() => {
-    if (hasAutoSelectedTab.current || audit.loading) return;
-    if (audit.sellers.length > 0 || audit.routes.length > 0) {
+    if (hasAutoSelectedTab.current || audit.loading || field.loading) return;
+    if (sellersTotalCount > 0 || driversTotalCount > 0) {
       hasAutoSelectedTab.current = true;
-      if (audit.sellers.length === 0 && audit.routes.length > 0) {
+      if (sellersTotalCount === 0 && driversTotalCount > 0) {
         setActiveTab('routes');
       }
     }
-  }, [audit.loading, audit.sellers.length, audit.routes.length]);
+  }, [audit.loading, field.loading, sellersTotalCount, driversTotalCount]);
 
-  const topError = (audit.errorMsg && !audit.auditTarget ? audit.errorMsg : null) || deposit.drawerError;
+  const topSuccess = audit.successMsg || field.statusMsg;
+  const topError = (audit.errorMsg && !audit.auditTarget ? audit.errorMsg : null) || deposit.drawerError || field.errorMsg;
 
   return (
     <div style={{ padding: '0px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {audit.successMsg && (
+      {topSuccess && (
         <div
           role="status"
           style={{
@@ -58,9 +66,9 @@ const RendicionesDashboard: React.FC = () => {
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CheckCircle size={18} color="#10b981" aria-hidden="true" />
-            <span>{audit.successMsg}</span>
+            <span>{topSuccess}</span>
           </span>
-          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => audit.setSuccessMsg(null)} aria-label="Cerrar notificación">
+          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => { audit.setSuccessMsg(null); field.setStatusMsg(null); }} aria-label="Cerrar notificación">
             <X size={15} aria-hidden="true" />
           </button>
         </div>
@@ -94,6 +102,7 @@ const RendicionesDashboard: React.FC = () => {
             onClick={() => {
               audit.setErrorMsg(null);
               deposit.setDrawerError(null);
+              field.setErrorMsg(null);
             }}
             aria-label="Cerrar alerta"
           >
@@ -114,11 +123,12 @@ const RendicionesDashboard: React.FC = () => {
             onClick={() => {
               audit.fetchRendiciones();
               deposit.fetchDrawers();
+              void field.fetchFieldRendiciones();
             }}
-            disabled={audit.loading}
+            disabled={audit.loading || field.loading}
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <RefreshCw size={16} className={audit.loading ? 'animate-spin' : ''} aria-hidden="true" />
+            <RefreshCw size={16} className={audit.loading || field.loading ? 'animate-spin' : ''} aria-hidden="true" />
             <span>Actualizar</span>
           </button>
         </div>
@@ -126,9 +136,15 @@ const RendicionesDashboard: React.FC = () => {
         <PendingRendicionesTabs
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          loading={audit.loading}
+          loading={audit.loading || field.loading}
           sellers={audit.sellers}
           routes={audit.routes}
+          sellerFieldSettlements={field.sellerFieldSettlements}
+          driverFieldSettlements={field.driverFieldSettlements}
+          fieldBusyId={field.busyId}
+          declaredCashById={field.declaredCashById}
+          setDeclaredCashById={field.setDeclaredCashById}
+          onApproveFieldSettlement={(s) => void field.handleApproveSettlement(s)}
           drawers={deposit.drawers}
           onOpenAudit={audit.handleOpenAudit}
           onInspectDrawer={deposit.handleInspectDrawer}
@@ -144,6 +160,16 @@ const RendicionesDashboard: React.FC = () => {
           }}
         />
       </div>
+
+      <PendingFieldTransfersCard
+        pendingTransfers={field.pendingTransfers}
+        banks={field.banks}
+        bankByPaymentId={field.bankByPaymentId}
+        setBankByPaymentId={field.setBankByPaymentId}
+        previewImage={field.previewImage}
+        setPreviewImage={field.setPreviewImage}
+        onVerifyTransfer={(pid, action, bankId) => void field.handleVerifyTransfer(pid, action, bankId)}
+      />
 
       <RendicionAuditModal
         auditTarget={audit.auditTarget}

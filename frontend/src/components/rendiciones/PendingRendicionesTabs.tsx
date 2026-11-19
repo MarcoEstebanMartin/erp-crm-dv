@@ -1,5 +1,6 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useRef, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
 import { CheckCircle, Truck, User, RefreshCw, Lock, MapPin } from 'lucide-react';
+import type { CollectorSettlementDTO } from '../../api/fieldReceipts.api';
 import {
   type RendicionesTabType,
   type RouteGroup,
@@ -8,6 +9,7 @@ import {
   getDetectedRoutesAndCities,
 } from './types';
 import CajaDepositoTab from './CajaDepositoTab';
+import { FieldSettlementCards } from './FieldSettlementCards';
 
 interface PendingRendicionesTabsProps {
   activeTab: RendicionesTabType;
@@ -15,6 +17,12 @@ interface PendingRendicionesTabsProps {
   loading: boolean;
   sellers: SellerGroup[];
   routes: RouteGroup[];
+  sellerFieldSettlements?: CollectorSettlementDTO[];
+  driverFieldSettlements?: CollectorSettlementDTO[];
+  fieldBusyId?: number | null;
+  declaredCashById?: Record<number, string>;
+  setDeclaredCashById?: Dispatch<SetStateAction<Record<number, string>>>;
+  onApproveFieldSettlement?: (s: CollectorSettlementDTO) => void;
   drawers: any[];
   onOpenAudit: (type: 'seller' | 'route', data: any) => void;
   onInspectDrawer: (drawer: any) => void;
@@ -30,6 +38,12 @@ export default function PendingRendicionesTabs({
   loading,
   sellers,
   routes,
+  sellerFieldSettlements = [],
+  driverFieldSettlements = [],
+  fieldBusyId = null,
+  declaredCashById = {},
+  setDeclaredCashById,
+  onApproveFieldSettlement,
   drawers,
   onOpenAudit,
   onInspectDrawer,
@@ -37,6 +51,8 @@ export default function PendingRendicionesTabs({
   onOpenNewCaja,
 }: PendingRendicionesTabsProps) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const totalSellersCount = sellers.length + sellerFieldSettlements.length;
+  const totalDriversCount = routes.length + driverFieldSettlements.length;
 
   const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
     let nextIdx = idx;
@@ -65,8 +81,8 @@ export default function PendingRendicionesTabs({
         >
           <User size={15} aria-hidden="true" />
           Vendedores
-          <span className="tabular-nums" style={{ backgroundColor: sellers.length > 0 ? 'rgba(0, 0, 0, 0.06)' : 'transparent', color: sellers.length > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 600 }}>
-            {sellers.length}
+          <span className="tabular-nums" style={{ backgroundColor: totalSellersCount > 0 ? 'rgba(0, 0, 0, 0.06)' : 'transparent', color: totalSellersCount > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 600 }}>
+            {totalSellersCount}
           </span>
         </button>
 
@@ -82,8 +98,8 @@ export default function PendingRendicionesTabs({
         >
           <Truck size={15} aria-hidden="true" />
           Repartidores
-          <span className="tabular-nums" style={{ backgroundColor: routes.length > 0 ? 'rgba(0, 0, 0, 0.06)' : 'transparent', color: routes.length > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 600 }}>
-            {routes.length}
+          <span className="tabular-nums" style={{ backgroundColor: totalDriversCount > 0 ? 'rgba(0, 0, 0, 0.06)' : 'transparent', color: totalDriversCount > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', padding: '1px 7px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 600 }}>
+            {totalDriversCount}
           </span>
         </button>
 
@@ -109,13 +125,23 @@ export default function PendingRendicionesTabs({
           Cargando cajas...
         </div>
       ) : activeTab === 'sellers' ? (
-        sellers.length === 0 ? (
+        totalSellersCount === 0 ? (
           <div style={{ padding: '44px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)' }}>
             <CheckCircle size={32} color="#10b981" aria-hidden="true" style={{ margin: '0 auto 10px' }} />
             <h3 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 600 }}>Al día</h3>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {setDeclaredCashById && onApproveFieldSettlement && (
+              <FieldSettlementCards
+                settlements={sellerFieldSettlements}
+                channel="SELLER"
+                busyId={fieldBusyId}
+                declaredCashById={declaredCashById}
+                setDeclaredCashById={setDeclaredCashById}
+                onApprove={onApproveFieldSettlement}
+              />
+            )}
             {sellers.map((item) => {
               const detected = getDetectedRoutesAndCities(item.transactions);
               return (
@@ -158,13 +184,23 @@ export default function PendingRendicionesTabs({
           </div>
         )
       ) : activeTab === 'routes' ? (
-        routes.length === 0 ? (
+        totalDriversCount === 0 ? (
           <div style={{ padding: '44px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)' }}>
             <CheckCircle size={32} color="#10b981" aria-hidden="true" style={{ margin: '0 auto 10px' }} />
             <h3 style={{ margin: 0, color: 'var(--text-primary)', fontWeight: 600 }}>Al día</h3>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {setDeclaredCashById && onApproveFieldSettlement && (
+              <FieldSettlementCards
+                settlements={driverFieldSettlements}
+                channel="DRIVER"
+                busyId={fieldBusyId}
+                declaredCashById={declaredCashById}
+                setDeclaredCashById={setDeclaredCashById}
+                onApprove={onApproveFieldSettlement}
+              />
+            )}
             {routes.map((item) => (
               <div
                 key={item.routeId}

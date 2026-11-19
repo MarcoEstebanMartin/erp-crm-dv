@@ -13,16 +13,17 @@ import {
 } from '../../utils/receiptPdfGenerator';
 import { buildOfficeReceiptWhatsAppMessage } from '../../utils/receiptWhatsApp';
 
-type ReceiptOriginFilter = 'ALL' | 'OFFICE' | 'FIELD';
+type ReceiptOriginFilter = 'ALL' | 'OFFICE' | 'SELLER' | 'DRIVER';
 
 interface FieldReceiptEntry {
   collectorName: string;
+  channel: 'SELLER' | 'DRIVER';
   receipt: FieldReceiptDTO;
 }
 
 interface UnifiedReceiptRow {
   key: string;
-  origin: 'OFFICE' | 'FIELD';
+  origin: 'OFFICE' | 'SELLER' | 'DRIVER';
   date: string;
   receiptNumber: string;
   clientName: string;
@@ -149,13 +150,13 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
       officeReceipt: r,
     }));
 
-    const fieldRows: UnifiedReceiptRow[] = fieldReceipts.map(({ collectorName, receipt }) => {
+    const fieldRows: UnifiedReceiptRow[] = fieldReceipts.map(({ collectorName, channel, receipt }) => {
       const methods = Array.from(
         new Set(receipt.payments.map((p) => METHOD_LABELS[p.paymentMethod] || p.paymentMethod)),
       );
       return {
         key: `field-${receipt.id}`,
-        origin: 'FIELD',
+        origin: channel,
         date: receipt.capturedAt,
         receiptNumber: receipt.receiptNumber || receipt.provisionalCode,
         clientName: receipt.persona?.name || 'Cliente sin nombre',
@@ -189,10 +190,20 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
     });
   }, [unifiedRows, originFilter, search]);
 
+  const sellerCount = useMemo(
+    () => fieldReceipts.filter((f) => f.channel === 'SELLER').length,
+    [fieldReceipts],
+  );
+  const driverCount = useMemo(
+    () => fieldReceipts.filter((f) => f.channel === 'DRIVER').length,
+    [fieldReceipts],
+  );
+
   const filterTabs: { id: ReceiptOriginFilter; label: string; count: number }[] = [
     { id: 'ALL', label: 'Todos', count: unifiedRows.length },
     { id: 'OFFICE', label: 'Oficina', count: officeReceipts.length },
-    { id: 'FIELD', label: 'Calle', count: fieldReceipts.length },
+    { id: 'SELLER', label: 'Vendedores', count: sellerCount },
+    { id: 'DRIVER', label: 'Repartidores', count: driverCount },
   ];
 
   return (
@@ -274,11 +285,11 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                           fontWeight: 600,
                           padding: '1px 7px',
                           borderRadius: '999px',
-                          background: row.origin === 'OFFICE' ? '#eff6ff' : '#f3f4f6',
-                          color: row.origin === 'OFFICE' ? '#1d4ed8' : '#374151',
+                          background: row.origin === 'OFFICE' ? '#eff6ff' : row.origin === 'DRIVER' ? '#f0fdf4' : '#f3f4f6',
+                          color: row.origin === 'OFFICE' ? '#1d4ed8' : row.origin === 'DRIVER' ? '#15803d' : '#374151',
                         }}
                       >
-                        {row.origin === 'OFFICE' ? 'Oficina' : 'Calle'}
+                        {row.origin === 'OFFICE' ? 'Oficina' : row.origin === 'DRIVER' ? 'Repartidor' : 'Vendedor'}
                       </span>
                       {row.isVoided && (
                         <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#E30613' }}>ANULADO</span>
