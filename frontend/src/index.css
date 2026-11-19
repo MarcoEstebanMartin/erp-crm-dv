@@ -214,6 +214,10 @@ label {
   box-shadow: 0 0 0 1px #9CA3AF;
 }
 
+.input-uppercase {
+  text-transform: uppercase;
+}
+
 /* Checkbox Moderno */
 .checkbox-container {
   display: flex;

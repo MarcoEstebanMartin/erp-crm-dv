@@ -7,6 +7,7 @@ import {
   SalesChannel,
 } from '@prisma/client';
 import prisma from '../../utils/prisma';
+import { standardizePersonaName } from '../../utils/normalize';
 import {
   mapWebOrderStatusToErp,
   translateWebOrderItemsToErpLines,
@@ -125,7 +126,7 @@ export async function commitSingleWebOrderAtomically(params: {
     if (!personaId) {
       const newPersona = await tx.persona.create({
         data: {
-          name: wo.customer_name.trim() || `Cliente Web ${phone10 || webOrderId}`,
+          name: standardizePersonaName(wo.customer_name.trim() || `Cliente Web ${phone10 || webOrderId}`),
           phone: phoneRaw || null,
           address: wo.delivery_address?.trim() || null,
           isClient: true,

@@ -1,7 +1,7 @@
 import prisma from '../utils/prisma';
 import { logAudit } from '../utils/audit';
 import { Role } from '@prisma/client';
-import { standardizeCityName, standardizeRouteName } from '../utils/normalize';
+import { standardizeCityName, standardizePersonaName, standardizeRouteName } from '../utils/normalize';
 import { matchesPhoneticQuery } from '../core/search';
 import { personaPaymentSubService } from './personas/persona-payment.service';
 import { personaLedgerSubService } from './personas/persona-ledger.service';
@@ -154,7 +154,7 @@ export class PersonaService {
 
     const persona = await prisma.persona.create({
       data: {
-        name: data.name,
+        name: standardizePersonaName(data.name),
         cuit: resolvedCuit,
         address: data.address,
         city: data.city != null ? standardizeCityName(data.city) : data.city,
@@ -224,7 +224,7 @@ export class PersonaService {
     const updated = await prisma.persona.update({
       where: { id },
       data: {
-        name: data.name,
+        name: data.name !== undefined ? standardizePersonaName(data.name) : undefined,
         cuit: resolvedCuit,
         address: data.address,
         city: data.city !== undefined ? (data.city !== null ? standardizeCityName(data.city) : null) : undefined,

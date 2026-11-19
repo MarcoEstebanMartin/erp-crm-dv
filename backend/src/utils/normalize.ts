@@ -56,6 +56,10 @@ export const VILLEGAS_BARRIOS = [
   "CRUCE"
 ];
 
+export function standardizePersonaName(name: string): string {
+  return String(name).trim().toLocaleUpperCase('es-AR');
+}
+
 export function removeAccents(str: string): string {
   return str
     .normalize("NFD")

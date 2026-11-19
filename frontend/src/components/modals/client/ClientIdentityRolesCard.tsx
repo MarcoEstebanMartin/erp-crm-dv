@@ -128,10 +128,11 @@ export const ClientIdentityRolesCard: React.FC<ClientIdentityRolesCardProps> = (
           <input
             id="client-name"
             type="text"
-            className="input"
+            className="input input-uppercase"
             placeholder="Nombre o razón social"
             value={data.name || ''}
             onChange={(e) => onChangeData({ name: e.target.value })}
+            autoCapitalize="characters"
             required
             style={{ width: '100%', height: '38px', fontSize: '0.9rem' }}
           />

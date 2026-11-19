@@ -1,5 +1,6 @@
 import prisma from '../../utils/prisma';
 import { readExcelSheetObjects } from '../../utils/excel-reader.util';
+import { standardizePersonaName } from '../../utils/normalize';
 import {
   RowValidationResult,
   sanitizeText,
@@ -46,9 +47,10 @@ export async function validateClientsExcel(fileBuffer: Buffer): Promise<Validati
     let status: 'VALID' | 'WARNING' | 'ERROR' = 'VALID';
     let action: 'CREATE' | 'UPDATE' | 'NONE' = 'NONE';
 
-    const name = sanitizeText(
+    const rawName = sanitizeText(
       raw.RAZON_SOCIAL ?? raw.RazonSocial ?? raw.Nombre ?? raw.NOMBRE ?? raw.CLIENTE ?? raw.Cliente,
     );
+    const name = rawName ? standardizePersonaName(rawName) : '';
     const rawCuit = sanitizeText(raw.CUIT ?? raw.Cuit ?? raw.cuit);
     const cleanCuit = rawCuit.replace(/\D/g, '');
     const address = sanitizeText(raw.DIRECCION ?? raw.Direccion ?? raw.Domicilio);

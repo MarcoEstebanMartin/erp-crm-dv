@@ -222,7 +222,7 @@ export const ComprasProviderModals: FC<{
 
               <div className="form-group">
                 <label htmlFor="prov-name">Razón Social *</label>
-                <input id="prov-name" type="text" className="input" required value={providerModal.data.name || ''} onChange={(e) => setProviderModal((prev) => (prev ? { ...prev, data: { ...prev.data, name: e.target.value } } : null))} />
+                <input id="prov-name" type="text" className="input input-uppercase" required autoCapitalize="characters" value={providerModal.data.name || ''} onChange={(e) => setProviderModal((prev) => (prev ? { ...prev, data: { ...prev.data, name: e.target.value } } : null))} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.7fr', gap: '12px' }}>

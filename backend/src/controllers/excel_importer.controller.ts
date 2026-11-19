@@ -4,6 +4,7 @@ import path from 'path';
 import prisma from '../utils/prisma';
 import { appCache } from '../utils/cache';
 import { roundToIntegerPeso, roundToTwoDecimals } from '../core/money';
+import { standardizePersonaName } from '../utils/normalize';
 import { validateProductsExcel, validatePricesExcel, validateClientsExcel, ValidationReport } from '../services/excel_validator.service';
 import { productionOutboundBridgeService } from '../services/catalog/production-outbound-bridge.service';
 
@@ -138,10 +139,11 @@ export async function commitExcel(req: Request, res: Response) {
       } else if (domain === 'CLIENTS') {
         for (const row of validRowsToCommit) {
           const { id, name, cuit, address, city, phone, email, route } = row.data;
+          const normalizedName = standardizePersonaName(name);
           if (row.action === 'CREATE') {
             await tx.persona.create({
               data: {
-                name,
+                name: normalizedName,
                 cuit: cuit || null,
                 address: address || null,
                 city: city || null,
@@ -156,7 +158,7 @@ export async function commitExcel(req: Request, res: Response) {
             await tx.persona.update({
               where: { id },
               data: {
-                name,
+                name: normalizedName,
                 ...(cuit ? { cuit } : {}),
                 ...(address ? { address } : {}),
                 ...(city ? { city } : {}),
