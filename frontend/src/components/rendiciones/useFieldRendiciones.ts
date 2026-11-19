@@ -5,7 +5,7 @@ import {
   type CollectorSettlementDTO,
   type OfflineBundleBankAccount,
 } from '../../api/fieldReceipts.api';
-import { HOME_QUERY_KEYS } from '../../hooks/useHomeDashboardQueries';
+import { HOME_QUERY_KEYS } from '../../hooks/queries/useHomeQuery';
 import { isPendingOpenSettlement, resolveSettlementChannel } from './fieldSettlementChannel';
 
 export function useFieldRendiciones() {
