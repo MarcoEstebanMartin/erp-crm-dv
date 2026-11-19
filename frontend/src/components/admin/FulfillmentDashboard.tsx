@@ -1,5 +1,4 @@
 import {
-  printPickingList,
   printOrderReceipt,
   printRemitoX,
   printFacturaOficialA4,
@@ -62,7 +61,7 @@ export default function FulfillmentDashboard() {
           requestingCaeId={f.requestingCaeId}
           onToggleSelect={f.toggleSelectOrder}
           onToggleSelectAllPending={f.toggleSelectAllPending}
-          onPrintPickingList={printPickingList}
+          onPrintPickingList={f.handlePrintSinglePicking}
           onPrintLabels={f.handlePrintLabels}
           onOpenFulfillmentModal={f.setFulfillmentModalOrder}
           onRevertToPending={f.handleRevertToPending}
@@ -137,7 +136,7 @@ export default function FulfillmentDashboard() {
                     pendingRoutes={pendingRoutes}
                     isSelected={f.selectedOrderIds.includes(o.id)}
                     onToggleSelect={f.toggleSelectOrder}
-                    onPrintPickingList={printPickingList}
+                    onPrintPickingList={f.handlePrintSinglePicking}
                     onPrintLabels={f.handlePrintLabels}
                     onOpenFulfillmentModal={f.setFulfillmentModalOrder}
                     onRevertToPending={f.handleRevertToPending}
@@ -206,7 +205,7 @@ export default function FulfillmentDashboard() {
                     pendingRoutes={pendingRoutes}
                     isSelected={false}
                     onToggleSelect={f.toggleSelectOrder}
-                    onPrintPickingList={printPickingList}
+                    onPrintPickingList={f.handlePrintSinglePicking}
                     onPrintLabels={f.handlePrintLabels}
                     onOpenFulfillmentModal={f.setFulfillmentModalOrder}
                     onRevertToPending={f.handleRevertToPending}
@@ -270,7 +269,7 @@ export default function FulfillmentDashboard() {
                     isSelected={false}
                     requestingCaeId={f.requestingCaeId}
                     onToggleSelect={f.toggleSelectOrder}
-                    onPrintPickingList={printPickingList}
+                    onPrintPickingList={f.handlePrintSinglePicking}
                     onPrintLabels={f.handlePrintLabels}
                     onOpenFulfillmentModal={f.setFulfillmentModalOrder}
                     onRevertToPending={f.handleRevertToPending}

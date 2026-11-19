@@ -164,3 +164,24 @@ export const FULFILLMENT_STAGE_TONES: Record<FulfillmentStageKey, FulfillmentSta
     accent: '#10B981',
   },
 };
+
+/**
+ * Devuelve los IDs únicos de pedidos pendientes (PENDING / RECIBIDO) que deben pasar
+ * automáticamente a En Picking (PREPARING) al imprimirse la hoja de armado.
+ */
+export function selectPendingOrderIdsForAutoPicking(
+  orders: Array<{ id?: number; status?: string } | null | undefined>,
+): number[] {
+  const seen = new Set<number>();
+  const ids: number[] = [];
+  for (const order of orders || []) {
+    const id = Number(order?.id);
+    if (!Number.isInteger(id) || id <= 0 || seen.has(id)) continue;
+    const status = String(order?.status || '').toUpperCase();
+    if (status === 'PENDING' || status === 'RECIBIDO') {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
+}

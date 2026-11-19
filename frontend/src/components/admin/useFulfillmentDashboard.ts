@@ -3,11 +3,13 @@ import { api } from '../../utils/api';
 import {
   printBatchPickingA4,
   printConsolidatedPickingA4,
+  printPickingList,
   printShippingLabelsBultos,
 } from '../../utils/printHelpers';
 import {
   computeAdaptiveFulfillmentColumns,
   formatBigIntARS,
+  selectPendingOrderIdsForAutoPicking,
   sumOrdersTotalInt,
 } from '../../utils/fulfillmentCardMeta.helper';
 import {
@@ -228,6 +230,31 @@ export function useFulfillmentDashboard() {
   const getOrdersForBatchAction = () =>
     selectedOrderIds.length > 0 ? pending.filter((o) => selectedOrderIds.includes(o.id)) : pending;
 
+  const moveOrdersToPicking = async (ordersToMove: any[]) => {
+    const idsToMove = selectPendingOrderIdsForAutoPicking(ordersToMove);
+    if (idsToMove.length === 0) return;
+    try {
+      await Promise.all(idsToMove.map((id) => api.updateOrderStatus(id, 'PREPARING' as any)));
+      const movedSet = new Set(idsToMove);
+      setSelectedOrderIds((prev) => prev.filter((id) => !movedSet.has(id)));
+      await fetchOrders();
+    } catch (err: any) {
+      showConfirm({
+        title: 'Error al pasar a En Picking',
+        message: err?.message || 'Se imprimió la hoja, pero no se pudo actualizar el estado del pedido.',
+        confirmText: 'Entendido',
+        type: 'danger',
+        isAlert: true,
+        onConfirm: () => {},
+      });
+    }
+  };
+
+  const handlePrintSinglePicking = (order: any) => {
+    printPickingList(order);
+    void moveOrdersToPicking([order]);
+  };
+
   const handlePrintBatchA4 = () => {
     const ordersToPrint = getOrdersForBatchAction();
     if (ordersToPrint.length === 0) {
@@ -248,20 +275,7 @@ export function useFulfillmentDashboard() {
       filterLabel: getFilterLabel(),
     });
 
-    setTimeout(() => {
-      showConfirm({
-        title: 'Pasar a En Picking',
-        message: `¿Deseas mover los ${ordersToPrint.length} pedidos impresos a la columna "En Picking"?`,
-        confirmText: 'Pasar a Picking',
-        cancelText: 'Mantener en Pendientes',
-        type: 'info',
-        onConfirm: async () => {
-          await Promise.all(ordersToPrint.map((o) => api.updateOrderStatus(o.id, 'PREPARING' as any)));
-          setSelectedOrderIds([]);
-          void fetchOrders();
-        },
-      });
-    }, 600);
+    void moveOrdersToPicking(ordersToPrint);
   };
 
   const handlePrintConsolidated = () => {
@@ -335,6 +349,7 @@ export function useFulfillmentDashboard() {
     toggleSelectAllPending,
     handleRevertToPending,
     handleRevertAllPreparingToPending,
+    handlePrintSinglePicking,
     handlePrintBatchA4,
     handlePrintConsolidated,
     handlePrintLabels,

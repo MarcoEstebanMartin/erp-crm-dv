@@ -5,6 +5,7 @@ import {
   formatOrderRelativeAge,
   resolveOrderFiscalChannelBadge,
   resolveOrderOriginLabel,
+  selectPendingOrderIdsForAutoPicking,
   sumOrdersTotalInt,
 } from '../fulfillmentCardMeta.helper';
 import {
@@ -102,6 +103,20 @@ describe('Paso 3: Minimalismo Operativo, Armado de Pedidos y Métricas AFIP', ()
       expect(computeAdaptiveFulfillmentColumns(5, 0, 1)).toBe(
         'minmax(310px, 1.35fr) minmax(210px, 0.55fr) minmax(310px, 1.35fr)',
       );
+    });
+
+    it('selecciona solo IDs únicos pendientes (PENDING/RECIBIDO) para auto-picking al imprimir', () => {
+      const ids = selectPendingOrderIdsForAutoPicking([
+        { id: 101, status: 'PENDING' },
+        { id: 102, status: 'RECIBIDO' },
+        { id: 101, status: 'PENDING' },
+        { id: 103, status: 'PREPARING' },
+        { id: 104, status: 'PREPARED' },
+        { id: 105, status: 'DELIVERED' },
+        { id: 0, status: 'PENDING' },
+        null,
+      ]);
+      expect(ids).toEqual([101, 102]);
     });
   });
 
