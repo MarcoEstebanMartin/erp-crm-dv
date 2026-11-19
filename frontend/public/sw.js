@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'dv-pwa-shell-v2';
+const SHELL_CACHE = 'dv-pwa-shell-v3';
 const MEDIA_CACHE = 'dv-pwa-media-v1';
 const MAX_MEDIA_ENTRIES = 260;
 
@@ -62,20 +62,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. Navegaciones SPA: Network-First con fallback instantáneo a index.html local
-  if (request.mode === 'navigate') {
+  // 1. Navegaciones SPA y manifest PWA: Network-First con fallback instantáneo a caché local
+  if (request.mode === 'navigate' || url.pathname === '/manifest.webmanifest') {
+    const cacheKey = request.mode === 'navigate' ? '/index.html' : '/manifest.webmanifest';
     event.respondWith(
       fetch(request)
         .then((networkRes) => {
           if (networkRes && networkRes.ok) {
             const copy = networkRes.clone();
-            caches.open(SHELL_CACHE).then((cache) => cache.put('/index.html', copy));
+            caches.open(SHELL_CACHE).then((cache) => cache.put(cacheKey, copy));
           }
           return networkRes;
         })
         .catch(async () => {
           const cachedShell =
-            (await caches.match('/index.html')) || (await caches.match('/'));
+            (await caches.match(cacheKey)) || (request.mode === 'navigate' ? await caches.match('/') : undefined);
           return cachedShell || Response.error();
         }),
     );
