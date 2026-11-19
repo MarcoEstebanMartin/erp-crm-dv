@@ -1,7 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Download, FileText } from 'lucide-react';
+import { Check, Download, Printer, Share2, ShieldAlert, ShieldCheck } from 'lucide-react';
+import QRCode from 'qrcode';
 import { apiClient } from '../api/apiClient';
+import {
+  buildReceiptPdfFilename,
+  downloadReceiptPdf,
+  formatReceiptDateTimeAr,
+  generateReceiptPdfBlob,
+  type PublicReceiptData,
+} from '../utils/receiptPdfGenerator';
+import {
+  formatCustomerDisplayName,
+  formatPaymentMethodLabel,
+  formatReceiptAmountAr,
+} from '../utils/receiptWhatsApp';
 
 interface ReceiptViewProps {
   receiptId?: string;
@@ -12,132 +25,249 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
   const [searchParams] = useSearchParams();
   const verificationToken = searchParams.get('v') || '';
   const activeId = receiptId || id;
-  const [receipt, setReceipt] = useState<any>(null);
+
+  const [receipt, setReceipt] = useState<PublicReceiptData | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
     const fetchReceipt = async () => {
       try {
         const query = verificationToken ? `?v=${encodeURIComponent(verificationToken)}` : '';
-        const data = await apiClient.get(`/collections/receipt/${activeId}${query}`);
-        setReceipt(data);
+        const data = await apiClient.get<PublicReceiptData>(
+          `/collections/receipt/${activeId}${query}`,
+        );
+        if (!cancelled) {
+          setReceipt(data);
+        }
       } catch {
-        setError('El comprobante no existe o el enlace de verificación es inválido.');
+        if (!cancelled) {
+          setError('Comprobante no válido o enlace vencido.');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    if (activeId) fetchReceipt();
+    if (activeId) {
+      fetchReceipt();
+    } else {
+      setLoading(false);
+      setError('Comprobante no válido.');
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeId, verificationToken]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const targetUrl = receipt?.publicUrl || (typeof window !== 'undefined' ? window.location.href : '');
+    if (!receipt || !targetUrl) return;
+
+    QRCode.toDataURL(targetUrl, {
+      width: 176,
+      margin: 1,
+      color: { dark: '#18181B', light: '#FFFFFF' },
+    })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl('');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [receipt]);
+
+  const handleDownloadPdf = async () => {
+    if (!receipt || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadReceiptPdf(receipt);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleSharePdf = async () => {
+    if (!receipt || downloading) return;
+    setDownloading(true);
+    try {
+      const blob = await generateReceiptPdfBlob(receipt);
+      const file = new File([blob], buildReceiptPdfFilename(receipt), {
+        type: 'application/pdf',
+      });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Recibo ${receipt.receiptNumber || `REC-${receipt.id}`}`,
+          files: [file],
+        });
+        return;
+      }
+      await downloadReceiptPdf(receipt);
+    } catch {
+      // Usuario canceló el sheet nativo de compartir
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">Cargando recibo...</div>;
+    return (
+      <main
+        className="min-h-screen bg-zinc-50 flex items-center justify-center p-4"
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <div className="text-sm text-zinc-500">Verificando comprobante…</div>
+      </main>
+    );
   }
 
   if (error || !receipt) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white p-8 rounded-xl shadow-sm text-center max-w-sm w-full">
-          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" aria-hidden="true" />
-          <h2 className="text-xl font-bold text-gray-800">Recibo no encontrado</h2>
-          {error && <p className="text-gray-500 mt-2">{error}</p>}
-        </div>
-      </div>
+      <main className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+        <section className="bg-white border border-zinc-200 rounded-xl p-8 text-center max-w-sm w-full">
+          <div className="w-11 h-11 rounded-full bg-red-50 border border-red-200 flex items-center justify-center mx-auto mb-4">
+            <ShieldAlert className="w-5 h-5 text-[#E30613]" aria-hidden="true" />
+          </div>
+          <h1 className="text-base font-semibold text-zinc-900">Comprobante no válido</h1>
+          <p className="text-sm text-zinc-500 mt-1">{error}</p>
+        </section>
+      </main>
     );
   }
 
-  const formatCurrency = (val: number | string) => {
-    return Number(val).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
-  };
+  const receiptNo = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
+  const customerName = formatCustomerDisplayName(receipt.persona?.name);
+  const amountText = formatReceiptAmountAr(receipt.amount);
+  const methodLabel = formatPaymentMethodLabel(receipt.paymentMethod, receipt.bankAccount?.name);
+  const dateTimeLabel = formatReceiptDateTimeAr(receipt.createdAt);
+  const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-AR') + ' ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const paymentMethodEs = {
-    CASH: 'Efectivo',
-    BANK_TRANSFER: 'Transferencia Bancaria',
-    CHECK: 'Cheque',
-    OTHER: 'Otro',
-  };
+  const details: Array<{ label: string; value: string; mono?: boolean }> = [
+    { label: 'Cliente', value: customerName },
+    ...(receipt.persona?.cuit ? [{ label: 'CUIT', value: receipt.persona.cuit, mono: true }] : []),
+    { label: 'Fecha', value: dateTimeLabel, mono: true },
+    { label: 'Medio de pago', value: methodLabel },
+    ...(receipt.description ? [{ label: 'Concepto', value: receipt.description }] : []),
+    ...(receipt.user?.username ? [{ label: 'Emitido por', value: receipt.user.username }] : []),
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center font-sans">
-      <div className="bg-white max-w-md w-full rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-gray-900 text-white p-6 text-center">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-[var(--color-corp-red)] font-bold text-2xl">DV</span>
-          </div>
-          <h1 className="text-xl font-bold">Distribuidora de Alimentos y Bebidas</h1>
-          <div className="text-gray-400 text-sm mt-1">Comprobante de Pago</div>
-        </div>
-
-        <div className="p-6 text-center border-b border-gray-100 flex flex-col items-center">
-          <CheckCircle className="w-8 h-8 text-green-500 mb-2" aria-hidden="true" />
-          <div className="text-gray-500 text-xs font-semibold mb-1">Pago Registrado</div>
-          <h2 className="text-4xl font-extrabold text-gray-900 tabular-nums">{formatCurrency(receipt.amount)}</h2>
-          {receipt.verified ? (
-            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-              <span className="w-2 h-2 rounded-full bg-green-500" />
-              Verificado
+    <main className="min-h-screen bg-zinc-50 py-8 px-4 flex items-center justify-center font-sans print:bg-white print:p-0">
+      <article className="bg-white max-w-md w-full rounded-xl border border-zinc-200 shadow-xs overflow-hidden print:border-none print:shadow-none">
+        {/* Header institucional minimalista */}
+        <header className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-zinc-900 text-white font-bold text-sm flex items-center justify-center shrink-0">
+              DV
             </div>
-          ) : (
-            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-800 border border-yellow-200">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-              Pendiente de Verificación
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold text-zinc-900 truncate">Don Venancio</h1>
+              <p className="text-xs text-zinc-500">Recibo de Cobro</p>
             </div>
-          )}
-        </div>
-
-        <div className="p-6 space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">Recibo</span>
-            <span className="font-semibold text-gray-800 tabular-nums">{receipt.receiptNumber || `REC-00${receipt.id}`}</span>
           </div>
+          <span className="text-xs font-mono font-semibold text-zinc-700 bg-zinc-100 px-2.5 py-1 rounded-md tabular-nums shrink-0">
+            {receiptNo}
+          </span>
+        </header>
 
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">Fecha</span>
-            <span className="font-semibold text-gray-800 tabular-nums">{formatDate(receipt.createdAt)}</span>
+        {/* Monto y sello de autenticidad en vivo */}
+        <section className="px-6 py-7 border-b border-zinc-100 text-center">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 mb-3">
+            <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Verificado · Don Venancio</span>
           </div>
-
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">Cliente</span>
-            <span className="font-semibold text-gray-800">{receipt.persona?.name}</span>
+          <div className="text-4xl font-bold tracking-tight text-zinc-900 tabular-nums">
+            {amountText}
           </div>
+        </section>
 
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">Medio de Pago</span>
-            <span className="font-semibold text-gray-800">
-              {paymentMethodEs[receipt.paymentMethod as keyof typeof paymentMethodEs] || receipt.paymentMethod}
-            </span>
-          </div>
+        {/* Detalle del comprobante */}
+        <dl className="px-6 py-5 divide-y divide-zinc-100">
+          {details.map((item) => (
+            <div key={item.label} className="py-2.5 flex items-baseline justify-between gap-4">
+              <dt className="text-xs text-zinc-500 shrink-0">{item.label}</dt>
+              <dd
+                className={`text-sm font-medium text-zinc-900 text-right break-words ${
+                  item.mono ? 'tabular-nums' : ''
+                }`}
+              >
+                {item.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
 
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">Sucursal</span>
-            <span className="font-semibold text-gray-800">{receipt.billingType === 'OFFICIAL' ? 'A (Oficial)' : 'X (Interno)'}</span>
-          </div>
+        {/* Bloque anti-estafas con QR y código de verificación */}
+        {(receipt.verificationCode || qrDataUrl) && (
+          <section className="mx-6 mb-6 p-3.5 rounded-lg bg-zinc-50 border border-zinc-200/80 flex items-center gap-3.5">
+            {qrDataUrl && (
+              <img
+                src={qrDataUrl}
+                alt="Código QR de verificación"
+                className="w-16 h-16 rounded border border-zinc-200 bg-white p-0.5 shrink-0"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1 text-xs font-medium text-emerald-700">
+                <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Autenticidad verificable</span>
+              </div>
+              {receipt.verificationCode && (
+                <div className="mt-1 font-mono text-sm font-semibold text-zinc-900 tracking-wide">
+                  {receipt.verificationCode}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
-          <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">Cobrado por</span>
-            <span className="font-semibold text-gray-800">{receipt.user?.username}</span>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 p-6 flex gap-3">
+        {/* Acciones directas */}
+        <footer className="px-6 py-4 bg-zinc-50/70 border-t border-zinc-100 flex items-center gap-2.5 print:hidden">
           <button
             type="button"
-            onClick={() => window.print()}
-            className="flex-1 bg-white border border-gray-200 text-gray-700 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+            className="flex-1 bg-zinc-900 text-white text-sm font-medium py-2.5 px-4 rounded-lg hover:bg-zinc-800 disabled:opacity-60 transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
           >
-            <Download className="w-5 h-5" aria-hidden="true" />
-            Descargar PDF
+            <Download className="w-4 h-4" aria-hidden="true" />
+            <span>{downloading ? 'Generando…' : 'Descargar PDF'}</span>
           </button>
-        </div>
-      </div>
-    </div>
+
+          {canNativeShare ? (
+            <button
+              type="button"
+              onClick={handleSharePdf}
+              disabled={downloading}
+              className="bg-white border border-zinc-200 text-zinc-700 text-sm font-medium py-2.5 px-3.5 rounded-lg hover:bg-zinc-100 disabled:opacity-60 transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              aria-label="Compartir PDF"
+            >
+              <Share2 className="w-4 h-4" aria-hidden="true" />
+              <span>Compartir</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="bg-white border border-zinc-200 text-zinc-700 text-sm font-medium py-2.5 px-3.5 rounded-lg hover:bg-zinc-100 transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              aria-label="Imprimir"
+            >
+              <Printer className="w-4 h-4" aria-hidden="true" />
+              <span>Imprimir</span>
+            </button>
+          )}
+        </footer>
+      </article>
+    </main>
   );
 };
 
