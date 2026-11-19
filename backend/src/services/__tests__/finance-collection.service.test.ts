@@ -113,6 +113,7 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
       receiptNumber: 'REC-00055',
       paymentMethod: PaymentMethod.CASH,
       billingType: BillingType.INTERNAL,
+      description: 'Rendición Reparto - Chofer: Fabian - Ruta #3 - Pago de KIOSCO CENTRAL',
       verified: true,
       persona: { id: 10, name: 'Kiosco Central', cuit: '20-12345678-9', address: 'Mitre 100', city: 'Villegas' },
       user: { id: 2, username: 'preventa1' },
@@ -148,7 +149,8 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
         },
       }),
     );
-    expect((receipt.user as any).passwordHash).toBeUndefined();
+    expect(receipt.user).toBeUndefined();
+    expect(receipt.description).toBe('Pago a cuenta corriente');
     expect((receipt.persona as any).webPin).toBeUndefined();
     expect(receipt.verificationCode).toMatch(/^DV-[0-9A-F]{4}-[0-9A-F]{4}$/);
     expect(receipt.publicUrl).toContain(`/recibo/55?v=${shareToken}`);

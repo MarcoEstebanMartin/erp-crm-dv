@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { apiClient } from '../api/apiClient';
 import {
   downloadReceiptPdf,
+  formatClientReceiptConcept,
   formatReceiptDateTimeAr,
   shareOrDownloadReceiptPdf,
   type PublicReceiptData,
@@ -134,8 +135,12 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
   const receiptNo = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
   const customerName = formatCustomerDisplayName(receipt.persona?.name);
   const amountText = formatReceiptAmountAr(receipt.amount);
-  const methodLabel = formatPaymentMethodLabel(receipt.paymentMethod, receipt.bankAccount?.name);
+  const methodLabel = formatPaymentMethodLabel(receipt.paymentMethod);
   const dateTimeLabel = formatReceiptDateTimeAr(receipt.createdAt);
+  const conceptLabel = formatClientReceiptConcept(
+    receipt.description,
+    receipt.order?.invoiceNumber,
+  );
   const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   const details: Array<{ label: string; value: string; mono?: boolean }> = [
@@ -143,8 +148,7 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
     ...(receipt.persona?.cuit ? [{ label: 'CUIT', value: receipt.persona.cuit, mono: true }] : []),
     { label: 'Fecha', value: dateTimeLabel, mono: true },
     { label: 'Medio de pago', value: methodLabel },
-    ...(receipt.description ? [{ label: 'Concepto', value: receipt.description }] : []),
-    ...(receipt.user?.username ? [{ label: 'Emitido por', value: receipt.user.username }] : []),
+    { label: 'Concepto', value: conceptLabel },
   ];
 
   return (
@@ -196,7 +200,7 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
             <div className="dv-receipt-verify-meta">
               <div className="dv-receipt-verify-status">
                 <Check size={14} aria-hidden="true" />
-                <span>Código único verificado</span>
+                <span>Verificación digital</span>
               </div>
               {receipt.verificationCode && (
                 <div className="dv-receipt-verify-code">{receipt.verificationCode}</div>

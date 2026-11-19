@@ -100,6 +100,7 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
     persona: r.persona ? { id: r.persona.id, name: r.persona.name } : null,
     user: r.user,
     bankAccount: r.bankAccount,
+    order: r.order,
   });
 
   const handleOfficePdfDownload = async (row: UnifiedReceiptRow) => {

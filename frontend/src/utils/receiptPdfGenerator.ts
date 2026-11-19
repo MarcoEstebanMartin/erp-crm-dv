@@ -31,10 +31,56 @@ export interface PublicReceiptData {
     id: number;
     name: string;
   } | null;
+  order?: {
+    id?: number;
+    invoiceNumber?: string | null;
+  } | null;
   authenticity?: {
     verified: boolean;
     issuer: string;
   };
+}
+
+const INTERNAL_CONCEPT_PATTERN =
+  /rendici[oó]n|chofer\s*:|ruta\s*#|reparto|vendedor\s*:|pago\s+de\s+|emisor\s*:|cierre\s+de|caja\s+|arqueo|backfill|migraci[oó]n|interno|auditor/i;
+
+/**
+ * Sanitiza cualquier descripción interna (ej. "Rendición Reparto - Chofer: ... - Ruta #3")
+ * para que el cliente vea únicamente un concepto comercial limpio, profesional y seguro.
+ */
+export function formatClientReceiptConcept(
+  rawDescription?: string | null,
+  invoiceNumber?: string | null,
+): string {
+  const cleanInvoice = (invoiceNumber || '').trim();
+  if (cleanInvoice) {
+    return `Pago Factura ${cleanInvoice}`;
+  }
+
+  const trimmed = (rawDescription || '').trim().replace(/\s+/g, ' ');
+  if (!trimmed) {
+    return 'Pago a cuenta corriente';
+  }
+
+  const invoiceMatch = trimmed.match(/factura\s+([A-Z]?\s*\d{4}-\d{8})/i);
+  if (invoiceMatch) {
+    return `Pago Factura ${invoiceMatch[1].replace(/\s+/g, ' ').trim()}`;
+  }
+
+  const checkMatch = trimmed.match(/cheque\s*n[°º]?\s*([A-Z0-9-]+)/i);
+  if (checkMatch && checkMatch[1].toUpperCase() !== 'S/N') {
+    return `Pago a cuenta corriente · Cheque N° ${checkMatch[1]}`;
+  }
+
+  if (INTERNAL_CONCEPT_PATTERN.test(trimmed)) {
+    return 'Pago a cuenta corriente';
+  }
+
+  if (/^pago\s+(a\s+)?cuenta\s+corriente$/i.test(trimmed)) {
+    return 'Pago a cuenta corriente';
+  }
+
+  return trimmed.length > 60 ? `${trimmed.slice(0, 57).trimEnd()}…` : trimmed;
 }
 
 export function buildReceiptPdfFilename(
@@ -56,6 +102,7 @@ export function formatReceiptDateTimeAr(isoDate: string): string {
   const timePart = d.toLocaleTimeString('es-AR', {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
   return `${datePart} · ${timePart}`;
 }
@@ -72,8 +119,12 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
   const receiptNo = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
   const customerName = formatCustomerDisplayName(receipt.persona?.name);
   const amountText = formatReceiptAmountAr(receipt.amount);
-  const methodLabel = formatPaymentMethodLabel(receipt.paymentMethod, receipt.bankAccount?.name);
+  const methodLabel = formatPaymentMethodLabel(receipt.paymentMethod);
   const dateTimeLabel = formatReceiptDateTimeAr(receipt.createdAt);
+  const conceptLabel = formatClientReceiptConcept(
+    receipt.description,
+    receipt.order?.invoiceNumber,
+  );
   const verificationCode = receipt.verificationCode || '';
   const verifyUrl =
     receipt.publicUrl || (typeof window !== 'undefined' ? window.location.href : '');
@@ -83,8 +134,7 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
     ...(receipt.persona?.cuit ? [['CUIT', receipt.persona.cuit] as [string, string]] : []),
     ['Fecha', dateTimeLabel],
     ['Medio de pago', methodLabel],
-    ...(receipt.description ? [['Concepto', receipt.description] as [string, string]] : []),
-    ...(receipt.user?.username ? [['Emitido por', receipt.user.username] as [string, string]] : []),
+    ['Concepto', conceptLabel],
   ];
 
   // Calculamos el alto exacto del comprobante para eliminar espacio muerto inferior
@@ -201,7 +251,7 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
   doc.setTextColor(4, 120, 87);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.text('Código único de verificación', textStartX, qrBoxY + 10.5);
+  doc.text('Verificación digital', textStartX, qrBoxY + 10.5);
 
   if (verificationCode) {
     doc.setTextColor(17, 24, 39);
@@ -213,7 +263,7 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
   doc.setTextColor(107, 114, 128);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.text('Don Venancio · Registro inmutable', textStartX, qrBoxY + 25.5);
+  doc.text('Escaneá el QR para validar este recibo', textStartX, qrBoxY + 25.5);
 
   return doc.output('blob');
 }

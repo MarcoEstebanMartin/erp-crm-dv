@@ -13,6 +13,30 @@ import {
   verifyReceiptToken,
 } from '../../core/receiptToken';
 
+const INTERNAL_RECEIPT_DESCRIPTION_PATTERN =
+  /rendici[oó]n|chofer\s*:|ruta\s*#|reparto|vendedor\s*:|pago\s+de\s+|emisor\s*:|cierre\s+de|caja\s+|arqueo|backfill|migraci[oó]n|interno|auditor/i;
+
+export function sanitizePublicReceiptDescription(rawDescription?: string | null): string {
+  const trimmed = (rawDescription || '').trim().replace(/\s+/g, ' ');
+  if (!trimmed) return 'Pago a cuenta corriente';
+
+  const invoiceMatch = trimmed.match(/factura\s+([A-Z]?\s*\d{4}-\d{8})/i);
+  if (invoiceMatch) {
+    return `Pago Factura ${invoiceMatch[1].replace(/\s+/g, ' ').trim()}`;
+  }
+
+  const checkMatch = trimmed.match(/cheque\s*n[°º]?\s*([A-Z0-9-]+)/i);
+  if (checkMatch && checkMatch[1].toUpperCase() !== 'S/N') {
+    return `Pago a cuenta corriente · Cheque N° ${checkMatch[1]}`;
+  }
+
+  if (INTERNAL_RECEIPT_DESCRIPTION_PATTERN.test(trimmed)) {
+    return 'Pago a cuenta corriente';
+  }
+
+  return trimmed.length > 60 ? `${trimmed.slice(0, 57).trimEnd()}…` : trimmed;
+}
+
 export function buildOfficeReceiptSecurityMeta(
   id: number,
   persistedVerificationCode?: string | null,
@@ -173,8 +197,16 @@ export const receiptService = {
       }
     }
 
+    const { user: internalUser, ...safeTransaction } = transaction;
+
     return {
-      ...transaction,
+      ...safeTransaction,
+      ...(options?.isAuthenticatedStaff
+        ? { user: internalUser }
+        : {
+            description: sanitizePublicReceiptDescription(transaction.description),
+            user: undefined,
+          }),
       ...buildOfficeReceiptSecurityMeta(transaction.id, transaction.verificationCode),
       authenticity: {
         verified: true,
