@@ -1,4 +1,4 @@
-import { formatDrawerBranchLabel, formatResponsibleName } from '../../utils/formatters';
+import { formatDrawerBranchLabel, formatExpenseConcept, formatResponsibleName } from '../../utils/formatters';
 
 export const isEcheqTx = (t: any): boolean =>
   t?.paymentMethod === 'CHECK' && /\(echeq\)|e-?cheq/i.test(String(t?.description || ''));
@@ -253,16 +253,16 @@ export const computeFilteredMetricsAndLedger = (
     });
     const methods = Array.from(methodsSet);
     ledgerItems.push({
-      id: `drawer-${d.id}`, date: d.closedAt, type: 'INGRESO', description: formatResponsibleName(d),
-      paymentMethod: methods.length === 1 ? methods[0] : methods.length > 1 ? 'Varios' : 'Efectivo',
-      amount: netAmount, drawer: d,
+      id: `drawer-${d.id}`, date: d.closedAt, type: 'INGRESO', description: formatResponsibleName(d), detail: null,
+      paymentMethod: methods.length === 1 ? methods[0] : methods.length > 1 ? 'Varios' : 'Efectivo', amount: netAmount, drawer: d,
     });
   });
 
   expensesInPeriod.forEach((t: any) => {
+    const responsible = formatResponsibleName(t);
     ledgerItems.push({
-      id: `tx-${t.id}`, date: t.createdAt, type: 'EGRESO',
-      description: `Gasto: ${t.description}`, paymentMethod: formatPaymentMethodLabel(t.paymentMethod), amount: Number(t.amount),
+      id: `tx-${t.id}`, date: t.createdAt, type: 'EGRESO', description: responsible,
+      detail: formatExpenseConcept(t.description, responsible), paymentMethod: formatPaymentMethodLabel(t.paymentMethod), amount: Number(t.amount),
     });
   });
   ledgerItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

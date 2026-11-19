@@ -155,7 +155,7 @@ export default function DrawersHistoryTable({
                         </span>
                       </div>
                       <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                        {isDepo ? 'Caja Oficina' : formatResponsibleName(d)}
+                        {formatResponsibleName(d)}
                       </div>
                       {!isDepo && !isCentral && d.routeNote && (
                         <div style={{ fontSize: '0.78rem', color: '#0284c7', marginTop: '3px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>

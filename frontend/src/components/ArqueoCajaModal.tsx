@@ -62,6 +62,12 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
   const currentTheoretical = theoreticalBalance + totalReceipts;
   const difference = realBalance - currentTheoretical;
 
+  const handleMatchExpected = () => {
+    const neededCash = Math.max(0, Math.round((currentTheoretical - totalChecks) * 100) / 100);
+    setCashAmount(String(neededCash));
+    setErrorMsg(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (realBalance < 0) return setErrorMsg('El saldo real no puede ser negativo.');
@@ -81,7 +87,18 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
         <div>
           <div className="card" style={{ padding: '16px', marginBottom: '14px' }}>
-            <label htmlFor="arqueo-cash-input" style={{ display: 'block', fontSize: '0.9rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '10px', color: 'var(--text-primary)' }}>Efectivo Físico</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '10px' }}>
+              <label htmlFor="arqueo-cash-input" style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Efectivo Físico</label>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleMatchExpected}
+                disabled={loading || difference === 0 || currentTheoretical - totalChecks < 0}
+                style={{ fontSize: '0.75rem', padding: '3px 10px', backgroundColor: '#f0fdf4', color: '#15803d', borderColor: '#bbf7d0' }}
+              >
+                Igualar
+              </button>
+            </div>
             <input id="arqueo-cash-input" type="number" className="input tabular-nums" autoFocus step="0.01" min="0" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)} placeholder="0.00" style={{ fontSize: '1.2rem', fontFamily: 'monospace' }} />
           </div>
 

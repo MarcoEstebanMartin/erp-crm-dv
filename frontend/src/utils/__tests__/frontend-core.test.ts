@@ -9,7 +9,7 @@ import {
   resolveRequestIdempotencyKey,
 } from '../idempotencyClient';
 import { getOrderStatusInfo } from '../orderStatusHelper';
-import { formatResponsibleName } from '../formatters';
+import { formatExpenseConcept, formatResponsibleName } from '../formatters';
 
 describe('Frontend Core — Pesos Enteros, Idempotencia Móvil y Estados Logísticos', () => {
   it('roundHalfUpInteger y formatIntegerARS redondean al peso entero exacto sin centavos fantasma ni ,00', () => {
@@ -63,5 +63,23 @@ describe('Frontend Core — Pesos Enteros, Idempotencia Móvil y Estados Logíst
         user: { employee: { firstName: 'Esteban', lastName: 'Martin' } },
       }),
     ).toBe('Esteban Martin');
+    expect(
+      formatResponsibleName({
+        branch: 'CONSOLIDADA',
+        user: { username: 'Gemini' },
+      }),
+    ).toBe('Gemini');
+    expect(
+      formatResponsibleName({
+        branch: 'DEPOSITO',
+        user: { username: 'admin' },
+      }),
+    ).toBe('Admin');
+    expect(formatExpenseConcept('Gasto: Gasto de prueba en ruta (Gemini)', 'Gemini')).toBe(
+      'Gasto de prueba en ruta',
+    );
+    expect(formatExpenseConcept('Gasto: Gasto: Peaje autopista', 'Diego Lejarza')).toBe(
+      'Peaje autopista',
+    );
   });
 });

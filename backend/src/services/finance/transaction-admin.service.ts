@@ -41,7 +41,13 @@ export const transactionAdminService = {
     return prisma.transaction.findMany({
       where: whereClause,
       include: {
-        user: { select: { id: true, username: true } },
+        user: {
+          select: {
+            id: true,
+            username: true,
+            employee: { select: { firstName: true, lastName: true } },
+          },
+        },
         verifiedBy: { select: { id: true, username: true } },
         persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
         cashDrawer: true,
@@ -57,7 +63,13 @@ export const transactionAdminService = {
     const transaction = await prisma.transaction.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, username: true } },
+        user: {
+          select: {
+            id: true,
+            username: true,
+            employee: { select: { firstName: true, lastName: true } },
+          },
+        },
         verifiedBy: { select: { id: true, username: true } },
         persona: { select: { id: true, name: true, isClient: true, isProvider: true } },
         cashDrawer: true,

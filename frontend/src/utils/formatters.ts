@@ -21,8 +21,10 @@ export function formatResponsibleName(d: any): string {
     return `${d.user.employee.firstName} ${d.user.employee.lastName}`;
   }
 
-  // 2. Extraer texto del campo branch o username
-  const raw = (d.branch || d.user?.username || '').trim();
+  // 2. Extraer texto del campo branch o username (ignorando ramas técnicas genéricas si hay usuario)
+  const rawBranch = (d.branch || '').trim();
+  const isGenericBranch = /^(CONSOLIDADA|CENTRAL|GENERAL|DEPOSITO|DEPÓSITO|OFICINA|A|X)$/i.test(rawBranch);
+  const raw = ((!isGenericBranch && rawBranch) || d.user?.username || rawBranch || '').trim();
   if (!raw) return 'Responsable S/D';
 
   // Limpiar prefijos de sistema (ej: "Caja: VENDEDOR: DIEGO", "VENDEDOR: FABIAN", "REPARTIDOR: Agustin (Ruta #1)")
@@ -49,7 +51,7 @@ export function formatResponsibleName(d: any): string {
   if (lower === 'miguel' || lower === 'miguel alberca') return 'Miguel Alberca';
   if (lower === 'deposito' || lower === 'depósito') return 'Caja Oficina';
   if (lower === 'oficina') return 'Oficina Central';
-  if (lower === 'admin' || lower === 'administrador') return 'Administración';
+  if (lower === 'admin' || lower === 'administrador') return 'Admin';
 
   // 4. Si no es un nombre mapeado pero tiene caracteres, formatear en Title Case
   if (cleanNameOnly.length > 0) {
@@ -60,4 +62,28 @@ export function formatResponsibleName(d: any): string {
   }
 
   return raw;
+}
+
+/**
+ * Limpia el concepto de un gasto para mostrarlo como detalle secundario junto al responsable,
+ * eliminando prefijos repetidos ("Gasto:") y sufijos redundantes con el nombre del responsable.
+ */
+export function formatExpenseConcept(
+  description?: string | null,
+  responsibleName?: string | null,
+): string {
+  let clean = String(description || '').trim();
+  if (!clean) return '';
+
+  // Quitar prefijos repetidos "Gasto:" / "Gastos:"
+  clean = clean.replace(/^(?:gastos?\s*:\s*)+/i, '').trim();
+
+  // Quitar paréntesis final redundante si coincide con el responsable ya mostrado (ej: "(Gemini)")
+  const resp = String(responsibleName || '').trim();
+  if (resp) {
+    const escapedResp = resp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    clean = clean.replace(new RegExp(`\\s*\\(${escapedResp}\\)\\s*$`, 'i'), '').trim();
+  }
+
+  return clean;
 }

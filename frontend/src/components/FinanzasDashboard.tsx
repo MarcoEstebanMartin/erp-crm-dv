@@ -216,7 +216,12 @@ export default function FinanzasDashboard() {
                   <tr key={item.id} style={{ cursor: item.drawer ? 'pointer' : 'default' }} onClick={() => item.drawer && setInspectingDrawer(item.drawer)}>
                     <td style={{ fontSize: '0.82rem' }}>{new Date(item.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td><span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 600, backgroundColor: item.type === 'INGRESO' ? '#ecfdf5' : '#fff5f5', color: item.type === 'INGRESO' ? '#047857' : '#c53030' }}>{item.type}</span></td>
-                    <td style={{ fontWeight: 600 }}>{item.description}</td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0 }}>
+                        <span style={{ fontWeight: 600 }}>{item.description}</span>
+                        {item.detail && <span title={item.detail} style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }}>{item.detail}</span>}
+                      </div>
+                    </td>
                     <td>
                       {item.drawer && (
                         <span className="tabular-nums" style={{ display: 'inline-block', fontSize: '0.72rem', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '12px', whiteSpace: 'nowrap', fontWeight: 600 }}>
