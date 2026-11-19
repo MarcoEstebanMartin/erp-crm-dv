@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, FileDown, Search, Send, Trash2 } from 'lucide-react';
+import { FileDown, Search, Trash2 } from 'lucide-react';
 import {
   buildManualWhatsAppUrl,
   buildOfficeReceiptWhatsAppUrl,
@@ -45,6 +45,18 @@ interface UnifiedReceiptsListProps {
   onRejectCheck: (paymentId: number) => Promise<void>;
   onResendWhatsApp: (receiptId: number) => Promise<void>;
 }
+
+const WhatsAppLogo: React.FC = () => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M12.031 2C6.506 2 2.02 6.486 2.02 12.011c0 1.766.461 3.49 1.337 5.008L2 22l5.106-1.339a9.97 9.97 0 0 0 4.925 1.298h.004c5.524 0 10.011-4.487 10.011-10.012A9.946 9.946 0 0 0 19.11 4.93 9.946 9.946 0 0 0 12.031 2Zm5.878 14.165c-.248.698-1.448 1.335-2.002 1.416-.513.076-1.162.108-1.875-.118-.432-.137-.987-.32-1.696-.627-2.984-1.288-4.933-4.307-5.082-4.506-.148-.199-1.212-1.613-1.212-3.077 0-1.464.767-2.184 1.039-2.482.273-.298.595-.372.793-.372.198 0 .396.002.57.01.183.01.428-.07.67.512.248.596.843 2.058.918 2.207.074.149.124.323.025.522-.099.199-.149.323-.297.497-.149.174-.313.389-.446.522-.149.149-.304.31-.13.608.173.298.771 1.273 1.656 2.062 1.137 1.014 2.096 1.328 2.394 1.477.298.149.471.124.645-.075.174-.199.744-.869.943-1.167.198-.298.397-.248.67-.149.272.1 1.735.818 2.033.967.297.149.496.224.57.348.075.124.075.72-.173 1.418Z" />
+  </svg>
+);
 
 const METHOD_LABELS: Record<string, string> = {
   CASH: 'Efectivo',
@@ -294,11 +306,13 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                           type="button"
                           onClick={() => void handleOfficePdfDownload(row)}
                           disabled={busyPdfKey === `pdf-${row.key}`}
+                          title="Descargar PDF"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
-                            padding: '4px 9px',
+                            height: '28px',
+                            padding: '0 9px',
                             borderRadius: '6px',
                             border: '1px solid #18181b',
                             background: '#18181b',
@@ -309,17 +323,31 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                             opacity: busyPdfKey === `pdf-${row.key}` ? 0.65 : 1,
                           }}
                         >
-                          <FileDown size={12} aria-hidden="true" /> {busyPdfKey === `pdf-${row.key}` ? 'PDF…' : 'PDF'}
+                          <FileDown size={13} aria-hidden="true" /> {busyPdfKey === `pdf-${row.key}` ? '…' : 'PDF'}
                         </button>
                       )}
-                      {row.viewUrl && (
+                      {!row.officeReceipt && row.viewUrl && (
                         <a
                           href={row.viewUrl}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#374151', fontSize: '0.75rem', textDecoration: 'none' }}
+                          title="Abrir PDF"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            height: '28px',
+                            padding: '0 9px',
+                            borderRadius: '6px',
+                            border: '1px solid #18181b',
+                            background: '#18181b',
+                            color: '#fff',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                          }}
                         >
-                          <ExternalLink size={12} aria-hidden="true" /> Ver
+                          <FileDown size={13} aria-hidden="true" /> PDF
                         </a>
                       )}
                       {!row.isVoided && row.officeReceipt && (
@@ -327,22 +355,24 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                           type="button"
                           onClick={() => void handleOfficeWhatsAppPdf(row)}
                           disabled={busyPdfKey === `wa-${row.key}`}
+                          title="Enviar por WhatsApp"
+                          aria-label="Enviar por WhatsApp"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 8px',
+                            justifyContent: 'center',
+                            width: '28px',
+                            height: '28px',
+                            padding: 0,
                             borderRadius: '6px',
                             border: '1px solid #16a34a',
                             background: '#fff',
-                            color: '#15803d',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
+                            color: '#16a34a',
                             cursor: busyPdfKey === `wa-${row.key}` ? 'wait' : 'pointer',
-                            opacity: busyPdfKey === `wa-${row.key}` ? 0.65 : 1,
+                            opacity: busyPdfKey === `wa-${row.key}` ? 0.6 : 1,
                           }}
                         >
-                          <Send size={12} aria-hidden="true" /> {busyPdfKey === `wa-${row.key}` ? 'Enviando…' : 'WhatsApp'}
+                          <WhatsAppLogo />
                         </button>
                       )}
                       {!row.isVoided && !row.officeReceipt && (
@@ -350,9 +380,22 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                           href={row.whatsappUrl}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #16a34a', color: '#15803d', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}
+                          title="Enviar por WhatsApp"
+                          aria-label="Enviar por WhatsApp"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '6px',
+                            border: '1px solid #16a34a',
+                            background: '#fff',
+                            color: '#16a34a',
+                            textDecoration: 'none',
+                          }}
                         >
-                          <Send size={12} aria-hidden="true" /> WhatsApp
+                          <WhatsAppLogo />
                         </a>
                       )}
                       {row.fieldReceipt && row.fieldReceipt.whatsappStatus !== 'DELIVERED' && !row.isVoided && (
@@ -383,9 +426,23 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                             if (row.officeReceipt) void onDeleteOfficeReceipt(row.officeReceipt);
                             else if (row.fieldReceipt) void onVoidFieldReceipt(row.fieldReceipt.id);
                           }}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontSize: '0.75rem', cursor: 'pointer' }}
+                          title="Anular recibo"
+                          aria-label="Anular recibo"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '28px',
+                            height: '28px',
+                            padding: 0,
+                            borderRadius: '6px',
+                            border: '1px solid #e5e7eb',
+                            background: '#fff',
+                            color: '#6b7280',
+                            cursor: 'pointer',
+                          }}
                         >
-                          <Trash2 size={12} aria-hidden="true" /> Anular
+                          <Trash2 size={14} aria-hidden="true" />
                         </button>
                       )}
                     </div>
