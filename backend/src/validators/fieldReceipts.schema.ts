@@ -27,7 +27,7 @@ export const fieldReceiptPaymentSchema = z
     }
   });
 
-export const syncFieldReceiptSchema = z.object({
+export const syncFieldReceiptBodySchema = z.object({
   provisionalCode: z.string().trim().min(6, 'Código provisorio inválido').max(120),
   personaId: z.coerce.number().int().positive('Cliente inválido'),
   deliveryRouteId: z.coerce.number().int().positive().nullable().optional(),
@@ -39,7 +39,11 @@ export const syncFieldReceiptSchema = z.object({
   payments: z.array(fieldReceiptPaymentSchema).min(1, 'Debe ingresar al menos un medio de pago'),
 });
 
-export const verifyTransferSchema = z
+export const syncFieldReceiptSchema = z.object({
+  body: syncFieldReceiptBodySchema,
+});
+
+export const verifyTransferBodySchema = z
   .object({
     action: z.enum(['CLEAR', 'REJECT']),
     bankAccountId: z.coerce.number().int().positive().optional(),
@@ -55,19 +59,35 @@ export const verifyTransferSchema = z
     }
   });
 
-export const rejectCheckSchema = z.object({
+export const verifyTransferSchema = z.object({
+  body: verifyTransferBodySchema,
+});
+
+export const rejectCheckBodySchema = z.object({
   rejectionReason: z.string().trim().min(3, 'Debe indicar el motivo del rechazo del cheque').max(300),
 });
 
-export const voidFieldReceiptSchema = z.object({
+export const rejectCheckSchema = z.object({
+  body: rejectCheckBodySchema,
+});
+
+export const voidFieldReceiptBodySchema = z.object({
   voidReason: z.string().trim().min(3, 'Debe indicar el motivo de anulación').max(300),
 });
 
-export const approveSettlementSchema = z.object({
+export const voidFieldReceiptSchema = z.object({
+  body: voidFieldReceiptBodySchema,
+});
+
+export const approveSettlementBodySchema = z.object({
   declaredCash: z.coerce.number().min(0, 'El efectivo declarado no puede ser negativo'),
   notes: z.string().trim().max(500).optional(),
 });
 
-export type SyncFieldReceiptInput = z.infer<typeof syncFieldReceiptSchema>;
-export type VerifyTransferInput = z.infer<typeof verifyTransferSchema>;
-export type ApproveSettlementInput = z.infer<typeof approveSettlementSchema>;
+export const approveSettlementSchema = z.object({
+  body: approveSettlementBodySchema,
+});
+
+export type SyncFieldReceiptInput = z.infer<typeof syncFieldReceiptBodySchema>;
+export type VerifyTransferInput = z.infer<typeof verifyTransferBodySchema>;
+export type ApproveSettlementInput = z.infer<typeof approveSettlementBodySchema>;
