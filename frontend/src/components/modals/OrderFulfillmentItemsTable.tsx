@@ -24,12 +24,12 @@ export default function OrderFulfillmentItemsTable({
 }: OrderFulfillmentItemsTableProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <h3 id="fulfillment-items-heading" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
-          Artículos Preparados
+      <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <h3 id="fulfillment-items-heading" style={{ margin: 0, fontSize: '0.96rem', fontWeight: 600 }}>
+          Ítems
         </h3>
-        <span className="tabular-nums" style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-          {items.length} ítems
+        <span className="tabular-nums" style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+          {items.length}
         </span>
       </div>
 
@@ -40,14 +40,14 @@ export default function OrderFulfillmentItemsTable({
         aria-labelledby="fulfillment-items-heading"
         style={{ flex: 1, minHeight: 0, overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}
       >
-        <table style={{ width: '100%', fontSize: '0.94rem' }}>
+        <table style={{ width: '100%', fontSize: '0.92rem' }}>
           <thead style={{ position: 'sticky', insetBlockStart: 0, zIndex: 1, backgroundColor: 'var(--background-alt)' }}>
             <tr style={{ textAlign: 'left' }}>
-              <th scope="col" style={{ padding: '12px 16px' }}>Producto</th>
-              <th scope="col" style={{ padding: '12px 16px', textAlign: 'center' }}>Empaque / Bultos</th>
-              <th scope="col" style={{ padding: '12px 16px', textAlign: 'right' }}>Cant Total</th>
-              <th scope="col" style={{ padding: '12px 16px', textAlign: 'center' }}>Peso Real (Kg)</th>
-              <th scope="col" style={{ padding: '12px 16px', textAlign: 'right' }}>Subtotal</th>
+              <th scope="col" style={{ padding: '10px 14px' }}>Producto</th>
+              <th scope="col" style={{ padding: '10px 14px', textAlign: 'center' }}>Bultos</th>
+              <th scope="col" style={{ padding: '10px 14px', textAlign: 'right' }}>Cant</th>
+              <th scope="col" style={{ padding: '10px 14px', textAlign: 'center' }}>Kg</th>
+              <th scope="col" style={{ padding: '10px 14px', textAlign: 'right' }}>Subtotal</th>
             </tr>
           </thead>
           <tbody>
@@ -241,7 +241,7 @@ export default function OrderFulfillmentItemsTable({
           alignItems: 'center',
         }}
       >
-        <span style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Total del Pedido</span>
+        <span style={{ fontSize: '0.96rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Total</span>
         <span className="tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)' }}>
           {formatIntegerARS(currentTotal)}
         </span>

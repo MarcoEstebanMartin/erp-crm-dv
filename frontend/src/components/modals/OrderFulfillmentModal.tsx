@@ -1,21 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, AlertTriangle, SkipForward, Truck, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, AlertTriangle, Truck, X } from 'lucide-react';
 import { BillingType, PaymentMethod } from '../../utils/types';
 import { api } from '../../utils/api';
 import { isBonusOrderItem } from '../../utils/weeklyPromoCartEvaluator';
 import { NativeModalDialog } from './NativeModalDialog';
 import OrderFulfillmentBillingPanel from './OrderFulfillmentBillingPanel';
 import OrderFulfillmentItemsTable from './OrderFulfillmentItemsTable';
-import OrderFulfillmentSuccessView from './OrderFulfillmentSuccessView';
-import OrderFulfillmentQueueSummary from './OrderFulfillmentQueueSummary';
-import {
-  getNextQueueIndex,
-  summarizeFulfillmentQueue,
-  type FulfillmentQueueResult,
-} from './fulfillmentQueue.helper';
-import {
-  formatDeliveryRouteOptionLabel,
-} from '../../utils/orderDeliveryHelpers';
+import { formatDeliveryRouteOptionLabel } from '../../utils/orderDeliveryHelpers';
 import {
   buildInitialFulfillmentWeights,
   calculateFulfillmentOrderTotalInt,
@@ -24,30 +15,21 @@ import {
 } from './orderFulfillmentMath';
 
 interface OrderFulfillmentModalProps {
-  order?: any;
-  queueOrders?: any[];
+  order: any;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function OrderFulfillmentModal({ order, queueOrders, onClose, onSuccess }: OrderFulfillmentModalProps) {
-  const isQueueMode = Boolean(queueOrders && queueOrders.length > 0);
-  const [queueIndex, setQueueIndex] = useState(0);
-  const [queueResults, setQueueResults] = useState<FulfillmentQueueResult[]>([]);
-  const [queueFinished, setQueueFinished] = useState(false);
-  const activeOrder = isQueueMode ? queueOrders![queueIndex] : order;
-
+export default function OrderFulfillmentModal({ order, onClose, onSuccess }: OrderFulfillmentModalProps) {
   const [pesableWeights, setPesableWeights] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmAnomalyBypass, setConfirmAnomalyBypass] = useState(false);
-  const [billingCompleted, setBillingCompleted] = useState(false);
-  const [invoicedOrder, setInvoicedOrder] = useState<any>(null);
   const [deferCae, setDeferCae] = useState(false);
 
-  const [billingType, setBillingType] = useState<BillingType>(activeOrder?.billingType || BillingType.INTERNAL);
+  const [billingType, setBillingType] = useState<BillingType>(order?.billingType || BillingType.INTERNAL);
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>(
-    activeOrder?.deliveryMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY',
+    order?.deliveryMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY',
   );
   const [markPickedUpNow, setMarkPickedUpNow] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.OTHER);
@@ -63,16 +45,16 @@ export default function OrderFulfillmentModal({ order, queueOrders, onClose, onS
   }, []);
 
   useEffect(() => {
-    if (!activeOrder) return;
-    setPesableWeights(buildInitialFulfillmentWeights(activeOrder?.items));
-    setBillingType(activeOrder?.billingType || BillingType.INTERNAL);
-    setDeliveryMethod(activeOrder?.deliveryMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY');
+    if (!order) return;
+    setPesableWeights(buildInitialFulfillmentWeights(order?.items));
+    setBillingType(order?.billingType || BillingType.INTERNAL);
+    setDeliveryMethod(order?.deliveryMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY');
     setMarkPickedUpNow(true);
     setPaymentMethod(PaymentMethod.OTHER);
     setCheckNumber('');
     setErrorMsg(null);
     setConfirmAnomalyBypass(false);
-  }, [activeOrder?.id]);
+  }, [order?.id]);
 
   const handleWeightChange = (orderItemId: number, val: string) => {
     const num = parseFloat(val);
@@ -84,39 +66,22 @@ export default function OrderFulfillmentModal({ order, queueOrders, onClose, onS
   };
 
   const anomalies = useMemo(
-    () => detectFulfillmentWeightAnomalies(activeOrder?.items, pesableWeights),
-    [activeOrder?.items, pesableWeights],
+    () => detectFulfillmentWeightAnomalies(order?.items, pesableWeights),
+    [order?.items, pesableWeights],
   );
   const currentTotal = useMemo(
-    () => calculateFulfillmentOrderTotalInt(activeOrder?.items, pesableWeights),
-    [activeOrder?.items, pesableWeights],
+    () => calculateFulfillmentOrderTotalInt(order?.items, pesableWeights),
+    [order?.items, pesableWeights],
   );
-  const queueSummary = useMemo(() => summarizeFulfillmentQueue(queueResults), [queueResults]);
-
-  const advanceQueueOrFinish = () => {
-    const nextIndex = getNextQueueIndex(queueIndex, queueOrders?.length ?? 0);
-    if (nextIndex !== null) {
-      setQueueIndex(nextIndex);
-    } else {
-      setQueueFinished(true);
-    }
-  };
-
-  const handleSkipQueueOrder = () => {
-    if (!isQueueMode || !activeOrder || loading) return;
-    const clientName = activeOrder.persona?.name || activeOrder.client?.name || 'Consumidor Final';
-    setQueueResults((prev) => [...prev, { orderId: activeOrder.id, clientName, status: 'SKIPPED' }]);
-    advanceQueueOrFinish();
-  };
 
   const executeConfirmAndInvoice = async () => {
-    if (!activeOrder) return;
+    if (!order) return;
     setConfirmAnomalyBypass(false);
     setLoading(true);
     setErrorMsg(null);
     try {
       const weighableIds = new Set<number>(
-        (activeOrder?.items || [])
+        (order?.items || [])
           .filter((item: any) => isOrderItemWeighable(item) && !isBonusOrderItem(item))
           .map((item: any) => Number(item.id)),
       );
@@ -124,10 +89,11 @@ export default function OrderFulfillmentModal({ order, queueOrders, onClose, onS
         .filter(([id, w]) => weighableIds.has(Number(id)) && Number(w) > 0)
         .map(([id, w]) => ({ orderItemId: Number(id), weight: Number(w) }));
 
-      await api.confirmOrderArmado(activeOrder.id, weightItems);
-      const paymentDesc = paymentMethod === 'CHECK' && checkNumber.trim() ? `Cheque N° ${checkNumber.trim()}` : undefined;
-      const updatedOrder = await api.invoiceOrder(
-        activeOrder.id,
+      await api.confirmOrderArmado(order.id, weightItems);
+      const paymentDesc =
+        paymentMethod === 'CHECK' && checkNumber.trim() ? `Cheque N° ${checkNumber.trim()}` : undefined;
+      await api.invoiceOrder(
+        order.id,
         billingType,
         paymentMethod === 'OTHER' ? undefined : paymentMethod,
         paymentDesc,
@@ -137,30 +103,9 @@ export default function OrderFulfillmentModal({ order, queueOrders, onClose, onS
         !deliveryLocked && deliveryMethod === 'PICKUP' ? markPickedUpNow : undefined,
       );
 
-      const resolvedOrder = updatedOrder || { ...activeOrder, totalAmount: currentTotal, billingType };
-
-      if (isQueueMode) {
-        const clientName = activeOrder.persona?.name || activeOrder.client?.name || 'Consumidor Final';
-        setQueueResults((prev) => [
-          ...prev,
-          {
-            orderId: activeOrder.id,
-            clientName,
-            status: 'INVOICED',
-            billingType,
-            invoiceNumber: resolvedOrder?.invoiceNumber ?? null,
-            cae: resolvedOrder?.cae ?? null,
-            totalAmount: resolvedOrder?.totalAmount ?? currentTotal,
-            invoicedOrder: resolvedOrder,
-          },
-        ]);
-        advanceQueueOrFinish();
-      } else {
-        setInvoicedOrder(resolvedOrder);
-        setBillingCompleted(true);
-      }
+      onSuccess();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al completar el pedido.');
+      setErrorMsg(err.message || 'Error al facturar.');
     } finally {
       setLoading(false);
     }
@@ -174,171 +119,83 @@ export default function OrderFulfillmentModal({ order, queueOrders, onClose, onS
     await executeConfirmAndInvoice();
   };
 
-  const confirmRef = useRef(handleConfirmAndInvoice);
-  confirmRef.current = handleConfirmAndInvoice;
+  if (!order) return null;
 
-  useEffect(() => {
-    if (!isQueueMode || queueFinished || loading || confirmAnomalyBypass) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        void confirmRef.current();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isQueueMode, queueFinished, loading, confirmAnomalyBypass]);
-
-  if (isQueueMode && queueFinished) {
-    return (
-      <OrderFulfillmentQueueSummary
-        results={queueResults}
-        totalPlanned={queueOrders!.length}
-        onClose={() => {
-          if (queueSummary.invoicedCount > 0) {
-            onSuccess();
-          } else {
-            onClose();
-          }
-        }}
-      />
-    );
-  }
-
-  if (!activeOrder) return null;
-
-  if (billingCompleted) {
-    return (
-      <OrderFulfillmentSuccessView
-        orderId={activeOrder.id}
-        billingType={billingType}
-        invoicedOrder={invoicedOrder}
-        fallbackTotal={currentTotal}
-        onSuccess={onSuccess}
-      />
-    );
-  }
-
-  const clientInfo = activeOrder.persona || activeOrder.client;
+  const clientInfo = order.persona || order.client;
   const deliveryLocked = Boolean(
-    activeOrder?.deliveryRouteId &&
-      (activeOrder?.deliveryRoute?.status === 'IN_TRANSIT' || activeOrder?.deliveryRoute?.status === 'COMPLETED'),
+    order?.deliveryRouteId &&
+      (order?.deliveryRoute?.status === 'IN_TRANSIT' || order?.deliveryRoute?.status === 'COMPLETED'),
   );
-  const assignedRouteLabel = activeOrder?.deliveryRouteId
-    ? formatDeliveryRouteOptionLabel(activeOrder.deliveryRoute || { id: activeOrder.deliveryRouteId })
+  const assignedRouteLabel = order?.deliveryRouteId
+    ? formatDeliveryRouteOptionLabel(order.deliveryRoute || { id: order.deliveryRouteId })
     : null;
-  const isLastInQueue = isQueueMode && queueIndex === queueOrders!.length - 1;
-  const queueProgressPct = isQueueMode ? Math.round(((queueIndex + 1) / queueOrders!.length) * 100) : 0;
-
-  const handleRequestClose = () => {
-    if (isQueueMode && queueResults.length > 0) {
-      setQueueFinished(true);
-      return;
-    }
-    onClose();
-  };
 
   return (
     <NativeModalDialog
-      isOpen={!billingCompleted}
-      onClose={handleRequestClose}
+      isOpen
+      onClose={onClose}
       ariaLabelledBy="fulfillment-modal-title"
-      style={{ width: '95vw', maxWidth: '1280px', height: '85vh', minHeight: '640px' }}
+      style={{ width: '95vw', maxWidth: '1220px', height: '84vh', minHeight: '600px' }}
     >
-      <div style={{ height: '100%', padding: '24px 28px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {isQueueMode && (
-          <div style={{ flexShrink: 0, height: '4px', backgroundColor: '#F3F4F6', borderRadius: '999px', overflow: 'hidden', marginBottom: '12px' }}>
-            <div style={{ width: `${queueProgressPct}%`, height: '100%', backgroundColor: '#111827', transition: 'width 0.2s ease' }} />
-          </div>
-        )}
+      <div style={{ height: '100%', padding: '22px 26px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div
           className="modal-header"
-          style={{ flexShrink: 0, marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--border-color)' }}
+          style={{ flexShrink: 0, marginBottom: '14px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            {isQueueMode && (
-              <span className="badge-minimal badge-minimal--solid tabular-nums" style={{ fontSize: '0.82rem', padding: '4px 10px' }}>
-                {queueIndex + 1} / {queueOrders!.length}
-              </span>
-            )}
-            <h2 id="fulfillment-modal-title" style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700 }}>
-              Armado y Facturar — Pedido #{activeOrder.id}
+            <h2 id="fulfillment-modal-title" style={{ fontSize: '1.25rem', margin: 0, fontWeight: 700 }}>
+              Pedido #{order.id}
             </h2>
-            {activeOrder.deliveryZone && (
-              <span className="badge" style={{ backgroundColor: '#F3F4F6', color: '#111827', border: '1px solid #E5E7EB', fontSize: '0.85rem', padding: '4px 10px' }}>
-                <Truck size={14} aria-hidden="true" style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                {activeOrder.deliveryZone}
-              </span>
-            )}
-            {isQueueMode && queueResults.length > 0 && (
-              <span className="tabular-nums" style={{ fontSize: '0.8rem', color: '#6B7280', fontWeight: 600 }}>
-                {queueSummary.invoicedCount} facturados{queueSummary.skippedCount > 0 ? ` · ${queueSummary.skippedCount} saltados` : ''}
+            {order.deliveryZone && (
+              <span className="badge-minimal">
+                <Truck size={13} aria-hidden="true" />
+                {order.deliveryZone}
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isQueueMode && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={loading}
-                  onClick={handleSkipQueueOrder}
-                  style={{ height: '32px', padding: '0 12px', fontSize: '0.82rem', fontWeight: 600 }}
-                >
-                  <SkipForward size={14} aria-hidden="true" />
-                  Saltar
-                </button>
-                {queueResults.length > 0 && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={loading}
-                    onClick={() => setQueueFinished(true)}
-                    style={{ height: '32px', padding: '0 12px', fontSize: '0.82rem', fontWeight: 600 }}
-                  >
-                    Finalizar
-                  </button>
-                )}
-              </>
-            )}
-            <button type="button" className="btn-close" aria-label="Cerrar ventana" onClick={handleRequestClose} style={{ padding: '6px', borderRadius: '6px' }}>
-              <X size={22} aria-hidden="true" />
-            </button>
-          </div>
+          <button type="button" className="btn-close" aria-label="Cerrar" onClick={onClose} style={{ padding: '5px', borderRadius: '6px' }}>
+            <X size={20} aria-hidden="true" />
+          </button>
         </div>
 
         {anomalies.length > 0 && (
           <div
             role={confirmAnomalyBypass ? 'alertdialog' : 'alert'}
-            aria-label="Alerta de seguridad en pesos"
-            style={{ flexShrink: 0, backgroundColor: '#FEF2F2', color: '#111827', border: '1px solid rgba(227, 6, 19, 0.28)', padding: '12px 18px', borderRadius: '10px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}
+            aria-label="Alerta de pesos"
+            style={{
+              flexShrink: 0,
+              backgroundColor: '#FEF2F2',
+              color: '#111827',
+              border: '1px solid rgba(227, 6, 19, 0.28)',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <AlertTriangle size={24} aria-hidden="true" style={{ color: '#E30613', flexShrink: 0 }} />
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#E30613' }}>
-                  {confirmAnomalyBypass
-                    ? 'Confirmación requerida: se detectaron pesos desproporcionados'
-                    : 'Advertencia: Peso fuera de rango respecto al promedio esperado'}
-                </div>
-                <div style={{ fontSize: '0.85rem', marginTop: '2px', color: '#374151' }}>
-                  {anomalies.map((a) => `${a.item.product?.name}: ${a.currentWeight} kg (~${a.suggestedAvgWeight} kg)`).join(' | ')}
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <AlertTriangle size={20} aria-hidden="true" style={{ color: '#E30613', flexShrink: 0 }} />
+              <div style={{ fontSize: '0.84rem', color: '#374151' }}>
+                <strong style={{ color: '#E30613', marginRight: '6px' }}>Peso fuera de rango:</strong>
+                {anomalies.map((a) => `${a.item.product?.name}: ${a.currentWeight} kg (~${a.suggestedAvgWeight} kg)`).join(' · ')}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {anomalies.some((a) => a.possibleDecimalFix !== null) && (
                 <button
                   type="button"
-                  style={{ backgroundColor: '#FFFFFF', color: '#E30613', fontWeight: 700, border: '1px solid #FECACA', padding: '7px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                  style={{ backgroundColor: '#FFFFFF', color: '#E30613', fontWeight: 700, border: '1px solid #FECACA', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' }}
                   onClick={() => {
                     anomalies.forEach((a) => {
                       if (a.possibleDecimalFix !== null) handleWeightChange(a.item.id, a.possibleDecimalFix.toString());
                     });
                   }}
                 >
-                  Corregir coma faltante
+                  Corregir coma
                 </button>
               )}
               {confirmAnomalyBypass && (
@@ -347,17 +204,18 @@ export default function OrderFulfillmentModal({ order, queueOrders, onClose, onS
                     type="button"
                     disabled={loading}
                     onClick={() => setConfirmAnomalyBypass(false)}
-                    style={{ backgroundColor: '#FFFFFF', color: '#111827', fontWeight: 600, border: '1px solid #D1D5DB', padding: '7px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                    className="btn btn-secondary"
+                    style={{ height: '30px', padding: '0 10px', fontSize: '0.82rem' }}
                   >
-                    Revisar pesos
+                    Revisar
                   </button>
                   <button
                     type="button"
                     disabled={loading}
                     onClick={() => void executeConfirmAndInvoice()}
-                    style={{ backgroundColor: '#E30613', color: '#FFFFFF', fontWeight: 700, border: 'none', padding: '7px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                    style={{ backgroundColor: '#E30613', color: '#FFFFFF', fontWeight: 700, border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem' }}
                   >
-                    {loading ? 'Procesando...' : 'Confirmar pesos y facturar igual'}
+                    {loading ? 'Procesando...' : 'Facturar igual'}
                   </button>
                 </>
               )}
@@ -366,15 +224,15 @@ export default function OrderFulfillmentModal({ order, queueOrders, onClose, onS
         )}
 
         {errorMsg && (
-          <div role="alert" style={{ flexShrink: 0, backgroundColor: '#FEF2F2', color: '#E30613', border: '1px solid #FECACA', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={18} aria-hidden="true" />
+          <div role="alert" style={{ flexShrink: 0, backgroundColor: '#FEF2F2', color: '#E30613', border: '1px solid #FECACA', padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem' }}>
+            <AlertCircle size={16} aria-hidden="true" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '28px' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.65fr 1fr', gap: '24px' }}>
           <OrderFulfillmentItemsTable
-            items={activeOrder.items || []}
+            items={order.items || []}
             pesableWeights={pesableWeights}
             anomalies={anomalies}
             currentTotal={currentTotal}
@@ -403,14 +261,6 @@ export default function OrderFulfillmentModal({ order, queueOrders, onClose, onS
             onSelectedBankIdChange={setSelectedBankId}
             loading={loading}
             onConfirmAndInvoice={handleConfirmAndInvoice}
-            submitLabel={
-              isQueueMode
-                ? isLastInQueue
-                  ? 'Confirmar y Finalizar'
-                  : 'Confirmar y Siguiente'
-                : 'Confirmar y Facturar'
-            }
-            shortcutHint={isQueueMode ? 'Ctrl+Enter' : undefined}
           />
         </div>
       </div>

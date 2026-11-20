@@ -1,4 +1,4 @@
-import { CheckCircle, DollarSign, Store, Truck } from 'lucide-react';
+import { CheckCircle, Store, Truck } from 'lucide-react';
 import { BillingType, PaymentMethod } from '../../utils/types';
 
 interface OrderFulfillmentBillingPanelProps {
@@ -62,7 +62,7 @@ export default function OrderFulfillmentBillingPanel({
   onSelectedBankIdChange,
   loading,
   onConfirmAndInvoice,
-  submitLabel = 'Confirmar y Facturar',
+  submitLabel = 'Facturar',
   shortcutHint,
 }: OrderFulfillmentBillingPanelProps) {
   return (
@@ -78,27 +78,20 @@ export default function OrderFulfillmentBillingPanel({
         overflowY: 'auto',
       }}
     >
-      <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-        <h3 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
-          <DollarSign size={20} aria-hidden="true" style={{ color: '#111827' }} /> Facturación y Cobro
-        </h3>
-      </div>
-
-      <div>
-        <span style={labelCapsStyle}>Cliente</span>
-        <div style={{ fontSize: '1.08rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
+      <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+        <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
           {clientName || 'Consumidor Final'}
         </div>
         {clientCuit && (
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            CUIT: {clientCuit}
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+            {clientCuit}
           </div>
         )}
       </div>
 
       <div className="form-group" style={{ marginBottom: 0 }}>
         <label htmlFor="fulfillment-billing-type" style={labelCapsStyle}>
-          Canal de Facturación
+          Canal
         </label>
         <select
           id="fulfillment-billing-type"
@@ -113,20 +106,15 @@ export default function OrderFulfillmentBillingPanel({
       </div>
 
       {billingType === 'OFFICIAL' && (
-        <div style={{ backgroundColor: '#F9FAFB', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
-          <span style={{ fontSize: '0.78rem', color: '#4B5563', fontWeight: 700 }}>
-            Emisión AFIP / ARCA
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: !deferCae ? 700 : 500, color: !deferCae ? '#111827' : '#4B5563' }}>
-              <input type="radio" name="deferCae" checked={!deferCae} onChange={() => onDeferCaeChange(false)} />
-              CAE Inmediato
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem', cursor: 'pointer', fontWeight: deferCae ? 700 : 500, color: deferCae ? '#111827' : '#4B5563' }}>
-              <input type="radio" name="deferCae" checked={deferCae} onChange={() => onDeferCaeChange(true)} />
-              Pre-Facturar A (Diferir CAE)
-            </label>
-          </div>
+        <div style={{ backgroundColor: '#F9FAFB', padding: '10px 12px', borderRadius: '8px', border: '1px solid #E5E7EB', display: 'flex', gap: '16px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', cursor: 'pointer', fontWeight: !deferCae ? 700 : 500, color: !deferCae ? '#111827' : '#4B5563' }}>
+            <input type="radio" name="deferCae" checked={!deferCae} onChange={() => onDeferCaeChange(false)} />
+            CAE ahora
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', cursor: 'pointer', fontWeight: deferCae ? 700 : 500, color: deferCae ? '#111827' : '#4B5563' }}>
+            <input type="radio" name="deferCae" checked={deferCae} onChange={() => onDeferCaeChange(true)} />
+            Diferir CAE
+          </label>
         </div>
       )}
 
@@ -207,7 +195,7 @@ export default function OrderFulfillmentBillingPanel({
 
       <div className="form-group" style={{ marginBottom: 0 }}>
         <label htmlFor="fulfillment-payment-method" style={labelCapsStyle}>
-          Medio de Pago / Condición
+          Pago
         </label>
         <select
           id="fulfillment-payment-method"

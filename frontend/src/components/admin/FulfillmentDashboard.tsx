@@ -4,6 +4,7 @@ import {
   printFacturaOficialA4,
 } from '../../utils/printHelpers';
 import OrderFulfillmentModal from '../modals/OrderFulfillmentModal';
+import OrderBatchInvoiceModal from '../modals/OrderBatchInvoiceModal';
 import ConfirmModal from '../modals/ConfirmModal';
 import { usePendingDeliveryRoutesQuery } from '../../hooks/queries';
 import { FulfillmentOrderCard } from './FulfillmentOrderCard';
@@ -304,10 +305,10 @@ export default function FulfillmentDashboard() {
       )}
 
       {f.fulfillmentQueueOrders && f.fulfillmentQueueOrders.length > 0 && (
-        <OrderFulfillmentModal
-          queueOrders={f.fulfillmentQueueOrders}
+        <OrderBatchInvoiceModal
+          orders={f.fulfillmentQueueOrders}
           onClose={() => f.handleCloseFulfillmentQueue(false)}
-          onSuccess={() => f.handleCloseFulfillmentQueue(true)}
+          onComplete={() => f.handleCloseFulfillmentQueue(true)}
         />
       )}
 

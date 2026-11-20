@@ -218,10 +218,10 @@ export function FulfillmentToolbar({
               borderRadius: '6px',
             }}
             onClick={handleStartFulfillmentQueue}
-            title="Revisar y facturar pedidos en armado de corrido"
+            title="Facturar lote"
           >
             <CheckCircle2 size={13} aria-hidden="true" />
-            Revisar y Facturar ({queueBatchCount})
+            Facturar ({queueBatchCount})
           </button>
         )}
 
@@ -281,7 +281,7 @@ export function FulfillmentToolbar({
           title="Imprimir rótulos térmicos adhesivos para los bultos"
         >
           <Tag size={13} aria-hidden="true" />
-          Rótulos Bultos {selectedOrderIdsCount > 0 ? `(${selectedOrderIdsCount})` : ''}
+          Rótulos {selectedOrderIdsCount > 0 ? `(${selectedOrderIdsCount})` : ''}
         </button>
       </div>
     </div>
