@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
+import { sumIntegerAmounts, toDecimal } from '../../core/money';
 import { normalizeStopSequences } from '../../engines/delivery-dispatch.engine';
 import { logisticsResourcesService } from './logistics-resources.service';
 import {
@@ -280,9 +281,27 @@ export const deliveryRouteService = {
       );
     }
 
+    const updateData: Prisma.DeliveryRouteUpdateInput = { status };
+    if (status === 'IN_TRANSIT') {
+      const existing = await prisma.deliveryRoute.findUnique({
+        where: { id: routeId },
+        select: {
+          signedByDriverAt: true,
+          orders: { select: { bultosCount: true } },
+        },
+      });
+      if (!existing) throw new AppError('Hoja de ruta no encontrada.', 404);
+      const totalBultos = sumIntegerAmounts(
+        existing.orders.map((o) => Math.max(1, toDecimal(o.bultosCount ?? 1).toNumber())),
+      ).toNumber();
+      updateData.custodyStatus = 'LOADED_IN_TRANSIT';
+      updateData.totalBultos = totalBultos;
+      updateData.signedByDriverAt = existing.signedByDriverAt ?? new Date();
+    }
+
     const route = await prisma.deliveryRoute.update({
       where: { id: routeId },
-      data: { status },
+      data: updateData,
       include: { orders: true },
     });
 

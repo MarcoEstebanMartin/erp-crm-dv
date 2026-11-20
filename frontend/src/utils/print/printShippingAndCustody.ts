@@ -147,8 +147,12 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
   const totalBultosRuta = totalBultosFraccionados + totalCajasTablaEstimadas;
   const driverNameUpper = escapePrintHtml((route.driverName || '').toUpperCase());
   const companionHtml = route.companionName
-    ? ` (Acompañante: ${escapePrintHtml(route.companionName.toUpperCase())})`
+    ? `Acompañante: ${escapePrintHtml(route.companionName.toUpperCase())}`
     : '';
+  const logoSrc =
+    typeof window !== 'undefined' && window.location?.origin
+      ? `${window.location.origin}/logo.png`
+      : '/logo.png';
 
   const rowsHtml = orders
     .map((o: any) => {
@@ -157,6 +161,8 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
       const noteText = (o.notes || o.bultosDetails?.notes || '').trim();
       return `<tr>
         <td class="col-check"><span class="check-box"></span></td>
+        <td class="col-check"><span class="check-box"></span></td>
+        <td class="col-transf"><span class="check-box"></span></td>
         <td class="col-id">#${o.id}</td>
         <td>
           <div class="client-name">${escapePrintHtml(client.name)}</div>
@@ -169,18 +175,18 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
     .join('');
 
   openPrintDocument(
-    'width=900,height=1100',
+    'width=960,height=1100',
     `<!DOCTYPE html>
-    <html>
+    <html lang="es">
       <head>
-        <title>Hoja de Ruta #${route.id}</title>
+        <title>Viaje #${route.id}</title>
         <style>
-          @page { size: A4 portrait; margin: 12mm 14mm; }
+          @page { size: A4 portrait; margin: 14mm 15mm; }
           * { box-sizing: border-box; }
-          body { font-family: ${PRINT_FONT_STACK}; font-size: 11px; color: #111827; margin: 0; padding: 0; line-height: 1.35; -webkit-font-smoothing: antialiased; }
-          .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #111827; padding-bottom: 10px; margin-bottom: 14px; }
-          .brand { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; text-transform: uppercase; color: #111827; }
-          .doc-type { font-size: 10px; font-weight: 500; color: #6b7280; letter-spacing: 0.04em; text-transform: uppercase; margin-top: 2px; }
+          body { font-family: ${PRINT_FONT_STACK}; font-size: 11px; color: #111827; background: #f3f4f6; margin: 0; padding: 16px; line-height: 1.35; -webkit-font-smoothing: antialiased; }
+          .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 15mm; background: #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08); }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #111827; padding-bottom: 10px; margin-bottom: 14px; }
+          .brand-logo { max-height: 36px; max-width: 140px; object-fit: contain; display: block; }
           .route-ref { text-align: right; }
           .route-num { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
           .route-date { font-size: 10.5px; color: #6b7280; font-variant-numeric: tabular-nums; margin-top: 1px; }
@@ -192,82 +198,76 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
           .meta-sub { font-size: 9.5px; color: #6b7280; margin-top: 1px; }
           .section-label { font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; margin: 0 0 6px 0; }
           table { width: 100%; border-collapse: collapse; }
-          th { border-bottom: 1px solid #d1d5db; padding: 6px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; color: #6b7280; text-align: left; }
-          td { border-bottom: 1px solid #f3f4f6; padding: 7px 8px; vertical-align: middle; }
-          .col-check { width: 32px; text-align: center; }
+          th { border-bottom: 1px solid #d1d5db; padding: 6px 6px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; color: #6b7280; text-align: left; }
+          td { border-bottom: 1px solid #f3f4f6; padding: 7px 6px; vertical-align: middle; }
+          .col-check { width: 42px; text-align: center; }
+          .col-transf { width: 78px; text-align: center; }
           .check-box { display: inline-block; width: 13px; height: 13px; border: 1px solid #9ca3af; border-radius: 3px; vertical-align: middle; }
-          .col-id { width: 56px; font-weight: 600; font-variant-numeric: tabular-nums; color: #374151; }
-          .client-name { font-weight: 600; color: #111827; font-size: 11px; }
-          .client-addr { font-size: 9.5px; color: #6b7280; margin-top: 1px; }
-          .col-bultos { width: 68px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
-          .col-notes { font-size: 10px; color: #4b5563; }
+          .col-id { width: 52px; font-weight: 600; font-variant-numeric: tabular-nums; color: #374151; }
+          .client-name { font-weight: 600; color: #111827; font-size: 10.5px; }
+          .client-addr { font-size: 9px; color: #6b7280; margin-top: 1px; }
+          .col-bultos { width: 54px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+          .col-notes { font-size: 9.5px; color: #4b5563; }
           .muted { color: #9ca3af; }
-          .custody-footer { margin-top: 22px; padding-top: 12px; border-top: 1px solid #e5e7eb; break-inside: avoid; }
-          .custody-note { font-size: 9.5px; color: #6b7280; line-height: 1.45; margin-bottom: 28px; }
-          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-          .sig-block { border-top: 1px solid #9ca3af; padding-top: 6px; }
+          .dispatch-footer { margin-top: 32px; break-inside: avoid; }
+          .sig-block { max-width: 320px; border-top: 1px solid #9ca3af; padding-top: 6px; }
           .sig-title { font-size: 10px; font-weight: 600; color: #111827; }
           .sig-sub { font-size: 9px; color: #6b7280; margin-top: 2px; }
-          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+          @media print {
+            body { background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .page { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+          }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div>
-            <div class="brand">${escapePrintHtml(company.nombreFantasia)}</div>
-            <div class="doc-type">Hoja de ruta · Transferencia de custodia</div>
-          </div>
-          <div class="route-ref">
-            <div class="route-num">Ruta #${route.id}</div>
-            <div class="route-date">${new Date(route.date || Date.now()).toLocaleDateString('es-AR')}</div>
-          </div>
-        </div>
-        <div class="meta-strip">
-          <div class="meta-cell">
-            <div class="meta-label">Chofer</div>
-            <div class="meta-val">${driverNameUpper || 'S/D'}</div>
-            ${companionHtml ? `<div class="meta-sub">${companionHtml.replace(/^\s*\(|\)\s*$/g, '')}</div>` : ''}
-          </div>
-          <div class="meta-cell">
-            <div class="meta-label">Vehículo</div>
-            <div class="meta-val">${escapePrintHtml(route.vehiclePlate || 'S/D')}</div>
-            ${route.vehicleDescription ? `<div class="meta-sub">${escapePrintHtml(route.vehicleDescription)}</div>` : ''}
-          </div>
-          <div class="meta-cell">
-            <div class="meta-label">Cajas tabla</div>
-            <div class="meta-val">~ ${totalCajasTablaEstimadas}</div>
-          </div>
-          <div class="meta-cell">
-            <div class="meta-label">Fajados</div>
-            <div class="meta-val">${totalBultosFraccionados} u</div>
-          </div>
-          <div class="meta-cell">
-            <div class="meta-label">Total carga</div>
-            <div class="meta-val" style="font-size: 13px;">${totalBultosRuta}</div>
-          </div>
-        </div>
-        <div class="section-label">Pedidos (${orders.length})</div>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 32px; text-align: center;">OK</th>
-              <th style="width: 56px;">Pedido</th>
-              <th>Cliente</th>
-              <th style="width: 68px; text-align: center;">Bultos</th>
-              <th>Notas</th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-        <div class="custody-footer">
-          <div class="custody-note">
-            El chofer declara recibir en conformidad el total de bultos detallados, asumiendo su custodia y transporte hasta la entrega efectiva al cliente.
-          </div>
-          <div class="signatures">
-            <div class="sig-block">
-              <div class="sig-title">Chofer · ${driverNameUpper}</div>
-              <div class="sig-sub">DNI / Aclaración</div>
+        <div class="page">
+          <div class="header">
+            <img src="${logoSrc}" alt="${escapePrintHtml(company.nombreFantasia)}" class="brand-logo" />
+            <div class="route-ref">
+              <div class="route-num">Viaje #${route.id}</div>
+              <div class="route-date">${new Date(route.date || Date.now()).toLocaleDateString('es-AR')}</div>
             </div>
+          </div>
+          <div class="meta-strip">
+            <div class="meta-cell">
+              <div class="meta-label">Chofer</div>
+              <div class="meta-val">${driverNameUpper || 'S/D'}</div>
+              ${companionHtml ? `<div class="meta-sub">${companionHtml}</div>` : ''}
+            </div>
+            <div class="meta-cell">
+              <div class="meta-label">Vehículo</div>
+              <div class="meta-val">${escapePrintHtml(route.vehiclePlate || 'S/D')}</div>
+              ${route.vehicleDescription ? `<div class="meta-sub">${escapePrintHtml(route.vehicleDescription)}</div>` : ''}
+            </div>
+            <div class="meta-cell">
+              <div class="meta-label">Cajas tabla</div>
+              <div class="meta-val">~ ${totalCajasTablaEstimadas}</div>
+            </div>
+            <div class="meta-cell">
+              <div class="meta-label">Fajados</div>
+              <div class="meta-val">${totalBultosFraccionados} u</div>
+            </div>
+            <div class="meta-cell">
+              <div class="meta-label">Total carga</div>
+              <div class="meta-val" style="font-size: 13px;">${totalBultosRuta}</div>
+            </div>
+          </div>
+          <div class="section-label">Pedidos (${orders.length})</div>
+          <table>
+            <thead>
+              <tr>
+                <th class="col-check">Debe</th>
+                <th class="col-check">Pagó</th>
+                <th class="col-transf">Transferencia</th>
+                <th class="col-id">Pedido</th>
+                <th>Cliente</th>
+                <th class="col-bultos">Bultos</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <div class="dispatch-footer">
             <div class="sig-block">
               <div class="sig-title">Responsable Despacho</div>
               <div class="sig-sub">Fecha y hora de carga: ____ / ____ / ____ · ____ : ____ hs</div>

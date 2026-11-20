@@ -14,8 +14,6 @@ interface RepartoCreateRouteModalProps {
   editingRouteId: number | null;
   onClose: () => void;
   onSubmit: (e: FormEvent) => void;
-  routeName: string;
-  setRouteName: (val: string) => void;
   driverName: string;
   setDriverName: (val: string) => void;
   driverEmployeeId: number | null;
@@ -50,7 +48,7 @@ interface RepartoCreateRouteModalProps {
 }
 
 export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
-  show, editingRouteId, onClose, onSubmit, routeName, setRouteName,
+  show, editingRouteId, onClose, onSubmit,
   driverName, setDriverName, setDriverEmployeeId, companionName, setCompanionName,
   vehiclePlate, setVehiclePlate, vehicleDescription, setVehicleDescription, setVehicleId,
   selectedVehicleKey, setSelectedVehicleKey, driverOptions, fleetVehicles,
@@ -62,6 +60,8 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
   const selectedOrders = modalOrderPool.filter((o) => selectedOrderIds.includes(o.id));
   const metrics = computeTripDisplayMetrics(selectedOrders);
   const [isCustomDriver, setIsCustomDriver] = useState(false);
+  const [isCustomCompanion, setIsCustomCompanion] = useState(false);
+  const companionOptions = driverOptions.filter((d) => !driverName || d.fullName !== driverName);
   const visibleSelectedCount = filteredPendingOrders.filter((o) => selectedOrderIds.includes(o.id)).length;
   const allVisibleSelected = filteredPendingOrders.length > 0 && visibleSelectedCount === filteredPendingOrders.length;
   const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
@@ -69,6 +69,7 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
   useEffect(() => {
     if (!show) return;
     setIsCustomDriver(Boolean(driverName && !driverOptions.some((d) => d.fullName === driverName)));
+    setIsCustomCompanion(Boolean(companionName && !driverOptions.some((d) => d.fullName === companionName)));
   }, [show, editingRouteId]);
 
   return (
@@ -100,92 +101,62 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minHeight: 0, height: '100%', overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', flexShrink: 0 }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label htmlFor="reparto-route-name">Nombre del viaje</label>
-                <input id="reparto-route-name" type="text" className="input" placeholder="Ruta Sur" value={routeName} onChange={(e) => setRouteName(e.target.value)} />
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label htmlFor="reparto-companion">Acompañante</label>
-                <input id="reparto-companion" type="text" className="input" placeholder="Opcional" value={companionName} onChange={(e) => setCompanionName(e.target.value)} />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', flexShrink: 0 }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label htmlFor="reparto-driver">Conductor</label>
-                <select
-                  id="reparto-driver"
-                  className="select"
-                  value={isCustomDriver ? 'CUSTOM' : driverName}
-                  onChange={(e) => {
-                    const nextName = e.target.value;
-                    if (nextName === 'CUSTOM') {
-                      setIsCustomDriver(true);
-                      setDriverName('');
-                      setDriverEmployeeId(null);
-                      return;
-                    }
-                    setIsCustomDriver(false);
-                    setDriverName(nextName);
-                    const found = driverOptions.find((d) => d.fullName === nextName);
-                    setDriverEmployeeId(found?.employeeId ?? null);
-                  }}
-                  required
-                >
+                <select id="reparto-driver" name="driverName" className="select" value={isCustomDriver ? 'CUSTOM' : driverName} required onChange={(e) => {
+                  const nextName = e.target.value;
+                  if (nextName === 'CUSTOM') { setIsCustomDriver(true); setDriverName(''); setDriverEmployeeId(null); return; }
+                  setIsCustomDriver(false); setDriverName(nextName);
+                  if (!isCustomCompanion && companionName && companionName === nextName) setCompanionName('');
+                  setDriverEmployeeId(driverOptions.find((d) => d.fullName === nextName)?.employeeId ?? null);
+                }}>
                   <option value="">Seleccionar...</option>
-                  {driverOptions.map((d) => (
-                    <option key={`${d.employeeId ?? 'x'}-${d.fullName}`} value={d.fullName}>
-                      {d.fullName}
-                    </option>
-                  ))}
+                  {driverOptions.map((d) => <option key={`${d.employeeId ?? 'x'}-${d.fullName}`} value={d.fullName}>{d.fullName}</option>)}
                   <option value="CUSTOM">Otro</option>
                 </select>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label htmlFor="reparto-vehicle">Vehículo</label>
-                <select
-                  id="reparto-vehicle"
-                  className="select"
-                  value={selectedVehicleKey}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSelectedVehicleKey(val);
-                    if (val === 'CUSTOM' || !val) {
-                      setVehicleId(null); setVehiclePlate(''); setVehicleDescription('');
-                    } else {
-                      const found = fleetVehicles.find((v) => v.plate === val);
-                      if (found) {
-                        setVehicleId(found.id ?? null);
-                        setVehiclePlate(found.plate);
-                        setVehicleDescription(found.description);
-                      }
-                    }
-                  }}
-                  required
-                >
-                  <option value="">Seleccionar...</option>
-                  {fleetVehicles.map((v) => (
-                    <option key={v.plate} value={v.plate}>{v.description} ({v.plate})</option>
-                  ))}
-                  <option value="CUSTOM">Otro (Manual)</option>
+                <label htmlFor="reparto-companion">Acompañante</label>
+                <select id="reparto-companion" name="companionName" className="select" value={isCustomCompanion ? 'CUSTOM' : companionName} onChange={(e) => {
+                  const nextName = e.target.value;
+                  if (nextName === 'CUSTOM') { setIsCustomCompanion(true); setCompanionName(''); return; }
+                  setIsCustomCompanion(false); setCompanionName(nextName);
+                }}>
+                  <option value="">Opcional</option>
+                  {companionOptions.map((d) => <option key={`comp-${d.employeeId ?? 'x'}-${d.fullName}`} value={d.fullName}>{d.fullName}</option>)}
+                  <option value="CUSTOM">Otro</option>
                 </select>
               </div>
             </div>
 
-            {isCustomDriver && (
-              <div className="form-group" style={{ marginBottom: 0, flexShrink: 0 }}>
-                <label htmlFor="reparto-driver-custom">Nombre del conductor</label>
-                <input
-                  id="reparto-driver-custom"
-                  type="text"
-                  className="input"
-                  placeholder="Nombre y apellido"
-                  value={driverName}
-                  onChange={(e) => {
-                    setDriverName(e.target.value);
-                    setDriverEmployeeId(null);
-                  }}
-                  required
-                />
+            <div className="form-group" style={{ marginBottom: 0, flexShrink: 0 }}>
+              <label htmlFor="reparto-vehicle">Vehículo</label>
+              <select id="reparto-vehicle" name="vehiclePlate" className="select" value={selectedVehicleKey} required onChange={(e) => {
+                const val = e.target.value;
+                setSelectedVehicleKey(val);
+                if (val === 'CUSTOM' || !val) { setVehicleId(null); setVehiclePlate(''); setVehicleDescription(''); return; }
+                const found = fleetVehicles.find((v) => v.plate === val);
+                if (found) { setVehicleId(found.id ?? null); setVehiclePlate(found.plate); setVehicleDescription(found.description); }
+              }}>
+                <option value="">Seleccionar...</option>
+                {fleetVehicles.map((v) => <option key={v.plate} value={v.plate}>{v.description} ({v.plate})</option>)}
+                <option value="CUSTOM">Otro (Manual)</option>
+              </select>
+            </div>
+
+            {(isCustomDriver || isCustomCompanion) && (
+              <div style={{ display: 'grid', gridTemplateColumns: isCustomDriver && isCustomCompanion ? '1fr 1fr' : '1fr', gap: '10px', flexShrink: 0 }}>
+                {isCustomDriver && (
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label htmlFor="reparto-driver-custom">Nombre del conductor</label>
+                    <input id="reparto-driver-custom" name="driverNameCustom" type="text" className="input" placeholder="Nombre y apellido" value={driverName} onChange={(e) => { setDriverName(e.target.value); setDriverEmployeeId(null); }} required />
+                  </div>
+                )}
+                {isCustomCompanion && (
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label htmlFor="reparto-companion-custom">Nombre del acompañante</label>
+                    <input id="reparto-companion-custom" name="companionNameCustom" type="text" className="input" placeholder="Nombre y apellido" value={companionName} onChange={(e) => setCompanionName(e.target.value)} />
+                  </div>
+                )}
               </div>
             )}
 

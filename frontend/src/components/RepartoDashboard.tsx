@@ -155,8 +155,7 @@ export default function RepartoDashboard() {
                         style={{ cursor: 'pointer', backgroundColor: c.selectedRoute?.id === r.id ? 'var(--bg-app)' : 'transparent' }}
                       >
                         <td className="tabular-nums" style={{ fontWeight: 600 }}>
-                          <div>#{r.id}</div>
-                          {r.routeName && <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{r.routeName}</div>}
+                          #{r.id}
                         </td>
                         <td>
                           <div style={{ fontWeight: 500 }}>
@@ -215,7 +214,6 @@ export default function RepartoDashboard() {
             setExpandedStops={c.setExpandedStops}
             handleEditRoute={c.handleOpenEditModal}
             handleReorderStop={c.handleReorderStop}
-            handleTransferCustody={c.handleTransferCustody}
             handleChangeStatus={c.handleChangeStatus}
             handleOpenSettleModal={c.handleOpenSettleModal}
             handleOpenCollectForStop={c.handleOpenCollectForStop}
@@ -239,7 +237,6 @@ export default function RepartoDashboard() {
         editingRouteId={c.editingRouteId}
         onClose={() => { c.setErrorMsg(null); c.setShowCreateModal(false); }}
         onSubmit={c.handleCreateRouteSubmit}
-        routeName={c.routeName} setRouteName={c.setRouteName}
         driverName={c.driverName} setDriverName={c.setDriverName}
         driverEmployeeId={c.driverEmployeeId} setDriverEmployeeId={c.setDriverEmployeeId}
         companionName={c.companionName} setCompanionName={c.setCompanionName}

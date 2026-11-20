@@ -24,12 +24,7 @@ export interface OrderDeliverySummary {
  */
 export function formatDeliveryRouteOptionLabel(route: any): string {
   if (!route || !route.id) return 'Viaje';
-  const idPart = `Viaje #${route.id}`;
-  if (route.routeName) {
-    const driverSuffix = route.driverName ? ` (${route.driverName})` : '';
-    return `${idPart} · ${route.routeName}${driverSuffix}`;
-  }
-  return [idPart, route.driverName, route.vehiclePlate].filter(Boolean).join(' · ');
+  return [`Viaje #${route.id}`, route.driverName, route.vehiclePlate].filter(Boolean).join(' · ');
 }
 
 /**
@@ -61,9 +56,7 @@ export function formatOrderDeliverySummary(order: any): OrderDeliverySummary {
   if (method === 'PICKUP') {
     badgeLabel = isPickedUp ? 'Retirado en local' : 'Retiro local';
   } else if (routeId) {
-    badgeLabel = order?.deliveryRoute?.routeName
-      ? `Viaje #${routeId} · ${order.deliveryRoute.routeName}`
-      : `Viaje #${routeId}`;
+    badgeLabel = `Viaje #${routeId}`;
   } else if (order?.deliveredAt) {
     badgeLabel = 'Entregado';
   }

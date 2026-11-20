@@ -66,9 +66,9 @@ describe('Paso 4 — Entregas, Menú Logística y Armado de Viajes', () => {
     const editForm = resolveEditRouteFormValues(
       {
         id: 7,
-        routeName: 'Sur Ruta 33',
         driverEmployeeId: 75,
         driverName: 'Matías Rodríguez',
+        companionName: 'Fabián Maya',
         vehicleId: 3,
         vehiclePlate: 'AB 919 WO',
         orders: [{ id: 99 }],
@@ -78,10 +78,9 @@ describe('Paso 4 — Entregas, Menú Logística y Armado de Viajes', () => {
     );
 
     expect(editForm).toEqual({
-      routeName: 'Sur Ruta 33',
       driverEmployeeId: 75,
       driverName: 'Matías Rodríguez',
-      companionName: '',
+      companionName: 'Fabián Maya',
       vehicleId: 3,
       vehiclePlate: 'AB 919 WO',
       vehicleDescription: 'Mercedes-Benz Accelo 1016',
@@ -112,6 +111,13 @@ describe('Paso 4 — Entregas, Menú Logística y Armado de Viajes', () => {
     expect(createModal).toContain("width: 'min(1320px, 95dvw)'");
     expect(createModal).toContain("height: 'min(760px, 90dvh)'");
     expect(createModal).toContain('fillHeight');
+    expect(createModal).not.toContain('Nombre del viaje');
+    expect(createModal).toContain('id="reparto-companion"');
+    expect(createModal).toContain('name="companionName"');
+
+    const activePanel = readSrc('components/reparto/RepartoActiveRoutePanel.tsx');
+    expect(activePanel).not.toContain('Custodia');
+    expect(activePanel).not.toContain('Sin carga');
   });
 
   it('respeta zona ideal <= 300 líneas en todos los archivos nuevos y editados de Reparto', () => {

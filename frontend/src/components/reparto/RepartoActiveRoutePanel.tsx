@@ -1,5 +1,5 @@
 import type { FC, Dispatch, SetStateAction } from 'react';
-import { Navigation, CheckCircle, Play, Map, Printer, Lock, Clock, Pencil, ChevronUp, ChevronDown, Banknote } from 'lucide-react';
+import { Navigation, CheckCircle, Play, Map, Printer, Pencil, ChevronUp, ChevronDown, Banknote } from 'lucide-react';
 import { printDeliveryRouteCustodyGuide } from '../../utils/printHelpers';
 import { RouteMap } from './LeafletRouteMap';
 import { computeTripDisplayMetrics } from './repartoRouteHelpers';
@@ -14,7 +14,6 @@ interface RepartoActiveRoutePanelProps {
   setExpandedStops: Dispatch<SetStateAction<Record<string, boolean>>>;
   handleEditRoute?: (route: any) => void;
   handleReorderStop?: (routeId: number, currentOrderIds: number[], index: number, direction: -1 | 1) => void;
-  handleTransferCustody: (route: any) => void;
   handleChangeStatus: (routeId: number, nextStatus: string) => void;
   handleOpenSettleModal: (route: any) => void;
   handleOpenCollectForStop?: (stop: any) => void;
@@ -24,7 +23,7 @@ interface RepartoActiveRoutePanelProps {
 export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
   selectedRoute, activeRouteTspDetails, selectedRouteStreetPoints, liveGpsInfo,
   gpsHistory, expandedStops, setExpandedStops, handleEditRoute, handleReorderStop,
-  handleTransferCustody, handleChangeStatus, handleOpenSettleModal, handleOpenCollectForStop,
+  handleChangeStatus, handleOpenSettleModal, handleOpenCollectForStop,
   handleUpdateClientCoords,
 }) => {
   if (!selectedRoute) {
@@ -55,7 +54,7 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <h3 className="tabular-nums" style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 4px 0' }}>
-            Viaje #{selectedRoute.id}{selectedRoute.routeName ? ` · ${selectedRoute.routeName}` : ''}
+            Viaje #{selectedRoute.id}
           </h3>
           <div className="tabular-nums" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
             <strong style={{ color: 'var(--text-primary)' }}>{selectedRoute.driverName}</strong>
@@ -66,17 +65,6 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
           <div className="tabular-nums" style={{ fontSize: '0.78rem', fontWeight: 600, color: '#111827', marginTop: '4px' }}>
             {metrics.ordersCount} {metrics.ordersCount === 1 ? 'pedido' : 'pedidos'} · {metrics.totalBultos} {metrics.totalBultos === 1 ? 'bulto' : 'bultos'} · {metrics.totalAmountLabel}
           </div>
-          {selectedRoute.custodyStatus === 'LOADED_IN_TRANSIT' ? (
-            <div className="tabular-nums" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', backgroundColor: '#dcfce7', padding: '3px 8px', borderRadius: '4px', marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px', border: '1px solid #86efac' }}>
-              <Lock size={12} aria-hidden="true" />
-              Custodia: {selectedRoute.driverName} ({metrics.totalBultos} bultos){selectedRoute.signedByDriverAt ? ` · ${new Date(selectedRoute.signedByDriverAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` : ''}
-            </div>
-          ) : (
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b45309', backgroundColor: '#fef3c7', padding: '3px 8px', borderRadius: '4px', marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px', border: '1px solid #fde68a' }}>
-              <Clock size={12} aria-hidden="true" />
-              Sin carga
-            </div>
-          )}
         </div>
 
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -85,13 +73,8 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
               <Pencil size={12} aria-hidden="true" /> Editar
             </button>
           )}
-          {selectedRoute.custodyStatus !== 'LOADED_IN_TRANSIT' && (
-            <button type="button" className="btn btn-warning" style={{ fontSize: '0.78rem', backgroundColor: '#FEF3C7', borderColor: '#F59E0B', color: '#B45309', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => handleTransferCustody(selectedRoute)}>
-              <Lock size={12} aria-hidden="true" /> Custodia
-            </button>
-          )}
           {isPendingRoute && (
-            <button type="button" className="btn btn-secondary" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => handleChangeStatus(selectedRoute.id, 'IN_TRANSIT')}>
+            <button type="button" className="btn btn-primary" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => handleChangeStatus(selectedRoute.id, 'IN_TRANSIT')}>
               <Play size={12} aria-hidden="true" /> Iniciar
             </button>
           )}

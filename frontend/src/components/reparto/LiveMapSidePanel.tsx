@@ -220,9 +220,9 @@ export function LiveMapSidePanel({
           <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
             {selectedVehicle.vehiclePlate} · {selectedVehicle.driverName}
           </strong>
-          {selectedVehicle.routeName && (
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{selectedVehicle.routeName}</span>
-          )}
+          <span className="tabular-nums" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            Viaje #{selectedVehicle.routeId}
+          </span>
           <div style={{ display: 'flex', gap: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
             <span className="tabular-nums">{selectedVehicle.deliveredCount}/{selectedVehicle.stopsCount} entregas</span>
             {selectedVehicle.lastLocation?.speed != null && (

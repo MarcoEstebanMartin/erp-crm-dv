@@ -190,7 +190,7 @@ export const AdminSummaryCardModal: React.FC<AdminSummaryCardModalProps> = ({
                         {o.deliveryRoute ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                              Viaje #{o.deliveryRoute.id}{o.deliveryRoute.routeName ? ` · ${o.deliveryRoute.routeName}` : ''}
+                              Viaje #{o.deliveryRoute.id}
                             </span>
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
                               {driverPlate || (o.deliveryRoute.status === 'IN_TRANSIT' ? 'En calle' : o.deliveryRoute.status === 'COMPLETED' ? 'Entregado' : 'Asignado')}

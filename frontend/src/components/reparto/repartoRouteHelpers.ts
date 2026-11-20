@@ -125,7 +125,6 @@ export function resolveEditRouteFormValues(
     (v) => (route.vehicleId && v.id === route.vehicleId) || v.plate === route.vehiclePlate,
   );
   return {
-    routeName: route.routeName || '',
     driverEmployeeId: matchedDriver?.employeeId ?? route.driverEmployeeId ?? null,
     driverName: matchedDriver?.fullName || route.driverName || '',
     companionName: route.companionName || '',

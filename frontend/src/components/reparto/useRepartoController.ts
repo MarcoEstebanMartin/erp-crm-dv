@@ -31,7 +31,6 @@ export function useRepartoController() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingRouteId, setEditingRouteId] = useState<number | null>(null);
-  const [routeName, setRouteName] = useState('');
   const [driverName, setDriverName] = useState('');
   const [driverEmployeeId, setDriverEmployeeId] = useState<number | null>(null);
   const [companionName, setCompanionName] = useState('');
@@ -138,7 +137,7 @@ export function useRepartoController() {
   });
 
   const handleOpenCreateModal = () => {
-    setErrorMsg(null); setEditingRouteId(null); setRouteName('');
+    setErrorMsg(null); setEditingRouteId(null);
     setDriverName(''); setDriverEmployeeId(null); setCompanionName('');
     setVehicleId(null); setVehiclePlate(''); setVehicleDescription('');
     setSelectedVehicleKey(''); setSelectedOrderIds([]);
@@ -149,7 +148,7 @@ export function useRepartoController() {
   const handleOpenEditModal = (route: any) => {
     const resolved = resolveEditRouteFormValues(route, driverOptions, fleetVehicles);
     setErrorMsg(null); setEditingRouteId(route.id);
-    setRouteName(resolved.routeName); setDriverEmployeeId(resolved.driverEmployeeId);
+    setDriverEmployeeId(resolved.driverEmployeeId);
     setDriverName(resolved.driverName); setCompanionName(resolved.companionName);
     setVehicleId(resolved.vehicleId); setVehiclePlate(resolved.vehiclePlate);
     setVehicleDescription(resolved.vehicleDescription); setSelectedVehicleKey(resolved.selectedVehicleKey);
@@ -193,29 +192,13 @@ export function useRepartoController() {
     setSelectedOrderIds((prev) => (prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]));
   };
 
-  const handleTransferCustody = async (route: any) => {
-    const totalBultos = route.orders?.reduce((sum: number, o: any) => sum + Math.max(1, Number(o.bultosCount || 1)), 0) || 0;
-    if (!await confirm(`¿Confirmar carga de ${totalBultos} bultos para ${route.driverName}?`, { type: 'warning' })) return;
-    try {
-      setLoading(true);
-      const updated = await api.transferRouteCustody(route.id);
-      setSuccessMsg(`Carga confirmada (${totalBultos} bultos).`);
-      setSelectedRoute(updated);
-      await fetchRoutesAndOrders();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al transferir custodia.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreateRouteSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg(null); setSuccessMsg(null);
     if (selectedOrderIds.length === 0) { setErrorMsg('Seleccione al menos un pedido.'); return; }
     const orderedIds = currentTspRoute.length > 0 ? currentTspRoute.map((n) => n.id) : selectedOrderIds;
     const payload = {
-      routeName: routeName.trim() || null,
+      routeName: null,
       driverName,
       driverEmployeeId,
       companionName: companionName.trim() || null,
@@ -280,7 +263,7 @@ export function useRepartoController() {
   return {
     currentUser, isAdminOrOffice, visibleRoutes, selectedRoute, setSelectedRoute,
     createRouteStreetPoints, selectedRouteStreetPoints, handleUpdateClientCoords,
-    showCreateModal, setShowCreateModal, editingRouteId, routeName, setRouteName,
+    showCreateModal, setShowCreateModal, editingRouteId,
     driverName, setDriverName, driverEmployeeId, setDriverEmployeeId,
     companionName, setCompanionName, vehicleId, setVehicleId, vehiclePlate, setVehiclePlate,
     vehicleDescription, setVehicleDescription, selectedOrderIds, setSelectedOrderIds,
@@ -289,7 +272,7 @@ export function useRepartoController() {
     selectedCityFilter, setSelectedCityFilter, selectedZoneFilter, setSelectedZoneFilter,
     successMsg, setSuccessMsg, errorMsg, setErrorMsg, uniqueCities, uniqueZones, filteredPendingOrders,
     handleOpenCreateModal, handleOpenEditModal, handleSelectCityOrders, handleReorderStop,
-    handleDeleteRoute, handleToggleOrder, handleTransferCustody,
+    handleDeleteRoute, handleToggleOrder,
     currentTspRoute, mapPoints, activeRouteTspDetails, handleCreateRouteSubmit, handleChangeStatus,
     logisticsStats, ...gpsAndSettle,
   };

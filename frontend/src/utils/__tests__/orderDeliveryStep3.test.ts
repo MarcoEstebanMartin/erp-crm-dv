@@ -58,7 +58,7 @@ describe('Paso 3 — Designación Directa en Pedidos (Viaje Específico o Retiro
         routeName: 'Sur Ruta 33',
         driverName: 'Matías Rodríguez',
       }),
-    ).toBe('Viaje #14 · Sur Ruta 33 (Matías Rodríguez)');
+    ).toBe('Viaje #14 · Matías Rodríguez');
 
     expect(
       formatDeliveryRouteOptionLabel({
@@ -100,7 +100,7 @@ describe('Paso 3 — Designación Directa en Pedidos (Viaje Específico o Retiro
       method: 'DELIVERY',
       routeId: 14,
       isLocked: false,
-      badgeLabel: 'Viaje #14 · Ameghino',
+      badgeLabel: 'Viaje #14',
       subLabel: 'Matías Rodríguez · AB 919 WO',
       selectValue: 'ROUTE:14',
     });
