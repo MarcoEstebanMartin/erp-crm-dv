@@ -77,11 +77,13 @@ export const FieldSettlementsTab: React.FC = () => {
   };
 
   const allFieldReceipts = settlements.flatMap((s) =>
-    s.receipts.map((r) => ({
-      collectorName: s.collector?.username ?? `#${s.collectorUserId}`,
-      channel: resolveFieldReceiptChannel(r, s),
-      receipt: r,
-    })),
+    s.receipts
+      .filter((r) => Boolean(r.receiptNumber))
+      .map((r) => ({
+        collectorName: s.collector?.username ?? `#${s.collectorUserId}`,
+        channel: resolveFieldReceiptChannel(r, s),
+        receipt: r,
+      })),
   );
 
   return (

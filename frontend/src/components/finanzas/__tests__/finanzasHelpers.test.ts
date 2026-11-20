@@ -105,4 +105,39 @@ describe('computeFilteredMetricsAndLedger', () => {
       paymentMethod: 'Cheque',
     });
   });
+
+  it('excluye transferencias no verificadas (verified: false) del KPI Transferencias y Recaudación Neta pero las conserva en conciliación', () => {
+    const transactions = [
+      {
+        id: 10,
+        type: 'INCOME',
+        paymentMethod: 'BANK_TRANSFER',
+        amount: 100000,
+        verified: true,
+        cashDrawerId: null,
+        bankAccount: { name: 'MP' },
+        persona: { name: 'Cliente Verificado' },
+        createdAt: '2026-11-20T10:00:00.000Z',
+        description: 'Transferencia acreditada',
+      },
+      {
+        id: 11,
+        type: 'INCOME',
+        paymentMethod: 'BANK_TRANSFER',
+        amount: 500000,
+        verified: false,
+        cashDrawerId: null,
+        persona: { name: 'Cliente Pendiente' },
+        createdAt: '2026-11-20T11:00:00.000Z',
+        description: 'Transferencia pendiente de banco',
+      },
+    ];
+
+    const res = computeFilteredMetricsAndLedger([], transactions, '2026-11-20', '2026-11-20');
+    expect(res.totalTransfers).toBe(100000);
+    expect(res.netIncome).toBe(100000);
+    expect(res.detailedTransferItems).toHaveLength(1);
+    expect(res.detailedTransferItems[0].id).toBe('transfer-10');
+    expect(res.transfers).toHaveLength(2);
+  });
 });

@@ -151,14 +151,20 @@ export function PendingFieldTransfersCard({
         Transferencias por acreditar ({pendingTransfers.length})
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {pendingTransfers.map(({ receipt, payment }) => (
+        {pendingTransfers.map(({ settlement, receipt, payment }) => (
           <div
             key={payment.id}
             style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '10px 12px', border: '1px solid #f1f5f9', borderRadius: '10px' }}
           >
             <div className="tabular-nums" style={{ fontSize: '0.85rem' }}>
-              <strong>{receipt.receiptNumber || receipt.provisionalCode}</strong> · {receipt.persona?.name} ·{' '}
+              <strong>{receipt.persona?.name || 'Cliente'}</strong> ·{' '}
               <strong>{formatCurrency(Math.round(Number(payment.amount || 0)))}</strong>
+              {settlement.collector?.username && (
+                <span style={{ color: '#6b7280' }}> · {settlement.collector.username}</span>
+              )}
+              {receipt.receiptNumber && (
+                <span style={{ color: '#6b7280' }}> · {receipt.receiptNumber}</span>
+              )}
               {payment.transferReference && <span style={{ color: '#6b7280' }}> (Ref: {payment.transferReference})</span>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>

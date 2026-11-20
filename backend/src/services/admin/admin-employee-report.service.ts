@@ -127,6 +127,7 @@ export class AdminEmployeeReportSubService {
         where: {
           collectorUserId: userId,
           status: { not: FieldReceiptStatus.VOIDED },
+          receiptNumber: { not: null },
           capturedAt: { gte: start, lte: end },
         },
         _count: { _all: true },

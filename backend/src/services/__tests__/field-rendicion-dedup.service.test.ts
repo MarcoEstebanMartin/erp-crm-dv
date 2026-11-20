@@ -81,12 +81,169 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
     );
   });
 
-  it('verifyTransferPayment(CLEAR) marca FieldReceipt VERIFIED y sincroniza Transaction espejo con verified=true', async () => {
-    const fieldReceiptUpdates: any[] = [];
-    const txUpdates: any[] = [];
-    const bankUpdates: any[] = [];
+  it('syncReceipt con 100% transferencia no emite recibo oficial, no crea Transaction ni descuenta AccountLedger', async () => {
+    const receiptCreates: any[] = [];
+    const txCreates: any[] = [];
+    const ledgerCreates: any[] = [];
 
     const mockTx: any = {
+      fieldReceipt: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockImplementation((args) => {
+          receiptCreates.push(args);
+          return Promise.resolve({ id: 12, ...args.data });
+        }),
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: 12,
+            status: 'PENDING_VERIFICATION',
+            payments: [{ paymentMethod: PaymentMethod.BANK_TRANSFER, amount: '535560.00', status: 'PENDING_BANK' }],
+          },
+        ]),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: 12,
+          receiptNumber: null,
+          transactionId: null,
+          status: 'PENDING_VERIFICATION',
+          totalAmount: 535560,
+          payments: [{ id: 22, paymentMethod: PaymentMethod.BANK_TRANSFER, amount: 535560, status: 'PENDING_BANK' }],
+          persona: { id: 8785, name: 'MARTIN MARCO ESTEBAN', phone: null, outstandingBalance: '535560.00' },
+          collector: { id: 66, username: 'diego' },
+        }),
+      },
+      persona: {
+        findUnique: vi.fn().mockResolvedValue({ id: 8785, isClient: true, name: 'MARTIN MARCO ESTEBAN', outstandingBalance: '535560.00' }),
+        update: vi.fn(),
+      },
+      transaction: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockImplementation((args) => {
+          txCreates.push(args);
+          return Promise.resolve({ id: 99, movementId: 99 });
+        }),
+      },
+      collectorSettlement: {
+        findFirst: vi.fn().mockResolvedValue({ id: 2, collectorUserId: 66, status: 'OPEN' }),
+        update: vi.fn().mockResolvedValue({ id: 2 }),
+      },
+      fieldReceiptPayment: {
+        createMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      accountLedger: {
+        create: vi.fn().mockImplementation((args) => {
+          ledgerCreates.push(args);
+          return Promise.resolve({ id: 1 });
+        }),
+      },
+    };
+
+    vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+    const result = await fieldReceiptsService.syncReceipt(66, {
+      provisionalCode: 'PROV-TRANSFER-ONLY',
+      personaId: 8785,
+      billingType: 'INTERNAL',
+      capturedAt: '2026-11-20T12:00:00Z',
+      allowCreditOnAccount: false,
+      payments: [{ paymentMethod: 'BANK_TRANSFER', amount: 535560, bankAccountId: 22, isEcheq: false }],
+    });
+
+    expect(receiptCreates).toHaveLength(1);
+    expect(receiptCreates[0].data.status).toBe('PENDING_VERIFICATION');
+    expect(txCreates).toHaveLength(0);
+    expect(ledgerCreates).toHaveLength(0);
+    expect(mockTx.persona.update).not.toHaveBeenCalled();
+    expect(result.receipt.receiptNumber).toBeNull();
+    expect(result.receipt.transactionId).toBeNull();
+  });
+
+  it('syncReceipt mixto ($10.000 efectivo + $20.000 transferencia) emite recibo y descuenta solo $10.000', async () => {
+    const receiptCreates: any[] = [];
+    const txCreates: any[] = [];
+    const ledgerCreates: any[] = [];
+
+    const mockTx: any = {
+      fieldReceipt: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockImplementation((args) => {
+          receiptCreates.push(args);
+          return Promise.resolve({ id: 15, ...args.data });
+        }),
+        update: vi.fn().mockResolvedValue({ id: 15, receiptNumber: 'REC-C-0000015', transactionId: 105 }),
+        findMany: vi.fn().mockResolvedValue([]),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: 15,
+          receiptNumber: 'REC-C-0000015',
+          transactionId: 105,
+          totalAmount: 10000,
+          payments: [],
+        }),
+      },
+      persona: {
+        findUnique: vi.fn().mockResolvedValue({ id: 8785, isClient: true, name: 'Cliente Mixto', outstandingBalance: '50000.00' }),
+        update: vi.fn().mockResolvedValue({ id: 8785, outstandingBalance: '40000.00' }),
+      },
+      transaction: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockImplementation((args) => {
+          txCreates.push(args);
+          return Promise.resolve({ id: 105, movementId: 105 });
+        }),
+      },
+      collectorSettlement: {
+        findFirst: vi.fn().mockResolvedValue({ id: 2, collectorUserId: 66, status: 'OPEN' }),
+        update: vi.fn().mockResolvedValue({ id: 2 }),
+      },
+      fieldReceiptPayment: {
+        createMany: vi.fn().mockResolvedValue({ count: 2 }),
+      },
+      accountLedger: {
+        create: vi.fn().mockImplementation((args) => {
+          ledgerCreates.push(args);
+          return Promise.resolve({ id: 1 });
+        }),
+      },
+    };
+
+    vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+    await fieldReceiptsService.syncReceipt(66, {
+      provisionalCode: 'PROV-MIXED-001',
+      personaId: 8785,
+      billingType: 'INTERNAL',
+      capturedAt: '2026-11-20T12:00:00Z',
+      allowCreditOnAccount: false,
+      payments: [
+        { paymentMethod: 'CASH', amount: 10000, isEcheq: false },
+        { paymentMethod: 'BANK_TRANSFER', amount: 20000, bankAccountId: 22, isEcheq: false },
+      ],
+    });
+
+    expect(receiptCreates[0].data.totalAmount).toBe(10000);
+    expect(txCreates).toHaveLength(1);
+    expect(txCreates[0].data).toMatchObject({
+      paymentMethod: PaymentMethod.CASH,
+      amount: 10000,
+      receiptNumber: 'REC-C-0000015',
+      verified: false,
+    });
+    expect(ledgerCreates).toHaveLength(1);
+    expect(ledgerCreates[0].data).toMatchObject({
+      entryType: 'CREDIT',
+      amount: 10000,
+      reference: 'REC-C-0000015',
+      transactionId: 105,
+    });
+  });
+
+  it('verifyTransferPayment(CLEAR) sobre transferencia pura acredita banco, descuenta deuda y emite REC-C definitivo', async () => {
+    const fieldReceiptUpdates: any[] = [];
+    const txCreates: any[] = [];
+    const bankUpdates: any[] = [];
+    const ledgerCreates: any[] = [];
+
+    const mockTx: any = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 2 }]),
       fieldReceiptPayment: {
         findUnique: vi.fn().mockResolvedValue({
           id: 2,
@@ -98,10 +255,12 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
           fieldReceipt: {
             id: 2,
             personaId: 8785,
+            collectorUserId: 66,
             settlementId: 2,
             status: 'PENDING_VERIFICATION',
             billingType: BillingType.INTERNAL,
-            receiptNumber: 'REC-C-0000002',
+            receiptNumber: null,
+            transactionId: null,
             provisionalCode: 'PROV-2',
             payments: [
               {
@@ -120,6 +279,15 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
         update: vi.fn().mockImplementation((args) => {
           bankUpdates.push(args);
           return Promise.resolve({ id: 22 });
+        }),
+      },
+      persona: {
+        update: vi.fn().mockResolvedValue({ id: 8785, outstandingBalance: '0.00' }),
+      },
+      accountLedger: {
+        create: vi.fn().mockImplementation((args) => {
+          ledgerCreates.push(args);
+          return Promise.resolve({ id: 106 });
         }),
       },
       fieldReceipt: {
@@ -142,6 +310,7 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
         }),
         findUnique: vi.fn().mockResolvedValue({
           id: 2,
+          receiptNumber: 'REC-C-0000002',
           status: 'VERIFIED',
           transactionId: 62,
           payments: [
@@ -159,9 +328,9 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
         update: vi.fn().mockResolvedValue({ id: 2 }),
       },
       transaction: {
-        update: vi.fn().mockImplementation((args) => {
-          txUpdates.push(args);
-          return Promise.resolve({ id: 62, verified: true });
+        create: vi.fn().mockImplementation((args) => {
+          txCreates.push(args);
+          return Promise.resolve({ id: 62, ...args.data });
         }),
       },
     };
@@ -176,28 +345,42 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
     expect(bankUpdates).toEqual([
       { where: { id: 22 }, data: { balance: { increment: 535560 } } },
     ]);
+    expect(txCreates).toHaveLength(1);
+    expect(txCreates[0].data).toMatchObject({
+      personaId: 8785,
+      userId: 66,
+      paymentMethod: PaymentMethod.BANK_TRANSFER,
+      amount: 535560,
+      receiptNumber: 'REC-C-0000002',
+      bankAccountId: 22,
+      verified: true,
+      verifiedById: 73,
+    });
+    expect(ledgerCreates).toHaveLength(1);
+    expect(ledgerCreates[0].data).toMatchObject({
+      personaId: 8785,
+      entryType: 'CREDIT',
+      amount: 535560,
+      reference: 'REC-C-0000002',
+      transactionId: 62,
+    });
     expect(fieldReceiptUpdates[0]).toEqual({
       where: { id: 2 },
-      data: { status: 'VERIFIED' },
-    });
-    expect(txUpdates).toHaveLength(1);
-    expect(txUpdates[0]).toEqual({
-      where: { id: 62 },
       data: {
-        verified: true,
-        verifiedById: 73,
-        verifiedAt: expect.any(Date),
-        amount: 535560,
-        bankAccountId: 22,
+        totalAmount: 535560,
+        receiptNumber: 'REC-C-0000002',
+        transactionId: 62,
+        status: 'VERIFIED',
       },
     });
   });
 
-  it('verifyTransferPayment(REJECT) como único pago desvincula y borra la Transaction espejo', async () => {
-    const fieldReceiptUpdates: any[] = [];
+  it('verifyTransferPayment(REJECT) sobre transferencia pura marca REJECTED sin tocar AccountLedger, Transaction ni Banco', async () => {
+    const ledgerCreates: any[] = [];
     const txDeletes: any[] = [];
 
     const mockTx: any = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 2 }]),
       fieldReceiptPayment: {
         findUnique: vi.fn().mockResolvedValue({
           id: 2,
@@ -212,18 +395,30 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
             settlementId: 2,
             status: 'PENDING_VERIFICATION',
             billingType: BillingType.INTERNAL,
-            receiptNumber: 'REC-C-0000002',
+            receiptNumber: null,
+            transactionId: null,
             provisionalCode: 'PROV-2',
-            payments: [],
+            payments: [
+              {
+                id: 2,
+                paymentMethod: PaymentMethod.BANK_TRANSFER,
+                amount: '535560.00',
+                status: 'PENDING_BANK',
+                bankAccountId: 22,
+              },
+            ],
           },
         }),
         update: vi.fn().mockResolvedValue({ id: 2, status: 'REJECTED' }),
       },
-      persona: {
-        update: vi.fn().mockResolvedValue({ id: 8785, outstandingBalance: '535560.00' }),
-      },
       accountLedger: {
-        create: vi.fn().mockResolvedValue({ id: 1 }),
+        create: vi.fn().mockImplementation((args) => {
+          ledgerCreates.push(args);
+          return Promise.resolve({ id: 1 });
+        }),
+      },
+      bankAccount: {
+        update: vi.fn(),
       },
       fieldReceipt: {
         findMany: vi.fn().mockResolvedValue([
@@ -239,14 +434,11 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
             ],
           },
         ]),
-        update: vi.fn().mockImplementation((args) => {
-          fieldReceiptUpdates.push(args);
-          return Promise.resolve({ id: 2 });
-        }),
+        update: vi.fn().mockResolvedValue({ id: 2 }),
         findUnique: vi.fn().mockResolvedValue({
           id: 2,
           status: 'PENDING_VERIFICATION',
-          transactionId: 62,
+          transactionId: null,
           payments: [
             {
               id: 2,
@@ -264,7 +456,7 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
       transaction: {
         deleteMany: vi.fn().mockImplementation((args) => {
           txDeletes.push(args);
-          return Promise.resolve({ count: 1 });
+          return Promise.resolve({ count: 0 });
         }),
       },
     };
@@ -276,11 +468,88 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
       rejectionReason: 'Comprobante falso',
     });
 
-    expect(fieldReceiptUpdates).toContainEqual({
-      where: { id: 2 },
-      data: { transactionId: null },
+    expect(ledgerCreates).toHaveLength(0);
+    expect(mockTx.bankAccount.update).not.toHaveBeenCalled();
+    expect(txDeletes).toHaveLength(0);
+  });
+
+  it('voidFieldReceipt sobre recibo mixto con transferencia PENDING_BANK revierte solo lo efectivamente acreditado', async () => {
+    const ledgerCreates: any[] = [];
+    const txDeletes: any[] = [];
+
+    const mockTx: any = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 15 }]),
+      fieldReceipt: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 15,
+          personaId: 8785,
+          billingType: BillingType.INTERNAL,
+          receiptNumber: 'REC-C-0000015',
+          provisionalCode: 'PROV-15',
+          transactionId: 105,
+          settlementId: 2,
+          status: 'PENDING_VERIFICATION',
+          payments: [
+            { id: 1, paymentMethod: PaymentMethod.CASH, amount: '10000.00', status: 'IN_TRANSIT', bankAccountId: null },
+            { id: 2, paymentMethod: PaymentMethod.BANK_TRANSFER, amount: '20000.00', status: 'PENDING_BANK', bankAccountId: 22 },
+          ],
+        }),
+        update: vi.fn().mockResolvedValue({ id: 15, status: 'VOIDED', payments: [] }),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      persona: {
+        update: vi.fn().mockResolvedValue({ id: 8785, outstandingBalance: '50000.00' }),
+      },
+      accountLedger: {
+        create: vi.fn().mockImplementation((args) => {
+          ledgerCreates.push(args);
+          return Promise.resolve({ id: 1 });
+        }),
+      },
+      bankAccount: { update: vi.fn() },
+      transaction: {
+        deleteMany: vi.fn().mockImplementation((args) => {
+          txDeletes.push(args);
+          return Promise.resolve({ count: 1 });
+        }),
+      },
+      collectorSettlement: { update: vi.fn().mockResolvedValue({ id: 2 }) },
+    };
+
+    vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+    await fieldReceiptsService.voidFieldReceipt(15, 73, 'Error de carga');
+
+    expect(ledgerCreates).toHaveLength(1);
+    expect(ledgerCreates[0].data).toMatchObject({
+      entryType: 'DEBIT',
+      amount: 10000,
     });
-    expect(txDeletes).toEqual([{ where: { id: 62 } }]);
+    expect(mockTx.bankAccount.update).not.toHaveBeenCalled();
+    expect(txDeletes).toEqual([
+      { where: { id: 105 } },
+      { where: { receiptNumber: { startsWith: 'REC-C-0000015-T' } } },
+    ]);
+  });
+
+  it('receiptService.listReceipts excluye transacciones nacidas de FieldReceipt', async () => {
+    const findManySpy = vi.spyOn(prisma.transaction, 'findMany').mockResolvedValue([]);
+
+    await receiptService.listReceipts(50);
+
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          type: TransactionType.INCOME,
+          personaId: { not: null },
+          fieldReceipt: { is: null },
+          OR: [
+            { receiptNumber: null },
+            { NOT: { receiptNumber: { startsWith: 'REC-C-' } } },
+          ],
+        },
+      }),
+    );
   });
 
   it('approveSettlement crea CashDrawer cerrado, vincula cashDrawerId, marca Transaction espejo verified=true y bloquea doble aprobación', async () => {

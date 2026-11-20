@@ -27,7 +27,7 @@ export const syncFieldReceipt = async (req: AuthenticatedRequest, res: Response)
   try {
     const result = await fieldReceiptsService.syncReceipt(req.user.id, req.body);
     let dispatchResult = null;
-    if (!result.alreadySynced) {
+    if (!result.alreadySynced && Boolean(result.receipt.receiptNumber)) {
       dispatchResult = await whatsappDispatchService.dispatchReceiptPdf(result.receipt.id);
     }
     return res.status(result.alreadySynced ? 200 : 201).json({
@@ -63,7 +63,15 @@ export const verifyTransferPayment = async (req: AuthenticatedRequest, res: Resp
   try {
     const paymentId = Number(req.params.paymentId);
     const updated = await fieldReceiptsService.verifyTransferPayment(paymentId, req.user.id, req.body);
-    return res.json(updated);
+    let whatsapp = null;
+    if (req.body.action === 'CLEAR' && updated?.receiptNumber) {
+      try {
+        whatsapp = await whatsappDispatchService.dispatchReceiptPdf(updated.id);
+      } catch (err) {
+        console.error('Error generando PDF/WhatsApp al acreditar transferencia:', err);
+      }
+    }
+    return res.json({ ...updated, whatsapp });
   } catch (error) {
     return handleFieldReceiptError(res, error, 'Error al verificar transferencia');
   }

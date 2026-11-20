@@ -285,3 +285,67 @@ export function evaluateMirrorTransactionSync(
     bankAccountId: clearedBankAccountId,
   };
 }
+
+export interface SplitReceiptPaymentsResult {
+  immediatePayments: ComputedReceiptPayment[];
+  deferredTransferPayments: ComputedReceiptPayment[];
+  immediateAmount: Decimal;
+  deferredTransferAmount: Decimal;
+  hasImmediate: boolean;
+}
+
+/**
+ * Separa pagos inmediatos en calle (efectivo / cheques) de transferencias bancarias,
+ * que no emiten recibo ni acreditan saldo hasta ser verificadas en banco.
+ */
+export function splitImmediateAndDeferredPayments(
+  payments: ComputedReceiptPayment[],
+): SplitReceiptPaymentsResult {
+  const immediatePayments: ComputedReceiptPayment[] = [];
+  const deferredTransferPayments: ComputedReceiptPayment[] = [];
+  let immediateAmount = new Decimal(0);
+  let deferredTransferAmount = new Decimal(0);
+
+  for (const p of payments) {
+    const amt = roundToIntegerPeso(p.amount);
+    if (p.paymentMethod === 'BANK_TRANSFER') {
+      deferredTransferPayments.push(p);
+      deferredTransferAmount = deferredTransferAmount.plus(amt);
+    } else {
+      immediatePayments.push(p);
+      immediateAmount = immediateAmount.plus(amt);
+    }
+  }
+
+  return {
+    immediatePayments,
+    deferredTransferPayments,
+    immediateAmount,
+    deferredTransferAmount,
+    hasImmediate: immediateAmount.gt(0),
+  };
+}
+
+/**
+ * Suma únicamente los pagos efectivamente acreditados en Cuenta Corriente:
+ * efectivo/cheques no rechazados + transferencias ya acreditadas (CLEARED).
+ */
+export function computeCreditedReceiptAmount(
+  payments: Array<{
+    paymentMethod: FieldPaymentMethod;
+    amount: NumericInput;
+    status: PaymentVerificationStatusValue;
+  }>,
+): Decimal {
+  let total = new Decimal(0);
+  for (const p of payments) {
+    if (p.paymentMethod === 'BANK_TRANSFER') {
+      if (p.status === 'CLEARED') {
+        total = total.plus(roundToIntegerPeso(p.amount));
+      }
+    } else if (p.status !== 'REJECTED') {
+      total = total.plus(roundToIntegerPeso(p.amount));
+    }
+  }
+  return total;
+}

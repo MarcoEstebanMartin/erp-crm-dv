@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   computeBalanceAfterReceipt,
   computeCollectorSettlementSummary,
+  computeCreditedReceiptAmount,
   computeReceiptBreakdown,
   computeReversalAmount,
   evaluateMirrorTransactionSync,
   evaluateSettlementArqueo,
+  splitImmediateAndDeferredPayments,
 } from './fieldReceipts.engine';
 
 describe('fieldReceipts.engine — Motor Matemático de Recibos en Calle', () => {
@@ -202,5 +204,44 @@ describe('fieldReceipts.engine — Motor Matemático de Recibos en Calle', () =>
         payments: [{ paymentMethod: 'CASH', amount: 15000, status: 'CLEARED' }],
       }),
     ).toEqual({ action: 'DELETE' });
+  });
+
+  it('splitImmediateAndDeferredPayments separa efectivo/cheques inmediatos de transferencias diferidas', () => {
+    const pureCash = splitImmediateAndDeferredPayments(
+      computeReceiptBreakdown([{ paymentMethod: 'CASH', amount: 20000 }]).payments,
+    );
+    expect(pureCash.hasImmediate).toBe(true);
+    expect(pureCash.immediateAmount.toNumber()).toBe(20000);
+    expect(pureCash.deferredTransferAmount.toNumber()).toBe(0);
+
+    const pureTransfer = splitImmediateAndDeferredPayments(
+      computeReceiptBreakdown([{ paymentMethod: 'BANK_TRANSFER', amount: 535560 }]).payments,
+    );
+    expect(pureTransfer.hasImmediate).toBe(false);
+    expect(pureTransfer.immediateAmount.toNumber()).toBe(0);
+    expect(pureTransfer.deferredTransferAmount.toNumber()).toBe(535560);
+
+    const mixed = splitImmediateAndDeferredPayments(
+      computeReceiptBreakdown([
+        { paymentMethod: 'CASH', amount: 10000 },
+        { paymentMethod: 'CHECK', amount: 15000 },
+        { paymentMethod: 'BANK_TRANSFER', amount: 30000 },
+      ]).payments,
+    );
+    expect(mixed.hasImmediate).toBe(true);
+    expect(mixed.immediatePayments).toHaveLength(2);
+    expect(mixed.deferredTransferPayments).toHaveLength(1);
+    expect(mixed.immediateAmount.toNumber()).toBe(25000);
+    expect(mixed.deferredTransferAmount.toNumber()).toBe(30000);
+  });
+
+  it('computeCreditedReceiptAmount suma solo efectivo/cheques activos y transferencias CLEARED', () => {
+    const credited = computeCreditedReceiptAmount([
+      { paymentMethod: 'CASH', amount: 10000, status: 'IN_TRANSIT' },
+      { paymentMethod: 'CHECK', amount: 5000, status: 'REJECTED' },
+      { paymentMethod: 'BANK_TRANSFER', amount: 20000, status: 'PENDING_BANK' },
+      { paymentMethod: 'BANK_TRANSFER', amount: 35000, status: 'CLEARED' },
+    ]);
+    expect(credited.toNumber()).toBe(45000);
   });
 });

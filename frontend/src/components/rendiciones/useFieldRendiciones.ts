@@ -100,13 +100,17 @@ export function useFieldRendiciones() {
           setErrorMsg('Seleccioná una cuenta bancaria para acreditar.');
           return;
         }
-        await fieldReceiptsApi.verifyTransfer(paymentId, 'CLEAR', selectedBank);
-        setStatusMsg('Transferencia acreditada.');
+        const updated = await fieldReceiptsApi.verifyTransfer(paymentId, 'CLEAR', selectedBank);
+        setStatusMsg(
+          updated?.receiptNumber
+            ? `Transferencia acreditada y recibo ${updated.receiptNumber} emitido.`
+            : 'Transferencia acreditada y recibo emitido.',
+        );
       } else {
         const reason = window.prompt('Motivo del rechazo de la transferencia:');
         if (!reason || reason.trim().length < 3) return;
         await fieldReceiptsApi.verifyTransfer(paymentId, 'REJECT', undefined, reason.trim());
-        setStatusMsg('Transferencia rechazada y deuda restituida al cliente.');
+        setStatusMsg('Transferencia rechazada.');
       }
       await Promise.all([
         fetchFieldRendiciones(),

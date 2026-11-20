@@ -177,7 +177,7 @@ export const computeFilteredMetricsAndLedger = (
   const totalExpenses = expensesInPeriod.reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
   const transfersInPeriod = transactions.filter((t: any) => {
-    if (t.paymentMethod !== 'BANK_TRANSFER' || t.type !== 'INCOME') return false;
+    if (t.paymentMethod !== 'BANK_TRANSFER' || t.type !== 'INCOME' || !t.verified) return false;
     const txDate = new Date(t.createdAt);
     return txDate >= start && txDate <= end;
   });

@@ -1,4 +1,4 @@
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCw, Search, Send, WifiOff, X } from 'lucide-react';
 import {
   buildManualWhatsAppUrl,
@@ -19,11 +19,13 @@ import { FieldCollectModal } from './FieldCollectModal';
 import { buildSearchIndex, filterIndexedItems } from '../vendedor/vendedorHelpers';
 
 interface FieldCollectionPageProps {
+  isActive?: boolean;
   initialClientId?: number | null;
   onInitialClientHandled?: () => void;
 }
 
 export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
+  isActive = true,
   initialClientId = null,
   onInitialClientHandled,
 }) => {
@@ -37,14 +39,20 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedClient, setSelectedClient] = useState<OfflineBundleClient | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const lastFetchedAtRef = useRef(0);
+  const hasClientsRef = useRef(false);
+  hasClientsRef.current = clients.length > 0;
 
   const refreshQueue = useCallback(async () => {
     const queued = await getPendingOfflineReceipts();
     setPendingQueue(queued);
   }, []);
 
-  const refreshAll = useCallback(async () => {
-    setLoading(true);
+  const refreshAll = useCallback(async (options?: { silent?: boolean }) => {
+    const isSilent = options?.silent === true;
+    if (!isSilent || !hasClientsRef.current) {
+      setLoading(true);
+    }
     try {
       const cached = await loadOfflineBundle();
       if (cached) {
@@ -63,6 +71,7 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
         setBankAccounts(bundle.bankAccounts);
         setCollectorUserId(bundle.collectorUserId);
         setSettlements(mySettlements);
+        lastFetchedAtRef.current = Date.now();
       }
     } catch {
       // Si falla red, conserva caché local sin interrumpir el cobro
@@ -79,7 +88,7 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
     const stopSync = startOfflineSyncListener(() => {
-      void refreshAll();
+      void refreshAll({ silent: true });
     });
     const onManualSync = () => {
       void refreshAll();
@@ -92,6 +101,13 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
       stopSync();
     };
   }, [refreshAll]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    if (Date.now() - lastFetchedAtRef.current > 30_000) {
+      void refreshAll({ silent: true });
+    }
+  }, [isActive, refreshAll]);
 
   useEffect(() => {
     if (!initialClientId || clients.length === 0) return;
@@ -241,12 +257,17 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {openSettlement.receipts.slice(0, 10).map((r) => (
               <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', paddingBottom: '6px', borderBottom: '1px solid #f3f4f6' }}>
-                <div>
-                  <strong>{r.receiptNumber || r.provisionalCode}</strong> · {r.persona?.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <strong>{r.receiptNumber || 'Transferencia'}</strong> · {r.persona?.name}
+                  {!r.receiptNumber && (
+                    <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '1px 7px', borderRadius: '999px', background: '#fef3c7', color: '#92400e' }}>
+                      Sin acreditar
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontWeight: 700 }}>${Math.round(Number(r.totalAmount)).toLocaleString('es-AR')}</span>
-                  {r.pdfUrl && (
+                  {r.receiptNumber && r.pdfUrl && (
                     <a
                       href={r.pdfUrl}
                       target="_blank"
@@ -256,18 +277,20 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
                       PDF
                     </a>
                   )}
-                  <a
-                    href={buildManualWhatsAppUrl(r)}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', border: '1px solid #16a34a', color: '#15803d', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}
-                  >
-                    <Send size={12} /> WhatsApp
-                  </a>
-                  {r.whatsappStatus === 'FAILED' && (
+                  {r.receiptNumber && (
+                    <a
+                      href={buildManualWhatsAppUrl(r)}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', border: '1px solid #16a34a', color: '#15803d', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}
+                    >
+                      <Send size={12} /> WhatsApp
+                    </a>
+                  )}
+                  {r.receiptNumber && r.whatsappStatus === 'FAILED' && (
                     <button
                       type="button"
-                      onClick={() => void fieldReceiptsApi.resendWhatsApp(r.id).then(refreshAll)}
+                      onClick={() => void fieldReceiptsApi.resendWhatsApp(r.id).then(() => refreshAll())}
                       title="Enviar por API Meta"
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', fontSize: '0.75rem', cursor: 'pointer' }}
                     >
@@ -291,7 +314,9 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
           setFeedback(
             info.offline
               ? `Guardado offline (${info.provisionalCode}) por $${info.totalAmount.toLocaleString('es-AR')}. Se enviará al volver la señal.`
-              : `Recibo ${info.receiptNumber} emitido por $${info.totalAmount.toLocaleString('es-AR')}.`,
+              : info.receiptNumber
+                ? `Recibo ${info.receiptNumber} emitido por $${info.totalAmount.toLocaleString('es-AR')}.`
+                : `Transferencia registrada por $${info.totalAmount.toLocaleString('es-AR')}. Pendiente de acreditación.`,
           );
           void refreshAll();
         }}

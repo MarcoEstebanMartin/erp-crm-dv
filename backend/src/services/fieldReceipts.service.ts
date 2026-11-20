@@ -3,24 +3,24 @@ import {
   LedgerEntryType,
   LedgerSourceType,
   PaymentMethod,
-  Prisma,
   TransactionType,
 } from '@prisma/client';
-import { Decimal } from 'decimal.js';
 import prisma from '../utils/prisma';
 import AppError from '../utils/AppError';
-import { roundToIntegerPeso } from '../core/money';
 import {
-  computeCollectorSettlementSummary,
   computeReceiptBreakdown,
   computeReversalAmount,
   evaluateSettlementArqueo,
+  splitImmediateAndDeferredPayments,
 } from '../engines/fieldReceipts.engine';
 import { recordLedgerMovement } from './ledger/account-ledger.service';
 import { assertCollectionAllowed } from './collections/collection-guard.service';
 import {
+  applyTransferClearAndIssueReceipt,
   createSettlementCashDrawerAndLinkMirrors,
+  recomputeOpenSettlement,
   syncMirrorTransactionForFieldReceipt,
+  voidFieldReceiptAndReverse,
 } from './collections/field-receipt-mirror.helper';
 import { generateUniqueVerificationCode } from '../core/receiptToken';
 import {
@@ -28,34 +28,6 @@ import {
   SyncFieldReceiptInput,
   VerifyTransferInput,
 } from '../validators/fieldReceipts.schema';
-
-async function recomputeOpenSettlement(tx: Prisma.TransactionClient, settlementId: number) {
-  const receipts = await tx.fieldReceipt.findMany({
-    where: { settlementId },
-    include: { payments: true },
-  });
-
-  const summary = computeCollectorSettlementSummary(
-    receipts.map((r) => ({
-      status: r.status,
-      payments: r.payments.map((p) => ({
-        paymentMethod: p.paymentMethod as 'CASH' | 'BANK_TRANSFER' | 'CHECK',
-        amount: p.amount.toString(),
-        status: p.status,
-      })),
-    })),
-  );
-
-  return tx.collectorSettlement.update({
-    where: { id: settlementId },
-    data: {
-      expectedCash: summary.expectedCash.toNumber(),
-      expectedChecksCount: summary.expectedChecksCount,
-      expectedChecksAmount: summary.expectedChecksAmount.toNumber(),
-      pendingTransfersAmount: summary.pendingTransfersAmount.toNumber(),
-    },
-  });
-}
 
 export const fieldReceiptsService = {
   /**
@@ -150,8 +122,8 @@ export const fieldReceiptsService = {
         });
       }
 
-      const primaryMethod = input.payments[0].paymentMethod as PaymentMethod;
-
+      const split = splitImmediateAndDeferredPayments(breakdown.payments);
+      const immediateNum = split.immediateAmount.toNumber();
       const createdReceipt = await tx.fieldReceipt.create({
         data: {
           provisionalCode: input.provisionalCode,
@@ -159,30 +131,13 @@ export const fieldReceiptsService = {
           collectorUserId,
           deliveryRouteId: input.deliveryRouteId ?? null,
           billingType: input.billingType as BillingType,
-          totalAmount: totalNum,
-          status: breakdown.initialReceiptStatus,
+          totalAmount: split.hasImmediate ? immediateNum : totalNum,
+          status: split.hasImmediate ? breakdown.initialReceiptStatus : 'PENDING_VERIFICATION',
           notes: input.notes ?? null,
           gpsLat: input.gpsLat ?? null,
           gpsLng: input.gpsLng ?? null,
           capturedAt: new Date(input.capturedAt),
           settlementId: settlement.id,
-        },
-      });
-
-      const receiptNumber = `REC-C-${String(createdReceipt.id).padStart(7, '0')}`;
-
-      const transaction = await tx.transaction.create({
-        data: {
-          personaId: input.personaId,
-          userId: collectorUserId,
-          billingType: input.billingType as BillingType,
-          type: TransactionType.INCOME,
-          paymentMethod: primaryMethod,
-          amount: totalNum,
-          receiptNumber,
-          verificationCode: generateUniqueVerificationCode(),
-          description: `Cobro digital en calle (${receiptNumber})`,
-          verified: false,
         },
       });
 
@@ -205,22 +160,48 @@ export const fieldReceiptsService = {
         })),
       });
 
-      await recordLedgerMovement(tx, {
-        personaId: input.personaId,
-        entryType: LedgerEntryType.CREDIT,
-        sourceType: LedgerSourceType.COLLECTION_RECEIPT,
-        billingType: input.billingType as BillingType,
-        amount: totalNum,
-        reference: receiptNumber,
-        description: `Recibo digital en calle ${receiptNumber}`,
-        transactionId: transaction.id,
-        userId: collectorUserId,
-        occurredAt: new Date(input.capturedAt),
-      });
+      if (split.hasImmediate) {
+        const primaryImmediateMethod = split.immediatePayments[0].paymentMethod as PaymentMethod;
+        const receiptNumber = `REC-C-${String(createdReceipt.id).padStart(7, '0')}`;
 
-      const updatedReceipt = await tx.fieldReceipt.update({
+        const transaction = await tx.transaction.create({
+          data: {
+            personaId: input.personaId,
+            userId: collectorUserId,
+            billingType: input.billingType as BillingType,
+            type: TransactionType.INCOME,
+            paymentMethod: primaryImmediateMethod,
+            amount: immediateNum,
+            receiptNumber,
+            verificationCode: generateUniqueVerificationCode(),
+            description: `Cobro digital en calle (${receiptNumber})`,
+            verified: false,
+          },
+        });
+
+        await recordLedgerMovement(tx, {
+          personaId: input.personaId,
+          entryType: LedgerEntryType.CREDIT,
+          sourceType: LedgerSourceType.COLLECTION_RECEIPT,
+          billingType: input.billingType as BillingType,
+          amount: immediateNum,
+          reference: receiptNumber,
+          description: `Recibo digital en calle ${receiptNumber}`,
+          transactionId: transaction.id,
+          userId: collectorUserId,
+          occurredAt: new Date(input.capturedAt),
+        });
+
+        await tx.fieldReceipt.update({
+          where: { id: createdReceipt.id },
+          data: { receiptNumber, transactionId: transaction.id },
+        });
+      }
+
+      await recomputeOpenSettlement(tx, settlement.id);
+
+      const syncedReceipt = await tx.fieldReceipt.findUniqueOrThrow({
         where: { id: createdReceipt.id },
-        data: { receiptNumber, transactionId: transaction.id },
         include: {
           payments: true,
           persona: { select: { id: true, name: true, phone: true, outstandingBalance: true } },
@@ -228,9 +209,7 @@ export const fieldReceiptsService = {
         },
       });
 
-      await recomputeOpenSettlement(tx, settlement.id);
-
-      return { receipt: updatedReceipt, alreadySynced: false };
+      return { receipt: syncedReceipt, alreadySynced: false };
     });
   },
 
@@ -239,12 +218,17 @@ export const fieldReceiptsService = {
    */
   async verifyTransferPayment(paymentId: number, adminUserId: number, input: VerifyTransferInput) {
     return prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "FieldReceiptPayment" WHERE id = ${paymentId} FOR UPDATE`;
+
       const payment = await tx.fieldReceiptPayment.findUnique({
         where: { id: paymentId },
         include: { fieldReceipt: { include: { payments: true } } },
       });
       if (!payment || payment.paymentMethod !== 'BANK_TRANSFER') {
         throw new AppError('Pago por transferencia no encontrado', 404);
+      }
+      if (payment.fieldReceipt.status === 'VOIDED') {
+        throw new AppError('El recibo fue anulado y no puede acreditarse', 409);
       }
       if (payment.status !== 'PENDING_BANK') {
         throw new AppError('Esta transferencia ya fue procesada', 409);
@@ -258,25 +242,14 @@ export const fieldReceiptsService = {
           throw new AppError('Debe seleccionar la cuenta bancaria de destino', 400);
         }
 
-        await tx.fieldReceiptPayment.update({
-          where: { id: payment.id },
-          data: { status: 'CLEARED', bankAccountId: targetBankId, verifiedAt: new Date() },
+        await applyTransferClearAndIssueReceipt(tx, {
+          payment: { id: payment.id, fieldReceiptId: payment.fieldReceiptId },
+          receipt: payment.fieldReceipt,
+          targetBankId,
+          amountNum,
+          adminUserId,
+          now: new Date(),
         });
-
-        await tx.bankAccount.update({
-          where: { id: targetBankId },
-          data: { balance: { increment: amountNum } },
-        });
-
-        const hasRemainingPending = payment.fieldReceipt.payments.some(
-          (p) => p.id !== payment.id && (p.status === 'PENDING_BANK' || p.status === 'IN_TRANSIT'),
-        );
-        if (!hasRemainingPending && payment.fieldReceipt.status !== 'VOIDED') {
-          await tx.fieldReceipt.update({
-            where: { id: payment.fieldReceiptId },
-            data: { status: 'VERIFIED' },
-          });
-        }
       } else {
         await tx.fieldReceiptPayment.update({
           where: { id: payment.id },
@@ -287,23 +260,12 @@ export const fieldReceiptsService = {
           },
         });
 
-        await recordLedgerMovement(tx, {
-          personaId: payment.fieldReceipt.personaId,
-          entryType: LedgerEntryType.DEBIT,
-          sourceType: LedgerSourceType.RECEIPT_REVERSAL,
-          billingType: payment.fieldReceipt.billingType,
-          amount: amountNum,
-          reference: payment.fieldReceipt.receiptNumber ?? payment.fieldReceipt.provisionalCode,
-          description: `Rechazo de transferencia (${input.rejectionReason})`,
-          userId: adminUserId,
-        });
+        await syncMirrorTransactionForFieldReceipt(tx, payment.fieldReceiptId, adminUserId);
       }
 
       if (payment.fieldReceipt.settlementId) {
         await recomputeOpenSettlement(tx, payment.fieldReceipt.settlementId);
       }
-
-      await syncMirrorTransactionForFieldReceipt(tx, payment.fieldReceiptId, adminUserId);
 
       return tx.fieldReceipt.findUnique({
         where: { id: payment.fieldReceiptId },
@@ -374,62 +336,7 @@ export const fieldReceiptsService = {
         throw new AppError('El recibo ya se encuentra anulado', 409);
       }
 
-      const activeSumDec = receipt.payments
-        .filter((p) => p.status !== 'REJECTED')
-        .reduce((acc, p) => acc.plus(roundToIntegerPeso(p.amount.toString())), new Decimal(0));
-
-      if (activeSumDec.gt(0)) {
-        await recordLedgerMovement(tx, {
-          personaId: receipt.personaId,
-          entryType: LedgerEntryType.DEBIT,
-          sourceType: LedgerSourceType.RECEIPT_REVERSAL,
-          billingType: receipt.billingType,
-          amount: computeReversalAmount(activeSumDec).toNumber(),
-          reference: receipt.receiptNumber ?? receipt.provisionalCode,
-          description: `Anulación de recibo ${receipt.receiptNumber ?? receipt.provisionalCode}: ${voidReason}`,
-          userId: adminUserId,
-        });
-      }
-
-      // Revertir saldo bancario de transferencias que ya habían sido acreditadas (CLEARED)
-      for (const payment of receipt.payments) {
-        if (
-          payment.paymentMethod === PaymentMethod.BANK_TRANSFER &&
-          payment.status === 'CLEARED' &&
-          payment.bankAccountId
-        ) {
-          const clearedAmt = roundToIntegerPeso(payment.amount.toString()).toNumber();
-          if (clearedAmt > 0) {
-            await tx.bankAccount.update({
-              where: { id: payment.bankAccountId },
-              data: { balance: { decrement: clearedAmt } },
-            });
-          }
-        }
-      }
-
-      const mirrorTxId = receipt.transactionId;
-      const voided = await tx.fieldReceipt.update({
-        where: { id: receipt.id },
-        data: {
-          status: 'VOIDED',
-          voidReason,
-          voidedByUserId: adminUserId,
-          voidedAt: new Date(),
-          transactionId: null,
-        },
-        include: { payments: true },
-      });
-
-      if (mirrorTxId) {
-        await tx.transaction.deleteMany({ where: { id: mirrorTxId } });
-      }
-
-      if (receipt.settlementId) {
-        await recomputeOpenSettlement(tx, receipt.settlementId);
-      }
-
-      return voided;
+      return voidFieldReceiptAndReverse(tx, receipt, adminUserId, voidReason);
     });
   },
 

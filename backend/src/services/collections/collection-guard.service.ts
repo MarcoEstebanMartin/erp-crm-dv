@@ -52,7 +52,7 @@ export async function assertCollectionAllowed(
     select: { id: true, receiptNumber: true, amount: true, createdAt: true },
   });
 
-  const recentDuplicate: RecentCollectionMatch | null = duplicateTx
+  let recentDuplicate: RecentCollectionMatch | null = duplicateTx
     ? {
         id: duplicateTx.id,
         receiptNumber: duplicateTx.receiptNumber,
@@ -60,6 +60,37 @@ export async function assertCollectionAllowed(
         createdAt: duplicateTx.createdAt,
       }
     : null;
+
+  if (!recentDuplicate && typeof db.fieldReceipt?.findFirst === 'function') {
+    const duplicateFieldReceipt = await db.fieldReceipt.findFirst({
+      where: {
+        personaId: persona.id,
+        status: { not: 'VOIDED' },
+        totalAmount: normalizedAmount,
+        createdAt: { gte: windowStart },
+        payments: { some: { status: { not: 'REJECTED' } } },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        receiptNumber: true,
+        provisionalCode: true,
+        totalAmount: true,
+        createdAt: true,
+      },
+    });
+    if (duplicateFieldReceipt) {
+      recentDuplicate = {
+        id: duplicateFieldReceipt.id,
+        receiptNumber:
+          duplicateFieldReceipt.receiptNumber ||
+          duplicateFieldReceipt.provisionalCode ||
+          `Calle #${duplicateFieldReceipt.id}`,
+        amount: duplicateFieldReceipt.totalAmount.toString(),
+        createdAt: duplicateFieldReceipt.createdAt,
+      };
+    }
+  }
 
   // 2. Si viene desde un viaje de reparto, sumar pedidos PREPARED aún no facturados del cliente en ese viaje
   let unbilledRouteOrdersAmount = new Decimal(0);

@@ -52,8 +52,16 @@ export const whatsappDispatchService = {
       collectorName: receipt.collector.username,
       totalAmount: Number(receipt.totalAmount),
       balanceAfter: Number(receipt.persona.outstandingBalance),
-      hasPendingTransfer: receipt.payments.some((p) => p.paymentMethod === 'BANK_TRANSFER'),
-      payments: receipt.payments.map((p) => ({
+      hasPendingTransfer: receipt.payments.some(
+        (p) => p.paymentMethod === 'BANK_TRANSFER' && p.status === 'PENDING_BANK',
+      ),
+      payments: receipt.payments
+        .filter(
+          (p) =>
+            (p.paymentMethod !== 'BANK_TRANSFER' && p.status !== 'REJECTED') ||
+            (p.paymentMethod === 'BANK_TRANSFER' && p.status === 'CLEARED'),
+        )
+        .map((p) => ({
         paymentMethod: p.paymentMethod as 'CASH' | 'BANK_TRANSFER' | 'CHECK',
         amount: Number(p.amount),
         transferReference: p.transferReference,

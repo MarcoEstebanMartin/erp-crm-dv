@@ -80,6 +80,11 @@ export const receiptService = {
       where: {
         type: TransactionType.INCOME,
         personaId: { not: null },
+        fieldReceipt: { is: null },
+        OR: [
+          { receiptNumber: null },
+          { NOT: { receiptNumber: { startsWith: 'REC-C-' } } },
+        ],
       },
       include: {
         persona: {
