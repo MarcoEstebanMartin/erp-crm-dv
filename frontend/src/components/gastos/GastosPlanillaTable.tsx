@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, Loader2, Plus, Trash2 } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { ArrowRight, Trash2 } from 'lucide-react';
 import {
   type ComparisonRow,
   type ExpenseCategory,
@@ -9,6 +9,7 @@ import {
   getShortMonthName,
   shiftMonth,
 } from './gastos.types';
+import { SheetAmountCell, guessCategoryId } from './GastosSheetCell';
 
 interface GastosPlanillaTableProps {
   rows: ComparisonRow[];
@@ -31,118 +32,27 @@ interface GastosPlanillaTableProps {
   onDeleteExpense: (id: number) => void;
 }
 
-function InlineAmountCell({
-  row,
-  isSaving,
-  isSaved,
-  onSave,
-  onQuickCopy,
-}: {
-  row: ComparisonRow;
-  isSaving: boolean;
-  isSaved: boolean;
-  onSave: (row: ComparisonRow, amount: number) => Promise<void>;
-  onQuickCopy: (row: ComparisonRow) => Promise<void>;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(row.currentAmount !== null ? String(row.currentAmount) : '');
-
-  useEffect(() => {
-    if (!editing) {
-      setDraft(row.currentAmount !== null ? String(row.currentAmount) : '');
-    }
-  }, [row.currentAmount, editing]);
-
-  const commit = async () => {
-    setEditing(false);
-    const cleaned = draft.replace(/[^\d]/g, '');
-    if (!cleaned) {
-      setDraft(row.currentAmount !== null ? String(row.currentAmount) : '');
-      return;
-    }
-    const num = Number(cleaned);
-    if (num > 0 && num !== row.currentAmount) {
-      await onSave(row, num);
-    } else {
-      setDraft(row.currentAmount !== null ? String(row.currentAmount) : '');
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur();
-    } else if (e.key === 'Escape') {
-      setDraft(row.currentAmount !== null ? String(row.currentAmount) : '');
-      setEditing(false);
-      e.currentTarget.blur();
-    }
-  };
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-      {!row.currentExpense && row.compareAmount !== null && row.compareAmount > 0 && !editing && (
-        <button
-          type="button"
-          onClick={() => onQuickCopy(row)}
-          disabled={isSaving}
-          title={`Copiar ${formatPeso(row.compareAmount)}`}
-          aria-label={`Copiar importe de ${row.description}`}
-          style={{
-            background: 'none',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            color: 'var(--text-secondary)',
-            cursor: 'pointer',
-            padding: '3px 6px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '3px',
-            fontSize: '0.72rem',
-          }}
-        >
-          <ArrowRight size={12} aria-hidden="true" />
-        </button>
-      )}
-
-      <div style={{ position: 'relative', width: '132px' }}>
-        <input
-          type="text"
-          inputMode="numeric"
-          aria-label={`Monto de ${row.description}`}
-          value={editing ? draft : row.currentAmount !== null ? formatPeso(row.currentAmount) : ''}
-          placeholder="—"
-          disabled={isSaving}
-          onFocus={() => {
-            setEditing(true);
-            setDraft(row.currentAmount !== null ? String(row.currentAmount) : '');
-          }}
-          onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, ''))}
-          onBlur={commit}
-          onKeyDown={handleKeyDown}
-          className="tabular-nums"
-          style={{
-            width: '100%',
-            textAlign: 'right',
-            padding: '5px 8px',
-            borderRadius: '6px',
-            border: editing ? '1px solid #111827' : '1px solid transparent',
-            backgroundColor: editing ? '#fff' : row.currentAmount === null ? '#F9FAFB' : 'transparent',
-            fontWeight: row.currentAmount !== null ? 600 : 400,
-            fontSize: '0.9rem',
-            color: row.currentAmount !== null ? 'var(--text-primary)' : 'var(--text-muted)',
-            outline: 'none',
-            transition: 'border-color 0.15s, background-color 0.15s',
-          }}
-        />
-      </div>
-
-      <span style={{ width: '16px', display: 'inline-flex', justifyContent: 'center' }}>
-        {isSaving && <Loader2 size={13} className="spin" style={{ color: 'var(--text-muted)' }} aria-hidden="true" />}
-        {!isSaving && isSaved && <Check size={14} style={{ color: '#16A34A' }} aria-label="Guardado" />}
-      </span>
-    </div>
-  );
-}
+const B = '1px solid #E5E7EB';
+const thBase: React.CSSProperties = {
+  padding: '8px 12px',
+  fontSize: '0.76rem',
+  fontWeight: 600,
+  color: '#475569',
+  borderBottom: B,
+  borderRight: B,
+};
+const tdBase: React.CSSProperties = {
+  height: '36px',
+  borderBottom: B,
+  borderRight: B,
+  fontSize: '0.86rem',
+};
+const tfBase: React.CSSProperties = {
+  padding: '10px 12px',
+  borderTop: '2px solid #CBD5E1',
+  borderRight: B,
+  fontSize: '0.9rem',
+};
 
 export function GastosPlanillaTable({
   rows,
@@ -165,277 +75,238 @@ export function GastosPlanillaTable({
   onDeleteExpense,
 }: GastosPlanillaTableProps) {
   const [quickDesc, setQuickDesc] = useState('');
-  const [quickCatId, setQuickCatId] = useState<string>('');
   const [quickAmount, setQuickAmount] = useState('');
-
-  useEffect(() => {
-    if (!quickCatId && categories.length > 0) {
-      const otros = categories.find((c) => c.name.toLowerCase().includes('otros'));
-      setQuickCatId(String(otros ? otros.id : categories[0].id));
-    }
-  }, [categories, quickCatId]);
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const quickDescRef = useRef<HTMLInputElement | null>(null);
+  const quickAmountRef = useRef<HTMLInputElement | null>(null);
 
   const compareOptions = useMemo(() => {
-    const map = new Map<string, { year: number; month: number; count: number }>();
+    const map = new Map<string, { year: number; month: number }>();
     const prev = shiftMonth(selectedYear, selectedMonth, -1);
-    map.set(`${prev.year}-${prev.month}`, { year: prev.year, month: prev.month, count: 0 });
-    map.set(`${compareYear}-${compareMonth}`, { year: compareYear, month: compareMonth, count: 0 });
+    map.set(`${prev.year}-${prev.month}`, prev);
+    map.set(`${compareYear}-${compareMonth}`, { year: compareYear, month: compareMonth });
     for (const p of periods) {
       if (p.year === selectedYear && p.month === selectedMonth) continue;
-      map.set(`${p.year}-${p.month}`, { year: p.year, month: p.month, count: p.count });
+      map.set(`${p.year}-${p.month}`, { year: p.year, month: p.month });
     }
     return Array.from(map.values()).sort((a, b) => (b.year !== a.year ? b.year - a.year : b.month - a.month));
   }, [periods, selectedYear, selectedMonth, compareYear, compareMonth]);
 
-  const handleAddSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const num = Number(quickAmount.replace(/[^\d]/g, ''));
+  const handleMoveRow = (nextIndex: number) => {
+    if (nextIndex < 0) return;
+    if (nextIndex < rows.length) inputRefs.current[nextIndex]?.focus();
+    else quickDescRef.current?.focus();
+  };
+
+  const submitQuickAdd = async () => {
+    const desc = quickDesc.trim();
+    const amt = Number(quickAmount.replace(/[^\d]/g, ''));
+    if (!desc || !amt || amt <= 0) return;
     const ok = await onQuickAddRow({
-      description: quickDesc,
-      categoryId: Number(quickCatId),
-      amount: num,
+      description: desc,
+      categoryId: guessCategoryId(desc, categories),
+      amount: amt,
     });
     if (ok) {
       setQuickDesc('');
       setQuickAmount('');
+      quickDescRef.current?.focus();
     }
   };
 
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div
-        className="table-container table-container--sticky"
-        role="region"
-        aria-label="Planilla comparativa de gastos"
-        tabIndex={0}
-        style={{ marginTop: 0, maxHeight: '62vh' }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
-          <thead>
+    <div style={{ border: B, borderRadius: '8px', backgroundColor: '#fff', overflow: 'hidden' }}>
+      <div role="region" aria-label="Planilla de gastos" tabIndex={0} style={{ overflowY: 'auto', maxHeight: '72vh' }}>
+        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+          <colgroup>
+            <col />
+            <col style={{ width: '150px' }} />
+            <col style={{ width: '160px' }} />
+            <col style={{ width: '112px' }} />
+          </colgroup>
+
+          <thead style={{ position: 'sticky', top: 0, zIndex: 2, backgroundColor: '#F8FAFC' }}>
             <tr>
-              <th scope="col" style={{ textAlign: 'left', paddingLeft: '20px' }}>Concepto</th>
-              <th scope="col" style={{ textAlign: 'right', width: '190px' }}>
+              <th scope="col" style={{ ...thBase, textAlign: 'left', paddingLeft: '14px' }}>Concepto</th>
+              <th scope="col" style={{ ...thBase, textAlign: 'right', padding: '5px 8px' }}>
                 <select
-                  aria-label="Mes de comparación"
+                  aria-label="Mes comparado"
                   value={`${compareYear}-${compareMonth}`}
                   onChange={(e) => {
                     const [y, m] = e.target.value.split('-').map(Number);
                     onChangeComparePeriod(y, m);
                   }}
-                  style={{
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '5px',
-                    backgroundColor: '#fff',
-                    padding: '3px 8px',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                  }}
+                  style={{ border: '1px solid #D1D5DB', borderRadius: '4px', backgroundColor: '#fff', padding: '2px 6px', fontSize: '0.76rem', fontWeight: 600, color: '#374151', cursor: 'pointer', maxWidth: '100%' }}
                 >
                   {compareOptions.map((opt) => (
                     <option key={`${opt.year}-${opt.month}`} value={`${opt.year}-${opt.month}`}>
-                      {getShortMonthName(opt.month)} {opt.year}{opt.count > 0 ? ` (${opt.count})` : ''}
+                      {getShortMonthName(opt.month)} {opt.year}
                     </option>
                   ))}
                 </select>
               </th>
-              <th scope="col" style={{ textAlign: 'right', width: '210px', paddingRight: '26px' }}>
+              <th scope="col" style={{ ...thBase, textAlign: 'right', fontWeight: 700, color: '#111827', backgroundColor: '#F1F5F9', paddingRight: '24px' }}>
                 {getShortMonthName(selectedMonth)} {selectedYear}
               </th>
-              <th scope="col" style={{ textAlign: 'right', width: '130px' }}>Diferencia</th>
-              <th scope="col" style={{ width: '48px' }} aria-label="Acciones" />
+              <th scope="col" style={{ ...thBase, textAlign: 'right', borderRight: 'none' }}>Dif.</th>
             </tr>
           </thead>
 
           <tbody>
-            {rows.map((row) => {
-              const diff =
-                row.currentAmount !== null && row.compareAmount !== null
-                  ? row.currentAmount - row.compareAmount
-                  : null;
+            {rows.map((row, idx) => {
+              const diff = row.currentAmount !== null && row.compareAmount !== null ? row.currentAmount - row.compareAmount : null;
               const isPending = row.currentExpense === null;
 
               return (
-                <tr
-                  key={row.rowKey}
-                  style={{
-                    backgroundColor: isPending ? '#FAFAFA' : undefined,
-                  }}
-                >
-                  <td style={{ paddingLeft: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: isPending ? 400 : 500, color: isPending ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
-                        {row.description}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          color: 'var(--text-muted)',
-                          backgroundColor: '#F3F4F6',
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                        }}
-                      >
-                        {row.categoryName}
-                      </span>
+                <tr key={row.rowKey}>
+                  <td style={{ ...tdBase, padding: '0 8px 0 14px', color: isPending ? '#6B7280' : '#111827', fontWeight: isPending ? 400 : 500, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description}</span>
+                      {isAdmin && row.currentExpense && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteExpense(row.currentExpense!.id)}
+                          aria-label={`Eliminar ${row.description}`}
+                          title="Eliminar"
+                          style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '2px', display: 'inline-flex', flexShrink: 0 }}
+                        >
+                          <Trash2 size={13} aria-hidden="true" />
+                        </button>
+                      )}
                     </div>
                   </td>
 
-                  <td
-                    className="tabular-nums"
-                    style={{
-                      textAlign: 'right',
-                      color: 'var(--text-secondary)',
-                      fontSize: '0.88rem',
-                    }}
-                  >
-                    {row.compareAmount !== null ? formatPeso(row.compareAmount) : '—'}
+                  <td className="tabular-nums" style={{ ...tdBase, padding: '0 8px 0 10px', textAlign: 'right', color: '#6B7280', backgroundColor: '#FAFAFA' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                      <span>{row.compareAmount !== null ? formatPeso(row.compareAmount) : '—'}</span>
+                      {isPending && row.compareAmount !== null && row.compareAmount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => onQuickCopyRow(row)}
+                          disabled={savingRowKey === row.rowKey}
+                          title={`Copiar ${formatPeso(row.compareAmount)}`}
+                          aria-label={`Copiar ${row.description}`}
+                          style={{ background: '#fff', border: '1px solid #D1D5DB', borderRadius: '4px', color: '#4B5563', cursor: 'pointer', padding: '2px 4px', display: 'inline-flex' }}
+                        >
+                          <ArrowRight size={11} aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
                   </td>
 
-                  <td style={{ textAlign: 'right' }}>
-                    <InlineAmountCell
+                  <td style={{ ...tdBase, padding: 0 }}>
+                    <SheetAmountCell
                       row={row}
+                      rowIndex={idx}
                       isSaving={savingRowKey === row.rowKey}
                       isSaved={savedRowKey === row.rowKey}
+                      inputRef={(el) => { inputRefs.current[idx] = el; }}
                       onSave={onInlineSave}
-                      onQuickCopy={onQuickCopyRow}
+                      onMoveRow={handleMoveRow}
                     />
                   </td>
 
                   <td
                     className="tabular-nums"
                     style={{
+                      ...tdBase,
+                      borderRight: 'none',
+                      padding: '0 12px',
                       textAlign: 'right',
                       fontSize: '0.82rem',
                       fontWeight: 500,
-                      color:
-                        diff === null || diff === 0
-                          ? 'var(--text-muted)'
-                          : diff > 0
-                            ? 'var(--color-corp-red)'
-                            : '#15803D',
+                      color: diff === null || diff === 0 ? '#9CA3AF' : diff > 0 ? 'var(--color-corp-red)' : '#15803D',
                     }}
                   >
                     {diff !== null ? formatDiffPeso(diff) : '—'}
-                  </td>
-
-                  <td style={{ textAlign: 'center' }}>
-                    {isAdmin && row.currentExpense && (
-                      <button
-                        type="button"
-                        onClick={() => onDeleteExpense(row.currentExpense!.id)}
-                        aria-label={`Eliminar ${row.description}`}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--text-muted)',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          borderRadius: '4px',
-                          display: 'inline-flex',
-                        }}
-                      >
-                        <Trash2 size={14} aria-hidden="true" />
-                      </button>
-                    )}
                   </td>
                 </tr>
               );
             })}
 
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                  Sin gastos en este período
-                </td>
-              </tr>
-            )}
+            <tr style={{ backgroundColor: '#FDFDFD' }}>
+              <td style={{ ...tdBase, padding: 0, height: '38px' }}>
+                <input
+                  ref={quickDescRef}
+                  type="text"
+                  value={quickDesc}
+                  onChange={(e) => setQuickDesc(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && quickDesc.trim()) {
+                      e.preventDefault();
+                      quickAmountRef.current?.focus();
+                    }
+                  }}
+                  placeholder="+ Agregar concepto..."
+                  aria-label="Nuevo concepto"
+                  style={{ width: '100%', height: '100%', padding: '0 14px', border: 'none', outline: 'none', backgroundColor: 'transparent', fontSize: '0.86rem', color: '#111827' }}
+                />
+              </td>
+              <td style={{ ...tdBase, padding: '0 10px', textAlign: 'right', color: '#D1D5DB', backgroundColor: '#FAFAFA' }}>—</td>
+              <td style={{ ...tdBase, padding: 0 }}>
+                <input
+                  ref={quickAmountRef}
+                  type="text"
+                  inputMode="numeric"
+                  value={quickAmount}
+                  onChange={(e) => setQuickAmount(e.target.value.replace(/[^\d]/g, ''))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      submitQuickAdd();
+                    }
+                  }}
+                  onBlur={() => {
+                    if (quickDesc.trim() && quickAmount.trim()) submitQuickAdd();
+                  }}
+                  placeholder="Monto $"
+                  aria-label="Monto del nuevo concepto"
+                  disabled={savingRowKey === '__quick_add__'}
+                  className="tabular-nums"
+                  style={{ width: '100%', height: '100%', padding: '0 24px 0 10px', border: 'none', outline: 'none', textAlign: 'right', backgroundColor: 'transparent', fontSize: '0.86rem', color: '#111827' }}
+                />
+              </td>
+              <td style={{ ...tdBase, borderRight: 'none', padding: '0 8px', textAlign: 'right' }}>
+                {quickDesc.trim() && quickAmount.trim() && (
+                  <button
+                    type="button"
+                    onClick={submitQuickAdd}
+                    disabled={savingRowKey === '__quick_add__'}
+                    style={{ background: '#111827', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Guardar
+                  </button>
+                )}
+              </td>
+            </tr>
           </tbody>
 
-          <tfoot>
-            <tr style={{ backgroundColor: '#F9FAFB', borderTop: '1px solid var(--border-color)' }}>
-              <th scope="row" style={{ textAlign: 'left', paddingLeft: '20px', fontWeight: 700, fontSize: '0.92rem' }}>
-                Total
-              </th>
-              <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+          <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 2, backgroundColor: '#F8FAFC' }}>
+            <tr>
+              <th scope="row" style={{ ...tfBase, textAlign: 'left', paddingLeft: '14px', fontWeight: 700 }}>Total</th>
+              <td className="tabular-nums" style={{ ...tfBase, textAlign: 'right', fontWeight: 600, color: '#475569' }}>
                 {formatPeso(totalCompare)}
               </td>
-              <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, paddingRight: '26px', fontSize: '0.98rem', color: 'var(--text-primary)' }}>
+              <td className="tabular-nums" style={{ ...tfBase, textAlign: 'right', paddingRight: '24px', fontWeight: 700, fontSize: '0.94rem', color: '#111827', backgroundColor: '#FEF9C3' }}>
                 {formatPeso(totalCurrent)}
               </td>
               <td
                 className="tabular-nums"
                 style={{
+                  ...tfBase,
+                  borderRight: 'none',
                   textAlign: 'right',
                   fontWeight: 600,
-                  fontSize: '0.85rem',
-                  color: totalDiff === 0 ? 'var(--text-muted)' : totalDiff > 0 ? 'var(--color-corp-red)' : '#15803D',
+                  fontSize: '0.84rem',
+                  color: totalDiff === 0 ? '#9CA3AF' : totalDiff > 0 ? 'var(--color-corp-red)' : '#15803D',
                 }}
               >
                 {formatDiffPeso(totalDiff)}
               </td>
-              <td />
             </tr>
           </tfoot>
         </table>
       </div>
-
-      <form
-        onSubmit={handleAddSubmit}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '12px 20px',
-          borderTop: '1px solid var(--border-color)',
-          backgroundColor: '#fff',
-          flexWrap: 'wrap',
-        }}
-      >
-        <input
-          type="text"
-          value={quickDesc}
-          onChange={(e) => setQuickDesc(e.target.value)}
-          placeholder="Nuevo concepto (ej. Luz, Flete, Papelería)..."
-          aria-label="Nuevo concepto de gasto"
-          className="input"
-          style={{ flex: '2 1 200px', height: '34px', fontSize: '0.86rem' }}
-        />
-
-        <select
-          value={quickCatId}
-          onChange={(e) => setQuickCatId(e.target.value)}
-          aria-label="Categoría del nuevo gasto"
-          className="select"
-          style={{ flex: '1 1 150px', height: '34px', fontSize: '0.84rem' }}
-        >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          inputMode="numeric"
-          value={quickAmount}
-          onChange={(e) => setQuickAmount(e.target.value.replace(/[^\d]/g, ''))}
-          placeholder="Monto $"
-          aria-label="Monto del nuevo gasto"
-          className="input tabular-nums"
-          style={{ width: '130px', height: '34px', textAlign: 'right', fontSize: '0.86rem' }}
-        />
-
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={savingRowKey === '__quick_add__'}
-          style={{ height: '34px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
-        >
-          <Plus size={14} aria-hidden="true" />
-          <span>Agregar</span>
-        </button>
-      </form>
     </div>
   );
 }

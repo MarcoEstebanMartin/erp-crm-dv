@@ -103,12 +103,11 @@ export async function createBulkExpensesRecords(params: {
           vehicleId: item.vehicleId ? Number(item.vehicleId) : undefined,
           transactionId,
         },
-        include: { category: true },
       });
       results.push(exp);
     }
     return results;
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 
   await logAudit({
     userId: params.userId,

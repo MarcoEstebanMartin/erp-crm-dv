@@ -6,7 +6,6 @@ import {
   Copy,
   FileSpreadsheet,
   Plus,
-  Search,
   X,
 } from 'lucide-react';
 import { getMonthName } from './gastos/gastos.types';
@@ -124,31 +123,16 @@ export default function GastosDashboard() {
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {g.activeTab === 'planilla' && (
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} aria-hidden="true" />
-              <input
-                type="search"
-                value={g.searchQuery}
-                onChange={(e) => g.setSearchQuery(e.target.value)}
-                placeholder="Buscar..."
-                aria-label="Buscar concepto o categoría"
-                className="input"
-                style={{ paddingLeft: '30px', height: '34px', width: '170px', fontSize: '0.83rem' }}
-              />
-            </div>
-          )}
-
           {g.missingRows.length > 0 && (
             <button
               type="button"
               className="btn btn-secondary"
               disabled={g.copyingAll}
               onClick={g.handleCopyAllMissing}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', height: '34px' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', height: '34px', padding: '0 10px' }}
             >
               <Copy size={14} aria-hidden="true" />
-              <span>{g.copyingAll ? 'Copiando...' : `Copiar ${g.missingRows.length} pendientes`}</span>
+              <span>{g.copyingAll ? 'Copiando...' : `Copiar (${g.missingRows.length})`}</span>
             </button>
           )}
 
@@ -157,7 +141,7 @@ export default function GastosDashboard() {
               type="button"
               className="btn btn-secondary"
               onClick={() => { g.setErrorMsg(null); g.setIsImportModalOpen(true); }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', height: '34px' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', height: '34px', padding: '0 10px' }}
             >
               <FileSpreadsheet size={14} aria-hidden="true" />
               <span>Excel</span>
@@ -168,7 +152,7 @@ export default function GastosDashboard() {
             type="button"
             className="btn btn-primary"
             onClick={() => { g.setErrorMsg(null); g.setIsCreateModalOpen(true); }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', height: '34px' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', height: '34px', padding: '0 12px' }}
           >
             <Plus size={14} aria-hidden="true" />
             <span>Detallado</span>
