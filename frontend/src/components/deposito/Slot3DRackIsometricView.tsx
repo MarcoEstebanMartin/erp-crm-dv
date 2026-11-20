@@ -10,12 +10,12 @@ interface Slot3DRackIsometricViewProps {
 }
 
 const LEVEL_TITLES: Record<RackLevel, string> = {
-  A: 'BASE / SUELO',
-  B: 'NIVEL MEDIO',
-  C: 'NIVEL ALTO',
-  D: 'CUARTO NIVEL',
-  E: 'QUINTO NIVEL',
-  F: 'NIVEL SUPERIOR',
+  A: 'Base',
+  B: 'Medio',
+  C: 'Alto',
+  D: '4°',
+  E: '5°',
+  F: 'Superior',
 };
 
 export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = ({
@@ -31,13 +31,7 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
     <div className="wms-rack-3d-container">
       <div className="wms-rack-3d-header">
         <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b' }}>
-          Estantería ({supportedLevels.length} {supportedLevels.length === 1 ? 'Nivel' : 'Niveles'})
-        </span>
-        <span
-          className="badge"
-          style={{ backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.7rem' }}
-        >
-          Vista Isométrica 3D
+          Estante · {supportedLevels.length} {supportedLevels.length === 1 ? 'nivel' : 'niveles'}
         </span>
       </div>
 
@@ -45,8 +39,7 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
         className="wms-isometric-rack-wrapper"
         style={{ gap: isCompact ? '8px' : '14px', padding: isCompact ? '4px 0' : '10px 0' }}
       >
-        {levelsDesc.map((lvl, idx) => {
-          const floorNumber = supportedLevels.length - idx;
+        {levelsDesc.map((lvl) => {
           const items = itemsByLevel[lvl] || [];
           const totalUnits = items.reduce((s, i) => s + Number(i.lot.stock || 0), 0);
           const hasExpired = items.some((i) => evaluateLotDateHealth(i.lot.expirationDate) === 'EXPIRED');
@@ -74,14 +67,14 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
                 style={{ padding: isCompact ? '6px 10px' : '10px 12px' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 800, fontSize: isCompact ? '0.74rem' : '0.8rem' }}>
-                    PISO {floorNumber} - NIVEL {lvl} ({LEVEL_TITLES[lvl]})
+                  <span style={{ fontWeight: 700, fontSize: isCompact ? '0.74rem' : '0.8rem' }}>
+                    Nivel {lvl} · {LEVEL_TITLES[lvl]}
                   </span>
                   <span
                     className="badge tabular-nums"
-                    style={{ backgroundColor: badgeBg, color: '#fff', fontSize: '0.65rem' }}
+                    style={{ backgroundColor: badgeBg, color: '#fff', fontSize: '0.66rem' }}
                   >
-                    {items.length > 0 ? `${totalUnits} u.` : 'LIBRE'}
+                    {items.length > 0 ? `${totalUnits} u.` : 'Libre'}
                   </span>
                 </div>
 
@@ -97,12 +90,11 @@ export const Slot3DRackIsometricView: React.FC<Slot3DRackIsometricViewProps> = (
                   <div
                     style={{
                       fontSize: '0.71rem',
-                      fontStyle: 'italic',
-                      opacity: 0.7,
+                      opacity: 0.65,
                       marginTop: '2px',
                     }}
                   >
-                    Posición vacía
+                    Vacío
                   </div>
                 )}
               </div>

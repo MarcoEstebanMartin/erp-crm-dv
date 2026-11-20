@@ -12,7 +12,7 @@ import { extractSlotLevels, type MergedDepositSlot } from './warehouseLayoutMerg
 import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
 import { computeProductWmsBreakdown } from './wmsStockBreakdown';
 import { WMS_LOCATION_GROUPS } from './depositoHelpers';
-import type { RackLevel, UnassignedTrayItem } from './wmsMapHelpers';
+import { formatCompactSlotLevels, type RackLevel, type UnassignedTrayItem } from './wmsMapHelpers';
 
 interface Slot3DInspectorModalProps {
   isOpen: boolean;
@@ -31,6 +31,7 @@ type Slot3DInspectorInnerProps = Omit<Slot3DInspectorModalProps, 'slot'> & {
 };
 
 const ALL_RACK_LEVELS: RackLevel[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+const GENERIC_CHAMBERS = new Set(['GENERAL', 'D2_GENERAL', 'D3_GENERAL']);
 
 const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
   isOpen, onClose, slot, initialLevel, products, mergedSlots, prefillLoad, onPrefillConsumed, onStockUpdated,
@@ -227,19 +228,21 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '92vh' }}>
         <div className="wms-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: chamberInfo.bg, color: chamberInfo.color, border: `1.5px solid ${chamberInfo.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-              <Layers size={20} aria-hidden="true" />
+            <div style={{ width: '38px', height: '38px', borderRadius: '8px', backgroundColor: '#f8fafc', color: '#334155', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Layers size={18} aria-hidden="true" />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 id="wms-slot-3d-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>Slot {slot.code}</h3>
-                <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '3px 8px', fontVariantNumeric: 'tabular-nums' }}>
+                <h3 id="wms-slot-3d-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>{slot.code}</h3>
+                <span className={`badge ${totalStockInSlot > 0 ? 'badge-success' : 'badge-secondary'}`} style={{ fontSize: '0.72rem', padding: '2px 8px', fontVariantNumeric: 'tabular-nums' }}>
                   {totalStockInSlot > 0 ? `${totalStockInSlot} u.` : 'Vacío'}
                 </span>
                 {slot.customLabel && <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>{slot.customLabel}</span>}
               </div>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-                {slot.deposito} · {chamberInfo.label} · Niveles: <strong>{slot.nivel}</strong>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                {slot.deposito}
+                {!GENERIC_CHAMBERS.has(slot.chamber) ? ` · ${chamberInfo.label}` : ''}
+                {' · '}Pisos <strong>{formatCompactSlotLevels(slot.nivel)}</strong>
               </p>
             </div>
           </div>
@@ -249,17 +252,17 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
-                style={{ fontWeight: 700, fontSize: '0.78rem', padding: '6px 11px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                style={{ fontWeight: 600, fontSize: '0.78rem', padding: '6px 10px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                 onClick={() => setShowMoveSlotBar((prev) => !prev)}
                 disabled={loading}
               >
                 <ArrowRightLeft size={13} aria-hidden="true" />
-                Mudar Slot Completo
+                Mudar todo
               </button>
             )}
             {totalStockInSlot > 0 && (
-              <button type="button" className="btn btn-sm" style={{ backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', fontWeight: 700, fontSize: '0.78rem', padding: '6px 12px', borderRadius: '6px' }} onClick={handleVacateEntireSlot} disabled={loading}>
-                Liberar Slot a S/U
+              <button type="button" className="btn btn-sm" style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: 600, fontSize: '0.78rem', padding: '6px 10px', borderRadius: '6px' }} onClick={handleVacateEntireSlot} disabled={loading}>
+                Vaciar slot
               </button>
             )}
             <button type="button" className="wms-close-btn" onClick={onClose} aria-label="Cerrar"><X size={20} /></button>
@@ -280,7 +283,7 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
         {isSlotBlocked && (
           <div role="alert" className="alert alert-danger" style={{ margin: '12px 18px 0 18px', padding: '9px 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Lock size={15} aria-hidden="true" />
-            <span>Slot bloqueado: solo admite liberar mercadería a S/U.</span>
+            <span>Slot bloqueado: solo permite quitar stock.</span>
           </div>
         )}
         {errorMsg && <div className="alert alert-danger" style={{ margin: '12px 18px 0 18px', padding: '10px 14px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}><AlertCircle size={16} /><span>{errorMsg}</span></div>}
@@ -290,10 +293,10 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
           <Slot3DRackIsometricView supportedLevels={supportedLevels} activeLevel={activeLevel} setActiveLevel={(lvl) => { setActiveLevel(lvl); setShowLoadForm(false); }} itemsByLevel={itemsByLevel} />
 
           <div className="wms-shelf-detail-container">
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '14px', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-              {supportedLevels.map((lvl, idx) => (
-                <button key={lvl} type="button" className={`btn btn-sm ${activeLevel === lvl ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setActiveLevel(lvl); setShowLoadForm(false); }} style={{ fontSize: '0.78rem', padding: '6px 12px', fontWeight: 700, borderRadius: '6px' }}>
-                  Piso {idx + 1} (Nivel {lvl})
+            <div role="group" aria-label="Niveles del estante" style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '14px', paddingBottom: '8px', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {supportedLevels.map((lvl) => (
+                <button key={lvl} type="button" aria-pressed={activeLevel === lvl} className={`btn btn-sm ${activeLevel === lvl ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setActiveLevel(lvl); setShowLoadForm(false); }} style={{ fontSize: '0.78rem', padding: '5px 12px', fontWeight: 600, borderRadius: '6px' }}>
+                  Nivel {lvl}
                 </button>
               ))}
             </div>
@@ -310,12 +313,12 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
             ) : (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>Mercadería en Nivel {activeLevel}</span>
+                  <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>Nivel {activeLevel}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>{currentItems.length} lote(s)</span>
                     {currentItems.length > 0 && !isSlotBlocked && (
-                      <button type="button" className="btn btn-sm btn-primary" style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }} onClick={() => setShowLoadForm(true)}>
-                        Ubicar Mercadería
+                      <button type="button" className="btn btn-sm btn-primary" style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }} onClick={() => setShowLoadForm(true)}>
+                        Ubicar stock
                       </button>
                     )}
                   </div>
@@ -325,13 +328,13 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
                   <div style={{ padding: '24px 10px', textAlign: 'center', backgroundColor: '#fafafa', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
                     {isSlotBlocked && (
                       <div style={{ marginBottom: '6px', color: '#dc2626', display: 'flex', justifyContent: 'center' }}>
-                        <Lock size={22} aria-hidden="true" />
+                        <Lock size={20} aria-hidden="true" />
                       </div>
                     )}
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: !isSlotBlocked ? '12px' : 0 }}>Piso Vacío</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: !isSlotBlocked ? '12px' : 0 }}>Nivel vacío</div>
                     {!isSlotBlocked && (
                       <button type="button" className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '7px 14px', fontWeight: 600 }} onClick={() => setShowLoadForm(true)}>
-                        Ubicar Mercadería
+                        Ubicar stock
                       </button>
                     )}
                   </div>
@@ -341,22 +344,22 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
                       <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', backgroundColor: '#ffffff' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                           <div>
-                            <div style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)' }}>[{product.sku}] {product.name}</div>
-                            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>Rubro: {product.rubro?.name || 'General'}</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>[{product.sku}] {product.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{product.rubro?.name || 'General'}</div>
                           </div>
                           <span className="badge badge-success" style={{ fontSize: '0.75rem', fontWeight: 700 }}>{lot.stock} u.</span>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '6px', marginBottom: '8px' }}>
-                          <div>Lote: <strong>{extractCleanLotNumber(lot.lotNumber)}</strong></div>
-                          <div>Venc: <strong>{formatCleanExpirationDate(lot.expirationDate)}</strong></div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.78rem', backgroundColor: '#f8fafc', padding: '7px 8px', borderRadius: '6px', marginBottom: '8px' }}>
+                          <div>Lote <strong>{extractCleanLotNumber(lot.lotNumber)}</strong></div>
+                          <div>Venc. <strong>{formatCleanExpirationDate(lot.expirationDate)}</strong></div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
                           {!isSlotBlocked && lot.id > 0 && (
                             <div style={{ display: 'flex', gap: '4px', fontSize: '0.74rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Mover a:</span>
+                              <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Mover:</span>
                               {supportedLevels.filter((lvl) => lvl !== activeLevel).map((lvl) => (
                                 <button key={lvl} type="button" className="btn btn-ghost btn-sm" onClick={() => handleMoveLot(lot, `${slot.code}-${lvl}`)} style={{ fontSize: '0.72rem', padding: '2px 6px' }}>
-                                  Nivel {lvl}
+                                  {lvl}
                                 </button>
                               ))}
                               <button
@@ -372,8 +375,8 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
                               </button>
                             </div>
                           )}
-                          <button type="button" className="btn btn-outline btn-sm" onClick={() => handleVacatePosition(product, lot)} style={{ fontSize: '0.76rem', padding: '4px 10px', borderRadius: '6px', color: '#e30613', borderColor: '#fca5a5', fontWeight: 700, marginLeft: 'auto' }}>
-                            Liberar a S/U
+                          <button type="button" className="btn btn-outline btn-sm" title="Liberar a Sin Ubicar (S/U)" onClick={() => handleVacatePosition(product, lot)} style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', color: '#e30613', borderColor: '#fca5a5', fontWeight: 600, marginLeft: 'auto' }}>
+                            Quitar
                           </button>
                         </div>
 
@@ -386,7 +389,7 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
                               onChange={(e) => setTargetLotLocation(e.target.value)}
                               style={{ flex: 1, height: '30px', fontSize: '0.75rem' }}
                             >
-                              <option value="">Elegir slot destino...</option>
+                              <option value="">Destino...</option>
                               {WMS_LOCATION_GROUPS.map((g) => (
                                 <optgroup key={g.chamber} label={g.label}>
                                   {g.options

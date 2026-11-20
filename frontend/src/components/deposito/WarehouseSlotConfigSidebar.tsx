@@ -13,11 +13,11 @@ interface WarehouseSlotConfigSidebarProps {
 }
 
 const LEVEL_PRESET_OPTIONS = [
-  { value: 'A', label: 'A — 1 Piso (Solo Base / Suelo)' },
-  { value: 'A-B', label: 'A-B — 2 Pisos (Base + Medio)' },
-  { value: 'A-B-C', label: 'A-B-C — 3 Pisos Estándar' },
-  { value: 'A-B-C-D', label: 'A-B-C-D — 4 Pisos Rack Alto' },
-  { value: 'A-B-C-D-E-F', label: 'A-B-C-D-E-F — 6 Niveles Completos' },
+  { value: 'A', label: '1 nivel (A)' },
+  { value: 'A-B', label: '2 niveles (A–B)' },
+  { value: 'A-B-C', label: '3 niveles (A–C)' },
+  { value: 'A-B-C-D', label: '4 niveles (A–D)' },
+  { value: 'A-B-C-D-E-F', label: '6 niveles (A–F)' },
 ];
 
 export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProps> = ({
@@ -73,9 +73,9 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
         isBlocked: isStorage ? isBlocked : false,
       });
       await onSaved();
-      setSuccessMsg(`Posición ${cell.code} actualizada en PostgreSQL.`);
+      setSuccessMsg(`${cell.code} guardada.`);
     } catch (err: any) {
-      setErrorMsg(err.message || 'No se pudo guardar la configuración.');
+      setErrorMsg(err.message || 'No se pudo guardar.');
     } finally {
       setSaving(false);
     }
@@ -89,9 +89,9 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
       setSuccessMsg(null);
       await api.resetWarehouseCell(cell.code, originalBlueprint);
       await onSaved();
-      setSuccessMsg(`Posición ${cell.code} restaurada al plano original.`);
+      setSuccessMsg(`${cell.code} restaurada.`);
     } catch (err: any) {
-      setErrorMsg(err.message || 'No se pudo restaurar la posición.');
+      setErrorMsg(err.message || 'No se pudo restaurar.');
     } finally {
       setSaving(false);
     }
@@ -100,49 +100,48 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
   return (
     <div
       style={{
-        width: '340px',
+        width: '320px',
+        flexShrink: 0,
         backgroundColor: '#ffffff',
-        border: '1.5px solid #0f172a',
+        border: '1px solid var(--border-color)',
         borderRadius: '10px',
         padding: '16px',
-        boxShadow: '0 4px 12px rgba(15,23,42,0.06)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
       }}
     >
       <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h4 style={{ margin: 0, fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontWeight: 800 }}>
-          <Settings2 size={16} /> Configurar Celda WMS
+        <h4 style={{ margin: 0, fontSize: '0.94rem', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontWeight: 700 }}>
+          <Settings2 size={15} aria-hidden="true" /> Editar celda
         </h4>
-        <span className="badge" style={{ backgroundColor: '#0f172a', color: '#fff', fontSize: '0.68rem' }}>SOLO ADMIN</span>
       </div>
 
       {!cell ? (
-        <div style={{ padding: '24px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-            Seleccioná una celda del mapa
-          </div>
+        <div style={{ padding: '24px 10px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+          Elegí una celda del mapa
         </div>
       ) : (
         <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
-          <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px 12px' }}>
+          <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <strong style={{ fontSize: '0.96rem', color: '#0f172a' }}>{cell.code}</strong>
-              <span className="badge" style={{ fontSize: '0.68rem', backgroundColor: cell.hasOverride ? '#dbeafe' : '#f1f5f9', color: cell.hasOverride ? '#1d4ed8' : '#475569' }}>
-                {cell.hasOverride ? 'Personalizado DB' : 'Plano Original'}
-              </span>
+              <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{cell.code}</strong>
+              {cell.hasOverride && (
+                <span className="badge" style={{ fontSize: '0.68rem', backgroundColor: '#f1f5f9', color: '#475569' }}>
+                  Editada
+                </span>
+              )}
             </div>
             <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-              Fila {cell.r} • Columna {cell.c} • Stock activo: <strong>{activeUnitsInCell} u.</strong>
-              {occupiedLevels.length > 0 && ` (Pisos: ${occupiedLevels.join(', ')})`}
+              Stock: <strong>{activeUnitsInCell} u.</strong>
+              {occupiedLevels.length > 0 && ` · Pisos ${occupiedLevels.join(', ')}`}
             </div>
           </div>
 
           {activeUnitsInCell > 0 && (
             <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '7px', padding: '8px 10px', fontSize: '0.74rem', color: '#92400e', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-              <ShieldAlert size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
-              <span>Protección activa: no permite convertir en pasillo ni quitar pisos que tengan mercadería ubicada.</span>
+              <ShieldAlert size={14} aria-hidden="true" style={{ flexShrink: 0, marginTop: '1px' }} />
+              <span>Tiene stock: no permite pasar a pasillo ni quitar pisos ocupados.</span>
             </div>
           )}
 
@@ -150,25 +149,27 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
           {successMsg && <div role="status" className="alert alert-success" style={{ padding: '8px 10px', fontSize: '0.76rem', margin: 0 }}>{successMsg}</div>}
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '5px' }}>Función de la Celda</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: '#475569', marginBottom: '5px' }}>Tipo</label>
+            <div role="group" aria-label="Tipo de celda" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
               <button
                 type="button"
+                aria-pressed={isStorage}
                 className={`btn btn-sm ${isStorage ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setIsStorage(true)}
-                style={{ fontSize: '0.76rem', fontWeight: 700, padding: '6px' }}
+                style={{ fontSize: '0.76rem', fontWeight: 600, padding: '6px' }}
               >
-                Slot Estantería
+                Slot
               </button>
               <button
                 type="button"
+                aria-pressed={!isStorage}
                 className={`btn btn-sm ${!isStorage ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setIsStorage(false)}
                 disabled={activeUnitsInCell > 0}
                 title={activeUnitsInCell > 0 ? 'Primero liberá las unidades a S/U' : ''}
-                style={{ fontSize: '0.76rem', fontWeight: 700, padding: '6px' }}
+                style={{ fontSize: '0.76rem', fontWeight: 600, padding: '6px' }}
               >
-                Pasillo Libre
+                Pasillo
               </button>
             </div>
           </div>
@@ -176,8 +177,8 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
           {isStorage && (
             <>
               <div>
-                <label htmlFor="wms-cfg-levels" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Niveles</label>
-                <select id="wms-cfg-levels" className="form-control" value={levels} onChange={(e) => setLevels(e.target.value)} style={{ fontSize: '0.78rem', height: '34px' }}>
+                <label htmlFor="wms-cfg-levels" style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Niveles</label>
+                <select id="wms-cfg-levels" className="form-control" value={levels} onChange={(e) => setLevels(e.target.value)} style={{ fontSize: '0.78rem', height: '33px' }}>
                   {LEVEL_PRESET_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
@@ -185,8 +186,8 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
               </div>
 
               <div>
-                <label htmlFor="wms-cfg-chamber" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Sector</label>
-                <select id="wms-cfg-chamber" className="form-control" value={chamber} onChange={(e) => setChamber(e.target.value)} style={{ fontSize: '0.78rem', height: '34px' }}>
+                <label htmlFor="wms-cfg-chamber" style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Sector</label>
+                <select id="wms-cfg-chamber" className="form-control" value={chamber} onChange={(e) => setChamber(e.target.value)} style={{ fontSize: '0.78rem', height: '33px' }}>
                   {Object.entries(SECTORS_INFO)
                     .filter(([k]) => k !== 'GENERAL')
                     .map(([k, info]) => (
@@ -195,36 +196,36 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
                 </select>
               </div>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', fontWeight: 600, color: '#334155', backgroundColor: '#f8fafc', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.76rem', fontWeight: 600, color: '#334155', backgroundColor: '#f8fafc', padding: '7px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
                 <input type="checkbox" checked={isBlocked} onChange={(e) => setIsBlocked(e.target.checked)} />
-                <span>Bloquear nuevas cargas</span>
+                <span>Bloquear cargas</span>
               </label>
             </>
           )}
 
           <div>
-            <label htmlFor="wms-cfg-label" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-              {isStorage ? 'Etiqueta (Opcional)' : 'Referencia (Opcional)'}
+            <label htmlFor="wms-cfg-label" style={{ display: 'block', fontSize: '0.74rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+              {isStorage ? 'Etiqueta' : 'Referencia'}
             </label>
             <input
               id="wms-cfg-label"
               type="text"
               className="form-control"
-              placeholder={isStorage ? 'Etiqueta opcional' : 'Referencia opcional'}
+              placeholder={isStorage ? 'Etiqueta' : 'Referencia'}
               value={label}
               maxLength={50}
               onChange={(e) => setLabel(e.target.value)}
-              style={{ fontSize: '0.78rem', height: '34px' }}
+              style={{ fontSize: '0.78rem', height: '33px' }}
             />
           </div>
 
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-            <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 1, fontSize: '0.8rem', fontWeight: 700, padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-              <Save size={14} /> {saving ? 'Guardando...' : 'Guardar Posición'}
+            <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <Save size={14} aria-hidden="true" /> {saving ? 'Guardando...' : 'Guardar'}
             </button>
             {cell.hasOverride && (
-              <button type="button" className="btn btn-secondary" disabled={saving} onClick={handleReset} title="Restaurar diseño original de Excel" style={{ fontSize: '0.78rem', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <RotateCcw size={14} /> Original
+              <button type="button" className="btn btn-secondary" disabled={saving} onClick={handleReset} title="Restaurar plano original" style={{ fontSize: '0.78rem', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <RotateCcw size={14} aria-hidden="true" /> Restaurar
               </button>
             )}
           </div>

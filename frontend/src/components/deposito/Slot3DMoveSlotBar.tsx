@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { SECTORS_INFO } from './depositomapaData';
 import { extractSlotLevels, type MergedDepositSlot } from './warehouseLayoutMerger';
-import type { RackLevel } from './wmsMapHelpers';
+import { formatCompactSlotLevels, type RackLevel } from './wmsMapHelpers';
 
 interface Slot3DMoveSlotBarProps {
   sourceSlot: MergedDepositSlot;
@@ -27,7 +27,7 @@ export const Slot3DMoveSlotBar: React.FC<Slot3DMoveSlotBarProps> = ({
     const grouped = new Map<string, MergedDepositSlot[]>();
 
     for (const s of mergedSlots) {
-      if (s.code === sourceSlot.code || s.isBlocked || s.chamber === 'BANO') continue;
+      if (s.code === sourceSlot.code || s.isBlocked) continue;
       const supported = new Set(extractSlotLevels(s.nivel));
       if (!required.every((lvl) => supported.has(lvl))) continue;
       const list = grouped.get(s.chamber) || [];
@@ -48,7 +48,7 @@ export const Slot3DMoveSlotBar: React.FC<Slot3DMoveSlotBarProps> = ({
         margin: '12px 18px 0 18px',
         padding: '10px 14px',
         backgroundColor: '#f8fafc',
-        border: '1px solid #cbd5e1',
+        border: '1px solid #e2e8f0',
         borderRadius: '8px',
         display: 'flex',
         alignItems: 'center',
@@ -56,22 +56,22 @@ export const Slot3DMoveSlotBar: React.FC<Slot3DMoveSlotBarProps> = ({
         flexWrap: 'wrap',
       }}
     >
-      <label htmlFor="wms-move-slot-dest" style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-        Mudar todo {sourceSlot.code} hacia:
+      <label htmlFor="wms-move-slot-dest" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0f172a', margin: 0 }}>
+        Destino:
       </label>
       <select
         id="wms-move-slot-dest"
         className="select"
         value={targetSlotCode}
         onChange={(e) => setTargetSlotCode(e.target.value)}
-        style={{ flex: '1 1 240px', maxWidth: '340px', height: '33px', fontSize: '0.8rem' }}
+        style={{ flex: '1 1 240px', maxWidth: '340px', height: '32px', fontSize: '0.8rem' }}
       >
-        <option value="">Seleccionar slot destino compatible...</option>
+        <option value="">Elegir slot destino...</option>
         {compatibleGroups.map((g) => (
           <optgroup key={g.chamber} label={g.label}>
             {g.slots.map((s) => (
               <option key={s.code} value={s.code}>
-                {s.code} ({s.deposito} · Niveles {s.nivel}{s.customLabel ? ` · ${s.customLabel}` : ''})
+                {s.code} ({s.deposito} · {formatCompactSlotLevels(s.nivel)}{s.customLabel ? ` · ${s.customLabel}` : ''})
               </option>
             ))}
           </optgroup>
@@ -82,9 +82,9 @@ export const Slot3DMoveSlotBar: React.FC<Slot3DMoveSlotBarProps> = ({
         className="btn btn-primary btn-sm"
         disabled={loading || !targetSlotCode}
         onClick={() => targetSlotCode && onConfirmMove(targetSlotCode)}
-        style={{ fontSize: '0.78rem', padding: '5px 12px', fontWeight: 700 }}
+        style={{ fontSize: '0.78rem', padding: '5px 12px', fontWeight: 600 }}
       >
-        Confirmar mudanza
+        Mudar
       </button>
       <button
         type="button"
