@@ -34,6 +34,7 @@ interface FulfillmentListViewProps {
   onToggleSelectAllPending: () => void;
   onToggleSelectPreparing: (id: number) => void;
   onToggleSelectAllPreparing: () => void;
+  onPrintBatchA4: () => void;
   onPrintPickingList: (order: any) => void;
   onPrintLabels: (order: any) => void;
   onOpenFulfillmentModal: (order: any) => void;
@@ -64,6 +65,7 @@ export function FulfillmentListView({
   onToggleSelectAllPending,
   onToggleSelectPreparing,
   onToggleSelectAllPreparing,
+  onPrintBatchA4,
   onPrintPickingList,
   onPrintLabels,
   onOpenFulfillmentModal,
@@ -126,6 +128,8 @@ export function FulfillmentListView({
         preparingCount={preparing.length}
         billedCount={billedOrPendingCae.length}
         pendingCaeCount={pendingCaeCount}
+        selectedPendingCount={selectedOrderIds.length}
+        onPrintBatchA4={onPrintBatchA4}
       />
 
       <div

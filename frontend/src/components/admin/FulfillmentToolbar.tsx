@@ -19,7 +19,6 @@ interface FulfillmentToolbarProps {
   preparingCount: number;
   selectedPreparingIdsCount: number;
   handleStartFulfillmentQueue: () => void;
-  handlePrintBatchA4: () => void;
   handlePrintConsolidated: () => void;
   handlePrintLabels: () => void;
 }
@@ -43,7 +42,6 @@ export function FulfillmentToolbar({
   preparingCount,
   selectedPreparingIdsCount,
   handleStartFulfillmentQueue,
-  handlePrintBatchA4,
   handlePrintConsolidated,
   handlePrintLabels,
 }: FulfillmentToolbarProps) {
@@ -224,25 +222,6 @@ export function FulfillmentToolbar({
             Facturar ({queueBatchCount})
           </button>
         )}
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{
-            height: '28px',
-            padding: '0 12px',
-            fontSize: '0.78rem',
-            fontWeight: 600,
-            backgroundColor: '#111827',
-            borderColor: '#111827',
-            borderRadius: '6px',
-          }}
-          onClick={handlePrintBatchA4}
-          title="Imprimir lote de pedidos seleccionados (máximo 8 por hoja A4)"
-        >
-          <Printer size={13} aria-hidden="true" />
-          Lote A4 {selectedOrderIdsCount > 0 ? `(${selectedOrderIdsCount})` : ''}
-        </button>
 
         <button
           type="button"

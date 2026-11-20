@@ -1,3 +1,4 @@
+import { Printer } from 'lucide-react';
 import {
   printOrderReceipt,
   printRemitoX,
@@ -48,7 +49,6 @@ export default function FulfillmentDashboard() {
         preparingCount={f.preparing.length}
         selectedPreparingIdsCount={f.selectedPreparingIds.length}
         handleStartFulfillmentQueue={f.handleStartFulfillmentQueue}
-        handlePrintBatchA4={f.handlePrintBatchA4}
         handlePrintConsolidated={f.handlePrintConsolidated}
         handlePrintLabels={() => f.handlePrintLabels()}
       />
@@ -67,6 +67,7 @@ export default function FulfillmentDashboard() {
           onToggleSelectAllPending={f.toggleSelectAllPending}
           onToggleSelectPreparing={f.toggleSelectPreparing}
           onToggleSelectAllPreparing={f.toggleSelectAllPreparing}
+          onPrintBatchA4={f.handlePrintBatchA4}
           onPrintPickingList={f.handlePrintSinglePicking}
           onPrintLabels={f.handlePrintLabels}
           onOpenFulfillmentModal={f.setFulfillmentModalOrder}
@@ -115,17 +116,40 @@ export default function FulfillmentDashboard() {
                 )}
               </h3>
 
-              {f.pending.length > 0 && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', cursor: 'pointer', fontWeight: 600, color: '#4B5563' }}>
-                  <input
-                    type="checkbox"
-                    checked={f.pending.length > 0 && f.pending.every((o) => f.selectedOrderIds.includes(o.id))}
-                    onChange={f.toggleSelectAllPending}
-                    style={{ accentColor: '#111827', cursor: 'pointer' }}
-                  />
-                  Todos
-                </label>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={f.handlePrintBatchA4}
+                  title="Imprimir lote A4 de pedidos seleccionados (máximo 8 por hoja A4)"
+                  aria-label="Imprimir lote A4 de pedidos seleccionados (máximo 8 por hoja A4)"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '24px',
+                    height: '24px',
+                    padding: 0,
+                    borderRadius: '5px',
+                    backgroundColor: '#111827',
+                    borderColor: '#111827',
+                    color: '#FFFFFF',
+                  }}
+                >
+                  <Printer size={13} aria-hidden="true" />
+                </button>
+                {f.pending.length > 0 && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', cursor: 'pointer', fontWeight: 600, color: '#4B5563' }}>
+                    <input
+                      type="checkbox"
+                      checked={f.pending.length > 0 && f.pending.every((o) => f.selectedOrderIds.includes(o.id))}
+                      onChange={f.toggleSelectAllPending}
+                      style={{ accentColor: '#111827', cursor: 'pointer' }}
+                    />
+                    Todos
+                  </label>
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flexGrow: 1, paddingRight: '2px' }}>

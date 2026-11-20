@@ -1,3 +1,5 @@
+import { Fragment } from 'react';
+import { Printer } from 'lucide-react';
 import { FULFILLMENT_STAGE_TONES, type FulfillmentStageKey } from '../../utils/fulfillmentCardMeta.helper';
 
 export type FulfillmentListStageFilter = 'ALL' | FulfillmentStageKey;
@@ -10,6 +12,8 @@ interface FulfillmentStageFilterBarProps {
   preparingCount: number;
   billedCount: number;
   pendingCaeCount: number;
+  selectedPendingCount: number;
+  onPrintBatchA4: () => void;
 }
 
 /**
@@ -23,6 +27,8 @@ export function FulfillmentStageFilterBar({
   preparingCount,
   billedCount,
   pendingCaeCount,
+  selectedPendingCount,
+  onPrintBatchA4,
 }: FulfillmentStageFilterBarProps) {
   const stageTabs: Array<{
     key: FulfillmentListStageFilter;
@@ -55,9 +61,14 @@ export function FulfillmentStageFilterBar({
     },
   ];
 
+  const batchA4Label =
+    selectedPendingCount > 0
+      ? `Imprimir lote A4 (${selectedPendingCount} seleccionados, máximo 8 por hoja A4)`
+      : 'Imprimir lote A4 de pedidos seleccionados (máximo 8 por hoja A4)';
+
   return (
     <div
-      role="tablist"
+      role="group"
       aria-label="Filtrar lista por etapa de armado"
       style={{
         display: 'flex',
@@ -73,46 +84,70 @@ export function FulfillmentStageFilterBar({
       {stageTabs.map((tab) => {
         const isSelected = stageFilter === tab.key;
         return (
-          <button
-            key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected={isSelected}
-            onClick={() => onSelectStage(tab.key)}
-            style={{
-              flex: 'none',
-              position: 'relative',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              height: '30px',
-              padding: '0 10px',
-              borderRadius: '6px',
-              border: isSelected ? '1px solid #D1D5DB' : '1px solid transparent',
-              borderBottom: isSelected ? `2px solid ${tab.accentColor}` : '1px solid transparent',
-              backgroundColor: isSelected ? '#F9FAFB' : 'transparent',
-              color: isSelected ? '#111827' : '#6B7280',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {tab.dotColor && (
-              <span
-                aria-hidden="true"
-                style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: tab.dotColor }}
-              />
-            )}
-            <span>
-              {tab.label} ({tab.count})
-            </span>
-            {tab.key === 'BILLED' && pendingCaeCount > 0 && (
-              <span className="badge-minimal badge-minimal--danger" style={{ fontSize: '0.68rem', padding: '1px 5px' }}>
-                {pendingCaeCount} sin CAE
+          <Fragment key={tab.key}>
+            <button
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onSelectStage(tab.key)}
+              style={{
+                flex: 'none',
+                position: 'relative',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                height: '30px',
+                padding: '0 10px',
+                borderRadius: '6px',
+                border: isSelected ? '1px solid #D1D5DB' : '1px solid transparent',
+                borderBottom: isSelected ? `2px solid ${tab.accentColor}` : '1px solid transparent',
+                backgroundColor: isSelected ? '#F9FAFB' : 'transparent',
+                color: isSelected ? '#111827' : '#6B7280',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {tab.dotColor && (
+                <span
+                  aria-hidden="true"
+                  style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: tab.dotColor }}
+                />
+              )}
+              <span>
+                {tab.label} ({tab.count})
               </span>
+              {tab.key === 'BILLED' && pendingCaeCount > 0 && (
+                <span className="badge-minimal badge-minimal--danger" style={{ fontSize: '0.68rem', padding: '1px 5px' }}>
+                  {pendingCaeCount} sin CAE
+                </span>
+              )}
+            </button>
+            {tab.key === 'PENDING' && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={onPrintBatchA4}
+                title={batchA4Label}
+                aria-label={batchA4Label}
+                style={{
+                  flex: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '30px',
+                  height: '30px',
+                  padding: 0,
+                  borderRadius: '6px',
+                  backgroundColor: '#111827',
+                  borderColor: '#111827',
+                  color: '#FFFFFF',
+                }}
+              >
+                <Printer size={14} aria-hidden="true" />
+              </button>
             )}
-          </button>
+          </Fragment>
         );
       })}
     </div>
