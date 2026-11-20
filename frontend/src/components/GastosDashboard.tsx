@@ -1,7 +1,18 @@
-import { AlertCircle, Check, Copy, FileSpreadsheet, Plus, X } from 'lucide-react';
-import { AVAILABLE_YEARS, getMonthName } from './gastos/gastos.types';
+import {
+  AlertCircle,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  FileSpreadsheet,
+  Plus,
+  Search,
+  X,
+} from 'lucide-react';
+import { formatDiffPeso, formatPeso, getMonthName, getShortMonthName } from './gastos/gastos.types';
 import { useGastosController } from './gastos/useGastosController';
-import { GastosOverviewAndTable } from './gastos/GastosOverviewAndTable';
+import { GastosPlanillaTable } from './gastos/GastosPlanillaTable';
+import { GastosCategoriesTab } from './gastos/GastosCategoriesTab';
 import { GastosCreateModal, GastosImportExcelModal } from './gastos/GastosCreateAndImportModals';
 import { GastosCopyMonthModal } from './gastos/GastosCopyMonthModal';
 
@@ -10,98 +21,250 @@ export default function GastosDashboard() {
   const anyModalOpen = g.isCreateModalOpen || g.isImportModalOpen || g.isCopyModalOpen;
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '4px' }}>
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '4px' }}>
       {g.errorMsg && !anyModalOpen && (
-        <div role="alert" style={{ padding: '12px 16px', backgroundColor: '#fff5f5', color: '#c53030', borderRadius: '6px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', border: '1px solid #feb2b2' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <AlertCircle size={16} aria-hidden="true" />
+        <div role="alert" style={{ padding: '10px 14px', backgroundColor: '#fff5f5', color: '#c53030', borderRadius: '6px', fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', border: '1px solid #feb2b2' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={15} aria-hidden="true" />
             <span>{g.errorMsg}</span>
           </span>
           <button type="button" className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => g.setErrorMsg(null)} aria-label="Cerrar alerta">
-            <X size={15} aria-hidden="true" />
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
       )}
 
       {g.successMsg && (
-        <div role="status" style={{ padding: '12px 16px', backgroundColor: '#f0fff4', color: '#22543d', borderRadius: '6px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', border: '1px solid #9ae6b4' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Check size={16} style={{ color: '#38a169' }} aria-hidden="true" />
+        <div role="status" style={{ padding: '10px 14px', backgroundColor: '#f0fff4', color: '#22543d', borderRadius: '6px', fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', border: '1px solid #9ae6b4' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Check size={15} style={{ color: '#16A34A' }} aria-hidden="true" />
             <span>{g.successMsg}</span>
           </span>
           <button type="button" className="btn btn-ghost" style={{ padding: '2px' }} onClick={() => g.setSuccessMsg(null)} aria-label="Cerrar notificación">
-            <X size={15} aria-hidden="true" />
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-        <h2 style={{ fontSize: '1.45rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Gastos Operativos</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-secondary" onClick={g.openCopyModal} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Copy size={15} aria-hidden="true" />
-            <span>Copiar Mes</span>
-          </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Gastos</h2>
 
-          {g.isAdmin && (
-            <button type="button" className="btn btn-secondary" onClick={() => { g.setErrorMsg(null); g.setIsImportModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FileSpreadsheet size={15} aria-hidden="true" />
-              <span>Importar Excel</span>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+              overflow: 'hidden',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => g.navigateMonth(-1)}
+              aria-label="Mes anterior"
+              style={{ background: 'none', border: 'none', padding: '6px 10px', cursor: 'pointer', display: 'inline-flex', color: 'var(--text-secondary)' }}
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+            </button>
+            <span style={{ padding: '0 10px', fontSize: '0.88rem', fontWeight: 600, minWidth: '132px', textAlign: 'center' }}>
+              {getMonthName(g.selectedMonth)} {g.selectedYear}
+            </span>
+            <button
+              type="button"
+              onClick={() => g.navigateMonth(1)}
+              aria-label="Mes siguiente"
+              style={{ background: 'none', border: 'none', padding: '6px 10px', cursor: 'pointer', display: 'inline-flex', color: 'var(--text-secondary)' }}
+            >
+              <ChevronRight size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {g.missingRows.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={g.copyingAll}
+              onClick={g.handleCopyAllMissing}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+            >
+              <Copy size={14} aria-hidden="true" />
+              <span>{g.copyingAll ? 'Copiando...' : `Copiar ${g.missingRows.length} pendientes`}</span>
             </button>
           )}
 
-          <button type="button" className="btn btn-primary" onClick={() => { g.setErrorMsg(null); g.setIsCreateModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={15} aria-hidden="true" />
-            <span>Nuevo Gasto</span>
+          {g.isAdmin && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => { g.setErrorMsg(null); g.setIsImportModalOpen(true); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+            >
+              <FileSpreadsheet size={14} aria-hidden="true" />
+              <span>Excel</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => { g.setErrorMsg(null); g.setIsCreateModalOpen(true); }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+          >
+            <Plus size={14} aria-hidden="true" />
+            <span>Detallado</span>
           </button>
         </div>
       </div>
 
-      <search aria-label="Filtrar gastos" className="card" style={{ padding: '16px 20px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
-          <div style={{ minWidth: '120px' }}>
-            <label htmlFor="gastos-year" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>Año</label>
-            <select id="gastos-year" value={g.selectedYear} onChange={(e) => g.setSelectedYear(Number(e.target.value))} className="select">
-              {AVAILABLE_YEARS.map((y) => (<option key={y} value={y}>{y}</option>))}
-            </select>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+        <div className="card" style={{ padding: '14px 18px' }}>
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            {getMonthName(g.selectedMonth)} {g.selectedYear}
           </div>
-
-          <div style={{ minWidth: '140px' }}>
-            <label htmlFor="gastos-month" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>Mes</label>
-            <select id="gastos-month" value={g.selectedMonth} onChange={(e) => g.setSelectedMonth(Number(e.target.value))} className="select">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (<option key={m} value={m}>{getMonthName(m)}</option>))}
-            </select>
+          <div className="tabular-nums" style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '4px', color: 'var(--text-primary)' }}>
+            {formatPeso(g.totalGasto)}
           </div>
+        </div>
 
-          <div style={{ minWidth: '180px' }}>
-            <label htmlFor="gastos-category" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>Categoría</label>
-            <select id="gastos-category" value={g.filterCategoryId} onChange={(e) => g.setFilterCategoryId(e.target.value)} className="select">
+        <div className="card" style={{ padding: '14px 18px' }}>
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            {getShortMonthName(g.compareMonth)} {g.compareYear}
+          </div>
+          <div className="tabular-nums" style={{ fontSize: '1.5rem', fontWeight: 600, marginTop: '4px', color: 'var(--text-secondary)' }}>
+            {formatPeso(g.totalCompare)}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '14px 18px' }}>
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            Diferencia
+          </div>
+          <div
+            className="tabular-nums"
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              marginTop: '4px',
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '8px',
+              color: g.totalDiff === 0 ? 'var(--text-muted)' : g.totalDiff > 0 ? 'var(--color-corp-red)' : '#15803D',
+            }}
+          >
+            <span>{formatDiffPeso(g.totalDiff)}</span>
+            {g.totalDiffPct !== null && g.totalDiff !== 0 && (
+              <span style={{ fontSize: '0.82rem', fontWeight: 500 }}>
+                ({g.totalDiffPct > 0 ? '+' : ''}{g.totalDiffPct.toFixed(1)}%)
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+        <div role="tablist" aria-label="Vistas de gastos" style={{ display: 'inline-flex', gap: '4px', backgroundColor: '#F3F4F6', padding: '3px', borderRadius: '8px' }}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={g.activeTab === 'planilla'}
+            onClick={() => g.setActiveTab('planilla')}
+            style={{
+              border: 'none',
+              borderRadius: '6px',
+              padding: '6px 14px',
+              fontSize: '0.83rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              backgroundColor: g.activeTab === 'planilla' ? '#fff' : 'transparent',
+              color: g.activeTab === 'planilla' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              boxShadow: g.activeTab === 'planilla' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+            }}
+          >
+            Planilla
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={g.activeTab === 'categorias'}
+            onClick={() => g.setActiveTab('categorias')}
+            style={{
+              border: 'none',
+              borderRadius: '6px',
+              padding: '6px 14px',
+              fontSize: '0.83rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              backgroundColor: g.activeTab === 'categorias' ? '#fff' : 'transparent',
+              color: g.activeTab === 'categorias' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              boxShadow: g.activeTab === 'categorias' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+            }}
+          >
+            Por categoría
+          </button>
+        </div>
+
+        {g.activeTab === 'planilla' && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} aria-hidden="true" />
+              <input
+                type="search"
+                value={g.searchQuery}
+                onChange={(e) => g.setSearchQuery(e.target.value)}
+                placeholder="Buscar concepto..."
+                aria-label="Buscar concepto"
+                className="input"
+                style={{ paddingLeft: '30px', height: '34px', width: '190px', fontSize: '0.83rem' }}
+              />
+            </div>
+
+            <select
+              value={g.filterCategoryId}
+              onChange={(e) => g.setFilterCategoryId(e.target.value)}
+              aria-label="Filtrar por categoría"
+              className="select"
+              style={{ height: '34px', width: '165px', fontSize: '0.83rem' }}
+            >
               <option value="">Todas</option>
               {g.categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
+        )}
+      </div>
 
-          <div style={{ minWidth: '160px' }}>
-            <label htmlFor="gastos-method" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '6px' }}>Medio de Pago</label>
-            <select id="gastos-method" value={g.filterPaymentMethod} onChange={(e) => g.setFilterPaymentMethod(e.target.value)} className="select">
-              <option value="">Todos</option>
-              <option value="CASH">Efectivo</option>
-              <option value="BANK_TRANSFER">Transferencia</option>
-              <option value="CHECK">Cheque</option>
-            </select>
-          </div>
-        </div>
-      </search>
-
-      <GastosOverviewAndTable
-        expenses={g.expenses}
-        selectedMonth={g.selectedMonth}
-        selectedYear={g.selectedYear}
-        totalGasto={g.totalGasto}
-        sortedCategories={g.sortedCategories}
-        isAdmin={g.isAdmin}
-        onDeleteExpense={g.handleDeleteExpense}
-      />
+      {g.activeTab === 'planilla' ? (
+        <GastosPlanillaTable
+          rows={g.comparisonRows}
+          categories={g.categories}
+          periods={g.periods}
+          selectedYear={g.selectedYear}
+          selectedMonth={g.selectedMonth}
+          compareYear={g.compareYear}
+          compareMonth={g.compareMonth}
+          onChangeComparePeriod={g.setComparePeriod}
+          totalCurrent={g.totalGasto}
+          totalCompare={g.totalCompare}
+          totalDiff={g.totalDiff}
+          savingRowKey={g.savingRowKey}
+          savedRowKey={g.savedRowKey}
+          isAdmin={g.isAdmin}
+          onInlineSave={g.handleInlineSaveAmount}
+          onQuickCopyRow={g.handleQuickCopyRow}
+          onQuickAddRow={g.handleQuickAddRow}
+          onDeleteExpense={g.handleDeleteExpense}
+        />
+      ) : (
+        <GastosCategoriesTab
+          expenses={g.expenses}
+          sortedCategories={g.sortedCategories}
+          isAdmin={g.isAdmin}
+          onDeleteExpense={g.handleDeleteExpense}
+        />
+      )}
 
       <GastosCreateModal
         isOpen={g.isCreateModalOpen}

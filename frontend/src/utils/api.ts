@@ -1108,11 +1108,24 @@ export const api = {
     return res?.data?.expenses || res?.expenses || [];
   },
 
+  getExpensePeriods: async () => {
+    const res = await request('/expenses/periods');
+    return res?.data?.periods || [];
+  },
+
   createExpenseNew: async (data: { amount: number; categoryId: number; description: string; date?: string; paymentMethod: string; cashSource?: 'CAJA_GRANDE' | 'CAJA_OFICINA'; cashDrawerId?: number; bankAccountId?: number; vehicleId?: number; billingType?: string }) => {
     return await request('/expenses', {
       method: 'POST',
       body: JSON.stringify(data)
     });
+  },
+
+  updateExpenseNew: async (id: number, data: { amount?: number; description?: string; categoryId?: number; date?: string }) => {
+    const res = await request(`/expenses/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+    return res?.data?.expense || res?.expense || res;
   },
 
   createBulkExpenses: async (data: { expenses: Array<{ amount: number; categoryId: number; description: string; date?: string; paymentMethod?: string; cashDrawerId?: number; bankAccountId?: number; vehicleId?: number; billingType?: string }>; targetDate?: string }) => {

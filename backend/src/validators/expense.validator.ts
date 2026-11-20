@@ -28,3 +28,21 @@ export const createBulkExpensesSchema = z.object({
     targetDate: z.string().optional().nullable(),
   }),
 });
+
+export const updateExpenseSchema = z.object({
+  body: z
+    .object({
+      amount: z.coerce.number().positive('El monto debe ser un número mayor a cero.').optional(),
+      description: z.string().trim().min(1, 'La descripción es obligatoria.').max(500).optional(),
+      categoryId: z.coerce.number().int().positive('La categoría es inválida.').optional(),
+      date: z.string().optional().nullable(),
+    })
+    .refine(
+      (data) =>
+        data.amount !== undefined ||
+        data.description !== undefined ||
+        data.categoryId !== undefined ||
+        data.date !== undefined,
+      { message: 'Debe enviar al menos un campo para actualizar.' },
+    ),
+});

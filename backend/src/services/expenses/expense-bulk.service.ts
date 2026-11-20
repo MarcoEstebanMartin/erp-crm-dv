@@ -1,7 +1,7 @@
 import { BillingType, PaymentMethod, TransactionType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { logAudit } from '../../utils/audit';
-import { roundToTwoDecimals } from '../../core/money';
+import { roundToIntegerPeso } from '../../core/money';
 
 export async function createBulkExpensesRecords(params: {
   userId: number;
@@ -16,27 +16,50 @@ export async function createBulkExpensesRecords(params: {
       const rawAmt = Number(item.amount);
       if (isNaN(rawAmt) || rawAmt <= 0 || !item.categoryId || !item.description?.trim()) continue;
 
-      const expAmount = roundToTwoDecimals(rawAmt).toNumber();
+      const expAmount = roundToIntegerPeso(rawAmt).toNumber();
+      if (expAmount <= 0) continue;
+
       let transactionId: number | undefined;
+      let resolvedCashDrawerId: number | undefined;
       const itemDate = item.date ? new Date(item.date) : defaultDate;
       const paymentMethod = (item.paymentMethod as PaymentMethod) || PaymentMethod.CASH;
 
-      if (paymentMethod === PaymentMethod.CASH && item.cashDrawerId) {
-        const activeDrawer = await tx.cashDrawer.findUnique({
-          where: { id: Number(item.cashDrawerId) },
-        });
-        if (activeDrawer && activeDrawer.status === 'OPEN') {
+      if (paymentMethod === PaymentMethod.CASH) {
+        if (item.cashDrawerId) {
+          const activeDrawer = await tx.cashDrawer.findUnique({
+            where: { id: Number(item.cashDrawerId) },
+          });
+          if (activeDrawer && activeDrawer.status === 'OPEN') {
+            resolvedCashDrawerId = activeDrawer.id;
+            const trans = await tx.transaction.create({
+              data: {
+                userId: params.userId,
+                billingType:
+                  (item.billingType as BillingType) ||
+                  (activeDrawer.branch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL),
+                type: TransactionType.OUTCOME,
+                paymentMethod: PaymentMethod.CASH,
+                amount: expAmount,
+                description: `Gasto: ${item.description.trim()}`,
+                cashDrawerId: activeDrawer.id,
+                verified: true,
+              },
+            });
+            transactionId = trans.id;
+          }
+        }
+
+        // Por defecto (Caja Grande): si no hay caja abierta asignada, descuenta de Caja Grande (cashDrawerId: null)
+        if (!transactionId) {
           const trans = await tx.transaction.create({
             data: {
               userId: params.userId,
-              billingType:
-                (item.billingType as BillingType) ||
-                (activeDrawer.branch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL),
+              billingType: (item.billingType as BillingType) || BillingType.INTERNAL,
               type: TransactionType.OUTCOME,
               paymentMethod: PaymentMethod.CASH,
               amount: expAmount,
-              description: `Gasto (Clonado): ${item.description.trim()}`,
-              cashDrawerId: activeDrawer.id,
+              description: `Gasto: ${item.description.trim()}`,
+              cashDrawerId: null,
               verified: true,
             },
           });
@@ -58,7 +81,7 @@ export async function createBulkExpensesRecords(params: {
               type: TransactionType.OUTCOME,
               paymentMethod: PaymentMethod.BANK_TRANSFER,
               amount: expAmount,
-              description: `Gasto (Clonado): ${item.description.trim()}`,
+              description: `Gasto: ${item.description.trim()}`,
               bankAccountId: bankAcc.id,
               verified: true,
             },
@@ -75,7 +98,7 @@ export async function createBulkExpensesRecords(params: {
           categoryId: Number(item.categoryId),
           userId: params.userId,
           paymentMethod,
-          cashDrawerId: item.cashDrawerId ? Number(item.cashDrawerId) : undefined,
+          cashDrawerId: resolvedCashDrawerId,
           bankAccountId: item.bankAccountId ? Number(item.bankAccountId) : undefined,
           vehicleId: item.vehicleId ? Number(item.vehicleId) : undefined,
           transactionId,

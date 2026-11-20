@@ -2,7 +2,7 @@ import { BillingType, PaymentMethod, TransactionType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
-import { roundToTwoDecimals } from '../../core/money';
+import { roundToIntegerPeso, roundToTwoDecimals, toDecimal } from '../../core/money';
 
 export const DEFAULT_EXPENSE_CATEGORIES = [
   { name: 'Sueldos', description: 'Sueldos de personal y operarios' },
@@ -94,7 +94,7 @@ export const expenseService = {
     vehicleId?: number | null;
     billingType?: string | null;
   }) {
-    const expAmount = roundToTwoDecimals(params.amount).toNumber();
+    const expAmount = roundToIntegerPeso(params.amount).toNumber();
     if (expAmount <= 0) {
       throw new AppError('El monto debe ser un número mayor a cero.', 400);
     }
@@ -260,5 +260,135 @@ export const expenseService = {
       entityId: params.expenseId,
       oldValues: expense,
     });
+  },
+
+  async getExpensePeriods() {
+    const rows = await prisma.expense.findMany({
+      select: { date: true, amount: true },
+      orderBy: { date: 'desc' },
+    });
+
+    const map = new Map<string, { year: number; month: number; count: number; total: ReturnType<typeof toDecimal> }>();
+    for (const row of rows) {
+      const d = new Date(row.date);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      const key = `${year}-${month}`;
+      const existing = map.get(key);
+      const amt = roundToIntegerPeso(row.amount.toString());
+      if (existing) {
+        existing.count += 1;
+        existing.total = existing.total.plus(amt);
+      } else {
+        map.set(key, { year, month, count: 1, total: amt });
+      }
+    }
+
+    return Array.from(map.values())
+      .map((p) => ({ year: p.year, month: p.month, count: p.count, total: p.total.toNumber() }))
+      .sort((a, b) => (b.year !== a.year ? b.year - a.year : b.month - a.month));
+  },
+
+  async updateExpense(params: {
+    userId: number;
+    expenseId: number;
+    amount?: number;
+    description?: string;
+    categoryId?: number;
+    date?: string | null;
+  }) {
+    if (isNaN(params.expenseId)) {
+      throw new AppError('ID inválido.', 400);
+    }
+
+    const existing = await prisma.expense.findUnique({
+      where: { id: params.expenseId },
+      include: { transaction: true, category: true },
+    });
+
+    if (!existing) {
+      throw new AppError('Gasto no encontrado.', 404);
+    }
+
+    const nextAmount =
+      params.amount !== undefined
+        ? roundToIntegerPeso(params.amount)
+        : toDecimal(existing.amount.toString());
+
+    if (nextAmount.lte(0)) {
+      throw new AppError('El monto debe ser un número mayor a cero.', 400);
+    }
+
+    const nextDescription =
+      params.description !== undefined ? params.description.trim() : existing.description;
+    if (!nextDescription) {
+      throw new AppError('La descripción es obligatoria.', 400);
+    }
+
+    const nextCategoryId =
+      params.categoryId !== undefined ? Number(params.categoryId) : existing.categoryId;
+    const nextDate = params.date ? new Date(params.date) : existing.date;
+
+    const oldAmount = toDecimal(existing.amount.toString());
+    const delta = nextAmount.minus(oldAmount);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (existing.transactionId && existing.transaction) {
+        const trans = existing.transaction;
+        if (trans.bankAccountId && !delta.isZero()) {
+          await tx.bankAccount.update({
+            where: { id: trans.bankAccountId },
+            data: delta.gt(0)
+              ? { balance: { decrement: delta.toNumber() } }
+              : { balance: { increment: delta.abs().toNumber() } },
+          });
+        }
+
+        await tx.transaction.update({
+          where: { id: trans.id },
+          data: {
+            amount: nextAmount.toNumber(),
+            description: `Gasto: ${nextDescription}`,
+          },
+        });
+      }
+
+      return tx.expense.update({
+        where: { id: existing.id },
+        data: {
+          amount: nextAmount.toNumber(),
+          description: nextDescription,
+          categoryId: nextCategoryId,
+          date: nextDate,
+        },
+        include: {
+          category: true,
+          user: { select: { id: true, username: true } },
+          vehicle: { select: { id: true, plate: true, brand: true, model: true } },
+          transaction: true,
+        },
+      });
+    });
+
+    await logAudit({
+      userId: params.userId,
+      action: 'UPDATE_EXPENSE',
+      entityType: 'Expense',
+      entityId: existing.id,
+      oldValues: {
+        amount: existing.amount.toString(),
+        description: existing.description,
+        categoryId: existing.categoryId,
+        date: existing.date,
+      },
+      newValues: {
+        amount: nextAmount.toNumber(),
+        description: nextDescription,
+        categoryId: nextCategoryId,
+        date: nextDate,
+      },
+    });
+
+    return updated;
   },
 };

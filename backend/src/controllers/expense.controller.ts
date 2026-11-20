@@ -49,6 +49,35 @@ export async function getExpenses(req: AuthenticatedRequest, res: Response): Pro
   }
 }
 
+export async function getExpensePeriods(_req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const periods = await expenseService.getExpensePeriods();
+    res.status(200).json({ status: 'success', data: { periods } });
+  } catch (error) {
+    handleExpenseError(res, error, 'Error al obtener los períodos de gastos.');
+  }
+}
+
+export async function updateExpense(req: AuthenticatedRequest, res: Response): Promise<void> {
+  if (!req.user?.id) {
+    res.status(401).json({ status: 'error', message: 'No autenticado.' });
+    return;
+  }
+  try {
+    const expense = await expenseService.updateExpense({
+      userId: req.user.id,
+      expenseId: Number(req.params.id),
+      amount: req.body.amount !== undefined ? Number(req.body.amount) : undefined,
+      description: req.body.description,
+      categoryId: req.body.categoryId !== undefined ? Number(req.body.categoryId) : undefined,
+      date: req.body.date,
+    });
+    res.status(200).json({ status: 'success', data: { expense } });
+  } catch (error) {
+    handleExpenseError(res, error, 'Error al actualizar el gasto.');
+  }
+}
+
 export async function createExpense(req: AuthenticatedRequest, res: Response): Promise<void> {
   if (!req.user?.id) {
     res.status(401).json({ status: 'error', message: 'No autenticado.' });

@@ -4,7 +4,9 @@ import {
   getCategories,
   createCategory,
   getExpenses,
+  getExpensePeriods,
   createExpense,
+  updateExpense,
   createBulkExpenses,
   deleteExpense,
   importExpenses,
@@ -17,6 +19,7 @@ import {
   createBulkExpensesSchema,
   createCategorySchema,
   createExpenseSchema,
+  updateExpenseSchema,
 } from '../validators/expense.validator';
 
 const router = Router();
@@ -33,6 +36,7 @@ router.post(
 );
 
 // Rutas de gastos (exclusivo ADMIN)
+router.get('/periods', authenticateJWT, requireRole([Role.ADMIN]), getExpensePeriods);
 router.get('/', authenticateJWT, requireRole([Role.ADMIN]), getExpenses);
 router.post(
   '/',
@@ -49,6 +53,13 @@ router.post(
   validateRequest(createBulkExpensesSchema),
   idempotencyGuard,
   createBulkExpenses,
+);
+router.patch(
+  '/:id',
+  authenticateJWT,
+  requireRole([Role.ADMIN]),
+  validateRequest(updateExpenseSchema),
+  updateExpense,
 );
 router.delete('/:id', authenticateJWT, requireRole([Role.ADMIN]), deleteExpense);
 
