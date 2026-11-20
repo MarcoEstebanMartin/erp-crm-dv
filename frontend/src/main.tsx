@@ -17,13 +17,6 @@ if (typeof document !== 'undefined') {
   document.addEventListener('gesturestart', blockPinch, { passive: false });
   document.addEventListener('gesturechange', blockPinch, { passive: false });
   document.addEventListener('gestureend', blockPinch, { passive: false });
-  document.addEventListener(
-    'touchmove',
-    (e: TouchEvent) => {
-      if (e.touches.length > 1) e.preventDefault();
-    },
-    { passive: false },
-  );
 }
 
 const queryClient = new QueryClient({

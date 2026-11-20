@@ -12,6 +12,7 @@ import type { Persona, Product, Rubro } from '../../types';
 import type { WeeklyPromo } from '../admin/config/weeklyPromo.helpers';
 
 interface VendedorOrderTakeTabProps {
+  isActive?: boolean;
   clients: Persona[];
   products: Product[];
   rubros: Rubro[];
@@ -46,6 +47,7 @@ const clearBtnStyle: React.CSSProperties = { position: 'absolute', right: '8px',
 const qtyInputStyle: React.CSSProperties = { width: '42px', height: '30px', textAlign: 'center', fontWeight: 700, fontSize: '16px', padding: '2px', border: '1px solid var(--border-color)', borderRadius: '6px', backgroundColor: '#fff', color: 'var(--text-primary)' };
 
 export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
+  isActive = true,
   clients, products, rubros, weeklyPromos = [], selectedClient, setSelectedClient, clientFilter, setClientFilter,
   prodSearchQuery, setProdSearchQuery, filterRubroId, cart, setCart, orderNotes, setOrderNotes, loading,
   onAddToCart, onUpdateCartQty, onSetCartQty, onConfirmOrder,
@@ -128,10 +130,10 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
   const prodSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (selectedClient) {
+    if (isActive && selectedClient) {
       prodSearchInputRef.current?.focus();
     }
-  }, [selectedClient?.id]);
+  }, [isActive, selectedClient?.id]);
 
   const handleDirectQtyChange = (productId: number, rawValue: string) => {
     const digits = rawValue.replace(/\D/g, '');

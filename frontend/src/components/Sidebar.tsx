@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -116,21 +116,23 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
   };
 
   const handleTabSelect = (tabId: string) => {
-    setActiveTab(tabId);
+    if (role === 'VENDEDOR' && tabId === currentTab) {
+      if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      }
+      return;
+    }
     setIsMobileOpen(false);
     let targetPath = `/admin/${tabId}`;
     if (role === 'VENDEDOR') {
       targetPath = `/vendedor/${tabId}`;
     } else if (role === 'DEPOSITO') {
-      if (tabId === 'deposito') {
-        targetPath = '/deposito/picking';
-      } else if (tabId === 'products') {
-        targetPath = '/deposito/stock';
-      } else {
-        targetPath = `/vendedor/${tabId}`;
-      }
+      targetPath = tabId === 'deposito' ? '/deposito/picking' : tabId === 'products' ? '/deposito/stock' : `/vendedor/${tabId}`;
     }
-    navigate(targetPath);
+    startTransition(() => {
+      setActiveTab(tabId);
+      navigate(targetPath);
+    });
   };
 
   const menuItems = getMenuItems();
@@ -178,24 +180,10 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
           {isVendedor && (
             <button
               type="button"
-              onClick={() => {
-                if (isRefreshing) return;
-                setIsRefreshing(true);
-                window.location.reload();
-              }}
+              onClick={() => { if (isRefreshing) return; setIsRefreshing(true); window.location.reload(); }}
               aria-label="Actualizar"
               title="Actualizar"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '6px',
-                borderRadius: '6px',
-                touchAction: 'manipulation',
-              }}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '6px', touchAction: 'manipulation' }}
             >
               <RefreshCw size={17} className={isRefreshing ? 'spin-animation' : ''} aria-hidden="true" />
             </button>
@@ -205,15 +193,7 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
             type="button"
             onClick={handleLogoutClick}
             aria-label="Salir"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              padding: '4px',
-            }}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
           >
             <LogOut size={18} aria-hidden="true" />
           </button>

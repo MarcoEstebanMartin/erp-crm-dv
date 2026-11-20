@@ -352,6 +352,7 @@ tr:hover td {
 .layout-app {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Header Móvil y Menú Drawer Responsivo */
@@ -659,6 +660,7 @@ tr:hover td {
   margin-left: var(--sidebar-width);
   padding: 40px;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .header-container {
@@ -1030,6 +1032,8 @@ dialog.app-native-dialog::backdrop {
     padding: env(safe-area-inset-top, 0px) 16px 0;
     z-index: 1030;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
   }
 
   .layout-app {
@@ -1977,6 +1981,30 @@ dialog.app-native-dialog::backdrop {
 /* ==========================================================================
    Estilos de Navegación Ágil para Vendedores (Sin Menú Hamburguesa)
    ========================================================================== */
+.vendedor-home-shell {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  min-height: calc(100vh - 180px);
+  min-height: calc(100dvh - 180px);
+  padding: 16px 0 8px;
+}
+
+.vendedor-home-action-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform 0.08s ease, background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.vendedor-home-action-btn:active {
+  transform: scale(0.98);
+}
+
 .vendedor-bottom-nav {
   display: none;
 }
@@ -2043,6 +2071,12 @@ dialog.app-native-dialog::backdrop {
 }
 
 @media (max-width: 768px) {
+  .vendedor-home-shell {
+    min-height: calc(100vh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding: 36px 0 8px;
+  }
+
   .vendedor-top-nav-bar {
     display: none;
   }
@@ -2068,24 +2102,27 @@ dialog.app-native-dialog::backdrop {
 
   .main-content:has(~ .vendedor-bottom-nav),
   body:has(.vendedor-bottom-nav) .main-content {
-    padding-bottom: 84px !important;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .vendedor-bottom-nav {
     display: flex;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
+    inset-block-end: 0;
+    inset-inline: 0;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
     background-color: var(--bg-card);
     border-top: 1px solid var(--border-color);
     z-index: 1040;
     justify-content: space-around;
-    align-items: center;
-    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.06);
-    padding: 0 4px;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    align-items: stretch;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+    padding: 4px max(4px, env(safe-area-inset-left, 0px)) max(4px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-right, 0px));
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: transform;
+    contain: layout style;
+    overscroll-behavior: none;
   }
 
   .vendedor-bottom-nav-item {
@@ -2094,17 +2131,31 @@ dialog.app-native-dialog::backdrop {
     align-items: center;
     justify-content: center;
     flex: 1;
+    min-height: 48px;
     height: 100%;
     background: transparent;
     border: none;
+    border-radius: 10px;
+    box-shadow: none;
     color: var(--text-secondary);
     font-size: 0.72rem;
     font-weight: 500;
     gap: 2px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: color 0.12s ease, transform 0.08s ease;
     text-decoration: none;
-    padding: 4px 0;
+    padding: 4px 2px;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .vendedor-bottom-nav-item:active {
+    transform: scale(0.95);
+  }
+
+  .vendedor-bottom-nav-item:active .bottom-nav-icon-wrapper {
+    background-color: var(--bg-secondary);
   }
 
   .vendedor-bottom-nav-item .bottom-nav-icon-wrapper {
@@ -2113,7 +2164,7 @@ dialog.app-native-dialog::backdrop {
     justify-content: center;
     padding: 3px 10px;
     border-radius: 12px;
-    transition: all 0.15s ease;
+    transition: background-color 0.12s ease, color 0.12s ease;
   }
 
   .vendedor-bottom-nav-item-active {

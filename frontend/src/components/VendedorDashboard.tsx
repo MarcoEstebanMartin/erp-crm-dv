@@ -6,13 +6,11 @@ import { VendedorRoutesTab } from './vendedor/VendedorRoutesTab';
 import { VendedorHistoryTab } from './vendedor/VendedorCatalogHistoryTabs';
 import { VendedorStreetClientModal, VendedorNoSaleModal, VendedorOrderDetailModal } from './vendedor/VendedorModals';
 import { VendedorOfflineBanner } from './vendedor/VendedorOfflineBanner';
+import { FieldCollectionPage } from './field-receipts/FieldCollectionPage';
 import { cleanCityName } from './vendedor/vendedorHelpers';
 import { useVendedorController } from './vendedor/useVendedorController';
 
 const MobileCobros = React.lazy(() => import('./MobileCobros'));
-const FieldCollectionPage = React.lazy(() =>
-  import('./field-receipts/FieldCollectionPage').then((m) => ({ default: m.FieldCollectionPage })),
-);
 const EditOrderModal = React.lazy(() => import('./modals/EditOrderModal'));
 const ResumenCuentaModal = React.lazy(() => import('./modals/ResumenCuentaModal'));
 const RepartoDashboard = React.lazy(() => import('./RepartoDashboard'));
@@ -26,6 +24,18 @@ interface VendedorDashboardProps {
 export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorDashboardProps) {
   const c = useVendedorController(activeTab);
   const [collectClientId, setCollectClientId] = React.useState<number | null>(null);
+  const [mountedTabs, setMountedTabs] = React.useState<Record<string, boolean>>(() => ({
+    [activeTab]: true,
+  }));
+
+  React.useEffect(() => {
+    setMountedTabs((prev) => (prev[activeTab] ? prev : { ...prev, [activeTab]: true }));
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }
+  }, [activeTab]);
+
+  const isTabMounted = (tab: string) => activeTab === tab || Boolean(mountedTabs[tab]);
 
   return (
     <div style={{ width: '100%' }}>
@@ -107,74 +117,83 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         </div>
       )}
 
-      {activeTab === 'inicio' && (
-        <VendedorHomeTab
-          vendedorRoutes={c.vendedorRoutes}
-          selectedRouteId={c.selectedRouteId}
-          cartCount={c.cart.length}
-          onGoToSell={() => setActiveTab('orders')}
-          onGoToRoute={() => setActiveTab('clients')}
-          onGoToCollect={() => setActiveTab('field-receipts')}
-          onGoToHistory={() => setActiveTab('history')}
-        />
+      {isTabMounted('inicio') && (
+        <div hidden={activeTab !== 'inicio'} style={{ display: activeTab === 'inicio' ? undefined : 'none' }}>
+          <VendedorHomeTab
+            vendedorRoutes={c.vendedorRoutes}
+            selectedRouteId={c.selectedRouteId}
+            cartCount={c.cart.length}
+            onGoToSell={() => setActiveTab('orders')}
+            onGoToRoute={() => setActiveTab('clients')}
+            onGoToCollect={() => setActiveTab('field-receipts')}
+            onGoToHistory={() => setActiveTab('history')}
+          />
+        </div>
       )}
 
-      {activeTab === 'orders' && (
-        <VendedorOrderTakeTab
-          clients={c.clients}
-          products={c.products}
-          rubros={c.rubros}
-          weeklyPromos={c.weeklyPromos}
-          selectedClient={c.selectedClient}
-          setSelectedClient={c.setSelectedClient}
-          clientFilter={c.clientFilter}
-          setClientFilter={c.setClientFilter}
-          selectedCityFilters={c.selectedCityFilters}
-          setSelectedCityFilters={c.setSelectedCityFilters}
-          uniqueCities={c.uniqueCities}
-          prodSearchQuery={c.prodSearchQuery}
-          setProdSearchQuery={c.setProdSearchQuery}
-          filterRubroId={c.filterRubroId}
-          setFilterRubroId={c.setFilterRubroId}
-          cart={c.cart}
-          setCart={c.setCart}
-          orderNotes={c.orderNotes}
-          setOrderNotes={c.setOrderNotes}
-          loading={c.loading}
-          onAddToCart={c.addToCart}
-          onUpdateCartQty={c.updateCartQty}
-          onSetCartQty={c.setCartQty}
-          onConfirmOrder={c.handleConfirmOrder}
-          onOpenNewClientModal={() => c.setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: '', latitude: null, longitude: null })}
-        />
+      {isTabMounted('orders') && (
+        <div hidden={activeTab !== 'orders'} style={{ display: activeTab === 'orders' ? undefined : 'none' }}>
+          <VendedorOrderTakeTab
+            isActive={activeTab === 'orders'}
+            clients={c.clients}
+            products={c.products}
+            rubros={c.rubros}
+            weeklyPromos={c.weeklyPromos}
+            selectedClient={c.selectedClient}
+            setSelectedClient={c.setSelectedClient}
+            clientFilter={c.clientFilter}
+            setClientFilter={c.setClientFilter}
+            selectedCityFilters={c.selectedCityFilters}
+            setSelectedCityFilters={c.setSelectedCityFilters}
+            uniqueCities={c.uniqueCities}
+            prodSearchQuery={c.prodSearchQuery}
+            setProdSearchQuery={c.setProdSearchQuery}
+            filterRubroId={c.filterRubroId}
+            setFilterRubroId={c.setFilterRubroId}
+            cart={c.cart}
+            setCart={c.setCart}
+            orderNotes={c.orderNotes}
+            setOrderNotes={c.setOrderNotes}
+            loading={c.loading}
+            onAddToCart={c.addToCart}
+            onUpdateCartQty={c.updateCartQty}
+            onSetCartQty={c.setCartQty}
+            onConfirmOrder={c.handleConfirmOrder}
+            onOpenNewClientModal={() => c.setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: '', latitude: null, longitude: null })}
+          />
+        </div>
       )}
 
-      {activeTab === 'history' && (
-        <VendedorHistoryTab
-          orders={c.orders}
-          onViewOrderDetails={c.setOrderDetailsModal}
-          onEditOrder={c.handleOpenEditOrder}
-        />
+      {isTabMounted('history') && (
+        <div hidden={activeTab !== 'history'} style={{ display: activeTab === 'history' ? undefined : 'none' }}>
+          <VendedorHistoryTab
+            orders={c.orders}
+            onViewOrderDetails={c.setOrderDetailsModal}
+            onEditOrder={c.handleOpenEditOrder}
+          />
+        </div>
       )}
 
-      {activeTab === 'clients' && (
-        <VendedorRoutesTab
-          vendedorRoutes={c.vendedorRoutes}
-          selectedRouteId={c.selectedRouteId}
-          clients={c.routeClients}
-          orders={c.orders}
-          todayVisits={c.todayVisits}
-          loading={c.loading}
-          onSelectRoute={c.handleSelectRoute}
-          onSync={() => { c.setLoading(true); c.fetchData(true).finally(() => c.setLoading(false)); }}
-          onOpenNewClientModal={() => c.setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: c.selectedRouteId || '', latitude: null, longitude: null })}
-          onOpenNoSaleModal={(client) => c.setNoSaleModal({ open: true, clientId: client.id, clientName: client.name, reason: 'Estaba cerrado', notes: '' })}
-          onCollectClient={(client) => { setCollectClientId(client.id); setActiveTab('field-receipts'); }}
-          onSellToClient={(client) => { c.setSelectedClient(client); setActiveTab('orders'); }}
-          onOpenResumenClient={(client) => c.setResumenClientModal(client)}
-          onReorderClients={c.handleReorderRouteClients}
-          onRemoveClient={c.handleRemoveClientFromRoute}
-        />
+      {isTabMounted('clients') && (
+        <div hidden={activeTab !== 'clients'} style={{ display: activeTab === 'clients' ? undefined : 'none' }}>
+          <VendedorRoutesTab
+            vendedorRoutes={c.vendedorRoutes}
+            selectedRouteId={c.selectedRouteId}
+            clients={c.routeClients}
+            orders={c.orders}
+            todayVisits={c.todayVisits}
+            loading={c.loading}
+            onSelectRoute={c.handleSelectRoute}
+            onSync={() => { c.setLoading(true); c.fetchData(true).finally(() => c.setLoading(false)); }}
+            onOpenNewClientModal={() => c.setClientModal({ open: true, name: '', cuit: '', address: '', city: '', phone: '', email: '', route: '', saleRouteId: c.selectedRouteId || '', latitude: null, longitude: null })}
+            onOpenNoSaleModal={(client) => c.setNoSaleModal({ open: true, clientId: client.id, clientName: client.name, reason: 'Estaba cerrado', notes: '' })}
+            onCollectClient={(client) => { setCollectClientId(client.id); setActiveTab('field-receipts'); }}
+            onSellToClient={(client) => { c.setSelectedClient(client); setActiveTab('orders'); }}
+            onOpenResumenClient={(client) => c.setResumenClientModal(client)}
+            onReorderClients={c.handleReorderRouteClients}
+            onRemoveClient={c.handleRemoveClientFromRoute}
+          />
+        </div>
       )}
 
       {activeTab === 'cobranzas' && (
@@ -188,13 +207,14 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         </React.Suspense>
       )}
 
-      {activeTab === 'field-receipts' && (
-        <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando...</div>}>
+      {isTabMounted('field-receipts') && (
+        <div hidden={activeTab !== 'field-receipts'} style={{ display: activeTab === 'field-receipts' ? undefined : 'none' }}>
           <FieldCollectionPage
+            isActive={activeTab === 'field-receipts'}
             initialClientId={collectClientId}
             onInitialClientHandled={() => setCollectClientId(null)}
           />
-        </React.Suspense>
+        </div>
       )}
 
       <VendedorStreetClientModal

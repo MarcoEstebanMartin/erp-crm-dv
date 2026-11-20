@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 export interface SidebarMenuItem {
   id: string;
@@ -19,17 +19,37 @@ export function VendedorBottomNav({
   vendedorCartCount,
   onSelect,
 }: VendedorBottomNavProps) {
+  const [pendingTab, setPendingTab] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPendingTab(null);
+  }, [currentTab]);
+
+  const displayedTab = pendingTab ?? currentTab;
+
+  const handleItemClick = (tabId: string) => {
+    if (tabId === currentTab) {
+      setPendingTab(null);
+      if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      }
+      return;
+    }
+    setPendingTab(tabId);
+    onSelect(tabId);
+  };
+
   return (
     <nav aria-label="Menú móvil" className="vendedor-bottom-nav">
       {menuItems.map((item) => {
-        const isActive = currentTab === item.id;
+        const isActive = displayedTab === item.id;
         return (
           <button
             key={item.id}
             type="button"
             aria-current={isActive ? 'page' : undefined}
             className={`vendedor-bottom-nav-item ${isActive ? 'vendedor-bottom-nav-item-active' : ''}`}
-            onClick={() => onSelect(item.id)}
+            onClick={() => handleItemClick(item.id)}
           >
             <div className="bottom-nav-icon-wrapper" style={{ position: 'relative' }}>
               {item.icon}

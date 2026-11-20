@@ -254,4 +254,23 @@ export const ComprasCreateReceiveModals: FC<{
                         <td>{item.product?.name || `Producto #${item.productId}`}</td>
                         <td className="tabular-nums" style={{ textAlign: 'right' }}>{item.quantity} u.</td>
                         <td className="tabular-nums" style={{ textAlign: 'right' }}>{formatCentsArs(parseExactCents(item.costPrice))}</td>
-           
+                        <td className="tabular-nums" style={{ textAlign: 'right' }}>{formatCentsArs(parseExactCents(item.subtotal))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', backgroundColor: 'var(--bg-app)', borderRadius: '6px', fontWeight: 700 }}>
+                <span>Total neto:</span>
+                <span className="tabular-nums">{formatCentsArs(parseExactCents(p.viewDetailsModal.totalAmount))}</span>
+              </div>
+            </div>
+            <div className="modal-footer" style={{ marginTop: '16px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => p.setViewDetailsModal(null)}>Cerrar</button>
+            </div>
+          </>
+        )}
+      </NativeModalDialog>
+    </>
+  );
+};

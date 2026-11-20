@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../utils/api';
 import { loadCatalogSnapshot } from '../../utils/offlineCatalogDb';
 import {
@@ -28,14 +28,16 @@ export function useVendedorOfflineSync({ onSynced, showToast }: UseVendedorOffli
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [queuedOrders, setQueuedOrders] = useState<QueuedOfflineOrder[]>([]);
   const [queuedVisits, setQueuedVisits] = useState<QueuedOfflineVisit[]>([]);
+  const onSyncedRef = useRef(onSynced);
+  onSyncedRef.current = onSynced;
 
-  const refreshQueueState = useCallback(async () => {
+  const refreshQueueState = useCallback(async (includeCatalogSyncAt = false) => {
     const [queueSnap, prodSnap] = await Promise.all([
       getOfflineQueueSnapshot(),
-      loadCatalogSnapshot('products_full'),
+      includeCatalogSyncAt ? loadCatalogSnapshot('products_full') : Promise.resolve(null),
     ]);
-    setQueuedOrders(queueSnap.orders);
-    setQueuedVisits(queueSnap.visits);
+    setQueuedOrders((prev) => (prev.length === 0 && queueSnap.orders.length === 0 ? prev : queueSnap.orders));
+    setQueuedVisits((prev) => (prev.length === 0 && queueSnap.visits.length === 0 ? prev : queueSnap.visits));
     if (prodSnap?.updatedAt) {
       setLastCatalogSyncAt(prodSnap.updatedAt);
     }
@@ -50,8 +52,8 @@ export function useVendedorOfflineSync({ onSynced, showToast }: UseVendedorOffli
     const current = await getOfflineQueueSnapshot();
     const actionableOrders = current.orders.filter((o) => o.status === 'PENDING');
     if (actionableOrders.length === 0 && current.visits.length === 0) {
-      setQueuedOrders(current.orders);
-      setQueuedVisits(current.visits);
+      setQueuedOrders((prev) => (prev.length === 0 && current.orders.length === 0 ? prev : current.orders));
+      setQueuedVisits((prev) => (prev.length === 0 && current.visits.length === 0 ? prev : current.visits));
       return;
     }
 
@@ -71,7 +73,7 @@ export function useVendedorOfflineSync({ onSynced, showToast }: UseVendedorOffli
         if (res.syncedOrders > 0) parts.push(`${res.syncedOrders} pedido(s)`);
         if (res.syncedVisits > 0) parts.push(`${res.syncedVisits} visita(s)`);
         showToast(`Sincronización completada: ${parts.join(' y ')} enviados.`, 'success');
-        onSynced?.();
+        onSyncedRef.current?.();
       }
       if (res.rejectedOrders > 0) {
         showToast(
@@ -82,7 +84,7 @@ export function useVendedorOfflineSync({ onSynced, showToast }: UseVendedorOffli
     } finally {
       setIsSyncing(false);
     }
-  }, [onSynced, refreshQueueState, showToast]);
+  }, [refreshQueueState, showToast]);
 
   const queueOrderOffline = useCallback(
     async (input: {
@@ -139,7 +141,7 @@ export function useVendedorOfflineSync({ onSynced, showToast }: UseVendedorOffli
 
   useEffect(() => {
     migrateLegacyLocalStorageQueues()
-      .then(() => refreshQueueState())
+      .then(() => refreshQueueState(true))
       .then(() => syncNow());
 
     const handleOnline = () => {

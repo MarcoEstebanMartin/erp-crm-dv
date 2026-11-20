@@ -35,10 +35,11 @@ export const VendedorHomeTab: React.FC<VendedorHomeTabProps> = ({
   const routeBadge = activeRoute ? `${activeRoute.name}${activeRoute.dayOfWeek ? ` · ${activeRoute.dayOfWeek}` : ''}` : 'Sin ruta';
 
   return (
-    <div style={{ maxWidth: '520px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px', paddingTop: '4px' }}>
+    <div className="vendedor-home-shell">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <button
           type="button"
+          className="vendedor-home-action-btn"
           onClick={onGoToSell}
           style={{
             display: 'flex',
@@ -75,6 +76,7 @@ export const VendedorHomeTab: React.FC<VendedorHomeTabProps> = ({
 
         <button
           type="button"
+          className="vendedor-home-action-btn"
           onClick={onGoToRoute}
           style={{
             display: 'flex',
@@ -111,6 +113,7 @@ export const VendedorHomeTab: React.FC<VendedorHomeTabProps> = ({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
         <button
           type="button"
+          className="vendedor-home-action-btn"
           onClick={onGoToCollect}
           style={{
             display: 'flex',
@@ -134,6 +137,7 @@ export const VendedorHomeTab: React.FC<VendedorHomeTabProps> = ({
 
         <button
           type="button"
+          className="vendedor-home-action-btn"
           onClick={onGoToHistory}
           style={{
             display: 'flex',

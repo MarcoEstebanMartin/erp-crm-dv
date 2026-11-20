@@ -58,6 +58,7 @@ export function useVendedorController(activeTab: string) {
   routeClientsLengthRef.current = routeClients.length;
   const lastFetchedTabAtRef = useRef<Record<string, number>>({});
   const prefetchedOrdersRef = useRef(false);
+  const prefetchedClientsRef = useRef(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -66,8 +67,11 @@ export function useVendedorController(activeTab: string) {
   }, []);
 
   const fetchRef = useRef<(force?: boolean) => void>(() => undefined);
+  const handleOfflineSynced = useCallback(() => {
+    fetchRef.current(true);
+  }, []);
   const offlineSync = useVendedorOfflineSync({
-    onSynced: () => fetchRef.current(true),
+    onSynced: handleOfflineSynced,
     showToast,
   });
 
@@ -144,6 +148,24 @@ export function useVendedorController(activeTab: string) {
             })
             .catch(() => {});
         }, 120);
+      }
+
+      if (activeTab === 'inicio' && !prefetchedClientsRef.current) {
+        prefetchedClientsRef.current = true;
+        const resolvedRoute = result.resolvedRouteId ?? selectedRouteIdRef.current;
+        setTimeout(() => {
+          fetchVendedorTabState({
+            activeTab: 'clients',
+            prodSearchQuery: '',
+            searchQuery: '',
+            selectedRouteId: resolvedRoute,
+          })
+            .then((prefetched) => {
+              applyTabResult(prefetched);
+              lastFetchedTabAtRef.current['clients'] = Date.now();
+            })
+            .catch(() => {});
+        }, 280);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al obtener datos.');

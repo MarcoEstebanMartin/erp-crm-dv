@@ -138,7 +138,7 @@ export const VendedorOrderCartPanel: React.FC<VendedorOrderCartPanelProps> = ({
       <div
         style={{
           position: 'fixed',
-          bottom: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+          bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
           left: '12px',
           right: '12px',
           zIndex: 1030,
