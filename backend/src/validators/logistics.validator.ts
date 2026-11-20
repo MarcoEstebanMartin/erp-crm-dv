@@ -124,3 +124,12 @@ export const recordRouteGpsPingSchema = z.object({
     heading: nullableNumber,
   }),
 });
+
+export const liveMapQuerySchema = z.object({
+  query: z.object({
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido (YYYY-MM-DD).')
+      .optional(),
+  }),
+});

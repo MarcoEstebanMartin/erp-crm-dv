@@ -4,6 +4,7 @@ import AppError from '../utils/AppError';
 import { deliveryRouteService } from '../services/logistics/delivery-route.service';
 import { routeSettlementService } from '../services/logistics/route-settlement.service';
 import { routeCustodyGpsService } from '../services/logistics/route-custody-gps.service';
+import { liveMapService } from '../services/logistics/live-map.service';
 
 function handleLogisticsError(res: Response, error: unknown, fallbackMessage: string): void {
   if (error instanceof AppError) {
@@ -186,5 +187,15 @@ export async function getRouteGpsHistory(req: AuthenticatedRequest, res: Respons
     res.status(200).json({ status: 'success', data });
   } catch (error) {
     handleLogisticsError(res, error, 'Error al obtener historial GPS.');
+  }
+}
+
+export async function getLiveMap(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const date = typeof req.query.date === 'string' ? req.query.date : undefined;
+    const data = await liveMapService.getLiveMap(date);
+    res.status(200).json({ status: 'success', data });
+  } catch (error) {
+    handleLogisticsError(res, error, 'Error al obtener el mapa en vivo.');
   }
 }

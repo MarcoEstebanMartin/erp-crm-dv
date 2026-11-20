@@ -11,12 +11,14 @@ import {
   transferRouteCustody,
   recordRouteGpsPing,
   getRouteGpsHistory,
+  getLiveMap,
 } from '../controllers/logistics.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   createDeliveryRouteSchema,
+  liveMapQuerySchema,
   recordRouteGpsPingSchema,
   routeIdParamSchema,
   settleDeliveryRouteSchema,
@@ -33,6 +35,7 @@ const canManageRoutes = requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO
 const canSettleOrDeleteRoutes = requireRole([Role.ADMIN, Role.FACTURACION]);
 
 router.get('/resources', getLogisticsResources);
+router.get('/live-map', canManageRoutes, validateRequest(liveMapQuerySchema), getLiveMap);
 router.get('/', getDeliveryRoutes);
 router.post('/', canManageRoutes, validateRequest(createDeliveryRouteSchema), idempotencyGuard, createDeliveryRoute);
 router.patch(
