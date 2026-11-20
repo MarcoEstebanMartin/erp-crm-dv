@@ -1,5 +1,5 @@
 import React, { useDeferredValue, useEffect, useMemo, useRef } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search, StickyNote, X } from 'lucide-react';
 import {
   buildSearchIndex,
   filterIndexedItems,
@@ -143,7 +143,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: cart.length > 0 ? '88px' : '16px' }}>
+    <div className={`vendedor-order-shell${cart.length > 0 ? ' vendedor-order-shell--has-cart' : ''}`}>
       {/* 1. Lupa de Cliente */}
       <div className="card" style={{ padding: '12px' }}>
         {!selectedClient ? (
@@ -364,15 +364,39 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
         )}
       </div>
 
-      {/* 3. Pedido */}
+      {/* 3. Nota / Comentarios del pedido */}
+      <div className="card" style={{ padding: '12px' }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', width: '100%' }}>
+          <StickyNote size={18} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--text-muted)', pointerEvents: 'none' }} aria-hidden="true" />
+          <label htmlFor="vendedor-order-notes" className="sr-only">Nota</label>
+          <textarea
+            id="vendedor-order-notes"
+            rows={1}
+            className="input vendedor-note-input"
+            placeholder="Nota"
+            value={orderNotes}
+            onChange={(e) => setOrderNotes(e.target.value)}
+          />
+          {orderNotes && (
+            <button
+              type="button"
+              aria-label="Limpiar nota"
+              onClick={() => setOrderNotes('')}
+              style={{ ...clearBtnStyle, top: '9px' }}
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 4. Pedido */}
       <VendedorOrderCartPanel
         cart={cart}
         setCart={setCart}
         selectedClient={selectedClient}
         promoEval={promoEval}
         totalUnits={totalUnits}
-        orderNotes={orderNotes}
-        setOrderNotes={setOrderNotes}
         loading={loading}
         cartSectionRef={cartSectionRef}
         qtyInputStyle={qtyInputStyle}

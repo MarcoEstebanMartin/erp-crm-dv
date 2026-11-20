@@ -66,4 +66,22 @@ describe('Vendedor — Inicio centrado en zona de pulgar y barra inferior fija f
     const mainSrc = readSrc('main.tsx');
     expect(mainSrc).not.toContain("addEventListener('touchmove'");
   });
+
+  it('centra la pantalla de Preventa con vendedor-order-shell y expone el renglón Nota siempre visible', () => {
+    const orderTabSrc = readSrc('components/vendedor/VendedorOrderTakeTab.tsx');
+    const cartPanelSrc = readSrc('components/vendedor/VendedorOrderCartPanel.tsx');
+    const cssSrc = readSrc('index.css');
+
+    expect(orderTabSrc).toContain('vendedor-order-shell');
+    expect(orderTabSrc).toContain('id="vendedor-order-notes"');
+    expect(orderTabSrc).toContain('placeholder="Nota"');
+    expect(orderTabSrc).toContain('vendedor-note-input');
+    expect(orderTabSrc.split(/\r?\n/).length).toBeLessThanOrEqual(450);
+
+    expect(cartPanelSrc).not.toContain('id="vendedor-order-notes"');
+
+    expect(cssSrc).toContain('.vendedor-order-shell');
+    expect(cssSrc).toContain('.vendedor-note-input');
+    expect(cssSrc).toContain('field-sizing: content;');
+  });
 });

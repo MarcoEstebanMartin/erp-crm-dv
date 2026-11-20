@@ -16,8 +16,6 @@ interface VendedorOrderCartPanelProps {
   selectedClient: Persona | null;
   promoEval: FrontendCartPromoEvalResult;
   totalUnits: number;
-  orderNotes: string;
-  setOrderNotes: (notes: string) => void;
   loading: boolean;
   cartSectionRef: React.RefObject<HTMLDivElement | null>;
   qtyInputStyle: React.CSSProperties;
@@ -32,8 +30,6 @@ export const VendedorOrderCartPanel: React.FC<VendedorOrderCartPanelProps> = ({
   selectedClient,
   promoEval,
   totalUnits,
-  orderNotes,
-  setOrderNotes,
   loading,
   cartSectionRef,
   qtyInputStyle,
@@ -119,16 +115,6 @@ export const VendedorOrderCartPanel: React.FC<VendedorOrderCartPanelProps> = ({
             </div>
           ))}
         </div>
-
-        <input
-          id="vendedor-order-notes"
-          type="text"
-          className="input"
-          placeholder="Notas de entrega (opcional)"
-          value={orderNotes}
-          onChange={(e) => setOrderNotes(e.target.value)}
-          style={{ fontSize: '16px', padding: '10px 12px' }}
-        />
 
         <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 700, fontSize: '0.95rem' }} onClick={onConfirmOrder} disabled={loading}>
           {loading ? 'Procesando...' : 'Confirmar pedido'}

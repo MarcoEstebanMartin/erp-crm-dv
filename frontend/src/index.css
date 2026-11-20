@@ -1994,6 +1994,40 @@ dialog.app-native-dialog::backdrop {
   padding: 16px 0 8px;
 }
 
+.vendedor-order-shell {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  min-height: calc(100vh - 180px);
+  min-height: calc(100dvh - 180px);
+  padding: 16px 0;
+}
+
+.vendedor-order-shell--has-cart {
+  padding-bottom: 88px;
+}
+
+.vendedor-note-input {
+  width: 100%;
+  font-size: 16px;
+  line-height: 1.4;
+  padding: 11px 38px 11px 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background-color: #fff;
+  color: var(--text-primary);
+  font-family: inherit;
+  resize: none;
+  field-sizing: content;
+  min-block-size: 46px;
+  max-block-size: 140px;
+  display: block;
+}
+
 .vendedor-home-action-btn {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -2075,6 +2109,16 @@ dialog.app-native-dialog::backdrop {
     min-height: calc(100vh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     min-height: calc(100dvh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     padding: 36px 0 8px;
+  }
+
+  .vendedor-order-shell {
+    min-height: calc(100vh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding: 36px 0 16px;
+  }
+
+  .vendedor-order-shell--has-cart {
+    padding-bottom: 88px;
   }
 
   .vendedor-top-nav-bar {
