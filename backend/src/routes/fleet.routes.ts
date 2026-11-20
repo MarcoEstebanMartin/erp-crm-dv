@@ -14,6 +14,7 @@ import {
 import {
   getFuelLogs,
   createFuelLog,
+  settleFuelLogs,
   deleteFuelLog,
   getFuelAnalytics,
 } from '../controllers/fuel.controller';
@@ -27,6 +28,10 @@ import {
   updateExpirySchema,
   updateVehicleSchema,
 } from '../validators/fleet.validator';
+import {
+  createFuelLogSchema,
+  settleFuelLogsSchema,
+} from '../validators/fuel.validator';
 
 const router = Router();
 
@@ -44,8 +49,9 @@ router.delete('/:id', canAdminFleet, validateRequest(fleetIdParamSchema), delete
 // Combustible
 router.get('/fuel', getFuelLogs);
 router.get('/fuel/analytics', getFuelAnalytics);
-router.post('/fuel', canOperateFleet, createFuelLog);
-router.delete('/fuel/:id', canAdminFleet, deleteFuelLog);
+router.post('/fuel', canOperateFleet, validateRequest(createFuelLogSchema), createFuelLog);
+router.post('/fuel/settle', canAdminFleet, validateRequest(settleFuelLogsSchema), settleFuelLogs);
+router.delete('/fuel/:id', canAdminFleet, validateRequest(fleetIdParamSchema), deleteFuelLog);
 
 // Mantenimientos
 router.post(

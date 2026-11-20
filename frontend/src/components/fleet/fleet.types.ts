@@ -32,6 +32,8 @@ export interface Vehicle {
   year: number;
   currentOdometer: number;
   status: 'ACTIVE' | 'MAINTENANCE' | 'OUT_OF_SERVICE';
+  trackFuel?: boolean;
+  fuelType?: 'NAFTA' | 'DIESEL' | null;
   notes?: string | null;
   maintenances: Maintenance[];
   expirations: Expiry[];

@@ -19,6 +19,8 @@ export const createVehicleSchema = z.object({
     year: z.coerce.number().int().min(1950).max(2100),
     currentOdometer: z.coerce.number().min(0),
     status: z.enum(['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE']).optional(),
+    trackFuel: z.boolean().optional(),
+    fuelType: z.enum(['NAFTA', 'DIESEL']).nullable().optional(),
     notes: z.string().max(2000).optional().nullable(),
   }),
 });
@@ -33,6 +35,8 @@ export const updateVehicleSchema = z.object({
     year: z.coerce.number().int().min(1950).max(2100).optional(),
     currentOdometer: z.coerce.number().min(0).optional(),
     status: z.enum(['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE']).optional(),
+    trackFuel: z.boolean().optional(),
+    fuelType: z.enum(['NAFTA', 'DIESEL']).nullable().optional(),
     notes: z.string().max(2000).optional().nullable(),
   }),
 });

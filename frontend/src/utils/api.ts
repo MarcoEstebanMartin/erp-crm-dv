@@ -1765,9 +1765,10 @@ export const api = {
   },
 
   // --- CONTROL DE COMBUSTIBLE DE FLOTA ---
-  getFuelLogs: async (params?: { vehicleId?: number; startDate?: string; endDate?: string }) => {
+  getFuelLogs: async (params?: { vehicleId?: number; status?: 'PENDING' | 'SETTLED'; startDate?: string; endDate?: string }) => {
     const query = new URLSearchParams();
     if (params?.vehicleId) query.append('vehicleId', String(params.vehicleId));
+    if (params?.status) query.append('status', params.status);
     if (params?.startDate) query.append('startDate', params.startDate);
     if (params?.endDate) query.append('endDate', params.endDate);
     const queryString = query.toString() ? `?${query.toString()}` : '';
@@ -1782,6 +1783,13 @@ export const api = {
 
   createFuelLog: async (data: any) => {
     return await request('/fleet/fuel', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  settleFuelLogs: async (data: any) => {
+    return await request('/fleet/fuel/settle', {
       method: 'POST',
       body: JSON.stringify(data)
     });

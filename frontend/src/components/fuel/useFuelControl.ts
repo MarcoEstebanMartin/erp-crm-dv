@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
 
@@ -7,19 +7,29 @@ interface UseFuelControlParams {
   onRefreshVehicles?: () => void;
 }
 
-const initialFuelForm = (vehicleId = '', odometer = '', bankAccountId = '') => ({
+const todayStr = () => new Date().toISOString().substring(0, 10);
+
+const initialFuelForm = (vehicleId = '', odometer = '') => ({
   vehicleId,
   odometer,
   liters: '',
-  totalCost: '',
-  pricePerLiter: '',
+  ticketNumber: '',
   isFullTank: true,
   notes: '',
-  date: new Date().toISOString().substring(0, 10),
+  date: todayStr(),
+});
+
+const initialSettleForm = (bankAccountId = '') => ({
+  dieselPricePerLiter: '',
+  dieselTotalCost: '',
+  naftaPricePerLiter: '',
+  naftaTotalCost: '',
+  settledDate: todayStr(),
   affectFinance: false,
-  paymentMethod: 'CASH',
+  paymentMethod: 'TRANSFER',
   bankAccountId,
   billingType: 'INTERNAL',
+  notes: '',
 });
 
 export function useFuelControl({ vehiclesProp, onRefreshVehicles }: UseFuelControlParams) {
@@ -29,14 +39,22 @@ export function useFuelControl({ vehiclesProp, onRefreshVehicles }: UseFuelContr
   const [analytics, setAnalytics] = useState<any>(null);
   const [fuelLogs, setFuelLogs] = useState<any[]>([]);
   const [selectedVehicleFilter, setSelectedVehicleFilter] = useState<number | 'ALL'>('ALL');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'ALL' | 'PENDING' | 'SETTLED'>('ALL');
   const [showModal, setShowModal] = useState(false);
+  const [showSettleModal, setShowSettleModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [form, setForm] = useState(() => initialFuelForm());
+  const [selectedSettleIds, setSelectedSettleIds] = useState<number[]>([]);
+  const [settleForm, setSettleForm] = useState(() => initialSettleForm());
 
-  const vehicles = vehiclesProp || internalVehicles;
+  const allVehicles = vehiclesProp || internalVehicles;
+  const vehicles = useMemo(
+    () => allVehicles.filter((v) => v.trackFuel === true),
+    [allVehicles],
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -62,15 +80,16 @@ export function useFuelControl({ vehiclesProp, onRefreshVehicles }: UseFuelContr
     api.getBankAccounts().then((d) => setBankAccounts(d || [])).catch(() => {});
   }, []);
 
+  const pendingLogs = useMemo(
+    () => fuelLogs.filter((l) => l.status === 'PENDING'),
+    [fuelLogs],
+  );
+
   const handleOpenModal = (vehicleId?: number) => {
     setModalError(null);
     const vId = vehicleId || (vehicles.length > 0 ? vehicles[0].id : '');
     const selectedVeh = vehicles.find((v) => v.id === Number(vId));
-    setForm(initialFuelForm(
-      String(vId),
-      selectedVeh ? String(selectedVeh.currentOdometer || 0) : '',
-      bankAccounts.length > 0 ? String(bankAccounts[0].id) : '',
-    ));
+    setForm(initialFuelForm(String(vId), selectedVeh ? String(selectedVeh.currentOdometer || 0) : ''));
     setShowModal(true);
   };
 
@@ -88,18 +107,10 @@ export function useFuelControl({ vehiclesProp, onRefreshVehicles }: UseFuelContr
     }));
   };
 
-  const handleCostOrLitersChange = (field: 'liters' | 'totalCost', value: string) => {
-    const nextForm = { ...form, [field]: value };
-    const lit = parseFloat(nextForm.liters);
-    const cost = parseFloat(nextForm.totalCost);
-    if (lit > 0 && cost > 0) nextForm.pricePerLiter = (cost / lit).toFixed(2);
-    setForm(nextForm);
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.vehicleId || !form.odometer || !form.liters || !form.totalCost) {
-      setModalError('Complete los campos requeridos.');
+    if (!form.vehicleId || !form.odometer || !form.liters) {
+      setModalError('Completá vehículo, odómetro y litros.');
       return;
     }
     setSubmitting(true);
@@ -109,44 +120,100 @@ export function useFuelControl({ vehiclesProp, onRefreshVehicles }: UseFuelContr
         vehicleId: Number(form.vehicleId),
         odometer: Number(form.odometer),
         liters: Number(form.liters),
-        totalCost: Number(form.totalCost),
-        pricePerLiter: form.pricePerLiter ? Number(form.pricePerLiter) : undefined,
+        ticketNumber: form.ticketNumber.trim() || null,
         isFullTank: form.isFullTank,
-        notes: form.notes,
+        notes: form.notes.trim() || null,
         date: form.date,
-        affectFinance: form.affectFinance,
-        paymentMethod: form.paymentMethod,
-        bankAccountId: form.bankAccountId ? Number(form.bankAccountId) : undefined,
-        billingType: form.billingType,
       });
       setShowModal(false);
       await loadData();
       onRefreshVehicles?.();
     } catch (err: any) {
-      setModalError(err.message || 'Error al guardar carga de combustible.');
+      setModalError(err.message || 'Error al guardar el ticket.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenSettleModal = () => {
+    setModalError(null);
+    setSelectedSettleIds(pendingLogs.map((l) => l.id));
+    setSettleForm(initialSettleForm(bankAccounts.length > 0 ? String(bankAccounts[0].id) : ''));
+    setShowSettleModal(true);
+  };
+
+  const handleCloseSettleModal = () => {
+    setModalError(null);
+    setShowSettleModal(false);
+  };
+
+  const toggleSettleLog = (id: number) => {
+    setSelectedSettleIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const handleSettleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (selectedSettleIds.length === 0) {
+      setModalError('Seleccioná al menos un ticket.');
+      return;
+    }
+    setSubmitting(true);
+    setModalError(null);
+    try {
+      await api.settleFuelLogs({
+        logIds: selectedSettleIds,
+        dieselPricePerLiter: settleForm.dieselPricePerLiter ? Number(settleForm.dieselPricePerLiter) : undefined,
+        dieselTotalCost: settleForm.dieselTotalCost ? Number(settleForm.dieselTotalCost) : undefined,
+        naftaPricePerLiter: settleForm.naftaPricePerLiter ? Number(settleForm.naftaPricePerLiter) : undefined,
+        naftaTotalCost: settleForm.naftaTotalCost ? Number(settleForm.naftaTotalCost) : undefined,
+        settledDate: settleForm.settledDate,
+        affectFinance: settleForm.affectFinance,
+        paymentMethod: settleForm.paymentMethod,
+        bankAccountId: settleForm.bankAccountId ? Number(settleForm.bankAccountId) : undefined,
+        billingType: settleForm.billingType,
+        notes: settleForm.notes.trim() || null,
+      });
+      setShowSettleModal(false);
+      await loadData();
+    } catch (err: any) {
+      setModalError(err.message || 'Error al liquidar tickets.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteLog = async (id: number) => {
-    if (!await confirm('¿Eliminar este registro de carga?', { type: 'danger' })) return;
+    if (!await confirm('¿Eliminar este ticket de combustible?', { type: 'danger' })) return;
     setError(null);
     try {
       await api.deleteFuelLog(id);
       await loadData();
       onRefreshVehicles?.();
     } catch (err: any) {
-      setError(err.message || 'Error al eliminar la carga.');
+      setError(err.message || 'Error al eliminar el ticket.');
     }
   };
 
-  const filteredLogs = fuelLogs.filter((log) => (selectedVehicleFilter === 'ALL' ? true : log.vehicleId === selectedVehicleFilter));
+  const filteredLogs = useMemo(
+    () =>
+      fuelLogs.filter((log) => {
+        if (selectedVehicleFilter !== 'ALL' && log.vehicleId !== selectedVehicleFilter) return false;
+        if (selectedStatusFilter !== 'ALL' && log.status !== selectedStatusFilter) return false;
+        return true;
+      }),
+    [fuelLogs, selectedVehicleFilter, selectedStatusFilter],
+  );
 
   return {
-    vehicles, loading, analytics, filteredLogs, selectedVehicleFilter, setSelectedVehicleFilter,
-    showModal, submitting, error, setError, modalError, bankAccounts, form, setForm,
-    loadData, handleOpenModal, handleCloseModal, handleVehicleChange, handleCostOrLitersChange,
-    handleSubmit, handleDeleteLog,
+    vehicles, loading, analytics, filteredLogs, pendingLogs,
+    selectedVehicleFilter, setSelectedVehicleFilter,
+    selectedStatusFilter, setSelectedStatusFilter,
+    showModal, showSettleModal, submitting, error, setError, modalError, bankAccounts,
+    form, setForm, settleForm, setSettleForm, selectedSettleIds, setSelectedSettleIds,
+    loadData, handleOpenModal, handleCloseModal, handleVehicleChange, handleSubmit,
+    handleOpenSettleModal, handleCloseSettleModal, toggleSettleLog, handleSettleSubmit,
+    handleDeleteLog,
   };
 }

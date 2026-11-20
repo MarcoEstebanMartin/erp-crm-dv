@@ -1,4 +1,4 @@
-import { VehicleStatus } from '@prisma/client';
+import { FuelType, VehicleStatus } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
@@ -12,6 +12,8 @@ export interface CreateVehicleInput {
   year: number | string;
   currentOdometer: number | string;
   status?: VehicleStatus | string;
+  trackFuel?: boolean;
+  fuelType?: FuelType | string | null;
   notes?: string | null;
 }
 
@@ -23,6 +25,8 @@ export interface UpdateVehicleInput {
   year?: number | string;
   currentOdometer?: number | string;
   status?: VehicleStatus | string;
+  trackFuel?: boolean;
+  fuelType?: FuelType | string | null;
   notes?: string | null;
 }
 
@@ -85,6 +89,8 @@ export const vehicleService = {
         year: roundToIntegerPeso(input.year).toNumber(),
         currentOdometer: roundToIntegerPeso(input.currentOdometer).toNumber(),
         status: (input.status as VehicleStatus) || VehicleStatus.ACTIVE,
+        trackFuel: Boolean(input.trackFuel),
+        fuelType: input.fuelType ? (input.fuelType as FuelType) : null,
         notes: input.notes ? String(input.notes).trim() : null,
       },
     });
@@ -119,6 +125,13 @@ export const vehicleService = {
             ? roundToIntegerPeso(input.currentOdometer).toNumber()
             : undefined,
         status: (input.status as VehicleStatus) || undefined,
+        trackFuel: input.trackFuel !== undefined ? Boolean(input.trackFuel) : undefined,
+        fuelType:
+          input.fuelType !== undefined
+            ? input.fuelType
+              ? (input.fuelType as FuelType)
+              : null
+            : undefined,
         notes:
           input.notes !== undefined
             ? input.notes

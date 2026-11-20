@@ -12,7 +12,7 @@ interface FleetModalsProps {
   showVehicleModal: boolean;
   setShowVehicleModal: (v: boolean) => void;
   editingVehicle: Vehicle | null;
-  vehicleForm: { plate: string; brand: string; model: string; year: number; currentOdometer: number; status: Vehicle['status']; notes: string };
+  vehicleForm: { plate: string; brand: string; model: string; year: number; currentOdometer: number; status: Vehicle['status']; trackFuel: boolean; fuelType: '' | 'NAFTA' | 'DIESEL'; notes: string };
   setVehicleForm: (v: any) => void;
   onSaveVehicle: (e: FormEvent) => void;
   showMaintenanceModal: boolean;
@@ -73,6 +73,31 @@ export const FleetModals: FC<FleetModalsProps> = (p) => {
                 <option value="ACTIVE">Activo</option>
                 <option value="MAINTENANCE">En Taller</option>
                 <option value="OUT_OF_SERVICE">Fuera de Servicio</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'end' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '38px' }}>
+              <input
+                id="fleet-track-fuel"
+                type="checkbox"
+                checked={p.vehicleForm.trackFuel}
+                onChange={(e) => p.setVehicleForm({ ...p.vehicleForm, trackFuel: e.target.checked, fuelType: e.target.checked && !p.vehicleForm.fuelType ? 'DIESEL' : p.vehicleForm.fuelType })}
+                style={{ cursor: 'pointer' }}
+              />
+              <label htmlFor="fleet-track-fuel" style={{ margin: 0, fontSize: '0.82rem', fontWeight: 500, cursor: 'pointer' }}>Controla combustible</label>
+            </div>
+            <div className="form-group">
+              <label htmlFor="fleet-fuel-type">Combustible</label>
+              <select
+                id="fleet-fuel-type"
+                className="select"
+                value={p.vehicleForm.fuelType}
+                onChange={(e) => p.setVehicleForm({ ...p.vehicleForm, fuelType: e.target.value })}
+              >
+                <option value="">Sin especificar</option>
+                <option value="DIESEL">Diesel</option>
+                <option value="NAFTA">Nafta</option>
               </select>
             </div>
           </div>

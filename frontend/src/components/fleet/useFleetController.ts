@@ -5,7 +5,8 @@ import { ALLOWED_FLEET_PROVIDER_NAMES, type Expiry, type Maintenance, type Vehic
 
 const emptyVehicleForm = () => ({
   plate: '', brand: '', model: '', year: new Date().getFullYear(),
-  currentOdometer: 0, status: 'ACTIVE' as Vehicle['status'], notes: '',
+  currentOdometer: 0, status: 'ACTIVE' as Vehicle['status'],
+  trackFuel: false, fuelType: '' as '' | 'NAFTA' | 'DIESEL', notes: '',
 });
 
 const emptyMaintenanceForm = () => ({
@@ -89,7 +90,10 @@ export function useFleetController() {
     setVehicleForm({
       plate: vehicle.plate, brand: vehicle.brand, model: vehicle.model,
       year: vehicle.year, currentOdometer: vehicle.currentOdometer,
-      status: vehicle.status, notes: vehicle.notes || '',
+      status: vehicle.status,
+      trackFuel: Boolean(vehicle.trackFuel),
+      fuelType: vehicle.fuelType || '',
+      notes: vehicle.notes || '',
     });
     setShowVehicleModal(true);
   };
@@ -111,9 +115,13 @@ export function useFleetController() {
   const handleSaveVehicle = async (e: FormEvent) => {
     e.preventDefault();
     setModalError(null);
+    const payload = {
+      ...vehicleForm,
+      fuelType: vehicleForm.fuelType || null,
+    };
     try {
-      if (editingVehicle) await api.updateVehicle(editingVehicle.id, vehicleForm);
-      else await api.createVehicle(vehicleForm);
+      if (editingVehicle) await api.updateVehicle(editingVehicle.id, payload);
+      else await api.createVehicle(payload);
       setShowVehicleModal(false); setEditingVehicle(null); setVehicleForm(emptyVehicleForm()); fetchVehicles();
     } catch (err: any) {
       setModalError(err.message || 'Error al guardar vehículo.');
