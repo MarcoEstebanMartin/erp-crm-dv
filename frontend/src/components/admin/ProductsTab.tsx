@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import ProductsList from '../ProductsList';
 import StockDashboard from '../StockDashboard';
-import { WarehouseMap } from '../deposito/WarehouseMap';
+
+const WarehouseMap = lazy(() =>
+  import('../deposito/WarehouseMap').then((m) => ({ default: m.WarehouseMap })),
+);
 
 type CatalogTabId = 'products' | 'inactive_products' | 'stock' | 'map';
 
@@ -87,12 +90,14 @@ export default function ProductsTab({
       )}
 
       {catalogTab === 'map' && (
-        <WarehouseMap
-          products={activeProducts}
-          onStockUpdated={async () => fetchData()}
-          focusLocationCode={focusedMapLocation}
-          onClearFocus={() => setFocusedMapLocation(null)}
-        />
+        <Suspense fallback={<div style={{ padding: '24px', color: 'var(--text-secondary)' }}>Cargando mapa WMS...</div>}>
+          <WarehouseMap
+            products={activeProducts}
+            onStockUpdated={async () => fetchData()}
+            focusLocationCode={focusedMapLocation}
+            onClearFocus={() => setFocusedMapLocation(null)}
+          />
+        </Suspense>
       )}
     </div>
   );

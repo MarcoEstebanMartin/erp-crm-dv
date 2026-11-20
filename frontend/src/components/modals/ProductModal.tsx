@@ -235,6 +235,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
             onDataChange={handleDataChange}
             onPriceChange={handleModalPriceChange}
             onImageSelected={(file) => {
+              if (imagePreviewUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(imagePreviewUrl);
+              }
               setSelectedImageFile(file);
               setImagePreviewUrl(URL.createObjectURL(file));
             }}

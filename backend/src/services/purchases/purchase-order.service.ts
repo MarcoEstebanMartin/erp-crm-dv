@@ -30,6 +30,7 @@ export const purchaseOrderService = {
         stockMovements: { include: { productLot: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: query.startDate && query.endDate ? 500 : 200,
     });
   },
 

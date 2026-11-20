@@ -111,6 +111,7 @@ export const deliveryRouteService = {
         },
       },
       orderBy: { date: 'desc' },
+      take: filters.startDate && filters.endDate ? 500 : 120,
     });
   },
 

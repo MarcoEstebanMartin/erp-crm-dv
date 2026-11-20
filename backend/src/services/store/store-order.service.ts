@@ -100,6 +100,7 @@ export class StoreOrderService {
     return prisma.order.findMany({
       where: { personaId },
       orderBy: { createdAt: 'desc' },
+      take: 100,
       include: {
         items: {
           include: {

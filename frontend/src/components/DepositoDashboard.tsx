@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { FieldCollectionPage } from './field-receipts/FieldCollectionPage';
 import { ClipboardList, Calendar, ShoppingCart, Map, Warehouse } from 'lucide-react';
 import { useConfirm } from '../context/ConfirmContext';
-import { WarehouseMap } from './deposito/WarehouseMap';
 import { PickingOrdersQueueTab } from './deposito/PickingOrdersQueueTab';
+
+const WarehouseMap = lazy(() =>
+  import('./deposito/WarehouseMap').then((m) => ({ default: m.WarehouseMap })),
+);
 import { PickingActiveOrderView } from './deposito/PickingActiveOrderView';
 import { PickingConsolidatedView } from './deposito/PickingConsolidatedView';
 import { BultosCloseModal } from './deposito/BultosCloseModal';
@@ -155,12 +158,14 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
       )}
 
       {c.subTab === 'wms-map' && !c.selectedOrder && !c.showConsolidatedView && (
-        <WarehouseMap
-          products={c.products}
-          onStockUpdated={c.fetchData}
-          focusLocationCode={focusedMapLocation}
-          onClearFocus={() => setFocusedMapLocation(null)}
-        />
+        <Suspense fallback={<div style={{ padding: '24px', color: 'var(--text-secondary)' }}>Cargando mapa WMS...</div>}>
+          <WarehouseMap
+            products={c.products}
+            onStockUpdated={c.fetchData}
+            focusLocationCode={focusedMapLocation}
+            onClearFocus={() => setFocusedMapLocation(null)}
+          />
+        </Suspense>
       )}
 
       {c.subTab === 'stock-list' && !c.selectedOrder && !c.showConsolidatedView && (

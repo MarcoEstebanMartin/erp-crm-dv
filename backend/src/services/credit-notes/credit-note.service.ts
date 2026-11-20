@@ -61,6 +61,7 @@ export const creditNoteService = {
       where: whereClause,
       include: CREDIT_NOTE_DETAIL_INCLUDE,
       orderBy: { createdAt: 'desc' },
+      take: 250,
     });
   },
 

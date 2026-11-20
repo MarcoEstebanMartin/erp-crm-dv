@@ -136,7 +136,6 @@ export function LiveMapClientLocationModal({
       ref={dialogRef}
       className="app-native-dialog"
       aria-labelledby="live-map-client-loc-title"
-      // @ts-expect-error closedby es estándar HTML moderno (Chrome 134+, Firefox 141+)
       closedby="any"
       onClose={() => {
         if (dialogRef.current) dialogRef.current.returnValue = '';
