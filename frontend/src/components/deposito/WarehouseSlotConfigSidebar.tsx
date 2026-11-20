@@ -188,7 +188,7 @@ export const WarehouseSlotConfigSidebar: React.FC<WarehouseSlotConfigSidebarProp
                 <label htmlFor="wms-cfg-chamber" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Sector</label>
                 <select id="wms-cfg-chamber" className="form-control" value={chamber} onChange={(e) => setChamber(e.target.value)} style={{ fontSize: '0.78rem', height: '34px' }}>
                   {Object.entries(SECTORS_INFO)
-                    .filter(([k]) => k !== 'GENERAL' && k !== 'BANO')
+                    .filter(([k]) => k !== 'GENERAL')
                     .map(([k, info]) => (
                       <option key={k} value={k}>{info.label}</option>
                     ))}

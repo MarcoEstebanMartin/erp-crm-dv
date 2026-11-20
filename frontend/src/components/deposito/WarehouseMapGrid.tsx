@@ -116,8 +116,8 @@ export const WarehouseMapGrid: React.FC<WarehouseMapGridProps> = ({
                   const health = stockData?.health || 'EMPTY';
                   const isSelected = isEditMode ? selectedEditCode === slotCode : selectedSlotCode === slotCode;
                   const isSectorFilterActive = selectedSector !== 'ALL';
-                  const isChamberMatch = isSectorFilterActive && isSlot && cell?.chamber === selectedSector;
-                  const isDimmed = isSectorFilterActive && isSlot && !isChamberMatch && !isSelected;
+                  const isChamberMatch = isSectorFilterActive && cell?.chamber === selectedSector;
+                  const isDimmed = isSectorFilterActive && (isSlot || Boolean(cellText.trim())) && !isChamberMatch && !isSelected;
                   const isSearchMatch = isSlot ? matchingSlotCodes.has(slotCode) : false;
 
                   let bg = 'transparent';

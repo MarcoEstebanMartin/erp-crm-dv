@@ -120,6 +120,7 @@ export const FILTERABLE_SECTOR_KEYS = [
   'CAMARA_1',
   'CAMARA_2',
   'CAMARA_3',
+  'BANO',
 ] as const;
 
 export function formatCompactSlotLevels(levelsStr: string): string {
