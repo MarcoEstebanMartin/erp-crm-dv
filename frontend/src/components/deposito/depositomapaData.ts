@@ -8805,13 +8805,13 @@ export const DEPOSITO_SLOTS: DepositSlot[] = [
 ];
 
 export const SECTORS_INFO: Record<string, { label: string; bg: string; color: string; border: string; icon: string }> = {
-  ESTANTERIA: { label: 'Depósito 1 - Estanterías', bg: '#fce7f3', color: '#9d174d', border: '#f472b6', icon: '🏷️' },
-  RACK_ENTRADA: { label: 'Rack Entrada', bg: '#fef3c7', color: '#92400e', border: '#f59e0b', icon: '🚪' },
-  CAMARA_2: { label: 'Cámara 2 Frío (Quesos)', bg: '#e0f2fe', color: '#0369a1', border: '#0284c7', icon: '❄️' },
-  CAMARA_1: { label: 'Cámara 1 Frío (Lácteos)', bg: '#ecfeff', color: '#0e7490', border: '#0891b2', icon: '🥛' },
-  CAMARA_3: { label: 'Cámara 3 Seco (Conservas)', bg: '#f3e8ff', color: '#6b21a8', border: '#7e22ce', icon: '📦' },
-  BANO: { label: 'Baño / Sanitarios', bg: '#ffe4e6', color: '#9f1239', border: '#fb7185', icon: '🚻' },
-  D2_GENERAL: { label: 'Depósito 2 (Sector General)', bg: '#fce5cd', color: '#7c2d12', border: '#f97316', icon: '🏢' },
-  D3_GENERAL: { label: 'Depósito 3 (Sector General)', bg: '#d9d2e9', color: '#4c1d95', border: '#8b5cf6', icon: '🏭' },
-  GENERAL: { label: 'Pasillo / Circulación', bg: '#ffffff', color: '#334155', border: '#e2e8f0', icon: '📍' },
+  ESTANTERIA: { label: 'Estanterías', bg: '#fce7f3', color: '#9d174d', border: '#f472b6', icon: '🏷️' },
+  RACK_ENTRADA: { label: 'Entrada', bg: '#fef3c7', color: '#92400e', border: '#f59e0b', icon: '🚪' },
+  CAMARA_2: { label: 'Cám. 2 Quesos', bg: '#e0f2fe', color: '#0369a1', border: '#0284c7', icon: '❄️' },
+  CAMARA_1: { label: 'Cám. 1 Lácteos', bg: '#ecfeff', color: '#0e7490', border: '#0891b2', icon: '🥛' },
+  CAMARA_3: { label: 'Cám. 3 Seco', bg: '#f3e8ff', color: '#6b21a8', border: '#7e22ce', icon: '📦' },
+  BANO: { label: 'Baño', bg: '#ffe4e6', color: '#9f1239', border: '#fb7185', icon: '🚻' },
+  D2_GENERAL: { label: 'Dep. 2 · General', bg: '#fce5cd', color: '#7c2d12', border: '#f97316', icon: '🏢' },
+  D3_GENERAL: { label: 'Dep. 3 · General', bg: '#d9d2e9', color: '#4c1d95', border: '#8b5cf6', icon: '🏭' },
+  GENERAL: { label: 'Pasillo', bg: '#ffffff', color: '#334155', border: '#e2e8f0', icon: '📍' },
 };

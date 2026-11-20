@@ -3,6 +3,7 @@ import { Layers, Lock } from 'lucide-react';
 import type { Product, ProductLot } from '../../types';
 import { SECTORS_INFO } from './depositomapaData';
 import { extractBaseSlotFromLocation, type MergedDepositSlot } from './warehouseLayoutMerger';
+import { formatCompactSlotLevels } from './wmsMapHelpers';
 import {
   extractCleanLotNumber,
   formatCleanExpirationDate,
@@ -14,6 +15,8 @@ interface WarehouseSlotInspectorSidebarProps {
   products: Product[];
   onOpen3DModal: () => void;
 }
+
+const GENERIC_CHAMBERS = new Set(['GENERAL', 'D2_GENERAL', 'D3_GENERAL']);
 
 export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSidebarProps> = ({
   selectedSlot,
@@ -48,87 +51,68 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
     });
   }
 
+  const sectorLabel =
+    selectedSlot && !GENERIC_CHAMBERS.has(selectedSlot.chamber)
+      ? SECTORS_INFO[selectedSlot.chamber]?.label
+      : null;
+
+  const isEmpty = matchingProducts.length === 0;
+  const actionLabel = isEmpty && !selectedSlot?.isBlocked ? 'Ubicar stock' : 'Abrir estante';
+
   return (
     <div
       style={{
-        width: '340px',
+        width: '320px',
+        flexShrink: 0,
         backgroundColor: '#ffffff',
         border: '1px solid var(--border-color)',
         borderRadius: '10px',
         padding: '16px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
       }}
     >
-      <h4
-        style={{
-          margin: 0,
-          fontSize: '0.95rem',
-          borderBottom: '1px solid var(--border-color)',
-          paddingBottom: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          color: 'var(--text-primary)',
-        }}
-      >
-        Slot Seleccionado
-      </h4>
-
       {selectedSlot ? (
-        <div>
-          <div
-            style={{
-              backgroundColor: '#f8fafc',
-              border: '1px solid #cbd5e1',
-              padding: '12px',
-              borderRadius: '8px',
-              marginBottom: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-              <div style={{ fontWeight: 800, fontSize: '1.08rem', color: 'var(--text-primary)' }}>
-                Slot {selectedSlot.code}
-              </div>
-              {selectedSlot.isBlocked && (
-                <span className="badge" style={{ backgroundColor: '#fee2e2', color: '#dc2626', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  <Lock size={11} /> Bloqueado
+        <>
+          <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+              <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                {selectedSlot.code}
+              </h4>
+              {selectedSlot.isBlocked ? (
+                <span className="badge" style={{ backgroundColor: '#fee2e2', color: '#dc2626', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                  <Lock size={11} aria-hidden="true" /> Bloqueado
                 </span>
-              )}
+              ) : !isEmpty ? (
+                <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Ocupado</span>
+              ) : null}
             </div>
-            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#2563eb', marginBottom: '4px' }}>
-              {selectedSlot.deposito} • {SECTORS_INFO[selectedSlot.chamber]?.label || 'General'}
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
+              {selectedSlot.deposito}
+              {sectorLabel ? ` · ${sectorLabel}` : ''}
+              {' · '}Pisos <strong style={{ color: 'var(--text-primary)' }}>{formatCompactSlotLevels(selectedSlot.nivel)}</strong>
             </div>
             {selectedSlot.customLabel && (
-              <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0f172a', backgroundColor: '#e2e8f0', display: 'inline-block', padding: '2px 7px', borderRadius: '4px', marginBottom: '4px' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: 600, color: '#334155', backgroundColor: '#f1f5f9', display: 'inline-block', padding: '2px 7px', borderRadius: '4px', marginTop: '6px' }}>
                 {selectedSlot.customLabel}
               </div>
             )}
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Fila {selectedSlot.row}, Columna {selectedSlot.col}. Pisos: <strong>{selectedSlot.nivel}</strong>.
-            </div>
           </div>
 
-          {matchingProducts.length === 0 ? (
-            <div style={{ padding: '20px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          {isEmpty ? (
+            <div style={{ padding: '14px 8px', textAlign: 'center', color: 'var(--text-secondary)' }}>
               {selectedSlot.isBlocked && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '6px', color: '#dc2626' }}>
-                  <Lock size={20} aria-hidden="true" />
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px', color: '#dc2626' }}>
+                  <Lock size={18} aria-hidden="true" />
                 </div>
               )}
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                {selectedSlot.isBlocked ? 'Slot Bloqueado' : 'Slot Vacío'}
+              <div style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--text-secondary)' }}>
+                {selectedSlot.isBlocked ? 'Bloqueado' : 'Vacío'}
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px', maxHeight: '220px', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Stock Ubicado</span>
-                <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Ocupado</span>
-              </div>
-
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '260px', overflowY: 'auto' }}>
               {matchingProducts.map(({ product, lot }, idx) => {
                 const cleanLot = extractCleanLotNumber(lot.lotNumber);
                 const hasRealExp = !isSentinelExpiration(lot.expirationDate);
@@ -139,13 +123,13 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', marginTop: '2px', fontSize: '0.75rem' }}>
                       <span>
-                        Lote: {cleanLot}
-                        {hasRealExp ? ` · Venc: ${formatCleanExpirationDate(lot.expirationDate)}` : ''}
+                        Lote {cleanLot}
+                        {hasRealExp ? ` · Venc. ${formatCleanExpirationDate(lot.expirationDate)}` : ''}
                       </span>
-                      <strong style={{ color: 'var(--color-primary)', fontVariantNumeric: 'tabular-nums' }}>{lot.stock} u.</strong>
+                      <strong style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{lot.stock} u.</strong>
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
-                      Posición: {lot.location || selectedSlot.code}
+                      {lot.location || selectedSlot.code}
                     </div>
                   </div>
                 );
@@ -158,27 +142,24 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
             className="btn btn-primary"
             style={{
               width: '100%',
-              padding: '10px 14px',
-              fontSize: '0.86rem',
-              fontWeight: 700,
+              padding: '9px 14px',
+              fontSize: '0.84rem',
+              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
+              gap: '7px',
               borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0, 122, 255, 0.25)',
             }}
             onClick={onOpen3DModal}
           >
-            <Layers size={18} />
-            <span>Inspeccionar / Reubicar en 3D</span>
+            <Layers size={16} aria-hidden="true" />
+            <span>{actionLabel}</span>
           </button>
-        </div>
+        </>
       ) : (
-        <div style={{ padding: '28px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-            Seleccioná un slot del mapa
-          </div>
+        <div style={{ padding: '28px 10px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+          Elegí un slot del mapa
         </div>
       )}
     </div>

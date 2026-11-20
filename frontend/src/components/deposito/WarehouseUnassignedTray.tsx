@@ -61,7 +61,7 @@ export const WarehouseUnassignedTray: React.FC<WarehouseUnassignedTrayProps> = (
           }}
         >
           <PackagePlus size={16} aria-hidden="true" />
-          Por Ubicar (S/U)
+          Sin ubicar
         </h4>
         <span className="badge badge-secondary" style={{ fontSize: '0.72rem' }}>
           {items.length}

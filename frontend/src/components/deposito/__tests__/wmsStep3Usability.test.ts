@@ -49,9 +49,11 @@ describe('Paso 3 WMS Usability — semáforo físico, bandeja S/U, sectores y an
     expect(summary['D1-R03-C04']).toBeUndefined();
   });
 
-  it('formatCompactSlotLevels acorta A-B-C-D-E-F a A–F y resolveWarehouseForSector salta a D1/D2/D3', () => {
+  it('formatCompactSlotLevels acorta rangos a formato compacto (A–C, A–F) y resolveWarehouseForSector salta a D1/D2/D3', () => {
     expect(formatCompactSlotLevels('A-B-C-D-E-F')).toBe('A–F');
-    expect(formatCompactSlotLevels('A-B-C')).toBe('A-B-C');
+    expect(formatCompactSlotLevels('A-B-C')).toBe('A–C');
+    expect(formatCompactSlotLevels('A-B')).toBe('A–B');
+    expect(formatCompactSlotLevels('A')).toBe('A');
     expect(resolveWarehouseForSector('CAMARA_2')).toBe('D1');
     expect(resolveWarehouseForSector('D2_GENERAL')).toBe('D2');
     expect(resolveWarehouseForSector('D3_GENERAL')).toBe('D3');

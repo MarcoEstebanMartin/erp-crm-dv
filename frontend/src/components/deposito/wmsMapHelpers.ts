@@ -114,12 +114,20 @@ export function buildSlotStockSummaryMap(
   return map;
 }
 
+export const FILTERABLE_SECTOR_KEYS = [
+  'ESTANTERIA',
+  'RACK_ENTRADA',
+  'CAMARA_1',
+  'CAMARA_2',
+  'CAMARA_3',
+] as const;
+
 export function formatCompactSlotLevels(levelsStr: string): string {
   const parsed = extractSlotLevels(levelsStr);
-  if (parsed.length >= 5) {
+  if (parsed.length >= 2) {
     return `${parsed[0]}–${parsed[parsed.length - 1]}`;
   }
-  return levelsStr;
+  return parsed[0] || levelsStr;
 }
 
 export function resolveWarehouseForSector(sectorKey: string): 'D1' | 'D2' | 'D3' {
