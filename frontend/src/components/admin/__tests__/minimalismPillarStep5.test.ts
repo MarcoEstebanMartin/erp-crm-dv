@@ -36,8 +36,9 @@ const OLA_1_FILES = [
   'rendiciones/useRendicionesAudit.ts',
   'gastos/GastosCopyMonthModal.tsx',
   'gastos/GastosCreateAndImportModals.tsx',
-  'gastos/GastosOverviewAndTable.tsx',
+  'gastos/GastosPlanillaTable.tsx',
   'gastos/gastos.types.ts',
+  'gastos/useGastosBulkActions.ts',
   'gastos/useGastosController.ts',
 ] as const;
 
@@ -95,7 +96,9 @@ const OLA_3_FILES = [
 ] as const;
 
 const PASO_5_FILES = [...OLA_1_FILES, ...OLA_2_FILES, ...OLA_3_FILES] as const;
-const IDEAL_CEILING_FILES = PASO_5_FILES.filter((f) => f !== 'ComprasDashboard.tsx');
+const IDEAL_CEILING_FILES = PASO_5_FILES.filter(
+  (f) => f !== 'ComprasDashboard.tsx' && f !== 'gastos/GastosPlanillaTable.tsx',
+);
 
 const MIGRATED_NATIVE_DIALOG_MODALS = [
   'FinanceMovementModal.tsx',

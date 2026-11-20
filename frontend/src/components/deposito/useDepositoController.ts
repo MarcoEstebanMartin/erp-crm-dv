@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../../utils/api';
 import { OrderStatus } from '../../utils/types';
 import type { Order, Product, ProductLot } from '../../types';
@@ -81,32 +81,41 @@ export function useDepositoController(activeTab: string, confirm: any) {
     };
   }, [showConsolidatedView, labelsToPrint]);
 
+  const fetchSeqRef = useRef(0);
+
   const fetchData = useCallback(async () => {
+    const seq = ++fetchSeqRef.current;
     setErrorMsg(null);
     try {
       if (subTab === 'picking' || subTab === 'replenishment') {
         const data = await api.getOrders();
+        if (seq !== fetchSeqRef.current) return;
         setOrders(data.filter((o: any) => o.status === OrderStatus.PENDING || o.status === OrderStatus.PREPARING));
       }
       if (subTab === 'picking' || subTab === 'lot-expiration') {
         try {
           const lotsRes = await api.getExpiringLots();
+          if (seq !== fetchSeqRef.current) return;
           setExpiringLots(lotsRes.lots || []);
         } catch (lotErr) { console.error('Error al obtener lotes vencidos:', lotErr); }
       }
       if (subTab === 'stock-list' || subTab === 'wms-map') {
         const data = await api.getProducts(subTab === 'stock-list' ? debouncedSearchQuery : '');
+        if (seq !== fetchSeqRef.current) return;
         setProducts(data || []);
       }
       const allProds = await api.getProducts('', true);
+      if (seq !== fetchSeqRef.current) return;
       setAllProducts(allProds || []);
       if (subTab === 'replenishment') {
         try {
           const pendingPurchs = await api.getPurchaseOrders({ status: 'PENDING' });
+          if (seq !== fetchSeqRef.current) return;
           setPendingPurchaseOrders(pendingPurchs || []);
         } catch (poErr) { console.error('Error al obtener OC pendientes:', poErr); }
       }
     } catch (err: any) {
+      if (seq !== fetchSeqRef.current) return;
       setErrorMsg(err.message || 'Error al obtener datos.');
       setLoading(false);
     }

@@ -407,9 +407,10 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
             {items.map((item: any, idx: number) => {
               const isLast = idx === items.length - 1;
               const displayPrice = Number(item.unitPrice || 0);
+              const rawSub = Number(item.subtotal || 0);
               const displaySubtotal = isFacturaAOfficial
-                ? Number(item.subtotal || 0) / 1.21
-                : Number(item.subtotal || 0);
+                ? Math.round((rawSub * 100) / 1.21) / 100
+                : rawSub;
 
               return (
                 <tr

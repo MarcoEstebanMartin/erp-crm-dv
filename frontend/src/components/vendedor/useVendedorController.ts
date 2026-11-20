@@ -253,56 +253,46 @@ export function useVendedorController(activeTab: string) {
     localStorage.setItem(getTodayKey(), JSON.stringify(updatedVisits));
   };
 
+  const submittingOrderRef = useRef(false);
   const handleConfirmOrder = async () => {
+    if (submittingOrderRef.current) return;
     if (!selectedClient) return setErrorMsg('Debe seleccionar un cliente antes de confirmar.');
     if (cart.length === 0) return setErrorMsg('El carrito está vacío.');
-
+    submittingOrderRef.current = true;
     const items = cart.map((item) => ({
-      productId: item.product.id,
-      quantity: item.quantity,
+      productId: item.product.id, quantity: item.quantity,
       isEmergencyOverride: Boolean(item.isEmergencyOverride || item.quantity < (item.product.minOrderQuantity || 1)),
     }));
     const effectiveRouteId = Number(selectedRouteId || (selectedClient as any).saleRouteId || 0) || null;
     const orderIdempotencyKey = generateSafeIdempotencyKey();
-
     setLoading(true);
-    const gps = getFreshCachedGps() ?? (await captureCurrentGpsSilently(350));
-
-    const saveOrderToOfflineQueue = async () => {
-      await offlineSync.queueOrderOffline({
-        clientId: selectedClient.id, clientName: selectedClient.name, items, notes: orderNotes,
-        routeId: effectiveRouteId, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, idempotencyKey: orderIdempotencyKey,
-      });
-      markLocalVisit(selectedClient.id);
-      setSuccessMsg(`Pedido de "${selectedClient.name}" guardado offline.`);
-      setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
-    };
-
-    if (!navigator.onLine) { await saveOrderToOfflineQueue(); setLoading(false); return; }
-
     try {
-      await api.createOrder({ clientId: selectedClient.id, items, notes: orderNotes }, { idempotencyKey: orderIdempotencyKey });
-      if (effectiveRouteId) {
-        void api
-          .recordRouteVisit(
-            effectiveRouteId,
-            { personaId: selectedClient.id, status: 'ORDERED', latitude: gps?.lat ?? null, longitude: gps?.lng ?? null },
-            { idempotencyKey: `${orderIdempotencyKey}-visit` },
-          )
-          .catch(() => {});
+      const gps = getFreshCachedGps() ?? (await captureCurrentGpsSilently(350));
+      const saveOrderToOfflineQueue = async () => {
+        await offlineSync.queueOrderOffline({
+          clientId: selectedClient.id, clientName: selectedClient.name, items, notes: orderNotes,
+          routeId: effectiveRouteId, latitude: gps?.lat ?? null, longitude: gps?.lng ?? null, idempotencyKey: orderIdempotencyKey,
+        });
+        markLocalVisit(selectedClient.id);
+        setSuccessMsg(`Pedido de "${selectedClient.name}" guardado offline.`);
+        setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
+      };
+      if (!navigator.onLine) { await saveOrderToOfflineQueue(); return; }
+      try {
+        await api.createOrder({ clientId: selectedClient.id, items, notes: orderNotes }, { idempotencyKey: orderIdempotencyKey });
+        if (effectiveRouteId) {
+          void api.recordRouteVisit(effectiveRouteId, { personaId: selectedClient.id, status: 'ORDERED', latitude: gps?.lat ?? null, longitude: gps?.lng ?? null }, { idempotencyKey: `${orderIdempotencyKey}-visit` }).catch(() => {});
+        }
+        setTodayVisits((prev) => [...prev.filter((v) => v.personaId !== selectedClient.id), { personaId: selectedClient.id, status: 'ORDERED' }]);
+        markLocalVisit(selectedClient.id);
+        setSuccessMsg(`Pedido enviado${gps ? ' (GPS OK)' : ''}.`);
+        setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
+        void fetchData(true);
+      } catch (err: any) {
+        if (isLikelyNetworkError(err)) await saveOrderToOfflineQueue();
+        else setErrorMsg(err.message || 'Error al procesar el pedido.');
       }
-      setTodayVisits((prev) => [
-        ...prev.filter((v) => v.personaId !== selectedClient.id),
-        { personaId: selectedClient.id, status: 'ORDERED' },
-      ]);
-      markLocalVisit(selectedClient.id);
-      setSuccessMsg(`Pedido enviado${gps ? ' (GPS OK)' : ''}.`);
-      setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
-      void fetchData(true);
-    } catch (err: any) {
-      if (isLikelyNetworkError(err)) await saveOrderToOfflineQueue();
-      else setErrorMsg(err.message || 'Error al procesar el pedido.');
-    } finally { setLoading(false); }
+    } finally { submittingOrderRef.current = false; setLoading(false); }
   };
 
   const handleSelectRoute = async (routeId: number) => {

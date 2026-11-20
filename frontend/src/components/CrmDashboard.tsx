@@ -116,6 +116,11 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     }
   };
 
+  const selectedConversationIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversation?.id ?? null;
+  }, [selectedConversation]);
+
   // Cargar Conversaciones CRM
   const fetchConversations = async (targetConvId?: number) => {
     try {
@@ -123,7 +128,7 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
       const convList = Array.isArray(data) ? data : (data?.data || []);
       setConversations(convList);
 
-      const targetId = targetConvId || selectedConversation?.id;
+      const targetId = targetConvId ?? selectedConversationIdRef.current;
       if (targetId) {
         const convToSelect = convList.find((c: any) => c.id === targetId);
         if (convToSelect) {
@@ -136,8 +141,9 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
             };
           });
         }
-      } else if (convList.length > 0 && !selectedConversation) {
+      } else if (convList.length > 0 && !selectedConversationIdRef.current) {
         const firstConv = convList[0];
+        selectedConversationIdRef.current = firstConv.id;
         setSelectedConversation(firstConv);
         const res = await api.getCrmMessages(firstConv.id);
         const msgList = res?.data?.messages || res?.messages || (Array.isArray(res) ? res : []);
@@ -205,11 +211,11 @@ export default function CrmDashboard({ initialTab = 'whatsapp', hideHeaderTabs =
     fetchConversations();
     fetchCRMAlerts();
 
-    // Polling en tiempo real cada 4 segundos cuando estamos en la pestaña WhatsApp
+    if (activeTab !== 'whatsapp') return;
+
+    // Polling en tiempo real cada 4 segundos solo cuando estamos en la pestaña WhatsApp
     const interval = setInterval(() => {
-      if (activeTab === 'whatsapp') {
-        fetchConversations();
-      }
+      fetchConversations();
     }, 4000);
 
     return () => clearInterval(interval);

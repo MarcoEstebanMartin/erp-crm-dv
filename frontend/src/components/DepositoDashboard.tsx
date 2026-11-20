@@ -22,11 +22,11 @@ interface DepositoDashboardProps {
 export default function DepositoDashboard({ activeTab }: DepositoDashboardProps) {
   const confirm = useConfirm();
   const c = useDepositoController(activeTab, confirm);
+  const [focusedMapLocation, setFocusedMapLocation] = useState<string | null>(null);
 
   if (activeTab === 'field-receipts') {
     return <FieldCollectionPage />;
   }
-  const [focusedMapLocation, setFocusedMapLocation] = useState<string | null>(null);
 
   const isOrderFullyAssigned =
     (c.selectedOrder?.items.every((item: any) => {

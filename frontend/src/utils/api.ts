@@ -110,6 +110,9 @@ async function request(path: string, options: RequestInit = {}) {
       : '';
     throw new Error(`${json.message}${details}`);
   }
+  if (!response.ok) {
+    throw new Error(json?.message || json?.error || `Error HTTP ${response.status}`);
+  }
   return json.data !== undefined ? json.data : json;
 }
 
@@ -796,12 +799,11 @@ export const api = {
   },
 
   confirmOrderArmado: async (orderId: number, items: any[]) => {
-    
     const res = await request(`/orders/${orderId}/confirm-armado`, {
       method: 'POST',
       body: JSON.stringify({ items })
     });
-    return res.data;
+    return res;
   },
 
   updateOrderStatus: async (id: number, status: OrderStatus, lotAssignments?: any, bultosCount?: number, bultosDetails?: any) => {    
@@ -1833,13 +1835,10 @@ export const api = {
   },
 
   createCampaign: async (data: { title: string; startDate?: string; endDate?: string; isActive?: boolean }) => {
-    const res = await fetch(`${API_BASE_URL}/offers`, {
+    return await request('/offers', {
       method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Error al crear campaña');
-    return await res.json();
   },
 
   getCampaignSuggestions: async () => {

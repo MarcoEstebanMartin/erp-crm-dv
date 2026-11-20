@@ -107,6 +107,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   onSuccess,
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const submittingRef = useRef(false);
   const [payments, setPayments] = useState<PaymentDraft[]>([]);
   const [notes, setNotes] = useState('');
   const [allowCreditOnAccount, setAllowCreditOnAccount] = useState(false);
@@ -171,6 +172,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setError(null);
 
     if (totalAmount <= 0) {
@@ -203,6 +205,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
       });
     }
 
+    submittingRef.current = true;
     const provisionalCode = generateProvisionalCode(collectorUserId);
     setSubmitting(true);
     try {
@@ -251,6 +254,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
       });
       onSuccess({ offline: true, provisionalCode, totalAmount });
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

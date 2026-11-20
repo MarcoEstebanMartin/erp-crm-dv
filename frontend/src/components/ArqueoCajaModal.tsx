@@ -34,12 +34,18 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
     (async () => {
       try {
         const txs = await api.getTransactions({ cashDrawerId: drawer.id });
-        let income = 0, outcome = 0;
-        txs.forEach((t: any) => { if (t.type === 'INCOME') income += Number(t.amount); else outcome += Number(t.amount); });
-        setTheoreticalBalance(Number(drawer.openingBalance) + income - outcome);
+        let incomeCents = 0;
+        let outcomeCents = 0;
+        txs.forEach((t: any) => {
+          const cents = Math.round((Number(t.amount) || 0) * 100);
+          if (t.type === 'INCOME') incomeCents += cents;
+          else outcomeCents += cents;
+        });
+        const openingCents = Math.round((Number(drawer.openingBalance) || 0) * 100);
+        setTheoreticalBalance((openingCents + incomeCents - outcomeCents) / 100);
       } catch (err) { console.error('Error fetching transactions for drawer', err); }
     })();
-  }, [drawer.id]);
+  }, [drawer.id, drawer.openingBalance]);
 
   const handleSearchClient = async () => {
     if (clientSearch.trim().length < 2) return;
@@ -56,23 +62,38 @@ export default function ArqueoCajaModal({ drawer, onClose, onSuccess, defaultRou
     setReceiptAmount(''); setCheckNumberInput(''); setSelectedClient(null); setClientSearch(''); setClients([]); setErrorMsg(null);
   };
 
-  const totalChecks = Number(checksAmount) || 0;
-  const totalReceipts = receipts.reduce((acc, r) => acc + r.amount, 0);
-  const realBalance = (Number(cashAmount) || 0) + totalChecks;
-  const currentTheoretical = theoreticalBalance + totalReceipts;
-  const difference = realBalance - currentTheoretical;
+  const toCents = (val: number) => Math.round((Number(val) || 0) * 100);
+  const totalChecksCents = toCents(Number(checksAmount) || 0);
+  const totalReceiptsCents = receipts.reduce((acc, r) => acc + toCents(r.amount), 0);
+  const realBalanceCents = toCents(Number(cashAmount) || 0) + totalChecksCents;
+  const currentTheoreticalCents = toCents(theoreticalBalance) + totalReceiptsCents;
+  const totalChecks = totalChecksCents / 100;
+  const totalReceipts = totalReceiptsCents / 100;
+  const realBalance = realBalanceCents / 100;
+  const currentTheoretical = currentTheoreticalCents / 100;
+  const difference = (realBalanceCents - currentTheoreticalCents) / 100;
 
   const handleMatchExpected = () => {
-    const neededCash = Math.max(0, Math.round((currentTheoretical - totalChecks) * 100) / 100);
+    const neededCash = Math.max(0, (currentTheoreticalCents - totalChecksCents) / 100);
     setCashAmount(String(neededCash));
     setErrorMsg(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const submittingRef = React.useRef(false);
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (realBalance < 0) return setErrorMsg('El saldo real no puede ser negativo.');
+    submittingRef.current = true;
     setLoading(true);
-    onSuccess(realBalance, receipts, [], drawer.routeNote || defaultRouteNote || undefined, notesInput);
+    try {
+      await Promise.resolve(
+        onSuccess(realBalance, receipts, [], drawer.routeNote || defaultRouteNote || undefined, notesInput),
+      );
+    } finally {
+      submittingRef.current = false;
+      setLoading(false);
+    }
   };
 
   return (

@@ -141,7 +141,7 @@ export function InvoicePreviewFooter({
         >
           <span>Total</span>
           <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-            ${Number(invoice.totalAmount || 0).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            ${Number(invoice.totalAmount || 0).toLocaleString('es-AR', decimalOptions)}
           </span>
         </div>
       </div>
