@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatMovementLabel } from '../ResumenCuentaModal';
+import { buildResumenRows, formatSignedCurrency } from '../resumenCuenta.utils';
 
 describe('ResumenCuentaModal — formatMovementLabel', () => {
   it('muestra únicamente el número de recibo para cobros en el Haber (con receiptNumber explícito)', () => {
@@ -87,5 +88,53 @@ describe('ResumenCuentaModal — formatMovementLabel', () => {
         credit: 1200,
       }),
     ).toBe('Retención IIBB #4455');
+  });
+});
+
+describe('ResumenCuentaModal — buildResumenRows y saldo acumulado', () => {
+  it('calcula el saldo acumulado sumando DEBE y restando HABER (incluyendo saldos a favor negativos)', () => {
+    const ledger = [
+      { id: 'order-1', type: 'DEBIT', amount: 30692, date: '2026-11-16T10:00:00.000Z', description: 'Factura 0001-0001' },
+      { id: 'transaction-1', type: 'CREDIT', amount: 50000, date: '2026-11-16T11:00:00.000Z', description: 'Recibo REC-00001' },
+      { id: 'order-2', type: 'DEBIT', amount: 44624, date: '2026-11-20T09:00:00.000Z', description: 'Factura INT-00091' },
+      { id: 'order-3', type: 'DEBIT', amount: 24520, date: '2026-11-20T10:00:00.000Z', description: 'Factura 0001-0009' },
+    ];
+
+    const result = buildResumenRows(ledger, {
+      branchFilter: 'ALL',
+      dateRange: 'all',
+      now: new Date('2026-11-20T15:00:00.000Z'),
+    });
+
+    expect(result.hasPriorEntries).toBe(false);
+    expect(result.priorBalance).toBe(0);
+    expect(result.rows.map((r) => r.balance)).toEqual([30692, -19308, 25316, 49836]);
+    expect(result.finalBalance).toBe(49836);
+  });
+
+  it('conserva el saldo anterior acumulado al filtrar por rango de fechas para que el saldo final no se altere', () => {
+    const ledger = [
+      { id: 'order-old', type: 'DEBIT', amount: 15000, date: '2026-09-01T10:00:00.000Z', description: 'Factura INT-00001' },
+      { id: 'tx-old', type: 'CREDIT', amount: 5000, date: '2026-09-10T10:00:00.000Z', description: 'Recibo REC-00001' },
+      { id: 'order-recent', type: 'DEBIT', amount: 20000, date: '2026-11-18T10:00:00.000Z', description: 'Factura INT-00002' },
+      { id: 'tx-recent', type: 'CREDIT', amount: 8000, date: '2026-11-19T10:00:00.000Z', description: 'Recibo REC-00002' },
+    ];
+
+    const result = buildResumenRows(ledger, {
+      branchFilter: 'ALL',
+      dateRange: '30days',
+      now: new Date('2026-11-20T12:00:00.000Z'),
+    });
+
+    expect(result.hasPriorEntries).toBe(true);
+    expect(result.priorBalance).toBe(10000);
+    expect(result.rows.map((r) => r.balance)).toEqual([30000, 22000]);
+    expect(result.finalBalance).toBe(22000);
+  });
+
+  it('formatea correctamente saldos positivos, negativos y cero', () => {
+    expect(formatSignedCurrency(49836)).toBe('$49.836');
+    expect(formatSignedCurrency(-25480)).toBe('-$25.480');
+    expect(formatSignedCurrency(0)).toBe('$0');
   });
 });

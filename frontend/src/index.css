@@ -2345,14 +2345,37 @@ details[open] > .bank-summary .bank-chevron {
 }
 
 /* Resumen de cuenta modal */
-.resumen-print-header,
 .resumen-print-inline {
   display: none;
 }
 
+.resumen-scroll-frame {
+  max-height: 70vh;
+  overflow-y: auto;
+  background-color: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.resumen-sheet {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 24px 28px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.resumen-ledger-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.84rem;
+}
+
 .resumen-ledger-table thead th {
   position: sticky;
-  top: 0;
+  inset-block-start: 0;
   z-index: 2;
   background: #ffffff;
   font-size: 0.7rem;
@@ -2360,6 +2383,15 @@ details[open] > .bank-summary .bank-chevron {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #6b7280;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.resumen-ledger-table tbody td {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.resumen-row-opening td {
+  background-color: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
 }
 
@@ -2427,8 +2459,19 @@ button.resumen-desc-btn:hover {
 }
 
 @media print {
-  .resumen-print-header {
-    display: block !important;
+  .resumen-scroll-frame {
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+  .resumen-sheet {
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
   }
   .resumen-print-inline {
     display: inline !important;
