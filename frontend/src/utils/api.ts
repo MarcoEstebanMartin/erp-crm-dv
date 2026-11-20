@@ -1441,6 +1441,12 @@ export const api = {
     return res;
   },
 
+  getLogisticsLiveMap: async (date?: string) => {
+    const qs = date ? `?date=${encodeURIComponent(date)}` : '';
+    const res = await request(`/logistics/live-map${qs}`);
+    return res;
+  },
+
   getPurchaseOrders: async (filters?: any) => {
     
 

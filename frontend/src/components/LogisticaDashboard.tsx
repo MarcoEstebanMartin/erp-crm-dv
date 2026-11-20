@@ -1,13 +1,15 @@
 import { useState, lazy, Suspense, useRef, type KeyboardEvent } from 'react';
-import { Truck, Layers, Fuel } from 'lucide-react';
+import { Truck, Layers, Fuel, MapPin } from 'lucide-react';
 
+const LiveMapTab = lazy(() => import('./reparto/LiveMapTab'));
 const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
 const FleetDashboard = lazy(() => import('./FleetDashboard'));
 const FuelControlDashboard = lazy(() => import('./FuelControlDashboard'));
 
-type LogisticaSubTab = 'reparto' | 'flota' | 'combustible';
+type LogisticaSubTab = 'mapa' | 'reparto' | 'flota' | 'combustible';
 
 const TABS: Array<{ id: LogisticaSubTab; label: string; Icon: typeof Truck }> = [
+  { id: 'mapa', label: 'Mapa', Icon: MapPin },
   { id: 'reparto', label: 'Hojas de Reparto', Icon: Truck },
   { id: 'flota', label: 'Flota', Icon: Layers },
   { id: 'combustible', label: 'Combustible', Icon: Fuel },
@@ -20,7 +22,7 @@ const MiniSpinner = () => (
 );
 
 export default function LogisticaDashboard() {
-  const [subTab, setSubTab] = useState<LogisticaSubTab>('reparto');
+  const [subTab, setSubTab] = useState<LogisticaSubTab>('mapa');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
@@ -70,6 +72,7 @@ export default function LogisticaDashboard() {
 
       <div role="tabpanel" aria-labelledby={`logistica-tab-${subTab}`} style={{ padding: '0 24px 24px 24px', flex: 1 }}>
         <Suspense fallback={<MiniSpinner />}>
+          {subTab === 'mapa' && <LiveMapTab />}
           {subTab === 'reparto' && <RepartoDashboard />}
           {subTab === 'flota' && <FleetDashboard />}
           {subTab === 'combustible' && <FuelControlDashboard />}
