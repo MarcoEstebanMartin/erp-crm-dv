@@ -3,6 +3,7 @@ import { roundToIntegerPeso, roundToTwoDecimals } from '../../core/money';
 import { recordInvoicePerceptions, settleOrderFinancials } from './order-tax.helpers';
 import { reassignSplitStockMovements } from './order-billing.helpers';
 import { ensureFefoLotsForOrderItem } from './order-lot-picking.helper';
+import { lockProductsForUpdate } from '../../utils/db-locks.util';
 
 async function transferSplitOrderItemLotsInTx(
   tx: any,
@@ -101,6 +102,13 @@ export async function executeInvoiceOrderSettlementTx(
   const effectiveStatus = currentInTx?.status ?? order.status;
   if (effectiveStatus !== OrderStatus.PREPARED) {
     throw new Error(`El pedido #${order.id} ya fue facturado o cambió de estado (${effectiveStatus}).`);
+  }
+
+  const unallocatedProductIds = (order.items || [])
+    .filter((origItem: any) => Array.isArray(origItem.orderItemLots) && origItem.orderItemLots.length === 0 && origItem.quantity > 0)
+    .map((origItem: any) => origItem.productId);
+  if (unallocatedProductIds.length > 0) {
+    await lockProductsForUpdate(tx, unallocatedProductIds);
   }
 
   for (const origItem of order.items || []) {

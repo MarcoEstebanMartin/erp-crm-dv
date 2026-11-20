@@ -216,6 +216,12 @@ export async function ensureFefoLotsForOrderItem(
     );
   }
 
+  if (remainingToAssign > 0 && allLots.length > 0 && process.env.IGNORE_STOCK_CHECK !== 'true') {
+    throw new Error(
+      `Stock en lotes insuficiente para completar la asignación del pedido (faltan ${remainingToAssign} u.).`,
+    );
+  }
+
   if (remainingToAssign > 0 && process.env.IGNORE_STOCK_CHECK === 'true') {
     const slLot = await getOrCreateContingencySlLotInTx(tx, productId);
     await tx.productLot.update({ where: { id: slLot.id }, data: { stock: { decrement: remainingToAssign } } });

@@ -97,10 +97,48 @@ export class OrderStatusService {
         throw err;
       }
 
-      if (status === OrderStatus.CANCELLED && freshOrder.status === OrderStatus.CANCELLED) {
-        const err: any = new Error(`El pedido #${order.id} ya se encuentra cancelado.`);
+      if (freshOrder.status === OrderStatus.CANCELLED) {
+        const err: any = new Error(
+          status === OrderStatus.CANCELLED
+            ? `El pedido #${order.id} ya se encuentra cancelado.`
+            : `No se puede reactivar el pedido #${order.id} porque ya fue cancelado.`,
+        );
         err.statusCode = 409;
         throw err;
+      }
+
+      if (status === OrderStatus.CANCELLED && freshOrder.status === OrderStatus.DELIVERED) {
+        if (freshOrder.billingType === BillingType.OFFICIAL) {
+          throw new Error(
+            'No se puede cancelar una factura oficial entregada directamente. Se debe emitir una Nota de Crédito para anularla.',
+          );
+        }
+
+        if (typeof tx.transaction?.findFirst === 'function') {
+          const txPayment = await tx.transaction.findFirst({
+            where: { orderId: freshOrder.id, type: TransactionType.INCOME },
+          });
+          if (txPayment) {
+            throw new Error(
+              `No se puede cancelar el pedido #${freshOrder.id} porque posee cobros registrados en caja o cuenta bancaria. Debe anular o revertir el cobro en Finanzas/Cajas antes de cancelar el pedido.`,
+            );
+          }
+        }
+
+        if (typeof tx.creditNote?.findFirst === 'function') {
+          const existingCreditNote = await tx.creditNote.findFirst({
+            where: {
+              orderId: freshOrder.id,
+              status: { in: ['APPROVED', 'PENDING_APPROVAL'] },
+            },
+            select: { id: true, creditNoteNumber: true },
+          });
+          if (existingCreditNote) {
+            throw new Error(
+              `No se puede cancelar el pedido #${freshOrder.id} porque ya posee una Nota de Crédito asociada (${existingCreditNote.creditNoteNumber || '#' + existingCreditNote.id}). Completá la anulación vía Nota de Crédito.`,
+            );
+          }
+        }
       }
 
       let finalTotalAmount = roundToIntegerPeso(freshOrder.totalAmount).toNumber();
@@ -138,7 +176,7 @@ export class OrderStatusService {
         },
       });
 
-      if (status === OrderStatus.CANCELLED && freshOrder.status !== OrderStatus.CANCELLED) {
+      if (status === OrderStatus.CANCELLED) {
         const items = await tx.orderItem.findMany({
           where: { orderId: order.id },
           include: { orderItemLots: true },
@@ -150,11 +188,6 @@ export class OrderStatusService {
         );
 
         for (const item of items) {
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
-          });
-
           const hasLotsAssigned =
             freshOrder.status === OrderStatus.PREPARING ||
             freshOrder.status === OrderStatus.PREPARED ||
@@ -212,6 +245,47 @@ export class OrderStatusService {
                 userId,
                 reason: `Devolución por cancelación de pedido #${order.id}`,
               },
+            });
+          }
+
+          // Recalcular stock comercial contra invariante (Σlotes - reservas activas) para evitar stock fantasma
+          if (
+            typeof tx.productLot?.aggregate === 'function' &&
+            typeof tx.orderItem?.aggregate === 'function'
+          ) {
+            const [lotAgg, reservedAgg] = await Promise.all([
+              tx.productLot.aggregate({
+                where: { productId: item.productId },
+                _sum: { stock: true },
+                _count: { _all: true },
+              }),
+              tx.orderItem.aggregate({
+                where: {
+                  productId: item.productId,
+                  order: { status: { in: [OrderStatus.PENDING, OrderStatus.PREPARING] } },
+                },
+                _sum: { quantity: true },
+              }),
+            ]);
+
+            if ((lotAgg._count?._all ?? 0) > 0) {
+              const physicalTotal = Number(lotAgg._sum?.stock ?? 0);
+              const activeReserved = Number(reservedAgg._sum?.quantity ?? 0);
+              const syncedCommercialStock = Math.max(0, physicalTotal - activeReserved);
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stock: syncedCommercialStock },
+              });
+            } else {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stock: { increment: item.quantity } },
+              });
+            }
+          } else {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { increment: item.quantity } },
             });
           }
         }

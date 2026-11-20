@@ -80,6 +80,10 @@ export const purchaseOrderService = {
     billingType?: string;
   }) {
     const result = await prisma.$transaction(async (tx) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT id FROM "PurchaseOrder" WHERE id = ${params.orderId} FOR UPDATE`;
+      }
+
       const order = await tx.purchaseOrder.findUnique({
         where: { id: params.orderId },
         include: { items: true, supplierInvoice: true },

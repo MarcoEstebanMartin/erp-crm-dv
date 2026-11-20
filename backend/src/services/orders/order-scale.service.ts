@@ -20,6 +20,10 @@ export class OrderScaleService {
     itemWeights: { orderItemId: number; weight: number }[],
   ) {
     return await prisma.$transaction(async (tx) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
+      }
+
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: { items: { include: { product: true } } },
@@ -73,6 +77,10 @@ export class OrderScaleService {
     itemUpdates: { orderItemId: number; quantity?: number; weight?: number }[],
   ) {
     return await prisma.$transaction(async (tx) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
+      }
+
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: { items: { include: { product: true, orderItemLots: true } } },
@@ -121,10 +129,27 @@ export class OrderScaleService {
 
           const diff = item.quantity - currentQuantity;
           if (diff !== 0) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { stock: { increment: diff } },
-            });
+            if (
+              diff < 0 &&
+              process.env.IGNORE_STOCK_CHECK !== 'true' &&
+              typeof tx.product?.updateMany === 'function'
+            ) {
+              const extraNeeded = Math.abs(diff);
+              const updatedRes = await tx.product.updateMany({
+                where: { id: item.productId, stock: { gte: extraNeeded } },
+                data: { stock: { decrement: extraNeeded } },
+              });
+              if (updatedRes.count === 0) {
+                throw new Error(
+                  `Stock insuficiente para aumentar la cantidad de "${item.product.name}" en el armado.`,
+                );
+              }
+            } else {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stock: { increment: diff } },
+              });
+            }
 
             await tx.stockMovement.create({
               data: {

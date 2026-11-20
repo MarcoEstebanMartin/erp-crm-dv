@@ -181,6 +181,23 @@ export const creditNoteService = {
     }
 
     const createdCreditNote = await prisma.$transaction(async (tx) => {
+      if (resolvedOrderId && typeof tx.order?.findUnique === 'function') {
+        if (typeof tx.$queryRaw === 'function') {
+          await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${resolvedOrderId} FOR UPDATE`;
+        }
+        await validateCreditNoteAgainstLinkedOrder(tx, {
+          orderId: resolvedOrderId,
+          personaId: persona.id,
+          reason: params.reason,
+          newLines: totals.lines.map((l) => ({
+            productId: l.productId,
+            quantity: l.quantity,
+            weight: l.weight,
+          })),
+          newTotalAmount: totals.totalAmount,
+        });
+      }
+
       let note = await tx.creditNote.create({
         data: {
           personaId: persona.id,

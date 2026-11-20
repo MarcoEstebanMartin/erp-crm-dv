@@ -138,6 +138,12 @@ export async function revertSupplierInvoiceStockInTx(
   }
 
   const stockMovements = await tx.stockMovement.findMany({ where: { referenceId: `INV-${params.invoiceId}` } });
+  if (stockMovements.length > 0) {
+    await lockProductsForUpdate(
+      tx,
+      stockMovements.map((m: any) => Number(m.productId)),
+    );
+  }
   for (const movement of stockMovements) {
     const targetLot = movement.productLotId
       ? await tx.productLot.findUnique({ where: { id: movement.productLotId } })
@@ -145,6 +151,19 @@ export async function revertSupplierInvoiceStockInTx(
 
     if (targetLot && targetLot.stock !== undefined && Number(targetLot.stock) < Number(movement.quantity)) {
       throw new AppError('No se puede anular la factura porque parte de la mercadería ingresada ya fue vendida o reubicada.', 400);
+    }
+
+    if (typeof tx.product?.findUnique === 'function') {
+      const currentProduct = await tx.product.findUnique({
+        where: { id: movement.productId },
+        select: { stock: true },
+      });
+      if (currentProduct && Number(currentProduct.stock) < Number(movement.quantity)) {
+        throw new AppError(
+          'No se puede anular la factura porque parte de la mercadería ingresada ya está reservada por pedidos pendientes.',
+          400,
+        );
+      }
     }
 
     await tx.product.update({ where: { id: movement.productId }, data: { stock: { decrement: movement.quantity } } });

@@ -306,6 +306,23 @@ export const supplierInvoiceService = {
     const amountToRestore = roundToTwoDecimals(invoice.totalAmount.toString()).toNumber();
 
     await prisma.$transaction(async (tx) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT id FROM "SupplierInvoice" WHERE id = ${invoice.id} FOR UPDATE`;
+      }
+      if (typeof tx.supplierInvoice?.findUnique === 'function') {
+        const freshInvoice = await tx.supplierInvoice.findUnique({ where: { id: invoice.id } });
+        if (!freshInvoice) {
+          throw new AppError('Factura de compra ya fue eliminada por otra operación.', 409);
+        }
+        const freshPaidAmt = roundToTwoDecimals(freshInvoice.paidAmount.toString()).toNumber();
+        if (!isCreditNote && (freshInvoice.status !== 'PENDING' || freshPaidAmt > 0)) {
+          throw new AppError(
+            'No se puede eliminar una factura que ya ha sido saldada o pagada parcialmente. Anule los pagos asociados primero.',
+            409,
+          );
+        }
+      }
+
       await recordLedgerMovement(tx, {
         personaId: invoice.personaId,
         entryType: isCreditNote ? LedgerEntryType.CREDIT : LedgerEntryType.DEBIT,

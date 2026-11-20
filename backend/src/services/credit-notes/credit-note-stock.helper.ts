@@ -1,6 +1,7 @@
 import { BillingType, CreditNoteStatus, MovementType } from '@prisma/client';
 import AppError from '../../utils/AppError';
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
+import { lockProductsForUpdate } from '../../utils/db-locks.util';
 
 export function resolveCreditNoteAfipDocMeta(cuit?: string | null): {
   cleanCuit: string;
@@ -169,6 +170,11 @@ export async function restoreReturnedStockAndLots(
     items: Array<{ productId: number; quantity: number }>;
   },
 ): Promise<void> {
+  await lockProductsForUpdate(
+    tx,
+    params.items.map((i) => Number(i.productId)),
+  );
+
   for (const item of params.items) {
     const productId = Number(item.productId);
     const qty = Number(item.quantity);
@@ -181,7 +187,7 @@ export async function restoreReturnedStockAndLots(
       data: { stock: { increment: qty } },
     });
 
-    let assignedLotId: number | null = null;
+    const restoredMovements: Array<{ productLotId: number | null; quantity: number }> = [];
     let remainingToReturn = qty;
 
     if (params.orderId) {
@@ -199,8 +205,8 @@ export async function restoreReturnedStockAndLots(
               where: { id: oil.productLotId },
               data: { stock: { increment: toReturn } },
             });
+            restoredMovements.push({ productLotId: oil.productLotId, quantity: toReturn });
             remainingToReturn -= toReturn;
-            if (!assignedLotId) assignedLotId = oil.productLotId;
           }
         }
 
@@ -210,13 +216,13 @@ export async function restoreReturnedStockAndLots(
             where: { id: firstLot.productLotId },
             data: { stock: { increment: remainingToReturn } },
           });
+          restoredMovements.push({ productLotId: firstLot.productLotId, quantity: remainingToReturn });
           remainingToReturn = 0;
-          if (!assignedLotId) assignedLotId = firstLot.productLotId;
         }
       }
     }
 
-    if (!assignedLotId || remainingToReturn > 0) {
+    if (restoredMovements.length === 0 || remainingToReturn > 0) {
       const qtyToIncrement = remainingToReturn > 0 ? remainingToReturn : qty;
       let defaultLot = await tx.productLot.findFirst({
         where: { productId, lotNumber: 'S/L', location: 'S/U' },
@@ -229,12 +235,13 @@ export async function restoreReturnedStockAndLots(
         });
       }
 
+      let fallbackLotId: number | null = null;
       if (defaultLot) {
         await tx.productLot.update({
           where: { id: defaultLot.id },
           data: { stock: { increment: qtyToIncrement } },
         });
-        assignedLotId = defaultLot.id;
+        fallbackLotId = defaultLot.id;
       } else {
         const newLot = await tx.productLot.create({
           data: {
@@ -244,22 +251,25 @@ export async function restoreReturnedStockAndLots(
             stock: qtyToIncrement,
           },
         });
-        assignedLotId = newLot.id;
+        fallbackLotId = newLot.id;
       }
+      restoredMovements.push({ productLotId: fallbackLotId, quantity: qtyToIncrement });
     }
 
-    await tx.stockMovement.create({
-      data: {
-        productId,
-        quantity: qty,
-        type: MovementType.IN,
-        creditNoteId: params.creditNoteId,
-        orderId: params.orderId,
-        referenceId: `NC-${params.creditNoteId}`,
-        userId: params.userId,
-        reason: params.reasonLabel,
-        productLotId: assignedLotId,
-      },
-    });
+    for (const mov of restoredMovements) {
+      await tx.stockMovement.create({
+        data: {
+          productId,
+          quantity: mov.quantity,
+          type: MovementType.IN,
+          creditNoteId: params.creditNoteId,
+          orderId: params.orderId,
+          referenceId: `NC-${params.creditNoteId}`,
+          userId: params.userId,
+          reason: params.reasonLabel,
+          productLotId: mov.productLotId,
+        },
+      });
+    }
   }
 }
