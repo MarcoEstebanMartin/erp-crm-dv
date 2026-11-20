@@ -128,10 +128,7 @@ export const WarehouseMapGrid: React.FC<WarehouseMapGridProps> = ({
 
                   const chamberMeta = cell?.chamber ? SECTORS_INFO[cell.chamber] : null;
                   const isDistinctChamber = Boolean(
-                    chamberMeta &&
-                      cell.chamber !== 'GENERAL' &&
-                      cell.chamber !== 'D2_GENERAL' &&
-                      cell.chamber !== 'D3_GENERAL',
+                    chamberMeta && cell.chamber !== 'GENERAL',
                   );
 
                   if (!isSlot) {
@@ -154,8 +151,8 @@ export const WarehouseMapGrid: React.FC<WarehouseMapGridProps> = ({
                     bg = '#f0fdf4'; color = '#166534'; border = '1.5px solid #22c55e';
                   } else {
                     bg = '#ffffff';
-                    color = '#94a3b8';
-                    border = '1px solid #e2e8f0';
+                    color = '#64748b';
+                    border = '1px solid #cbd5e1';
                     if (isDistinctChamber && chamberMeta) {
                       borderLeftOverride = `3px solid ${chamberMeta.border}`;
                     }
