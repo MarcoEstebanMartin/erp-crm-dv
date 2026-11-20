@@ -138,6 +138,7 @@ export async function executeDeferredCaeRequest(orderId: number) {
     where: { id: order.id },
     data: {
       invoiceNumber: afipRes.invoiceNumber,
+      invoicedAt: new Date(),
       cae: afipRes.cae,
       caeDueDate: afipRes.caeDueDate ? new Date(afipRes.caeDueDate) : null,
     },

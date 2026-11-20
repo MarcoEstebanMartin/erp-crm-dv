@@ -26,8 +26,8 @@ describe('Paso 3A — Libro IVA Digital AFIP: Decimal.js, horario AR (-03:00) y 
     const orderArgs = (prisma.order.findMany as any).mock.calls[0][0];
     expect(orderArgs.where.billingType).toBe('OFFICIAL');
     expect(orderArgs.where.cae).toEqual({ not: null });
-    expect(orderArgs.where.createdAt.gte.toISOString()).toBe('2026-11-01T03:00:00.000Z');
-    expect(orderArgs.where.createdAt.lte.toISOString()).toBe('2026-12-01T02:59:59.999Z');
+    expect(orderArgs.where.invoicedAt.gte.toISOString()).toBe('2026-11-01T03:00:00.000Z');
+    expect(orderArgs.where.invoicedAt.lte.toISOString()).toBe('2026-12-01T02:59:59.999Z');
 
     const cnArgs = (prisma.creditNote.findMany as any).mock.calls[0][0];
     expect(cnArgs.where.billingType).toBe('OFFICIAL');
@@ -44,7 +44,8 @@ describe('Paso 3A — Libro IVA Digital AFIP: Decimal.js, horario AR (-03:00) y 
     (prisma.order.findMany as any).mockResolvedValue([
       {
         id: 1,
-        createdAt: new Date('2026-12-01T01:30:00.000Z'), // 2026-11-30 22:30 AR
+        createdAt: new Date('2026-11-28T12:00:00.000Z'), // Pedido tomado días antes
+        invoicedAt: new Date('2026-12-01T01:30:00.000Z'), // Facturado 2026-11-30 22:30 AR
         invoiceType: 'FACTURA_A',
         invoiceNumber: '0001-00000125',
         cae: '74123456789012',

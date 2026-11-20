@@ -238,6 +238,7 @@ export class OrderBillingService {
               billingType,
               invoiceType: taxInfo.finalInvoiceType,
               invoiceNumber: finalInvoiceNumber,
+              invoicedAt: new Date(),
               cae: finalCae,
               caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
               totalAmount: officialOrderTotal,

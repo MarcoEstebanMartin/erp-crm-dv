@@ -116,6 +116,7 @@ export async function executeInvoiceOrderSettlementTx(
   }
 
   let internalOrderId: number | null = null;
+  const invoicedAt = new Date();
   const effectiveDeliveryMethod: DeliveryMethod =
     params.deliveryMethod ?? (order.deliveryMethod as DeliveryMethod) ?? DeliveryMethod.DELIVERY;
   const isPickup = effectiveDeliveryMethod === DeliveryMethod.PICKUP;
@@ -137,6 +138,7 @@ export async function executeInvoiceOrderSettlementTx(
         billingType: BillingType.INTERNAL,
         invoiceType: InvoiceType.PRESUPUESTO,
         invoiceNumber: `INT-${order.id.toString().padStart(5, '0')}-X`,
+        invoicedAt,
         totalAmount: internalOrderTotal,
         status: OrderStatus.DELIVERED,
         deliveryMethod: effectiveDeliveryMethod,
@@ -246,6 +248,7 @@ export async function executeInvoiceOrderSettlementTx(
       billingType,
       invoiceType: taxInfo.finalInvoiceType,
       invoiceNumber: finalInvoiceNumber,
+      invoicedAt,
       cae: finalCae,
       caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
       totalAmount: officialOrderTotal,

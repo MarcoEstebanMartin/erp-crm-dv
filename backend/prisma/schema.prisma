@@ -259,6 +259,7 @@ model Order {
   billingType         BillingType @default(INTERNAL)
   invoiceType         InvoiceType @default(PRESUPUESTO)
   invoiceNumber       String?
+  invoicedAt          DateTime?
   cae                 String?
   caeDueDate          DateTime?
   status              OrderStatus @default(PENDING)
@@ -296,6 +297,7 @@ model Order {
   @@index([salesChannel])
   @@index([movementId])
   @@index([invoiceNumber])
+  @@index([invoicedAt])
   @@index([personaId, createdAt])
   @@index([status, createdAt, id])
   @@index([sellerId, status, createdAt])

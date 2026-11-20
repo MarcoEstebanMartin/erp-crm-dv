@@ -241,6 +241,7 @@ export class DirectInvoiceService {
       cae: finalCae,
       caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
       invoiceNumber: finalInvoiceNumber,
+      invoicedAt: new Date(),
     };
 
     try {

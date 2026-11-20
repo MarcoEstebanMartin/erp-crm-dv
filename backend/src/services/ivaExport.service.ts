@@ -43,7 +43,7 @@ export const ivaExportService = {
         billingType: 'OFFICIAL',
         status: { not: 'CANCELLED' },
         cae: { not: null },
-        createdAt: arRange,
+        invoicedAt: arRange,
       },
       include: { persona: true },
     });
@@ -70,7 +70,7 @@ export const ivaExportService = {
         continue;
       }
       ventas.push({
-        fecha: new Date(order.createdAt),
+        fecha: new Date(order.invoicedAt ?? order.createdAt),
         tipo: order.invoiceType,
         numero: invNum,
         persona: order.persona,

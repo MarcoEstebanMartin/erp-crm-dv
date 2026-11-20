@@ -20,13 +20,13 @@ export const supplierInvoiceService = {
     billingType?: string;
   }) {
     const whereClause: Record<string, any> = {
-      status: 'DELIVERED',
+      status: { not: 'CANCELLED' },
       invoiceNumber: { not: null },
     };
 
     const dateRange = parseArgentinaTimestampRange(query.startDate, query.endDate);
     if (dateRange) {
-      whereClause.createdAt = dateRange;
+      whereClause.invoicedAt = dateRange;
     }
 
     if (query.billingType === BillingType.OFFICIAL || query.billingType === BillingType.INTERNAL) {
@@ -60,7 +60,7 @@ export const supplierInvoiceService = {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ invoicedAt: 'desc' }, { createdAt: 'desc' }],
     });
   },
 

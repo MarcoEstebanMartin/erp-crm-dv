@@ -80,12 +80,15 @@ describe('Paso 2 — Datos de Persona, Filtros Horarios Argentina (-03:00) y Fac
       query: '#95',
     });
 
-    const where = (prisma.order.findMany as any).mock.calls[0][0].where;
-    expect(where.status).toBe('DELIVERED');
+    const call = (prisma.order.findMany as any).mock.calls[0][0];
+    const where = call.where;
+    expect(where.status).toEqual({ not: 'CANCELLED' });
+    expect(where.invoiceNumber).toEqual({ not: null });
     expect(where.billingType).toBe(BillingType.OFFICIAL);
-    expect(where.createdAt.gte.toISOString()).toBe('2026-11-14T03:00:00.000Z');
-    expect(where.createdAt.lte.toISOString()).toBe('2026-11-15T02:59:59.999Z');
+    expect(where.invoicedAt.gte.toISOString()).toBe('2026-11-14T03:00:00.000Z');
+    expect(where.invoicedAt.lte.toISOString()).toBe('2026-11-15T02:59:59.999Z');
     expect(where.OR).toEqual(expect.arrayContaining([{ id: 95 }]));
+    expect(call.orderBy).toEqual([{ invoicedAt: 'desc' }, { createdAt: 'desc' }]);
   });
 
   it('creditNoteService.getCreditNotes y taxWithholdingService.getTaxWithholdings aplican rango de fechas, billingType y query', async () => {

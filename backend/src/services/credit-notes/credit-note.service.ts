@@ -167,7 +167,7 @@ export const creditNoteService = {
               ? {
                   invoiceNumber: linkedOrder.invoiceNumber,
                   invoiceType: linkedOrder.invoiceType,
-                  invoiceDate: linkedOrder.createdAt,
+                  invoiceDate: linkedOrder.invoicedAt ?? linkedOrder.createdAt,
                 }
               : null,
           });
