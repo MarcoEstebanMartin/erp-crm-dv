@@ -153,6 +153,7 @@ export async function settleOrderFinancials(
     const isBankTransfer = paymentMethod === 'BANK_TRANSFER';
     const isEcheq = paymentMethod === 'CHECK' && /\(echeq\)|e-?cheq/i.test(description || '');
 
+    const isVerifiedNow = !(isBankTransfer || isEcheq);
     const createdTx = await tx.transaction.create({
       data: {
         orderId,
@@ -165,9 +166,16 @@ export async function settleOrderFinancials(
         description,
         cashDrawerId,
         bankAccountId,
-        verified: !(isBankTransfer || isEcheq),
+        verified: isVerifiedNow,
       },
     });
+
+    if (isVerifiedNow && bankAccountId && typeof tx.bankAccount?.update === 'function') {
+      await tx.bankAccount.update({
+        where: { id: bankAccountId },
+        data: { balance: { increment: settledPaymentAmount } },
+      });
+    }
 
     await recordLedgerMovement(tx, {
       personaId,

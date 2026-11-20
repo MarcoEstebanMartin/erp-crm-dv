@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { roundToIntegerPeso } from '../core/money';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -24,7 +25,7 @@ export interface ReceiptPdfData {
 }
 
 function formatArs(amount: number): string {
-  return `$${Math.round(amount).toLocaleString('es-AR')}`;
+  return `$${roundToIntegerPeso(amount).toNumber().toLocaleString('es-AR')}`;
 }
 
 function formatMethodLabel(item: ReceiptPdfPaymentItem): string {
@@ -85,7 +86,7 @@ export const receiptPdfService = {
   computeVerificationCode(receiptNumber: string, totalAmount: number): string {
     return crypto
       .createHash('sha256')
-      .update(`${receiptNumber}:${Math.round(totalAmount)}`)
+      .update(`${receiptNumber}:${roundToIntegerPeso(totalAmount).toNumber()}`)
       .digest('hex')
       .slice(0, 10)
       .toUpperCase();

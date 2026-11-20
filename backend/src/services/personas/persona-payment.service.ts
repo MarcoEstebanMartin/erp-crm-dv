@@ -98,6 +98,9 @@ export class PersonaPaymentSubService {
 
       let invoiceNumberToLog = '';
       if (supplierInvoiceId) {
+        if (typeof tx.$queryRaw === 'function') {
+          await tx.$queryRaw`SELECT id FROM "SupplierInvoice" WHERE id = ${Number(supplierInvoiceId)} FOR UPDATE`;
+        }
         const supplierInvoice = await tx.supplierInvoice.findUnique({
           where: { id: Number(supplierInvoiceId) },
         });

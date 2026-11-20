@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma';
+import { roundToIntegerPeso } from '../core/money';
 import { receiptPdfService } from './receiptPdf.service';
 
 export function normalizeArgentinaWhatsAppPhone(rawPhone?: string | null): string | null {
@@ -125,7 +126,7 @@ export const whatsappDispatchService = {
         throw new Error(uploadJson.error?.message || `Error subiendo PDF a Meta (${uploadRes.status})`);
       }
 
-      const formattedTotal = `$${Math.round(Number(receipt.totalAmount)).toLocaleString('es-AR')}`;
+      const formattedTotal = `$${roundToIntegerPeso(receipt.totalAmount.toString()).toNumber().toLocaleString('es-AR')}`;
       const msgRes = await fetch(`${graphBase}/messages`, {
         method: 'POST',
         headers: {

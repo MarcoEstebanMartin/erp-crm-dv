@@ -140,8 +140,14 @@ export const payrollService = {
 
       if (isPaidNow) {
         if (parsedDrawerId) {
-          const drawer = await tx.cashDrawer.findUnique({ where: { id: parsedDrawerId }, select: { id: true } });
+          const drawer = await tx.cashDrawer.findUnique({
+            where: { id: parsedDrawerId },
+            select: { id: true, status: true },
+          });
           if (!drawer) throw new AppError('Caja operativa no encontrada', 404);
+          if (drawer.status !== 'OPEN') {
+            throw new AppError('La caja operativa seleccionada ya se encuentra cerrada.', 400);
+          }
         }
         const category =
           (await tx.expenseCategory.findUnique({ where: { name: 'Sueldos' } })) ??
@@ -216,11 +222,36 @@ export const payrollService = {
         let remainingToDeduct = breakdown.advDeduction;
         for (const adv of pendingAdvances) {
           if (remainingToDeduct.lte(0)) break;
-          await tx.salaryAdvance.update({
-            where: { id: adv.id },
-            data: { status: 'DEDUCTED', payrollId: payroll.id },
-          });
-          remainingToDeduct = remainingToDeduct.minus(roundToTwoDecimals(adv.amount));
+          const advAmount = roundToTwoDecimals(adv.amount);
+          if (remainingToDeduct.gte(advAmount)) {
+            await tx.salaryAdvance.update({
+              where: { id: adv.id },
+              data: { status: 'DEDUCTED', payrollId: payroll.id },
+            });
+            remainingToDeduct = remainingToDeduct.minus(advAmount);
+          } else {
+            // Deducción parcial: descontar solo lo aplicado y conservar el saldo pendiente en un adelanto remanente
+            const deductedPart = roundToTwoDecimals(remainingToDeduct).toNumber();
+            const remainderPart = roundToTwoDecimals(advAmount.minus(remainingToDeduct)).toNumber();
+            await tx.salaryAdvance.update({
+              where: { id: adv.id },
+              data: {
+                amount: deductedPart,
+                status: 'DEDUCTED',
+                payrollId: payroll.id,
+              },
+            });
+            await tx.salaryAdvance.create({
+              data: {
+                employeeId: empId,
+                amount: remainderPart,
+                date: adv.date,
+                reason: `Saldo remanente de adelanto #${adv.id} tras liquidación ${month}/${year}`,
+                status: 'PENDING',
+              },
+            });
+            remainingToDeduct = roundToTwoDecimals(0);
+          }
         }
       }
 

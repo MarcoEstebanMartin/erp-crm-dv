@@ -198,6 +198,46 @@ export class DirectInvoiceService {
     let finalCae: string | null = null;
     let finalCaeDueDate: Date | null = null;
 
+    // Pre-validar disponibilidad de Caja abierta / Cuenta Bancaria ANTES de emitir CAE en AFIP
+    if (paymentMethod === 'CASH' && typeof (prisma as any)?.cashDrawer?.findFirst === 'function') {
+      const preDrawer = data.cashDrawerId
+        ? await prisma.cashDrawer.findFirst({ where: { id: data.cashDrawerId, status: 'OPEN' } })
+        : (await prisma.cashDrawer.findFirst({
+            where: {
+              status: 'OPEN',
+              OR: [{ branch: 'DEPOSITO' }, { drawerType: 'DEPOSITO' }],
+            },
+            orderBy: { openedAt: 'desc' },
+          })) ||
+          (await prisma.cashDrawer.findFirst({
+            where: { userId: adminId, status: 'OPEN', drawerType: { not: 'CENTRAL' } },
+            orderBy: { openedAt: 'desc' },
+          })) ||
+          (await prisma.cashDrawer.findFirst({
+            where: { status: 'OPEN', drawerType: { not: 'CENTRAL' } },
+            orderBy: { openedAt: 'desc' },
+          }));
+
+      if (!preDrawer) {
+        throw new Error(
+          'No hay una Caja Oficina abierta. Abrí la Caja Oficina antes de registrar cobros en efectivo.',
+        );
+      }
+    }
+
+    if (
+      paymentMethod === 'BANK_TRANSFER' &&
+      !bankAccountId &&
+      typeof (prisma as any)?.bankAccount?.findFirst === 'function'
+    ) {
+      const preBank = await prisma.bankAccount.findFirst({ select: { id: true } });
+      if (!preBank) {
+        throw new Error(
+          'No hay cuentas bancarias configuradas para registrar la transferencia.',
+        );
+      }
+    }
+
     if (billingType === BillingType.OFFICIAL) {
       const afipRes = await emitirFacturaAFIP({
         clientCuit: taxInfo.cuitLimpio,

@@ -203,6 +203,21 @@ export const rendicionService = {
     );
 
     const drawer = await prisma.$transaction(async (tx) => {
+      const defaultBank = await tx.bankAccount.findFirst();
+      const targetDrawerId = params.destinationDrawerId ? Number(params.destinationDrawerId) : null;
+
+      // Evitar doble contabilización en Caja Grande:
+      // 1) Si el efectivo se transfiere a una caja abierta destino (targetDrawerId), se sumará al cerrar esa caja.
+      // 2) Los cheques acreditados a una BankAccount ya suman en saldo bancario y no deben duplicarse en Caja Grande.
+      const hasBankForChecks = Boolean(defaultBank?.id);
+      const unbankedChecksTotal = txs
+        .filter((t) => t.paymentMethod === PaymentMethod.CHECK && !(t.bankAccountId || hasBankForChecks))
+        .reduce((acc, t) => acc.plus(roundToTwoDecimals(t.amount.toString())), toDecimal(0));
+      const cashCountedInRendicionDrawer = targetDrawerId ? toDecimal(0) : toDecimal(summary.realCash);
+      const centralRealBalance = roundToTwoDecimals(
+        cashCountedInRendicionDrawer.plus(unbankedChecksTotal),
+      ).toNumber();
+
       const createdDrawer = await tx.cashDrawer.create({
         data: {
           userId: params.adminId,
@@ -212,15 +227,12 @@ export const rendicionService = {
           notes: extraNotes || null,
           openingBalance: 0,
           closingBalance: summary.theoreticalClosing,
-          realBalance: summary.realTotal,
+          realBalance: centralRealBalance,
           status: 'CLOSED',
           openedAt: minCreatedAt,
           closedAt: new Date(),
         },
       });
-
-      const defaultBank = await tx.bankAccount.findFirst();
-      const targetDrawerId = params.destinationDrawerId ? Number(params.destinationDrawerId) : null;
 
       if (targetDrawerId && summary.realCash > 0) {
         await tx.transaction.create({

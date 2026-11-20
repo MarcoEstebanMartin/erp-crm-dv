@@ -89,21 +89,42 @@ export const transactionAdminService = {
     adjustedAmount?: number | null;
     bankAccountId?: number | null;
   }) {
-    const transaction = await prisma.transaction.findUnique({
+    const preCheck = await prisma.transaction.findUnique({
       where: { id: params.txId },
       include: { fieldReceipt: { select: { id: true, receiptNumber: true } } },
     });
-    if (!transaction) throw new AppError('Transacción no encontrada.', 404);
-    if (transaction.fieldReceipt) {
+    if (!preCheck) throw new AppError('Transacción no encontrada.', 404);
+    if (preCheck.fieldReceipt) {
       const receiptLabel =
-        transaction.fieldReceipt.receiptNumber || `#${transaction.fieldReceipt.id}`;
+        preCheck.fieldReceipt.receiptNumber || `#${preCheck.fieldReceipt.id}`;
       throw new AppError(
         `Este cobro pertenece al recibo digital en calle ${receiptLabel}. Gestionalo desde Rendiciones para evitar duplicar acreditaciones.`,
         409,
       );
     }
 
-    const updatedTx = await prisma.$transaction(async (tx) => {
+    const { updatedTx, originalAmount } = await prisma.$transaction(async (tx) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT id FROM "Transaction" WHERE id = ${params.txId} FOR UPDATE`;
+      }
+
+      const transaction =
+        typeof tx.transaction?.findUnique === 'function'
+          ? await tx.transaction.findUnique({
+              where: { id: params.txId },
+              include: { fieldReceipt: { select: { id: true, receiptNumber: true } } },
+            })
+          : preCheck;
+      if (!transaction) throw new AppError('Transacción no encontrada.', 404);
+      if (transaction.fieldReceipt) {
+        const receiptLabel =
+          transaction.fieldReceipt.receiptNumber || `#${transaction.fieldReceipt.id}`;
+        throw new AppError(
+          `Este cobro pertenece al recibo digital en calle ${receiptLabel}. Gestionalo desde Rendiciones para evitar duplicar acreditaciones.`,
+          409,
+        );
+      }
+
       let resolvedBankAccountId = transaction.bankAccountId;
       if (
         !resolvedBankAccountId &&
@@ -152,7 +173,7 @@ export const transactionAdminService = {
         });
       }
 
-      return tx.transaction.update({
+      const savedTx = await tx.transaction.update({
         where: { id: params.txId },
         data: {
           verified: Boolean(params.verified),
@@ -169,6 +190,8 @@ export const transactionAdminService = {
           bankAccount: true,
         },
       });
+
+      return { updatedTx: savedTx, originalAmount: transaction.amount };
     });
 
     await logAudit({
@@ -179,7 +202,7 @@ export const transactionAdminService = {
       newValues: {
         verified: Boolean(params.verified),
         amount: updatedTx.amount,
-        originalAmount: transaction.amount,
+        originalAmount,
         bankAccountId: updatedTx.bankAccountId,
         adjusted: params.adjustedAmount !== undefined && params.adjustedAmount !== null,
       },

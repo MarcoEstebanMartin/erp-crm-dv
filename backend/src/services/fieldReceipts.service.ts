@@ -279,6 +279,10 @@ export const fieldReceiptsService = {
    */
   async rejectCheckPayment(paymentId: number, adminUserId: number, rejectionReason: string) {
     return prisma.$transaction(async (tx) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT id FROM "FieldReceiptPayment" WHERE id = ${paymentId} FOR UPDATE`;
+      }
+
       const payment = await tx.fieldReceiptPayment.findUnique({
         where: { id: paymentId },
         include: { fieldReceipt: true },
@@ -366,6 +370,10 @@ export const fieldReceiptsService = {
    */
   async approveSettlement(settlementId: number, adminUserId: number, input: ApproveSettlementInput) {
     return prisma.$transaction(async (tx) => {
+      if (typeof tx.$queryRaw === 'function') {
+        await tx.$queryRaw`SELECT id FROM "CollectorSettlement" WHERE id = ${settlementId} FOR UPDATE`;
+      }
+
       const settlement = await tx.collectorSettlement.findUnique({
         where: { id: settlementId },
         include: {
