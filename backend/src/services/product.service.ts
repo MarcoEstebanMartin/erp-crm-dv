@@ -155,9 +155,9 @@ export class ProductService {
     const priceC = listPriceC ? roundToIntegerPeso(listPriceC).toNumber() : 0;
     const computedMargin =
       profitMargin !== undefined && profitMargin !== null && profitMargin !== ''
-        ? roundToTwoDecimals(profitMargin).toNumber()
+        ? Math.max(-999.99, Math.min(999.99, roundToTwoDecimals(profitMargin).toNumber()))
         : cost > 0
-          ? Math.min(999.99, calculateRealMarginPct(cost, priceA).toNumber())
+          ? Math.max(-999.99, Math.min(999.99, calculateRealMarginPct(cost, priceA).toNumber()))
           : null;
 
     const product = await prisma.product.create({
@@ -225,9 +225,11 @@ export class ProductService {
         listPriceC: data.listPriceC !== undefined ? roundToIntegerPeso(data.listPriceC).toNumber() : undefined,
         profitMargin:
           data.profitMargin !== undefined
-            ? data.profitMargin ? roundToTwoDecimals(data.profitMargin).toNumber() : null
+            ? data.profitMargin !== null && data.profitMargin !== ''
+              ? Math.max(-999.99, Math.min(999.99, roundToTwoDecimals(data.profitMargin).toNumber()))
+              : null
             : priceChanged && nextCost > 0
-              ? Math.min(999.99, calculateRealMarginPct(nextCost, nextListPrice).toNumber())
+              ? Math.max(-999.99, Math.min(999.99, calculateRealMarginPct(nextCost, nextListPrice).toNumber()))
               : undefined,
         ...(priceChanged
           ? { previousCostPrice: original.costPrice, previousListPrice: original.listPrice, lastPriceUpdateAt: new Date() }

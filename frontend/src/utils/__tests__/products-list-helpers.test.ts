@@ -3,7 +3,9 @@ import {
   extractProductFilterOptions,
   filterAndSortProducts,
   getProductCategoryInfo,
+  marginPctToMultiplier,
   resolveProductImageUrl,
+  resolveProductMarginPct,
   sanitizeProductArray,
 } from '../productsListHelpers';
 
@@ -107,5 +109,20 @@ describe('ProductsList Helpers — Filtrado Rápido, Búsqueda sin Tildes y Orde
     expect(resolveProductImageUrl('https://cdn.example.com/12.webp')).toBe(
       'https://cdn.example.com/12.webp',
     );
+  });
+
+  it('resuelve el margen de producto en porcentaje directo (sin restar 1 ni multiplicar por 100) y convierte el factor del rubro', () => {
+    // Caso Melincué SKU 0001: profitMargin=32 en BD -> debe mostrar 32, nunca 3100
+    expect(resolveProductMarginPct({ profitMargin: '32', rubro: { profitMargin: '1.25' } })).toBe(32);
+    expect(resolveProductMarginPct({ profitMargin: 0, rubro: { profitMargin: '1.25' } })).toBe(0);
+    expect(resolveProductMarginPct({ profitMargin: -4.5, rubro: { profitMargin: '1.25' } })).toBe(-4.5);
+    // Sin margen propio: cae al factor multiplicador del rubro (1.25 -> 25%)
+    expect(resolveProductMarginPct({ profitMargin: null, rubro: { profitMargin: '1.25' } })).toBe(25);
+    expect(resolveProductMarginPct({ profitMargin: undefined, rubro: null })).toBe(25);
+
+    expect(marginPctToMultiplier(32)).toBeCloseTo(1.32, 4);
+    expect(marginPctToMultiplier(0)).toBe(1);
+    expect(marginPctToMultiplier(-10)).toBeCloseTo(0.9, 4);
+    expect(marginPctToMultiplier(-150)).toBe(1);
   });
 });

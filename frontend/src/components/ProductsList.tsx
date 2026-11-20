@@ -8,7 +8,9 @@ import {
   extractProductLabel,
   filterAndSortProducts,
   getProductCategoryInfo,
+  marginPctToMultiplier,
   resolveProductImageUrl,
+  resolveProductMarginPct,
   sanitizeProductArray,
 } from '../utils/productsListHelpers';
 
@@ -113,12 +115,7 @@ export default function ProductsList({
     if (isNaN(numValue)) return setEditingCell(null);
 
     const updatedProduct = { ...p };
-    const margin =
-      p.profitMargin !== null && p.profitMargin !== undefined
-        ? Number(p.profitMargin)
-        : p.rubro?.profitMargin
-          ? Number(p.rubro.profitMargin)
-          : 1.25;
+    const margin = marginPctToMultiplier(resolveProductMarginPct(p));
 
     if (field === 'costPrice') {
       updatedProduct.costPrice = numValue;
@@ -236,7 +233,7 @@ export default function ProductsList({
                   data: {
                     id: p.id, sku: p.sku, name: p.name, description: p.description || '', barcode: p.barcode || '',
                     costPrice: p.costPrice, listPrice: p.listPrice, listPriceB: p.listPriceB || 0, listPriceC: p.listPriceC || 0,
-                    profitMargin: p.profitMargin !== null && p.profitMargin !== undefined ? Math.round((Number(p.profitMargin) - 1) * 100) : p.rubro?.profitMargin ? Math.round((Number(p.rubro.profitMargin) - 1) * 100) : 25,
+                    profitMargin: resolveProductMarginPct(p),
                     minStock: p.minStock, isPesable: p.isPesable || false, approximateWeight: p.approximateWeight || 0,
                     unitsPerBox: p.unitsPerBox || 1, rubroId: p.rubroId || '', commercialCategory: p.commercialCategory || '',
                     providerId: p.providerId || '', imageUrl: p.imageUrl || null, isActive: p.isActive !== false,

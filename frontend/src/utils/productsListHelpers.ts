@@ -186,3 +186,45 @@ export function filterAndSortProducts(
 
   return decorated.map((entry) => entry.product);
 }
+
+/**
+ * Resuelve el porcentaje de margen real de un producto (ej. 32 para +32%).
+ * - `Product.profitMargin` se persiste en porcentaje directo (-999.99..999.99).
+ * - `Rubro.profitMargin` se persiste como factor multiplicador (ej. 1.25 = +25%).
+ */
+export function resolveProductMarginPct(product: {
+  profitMargin?: number | string | null;
+  rubro?: { profitMargin?: number | string | null } | null;
+}): number {
+  if (
+    product.profitMargin !== null &&
+    product.profitMargin !== undefined &&
+    product.profitMargin !== ''
+  ) {
+    const parsed = Number(product.profitMargin);
+    if (Number.isFinite(parsed)) {
+      return Math.round(parsed * 100) / 100;
+    }
+  }
+
+  if (
+    product.rubro?.profitMargin !== null &&
+    product.rubro?.profitMargin !== undefined &&
+    product.rubro.profitMargin !== ''
+  ) {
+    const rubroFactor = Number(product.rubro.profitMargin);
+    if (Number.isFinite(rubroFactor) && rubroFactor > 0) {
+      return Math.round((rubroFactor - 1) * 100 * 100) / 100;
+    }
+  }
+
+  return 25;
+}
+
+/**
+ * Convierte un porcentaje de margen (ej. 32) a factor multiplicador seguro (1.32).
+ */
+export function marginPctToMultiplier(marginPct: number): number {
+  const factor = 1 + marginPct / 100;
+  return Number.isFinite(factor) && factor > 0 ? factor : 1;
+}

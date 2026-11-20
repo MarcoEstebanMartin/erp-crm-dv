@@ -340,7 +340,12 @@ export function useAdminController(activeTab: string) {
         listPrice: Number(updatedProduct.listPrice),
         listPriceB: Number(updatedProduct.listPriceB || 0),
         listPriceC: Number(updatedProduct.listPriceC || 0),
-        profitMargin: updatedProduct.profitMargin !== undefined ? (updatedProduct.profitMargin ? Number(updatedProduct.profitMargin) : null) : undefined,
+        profitMargin:
+          updatedProduct.profitMargin !== undefined
+            ? updatedProduct.profitMargin !== null && updatedProduct.profitMargin !== ''
+              ? Number(updatedProduct.profitMargin)
+              : null
+            : undefined,
         rubroId: updatedProduct.rubroId !== undefined ? (updatedProduct.rubroId ? Number(updatedProduct.rubroId) : null) : undefined,
         providerId: updatedProduct.providerId !== undefined ? (updatedProduct.providerId ? Number(updatedProduct.providerId) : null) : undefined,
         minStock: Number(updatedProduct.minStock),

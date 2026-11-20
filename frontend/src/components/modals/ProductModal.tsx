@@ -135,7 +135,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
       listPriceB: Number(data.listPriceB || 0),
       listPriceC: Number(data.listPriceC || 0),
       profitMargin:
-        data.profitMargin !== undefined && data.profitMargin !== '' ? 1 + Number(data.profitMargin) / 100 : null,
+        data.profitMargin !== undefined && data.profitMargin !== '' && data.profitMargin !== null
+          ? Number(data.profitMargin)
+          : null,
       rubroId: data.rubroId ? Number(data.rubroId) : null,
       providerId: data.providerId ? Number(data.providerId) : null,
       commercialCategory: data.commercialCategory || null,

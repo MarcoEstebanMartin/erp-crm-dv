@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calculator, Check, X } from 'lucide-react';
 import { NativeModalDialog } from './NativeModalDialog';
+import { resolveProductMarginPct } from '../../utils/productsListHelpers';
 
 interface SupplierCostCalculatorModalProps {
   product: any | null;
@@ -13,12 +14,7 @@ const SupplierCostCalculatorInner: React.FC<{
   onClose: () => void;
   onSaveProduct: (updatedProduct: any) => Promise<void>;
 }> = ({ product, onClose, onSaveProduct }) => {
-  const initialMarginPct =
-    product.profitMargin !== null && product.profitMargin !== undefined
-      ? Math.round((Number(product.profitMargin) > 2 ? Number(product.profitMargin) : (Number(product.profitMargin) - 1) * 100) * 100) / 100
-      : product.rubro?.profitMargin
-        ? Math.round((Number(product.rubro.profitMargin) - 1) * 100 * 100) / 100
-        : 25;
+  const initialMarginPct = resolveProductMarginPct(product);
 
   const [mode, setMode] = useState<'MARGIN' | 'MANUAL_PRICE'>('MARGIN');
   const [costPrice, setCostPrice] = useState<string>(String(product.costPrice || 0));
@@ -66,13 +62,13 @@ const SupplierCostCalculatorInner: React.FC<{
     try {
       setSaving(true);
       setError(null);
-      const effectiveMarginFactor = Number((1 + Number(previewMargin) / 100).toFixed(4));
+      const effectiveMarginPct = Number(Number(previewMargin).toFixed(2));
       await onSaveProduct({
         ...product,
         costPrice: numCost,
         listPrice: previewPrice4,
         listPriceB: Number(listPriceB) || 0,
-        profitMargin: effectiveMarginFactor,
+        profitMargin: effectiveMarginPct,
       });
       onClose();
     } catch (err: any) {
