@@ -18,6 +18,7 @@ import {
   resolveOrderClientRoute,
   shouldShowInFulfillmentBilledColumn,
 } from '../../utils/orderSearchAndStatus.helper';
+import { resolvePreparingQueueOrders } from '../modals/fulfillmentQueue.helper';
 
 export interface FulfillmentConfirmState {
   isOpen: boolean;
@@ -40,10 +41,12 @@ export function useFulfillmentDashboard() {
   const [requestingCaeId, setRequestingCaeId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [fulfillmentModalOrder, setFulfillmentModalOrder] = useState<any | null>(null);
+  const [fulfillmentQueueOrders, setFulfillmentQueueOrders] = useState<any[] | null>(null);
   const [selectedSeller, setSelectedSeller] = useState<string>('ALL');
   const [selectedRoute, setSelectedRoute] = useState<string>('ALL');
   const [selectedZone, setSelectedZone] = useState<string>('ALL');
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [selectedPreparingIds, setSelectedPreparingIds] = useState<number[]>([]);
   const [viewMode, setViewMode] = useState<'board' | 'list'>('list');
 
   const [confirmState, setConfirmState] = useState<FulfillmentConfirmState>({
@@ -199,6 +202,37 @@ export function useFulfillmentDashboard() {
     }
   };
 
+  const toggleSelectPreparing = (id: number) => {
+    setSelectedPreparingIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const toggleSelectAllPreparing = () => {
+    const preparingIds = preparing.map((o) => o.id);
+    const allSelected =
+      preparingIds.length > 0 && preparingIds.every((id) => selectedPreparingIds.includes(id));
+    if (allSelected) {
+      setSelectedPreparingIds((prev) => prev.filter((id) => !preparingIds.includes(id)));
+    } else {
+      setSelectedPreparingIds((prev) => Array.from(new Set([...prev, ...preparingIds])));
+    }
+  };
+
+  const handleStartFulfillmentQueue = () => {
+    const queue = resolvePreparingQueueOrders(preparing, selectedPreparingIds);
+    if (queue.length === 0) return;
+    setFulfillmentQueueOrders(queue);
+  };
+
+  const handleCloseFulfillmentQueue = (shouldRefresh = false) => {
+    setFulfillmentQueueOrders(null);
+    setSelectedPreparingIds([]);
+    if (shouldRefresh) {
+      void fetchOrders();
+    }
+  };
+
   const handleRevertToPending = async (orderId: number) => {
     try {
       await api.updateOrderStatus(orderId, 'PENDING' as any);
@@ -323,6 +357,7 @@ export function useFulfillmentDashboard() {
     setSearchQuery,
     fulfillmentModalOrder,
     setFulfillmentModalOrder,
+    fulfillmentQueueOrders,
     selectedSeller,
     setSelectedSeller,
     selectedRoute,
@@ -330,6 +365,7 @@ export function useFulfillmentDashboard() {
     selectedZone,
     setSelectedZone,
     selectedOrderIds,
+    selectedPreparingIds,
     confirmState,
     uniqueSellers,
     uniqueRoutes,
@@ -347,6 +383,10 @@ export function useFulfillmentDashboard() {
     handleRequestCae,
     toggleSelectOrder,
     toggleSelectAllPending,
+    toggleSelectPreparing,
+    toggleSelectAllPreparing,
+    handleStartFulfillmentQueue,
+    handleCloseFulfillmentQueue,
     handleRevertToPending,
     handleRevertAllPreparingToPending,
     handlePrintSinglePicking,

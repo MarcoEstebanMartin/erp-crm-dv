@@ -28,9 +28,12 @@ interface FulfillmentListViewProps {
   pendingCaeCount: number;
   pendingRoutes?: any[];
   selectedOrderIds: number[];
+  selectedPreparingIds: number[];
   requestingCaeId?: number | null;
   onToggleSelect: (id: number) => void;
   onToggleSelectAllPending: () => void;
+  onToggleSelectPreparing: (id: number) => void;
+  onToggleSelectAllPreparing: () => void;
   onPrintPickingList: (order: any) => void;
   onPrintLabels: (order: any) => void;
   onOpenFulfillmentModal: (order: any) => void;
@@ -55,9 +58,12 @@ export function FulfillmentListView({
   pendingCaeCount,
   pendingRoutes = [],
   selectedOrderIds,
+  selectedPreparingIds,
   requestingCaeId,
   onToggleSelect,
   onToggleSelectAllPending,
+  onToggleSelectPreparing,
+  onToggleSelectAllPreparing,
   onPrintPickingList,
   onPrintLabels,
   onOpenFulfillmentModal,
@@ -78,7 +84,37 @@ export function FulfillmentListView({
 
   const rows = stageFilter === 'ALL' ? allRows : allRows.filter((r) => r.stage === stageFilter);
   const allPendingSelected = pending.length > 0 && pending.every((o) => selectedOrderIds.includes(o.id));
-  const canSelectPending = pending.length > 0 && (stageFilter === 'ALL' || stageFilter === 'PENDING');
+  const allPreparingSelected =
+    preparing.length > 0 && preparing.every((o) => selectedPreparingIds.includes(o.id));
+  const headerSelectMode: 'PENDING' | 'PREPARING' | 'NONE' =
+    stageFilter === 'PREPARING'
+      ? preparing.length > 0
+        ? 'PREPARING'
+        : 'NONE'
+      : stageFilter === 'PENDING'
+        ? pending.length > 0
+          ? 'PENDING'
+          : 'NONE'
+        : stageFilter === 'ALL'
+          ? pending.length > 0
+            ? 'PENDING'
+            : preparing.length > 0
+              ? 'PREPARING'
+              : 'NONE'
+          : 'NONE';
+  const headerChecked =
+    headerSelectMode === 'PREPARING'
+      ? allPreparingSelected
+      : headerSelectMode === 'PENDING'
+        ? allPendingSelected
+        : false;
+  const handleHeaderToggle = () => {
+    if (headerSelectMode === 'PREPARING') {
+      onToggleSelectAllPreparing();
+    } else if (headerSelectMode === 'PENDING') {
+      onToggleSelectAllPending();
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -105,11 +141,15 @@ export function FulfillmentListView({
               <th scope="col" style={{ width: '36px', textAlign: 'center' }}>
                 <input
                   type="checkbox"
-                  checked={allPendingSelected}
-                  onChange={onToggleSelectAllPending}
-                  disabled={!canSelectPending}
-                  aria-label="Seleccionar todos los pedidos pendientes para lote A4"
-                  style={{ accentColor: '#111827', cursor: canSelectPending ? 'pointer' : 'not-allowed' }}
+                  checked={headerChecked}
+                  onChange={handleHeaderToggle}
+                  disabled={headerSelectMode === 'NONE'}
+                  aria-label={
+                    headerSelectMode === 'PREPARING'
+                      ? 'Seleccionar todos los pedidos en armado para facturar'
+                      : 'Seleccionar todos los pedidos pendientes para lote A4'
+                  }
+                  style={{ accentColor: '#111827', cursor: headerSelectMode !== 'NONE' ? 'pointer' : 'not-allowed' }}
                 />
               </th>
             <th scope="col">Pedido</th>
@@ -138,7 +178,10 @@ export function FulfillmentListView({
               const age = formatOrderRelativeAge(o.createdAt);
               const channelBadge = resolveOrderFiscalChannelBadge(o);
               const pendingCae = isOrderPendingCae(o);
-              const isSelected = selectedOrderIds.includes(o.id);
+              const isSelected =
+                stage === 'PREPARING'
+                  ? selectedPreparingIds.includes(o.id)
+                  : selectedOrderIds.includes(o.id);
               const tone = FULFILLMENT_STAGE_TONES[stage];
               const rowAccent = pendingCae ? '#E30613' : tone.accent;
 
@@ -157,6 +200,14 @@ export function FulfillmentListView({
                         checked={isSelected}
                         onChange={() => onToggleSelect(o.id)}
                         aria-label={`Seleccionar pedido #${o.id} para lote A4`}
+                        style={{ accentColor: '#111827', cursor: 'pointer' }}
+                      />
+                    ) : stage === 'PREPARING' ? (
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => onToggleSelectPreparing(o.id)}
+                        aria-label={`Seleccionar pedido #${o.id} para revisar y facturar`}
                         style={{ accentColor: '#111827', cursor: 'pointer' }}
                       />
                     ) : null}

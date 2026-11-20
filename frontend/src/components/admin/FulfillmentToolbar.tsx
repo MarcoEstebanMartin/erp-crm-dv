@@ -1,4 +1,4 @@
-import { LayoutGrid, List, Printer, RefreshCw, Search, Tag } from 'lucide-react';
+import { CheckCircle2, LayoutGrid, List, Printer, RefreshCw, Search, Tag } from 'lucide-react';
 
 interface FulfillmentToolbarProps {
   loading: boolean;
@@ -16,6 +16,9 @@ interface FulfillmentToolbarProps {
   selectedZone: string;
   setSelectedZone: (zone: string) => void;
   selectedOrderIdsCount: number;
+  preparingCount: number;
+  selectedPreparingIdsCount: number;
+  handleStartFulfillmentQueue: () => void;
   handlePrintBatchA4: () => void;
   handlePrintConsolidated: () => void;
   handlePrintLabels: () => void;
@@ -37,10 +40,14 @@ export function FulfillmentToolbar({
   selectedZone,
   setSelectedZone,
   selectedOrderIdsCount,
+  preparingCount,
+  selectedPreparingIdsCount,
+  handleStartFulfillmentQueue,
   handlePrintBatchA4,
   handlePrintConsolidated,
   handlePrintLabels,
 }: FulfillmentToolbarProps) {
+  const queueBatchCount = selectedPreparingIdsCount > 0 ? selectedPreparingIdsCount : preparingCount;
   return (
     <div
       style={{
@@ -197,6 +204,27 @@ export function FulfillmentToolbar({
       </search>
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {preparingCount > 0 && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{
+              height: '28px',
+              padding: '0 12px',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              backgroundColor: '#E30613',
+              borderColor: '#E30613',
+              borderRadius: '6px',
+            }}
+            onClick={handleStartFulfillmentQueue}
+            title="Revisar y facturar pedidos en armado de corrido"
+          >
+            <CheckCircle2 size={13} aria-hidden="true" />
+            Revisar y Facturar ({queueBatchCount})
+          </button>
+        )}
+
         <button
           type="button"
           className="btn btn-primary"

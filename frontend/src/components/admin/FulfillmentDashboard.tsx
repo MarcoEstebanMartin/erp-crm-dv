@@ -45,6 +45,9 @@ export default function FulfillmentDashboard() {
         selectedZone={f.selectedZone}
         setSelectedZone={f.setSelectedZone}
         selectedOrderIdsCount={f.selectedOrderIds.length}
+        preparingCount={f.preparing.length}
+        selectedPreparingIdsCount={f.selectedPreparingIds.length}
+        handleStartFulfillmentQueue={f.handleStartFulfillmentQueue}
         handlePrintBatchA4={f.handlePrintBatchA4}
         handlePrintConsolidated={f.handlePrintConsolidated}
         handlePrintLabels={() => f.handlePrintLabels()}
@@ -58,9 +61,12 @@ export default function FulfillmentDashboard() {
           pendingCaeCount={f.pendingCaeCount}
           pendingRoutes={pendingRoutes}
           selectedOrderIds={f.selectedOrderIds}
+          selectedPreparingIds={f.selectedPreparingIds}
           requestingCaeId={f.requestingCaeId}
           onToggleSelect={f.toggleSelectOrder}
           onToggleSelectAllPending={f.toggleSelectAllPending}
+          onToggleSelectPreparing={f.toggleSelectPreparing}
+          onToggleSelectAllPreparing={f.toggleSelectAllPreparing}
           onPrintPickingList={f.handlePrintSinglePicking}
           onPrintLabels={f.handlePrintLabels}
           onOpenFulfillmentModal={f.setFulfillmentModalOrder}
@@ -294,6 +300,14 @@ export default function FulfillmentDashboard() {
             f.setFulfillmentModalOrder(null);
             void f.fetchOrders();
           }}
+        />
+      )}
+
+      {f.fulfillmentQueueOrders && f.fulfillmentQueueOrders.length > 0 && (
+        <OrderFulfillmentModal
+          queueOrders={f.fulfillmentQueueOrders}
+          onClose={() => f.handleCloseFulfillmentQueue(false)}
+          onSuccess={() => f.handleCloseFulfillmentQueue(true)}
         />
       )}
 

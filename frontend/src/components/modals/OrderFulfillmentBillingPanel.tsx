@@ -23,6 +23,8 @@ interface OrderFulfillmentBillingPanelProps {
   onSelectedBankIdChange: (value: string) => void;
   loading: boolean;
   onConfirmAndInvoice: () => void;
+  submitLabel?: string;
+  shortcutHint?: string;
 }
 
 const labelCapsStyle = {
@@ -60,6 +62,8 @@ export default function OrderFulfillmentBillingPanel({
   onSelectedBankIdChange,
   loading,
   onConfirmAndInvoice,
+  submitLabel = 'Confirmar y Facturar',
+  shortcutHint,
 }: OrderFulfillmentBillingPanelProps) {
   return (
     <div
@@ -282,7 +286,23 @@ export default function OrderFulfillmentBillingPanel({
       >
         {loading ? 'Procesando...' : (
           <>
-            <CheckCircle size={20} aria-hidden="true" /> Confirmar y Facturar
+            <CheckCircle size={20} aria-hidden="true" />
+            <span>{submitLabel}</span>
+            {shortcutHint && (
+              <kbd
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  color: '#FFFFFF',
+                  marginLeft: '4px',
+                }}
+              >
+                {shortcutHint}
+              </kbd>
+            )}
           </>
         )}
       </button>
