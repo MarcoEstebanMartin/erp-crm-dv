@@ -170,7 +170,8 @@ export function GastosPlanillaTable({
 
   useEffect(() => {
     if (!quickCatId && categories.length > 0) {
-      setQuickCatId(String(categories[0].id));
+      const otros = categories.find((c) => c.name.toLowerCase().includes('otros'));
+      setQuickCatId(String(otros ? otros.id : categories[0].id));
     }
   }, [categories, quickCatId]);
 

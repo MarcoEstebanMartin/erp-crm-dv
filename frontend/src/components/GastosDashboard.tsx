@@ -9,7 +9,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { formatDiffPeso, formatPeso, getMonthName, getShortMonthName } from './gastos/gastos.types';
+import { getMonthName } from './gastos/gastos.types';
 import { useGastosController } from './gastos/useGastosController';
 import { GastosPlanillaTable } from './gastos/GastosPlanillaTable';
 import { GastosCategoriesTab } from './gastos/GastosCategoriesTab';
@@ -21,7 +21,7 @@ export default function GastosDashboard() {
   const anyModalOpen = g.isCreateModalOpen || g.isImportModalOpen || g.isCopyModalOpen;
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '4px' }}>
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '4px' }}>
       {g.errorMsg && !anyModalOpen && (
         <div role="alert" style={{ padding: '10px 14px', backgroundColor: '#fff5f5', color: '#c53030', borderRadius: '6px', fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', border: '1px solid #feb2b2' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -47,7 +47,7 @@ export default function GastosDashboard() {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Gastos</h2>
 
           <div
@@ -80,16 +80,72 @@ export default function GastosDashboard() {
               <ChevronRight size={16} aria-hidden="true" />
             </button>
           </div>
+
+          <div role="tablist" aria-label="Vistas de gastos" style={{ display: 'inline-flex', gap: '3px', backgroundColor: '#F3F4F6', padding: '3px', borderRadius: '8px' }}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={g.activeTab === 'planilla'}
+              onClick={() => g.setActiveTab('planilla')}
+              style={{
+                border: 'none',
+                borderRadius: '6px',
+                padding: '5px 12px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: g.activeTab === 'planilla' ? '#fff' : 'transparent',
+                color: g.activeTab === 'planilla' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                boxShadow: g.activeTab === 'planilla' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+              }}
+            >
+              Planilla
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={g.activeTab === 'categorias'}
+              onClick={() => g.setActiveTab('categorias')}
+              style={{
+                border: 'none',
+                borderRadius: '6px',
+                padding: '5px 12px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: g.activeTab === 'categorias' ? '#fff' : 'transparent',
+                color: g.activeTab === 'categorias' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                boxShadow: g.activeTab === 'categorias' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+              }}
+            >
+              Por categoría
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {g.activeTab === 'planilla' && (
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} aria-hidden="true" />
+              <input
+                type="search"
+                value={g.searchQuery}
+                onChange={(e) => g.setSearchQuery(e.target.value)}
+                placeholder="Buscar..."
+                aria-label="Buscar concepto o categoría"
+                className="input"
+                style={{ paddingLeft: '30px', height: '34px', width: '170px', fontSize: '0.83rem' }}
+              />
+            </div>
+          )}
+
           {g.missingRows.length > 0 && (
             <button
               type="button"
               className="btn btn-secondary"
               disabled={g.copyingAll}
               onClick={g.handleCopyAllMissing}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', height: '34px' }}
             >
               <Copy size={14} aria-hidden="true" />
               <span>{g.copyingAll ? 'Copiando...' : `Copiar ${g.missingRows.length} pendientes`}</span>
@@ -101,7 +157,7 @@ export default function GastosDashboard() {
               type="button"
               className="btn btn-secondary"
               onClick={() => { g.setErrorMsg(null); g.setIsImportModalOpen(true); }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', height: '34px' }}
             >
               <FileSpreadsheet size={14} aria-hidden="true" />
               <span>Excel</span>
@@ -112,128 +168,12 @@ export default function GastosDashboard() {
             type="button"
             className="btn btn-primary"
             onClick={() => { g.setErrorMsg(null); g.setIsCreateModalOpen(true); }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', height: '34px' }}
           >
             <Plus size={14} aria-hidden="true" />
             <span>Detallado</span>
           </button>
         </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-        <div className="card" style={{ padding: '14px 18px' }}>
-          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-            {getMonthName(g.selectedMonth)} {g.selectedYear}
-          </div>
-          <div className="tabular-nums" style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '4px', color: 'var(--text-primary)' }}>
-            {formatPeso(g.totalGasto)}
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: '14px 18px' }}>
-          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-            {getShortMonthName(g.compareMonth)} {g.compareYear}
-          </div>
-          <div className="tabular-nums" style={{ fontSize: '1.5rem', fontWeight: 600, marginTop: '4px', color: 'var(--text-secondary)' }}>
-            {formatPeso(g.totalCompare)}
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: '14px 18px' }}>
-          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-            Diferencia
-          </div>
-          <div
-            className="tabular-nums"
-            style={{
-              fontSize: '1.5rem',
-              fontWeight: 600,
-              marginTop: '4px',
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: '8px',
-              color: g.totalDiff === 0 ? 'var(--text-muted)' : g.totalDiff > 0 ? 'var(--color-corp-red)' : '#15803D',
-            }}
-          >
-            <span>{formatDiffPeso(g.totalDiff)}</span>
-            {g.totalDiffPct !== null && g.totalDiff !== 0 && (
-              <span style={{ fontSize: '0.82rem', fontWeight: 500 }}>
-                ({g.totalDiffPct > 0 ? '+' : ''}{g.totalDiffPct.toFixed(1)}%)
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-        <div role="tablist" aria-label="Vistas de gastos" style={{ display: 'inline-flex', gap: '4px', backgroundColor: '#F3F4F6', padding: '3px', borderRadius: '8px' }}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={g.activeTab === 'planilla'}
-            onClick={() => g.setActiveTab('planilla')}
-            style={{
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 14px',
-              fontSize: '0.83rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              backgroundColor: g.activeTab === 'planilla' ? '#fff' : 'transparent',
-              color: g.activeTab === 'planilla' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              boxShadow: g.activeTab === 'planilla' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-            }}
-          >
-            Planilla
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={g.activeTab === 'categorias'}
-            onClick={() => g.setActiveTab('categorias')}
-            style={{
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 14px',
-              fontSize: '0.83rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              backgroundColor: g.activeTab === 'categorias' ? '#fff' : 'transparent',
-              color: g.activeTab === 'categorias' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              boxShadow: g.activeTab === 'categorias' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-            }}
-          >
-            Por categoría
-          </button>
-        </div>
-
-        {g.activeTab === 'planilla' && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} aria-hidden="true" />
-              <input
-                type="search"
-                value={g.searchQuery}
-                onChange={(e) => g.setSearchQuery(e.target.value)}
-                placeholder="Buscar concepto..."
-                aria-label="Buscar concepto"
-                className="input"
-                style={{ paddingLeft: '30px', height: '34px', width: '190px', fontSize: '0.83rem' }}
-              />
-            </div>
-
-            <select
-              value={g.filterCategoryId}
-              onChange={(e) => g.setFilterCategoryId(e.target.value)}
-              aria-label="Filtrar por categoría"
-              className="select"
-              style={{ height: '34px', width: '165px', fontSize: '0.83rem' }}
-            >
-              <option value="">Todas</option>
-              {g.categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-            </select>
-          </div>
-        )}
       </div>
 
       {g.activeTab === 'planilla' ? (
