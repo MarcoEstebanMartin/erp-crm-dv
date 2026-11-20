@@ -179,7 +179,7 @@ export function shouldShowInFulfillmentBilledColumn(order: any, now: Date = new 
   if (!order?.invoiceNumber || order?.status === 'CANCELLED') return false;
   if (isOrderPendingCae(order)) return true;
 
-  const targetDate = order.updatedAt || order.createdAt;
+  const targetDate = order.invoicedAt || order.updatedAt || order.createdAt;
   if (!targetDate) return false;
   return formatArgentinaDateKey(targetDate) === formatArgentinaDateKey(now);
 }

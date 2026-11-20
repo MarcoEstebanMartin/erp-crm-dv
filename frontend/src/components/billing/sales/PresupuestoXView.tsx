@@ -24,7 +24,7 @@ function formatPaymentMethodLabel(paymentMethod?: string): string {
 
 export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
   const client = resolveOrderPersona(invoice);
-  const issueDateStr = invoice.issueDate || invoice.createdAt;
+  const issueDateStr = invoice.invoicedAt || invoice.issueDate || invoice.createdAt;
   const formattedDate = issueDateStr
     ? new Date(issueDateStr).toLocaleDateString('es-AR')
     : new Date().toLocaleDateString('es-AR');

@@ -104,7 +104,7 @@ export function SalesInvoicesTable({
                 return (
                   <tr key={inv.id}>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      {new Date(inv.createdAt).toLocaleDateString('es-AR')}
+                      {new Date(inv.invoicedAt || inv.createdAt).toLocaleDateString('es-AR')}
                     </td>
                     <td>
                       <span

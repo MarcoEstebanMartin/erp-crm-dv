@@ -41,8 +41,9 @@ function formatRemitoBultosLabel(items: any[]): string {
 export const printRemitoX = (order: any) => {
   const { company, phone } = getPrintCompanyContext();
   const client = resolvePrintClientMeta(order);
-  const formattedDate = order.createdAt
-    ? new Date(order.createdAt).toLocaleDateString('es-AR', {
+  const remitoDateValue = order.invoicedAt || order.createdAt;
+  const formattedDate = remitoDateValue
+    ? new Date(remitoDateValue).toLocaleDateString('es-AR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -194,8 +195,9 @@ export const printOrderReceipt = (order: any) => {
   const { company, phone } = getPrintCompanyContext();
   const client = resolvePrintClientMeta(order);
   const remitoNum = order.invoiceNumber || order.remitoNumber || `INT-${String(order.id).padStart(5, '0')}`;
-  const formattedDate = order.createdAt
-    ? new Date(order.createdAt).toLocaleString('es-AR')
+  const receiptDateValue = order.invoicedAt || order.createdAt;
+  const formattedDate = receiptDateValue
+    ? new Date(receiptDateValue).toLocaleString('es-AR')
     : new Date().toLocaleString('es-AR');
   const items = order.items || order.orderItems || [];
 

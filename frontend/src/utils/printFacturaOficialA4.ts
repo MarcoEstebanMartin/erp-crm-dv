@@ -12,8 +12,9 @@ export function printFacturaOficialA4(order: any): void {
   const companyInitDate = company.inicioActividades;
   const puntoVentaStr = String(order.puntoVenta || company.puntoVenta || 1).padStart(4, '0');
 
-  const formattedDate = order.createdAt
-    ? new Date(order.createdAt).toLocaleDateString('es-AR', {
+  const invoiceDateValue = order.invoicedAt || order.createdAt;
+  const formattedDate = invoiceDateValue
+    ? new Date(invoiceDateValue).toLocaleDateString('es-AR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
