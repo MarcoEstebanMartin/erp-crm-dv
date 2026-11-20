@@ -88,8 +88,19 @@ export const transactionAdminService = {
     adjustedAmount?: number | null;
     bankAccountId?: number | null;
   }) {
-    const transaction = await prisma.transaction.findUnique({ where: { id: params.txId } });
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: params.txId },
+      include: { fieldReceipt: { select: { id: true, receiptNumber: true } } },
+    });
     if (!transaction) throw new AppError('Transacción no encontrada.', 404);
+    if (transaction.fieldReceipt) {
+      const receiptLabel =
+        transaction.fieldReceipt.receiptNumber || `#${transaction.fieldReceipt.id}`;
+      throw new AppError(
+        `Este cobro pertenece al recibo digital en calle ${receiptLabel}. Gestionalo desde Rendiciones para evitar duplicar acreditaciones.`,
+        409,
+      );
+    }
 
     const updatedTx = await prisma.$transaction(async (tx) => {
       let resolvedBankAccountId = transaction.bankAccountId;

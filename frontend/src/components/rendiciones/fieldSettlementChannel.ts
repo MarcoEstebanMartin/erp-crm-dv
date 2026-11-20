@@ -26,10 +26,9 @@ export function resolveSettlementChannel(
 
 export function isPendingOpenSettlement(settlement: CollectorSettlementDTO): boolean {
   if (settlement.status !== 'OPEN' && settlement.status !== 'SUBMITTED') return false;
-  const activeReceipts = (settlement.receipts || []).filter((r) => r.status !== 'VOIDED');
   const total =
     Math.round(Number(settlement.expectedCash || 0)) +
     Math.round(Number(settlement.expectedChecksAmount || 0)) +
     Math.round(Number(settlement.pendingTransfersAmount || 0));
-  return activeReceipts.length > 0 || total > 0;
+  return total > 0 || Number(settlement.expectedChecksCount || 0) > 0;
 }

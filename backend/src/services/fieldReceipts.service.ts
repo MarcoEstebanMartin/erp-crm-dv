@@ -18,6 +18,10 @@ import {
 } from '../engines/fieldReceipts.engine';
 import { recordLedgerMovement } from './ledger/account-ledger.service';
 import { assertCollectionAllowed } from './collections/collection-guard.service';
+import {
+  createSettlementCashDrawerAndLinkMirrors,
+  syncMirrorTransactionForFieldReceipt,
+} from './collections/field-receipt-mirror.helper';
 import { generateUniqueVerificationCode } from '../core/receiptToken';
 import {
   ApproveSettlementInput,
@@ -265,7 +269,7 @@ export const fieldReceiptsService = {
         });
 
         const hasRemainingPending = payment.fieldReceipt.payments.some(
-          (p) => p.id !== payment.id && p.status === 'PENDING_BANK',
+          (p) => p.id !== payment.id && (p.status === 'PENDING_BANK' || p.status === 'IN_TRANSIT'),
         );
         if (!hasRemainingPending && payment.fieldReceipt.status !== 'VOIDED') {
           await tx.fieldReceipt.update({
@@ -298,6 +302,8 @@ export const fieldReceiptsService = {
       if (payment.fieldReceipt.settlementId) {
         await recomputeOpenSettlement(tx, payment.fieldReceipt.settlementId);
       }
+
+      await syncMirrorTransactionForFieldReceipt(tx, payment.fieldReceiptId, adminUserId);
 
       return tx.fieldReceipt.findUnique({
         where: { id: payment.fieldReceiptId },
@@ -343,6 +349,8 @@ export const fieldReceiptsService = {
       if (payment.fieldReceipt.settlementId) {
         await recomputeOpenSettlement(tx, payment.fieldReceipt.settlementId);
       }
+
+      await syncMirrorTransactionForFieldReceipt(tx, payment.fieldReceiptId, adminUserId);
 
       return { rejected: true, amountReversed: amountNum };
     });
@@ -453,13 +461,17 @@ export const fieldReceiptsService = {
     return prisma.$transaction(async (tx) => {
       const settlement = await tx.collectorSettlement.findUnique({
         where: { id: settlementId },
-        include: { receipts: { include: { payments: true } } },
+        include: {
+          collector: { select: { id: true, username: true, role: true } },
+          deliveryRoute: { select: { id: true, driverName: true, vehiclePlate: true } },
+          receipts: { include: { payments: true } },
+        },
       });
       if (!settlement) {
         throw new AppError('Rendición no encontrada', 404);
       }
-      if (settlement.status === 'APPROVED') {
-        throw new AppError('Esta rendición ya fue aprobada', 409);
+      if (settlement.status === 'APPROVED' || settlement.status === 'DISCREPANCY') {
+        throw new AppError('Esta rendición ya fue aprobada y cerrada', 409);
       }
 
       await recomputeOpenSettlement(tx, settlement.id);
@@ -468,9 +480,8 @@ export const fieldReceiptsService = {
       const arqueo = evaluateSettlementArqueo(refreshed.expectedCash.toString(), input.declaredCash);
 
       // Marca efectivo y cheques IN_TRANSIT como CLEARED al recibirlos en tesorería
-      const receiptIds = settlement.receipts
-        .filter((r) => r.status !== 'VOIDED')
-        .map((r) => r.id);
+      const activeReceipts = settlement.receipts.filter((r) => r.status !== 'VOIDED');
+      const receiptIds = activeReceipts.map((r) => r.id);
 
       if (receiptIds.length > 0) {
         await tx.fieldReceiptPayment.updateMany({
@@ -481,6 +492,27 @@ export const fieldReceiptsService = {
           },
           data: { status: 'CLEARED', verifiedAt: new Date() },
         });
+      }
+
+      await createSettlementCashDrawerAndLinkMirrors(tx, {
+        settlementId: settlement.id,
+        collectorUserId: settlement.collectorUserId,
+        collector: settlement.collector,
+        deliveryRouteId: settlement.deliveryRouteId,
+        deliveryRoute: settlement.deliveryRoute,
+        activeReceipts,
+        expectedCash: refreshed.expectedCash.toString(),
+        expectedChecksAmount: refreshed.expectedChecksAmount.toString(),
+        declaredCash: arqueo.declaredCash.toNumber(),
+        cashDifference: arqueo.cashDifference.toNumber(),
+        settlementStatus: arqueo.status,
+        settlementCreatedAt: settlement.createdAt,
+        adminUserId,
+        notes: input.notes ?? null,
+      });
+
+      for (const receipt of activeReceipts) {
+        await syncMirrorTransactionForFieldReceipt(tx, receipt.id, adminUserId);
       }
 
       return tx.collectorSettlement.update({

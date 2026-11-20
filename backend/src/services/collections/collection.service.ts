@@ -52,6 +52,7 @@ export const collectionService = {
           amount: true,
           userId: true,
           order: { select: { deliveryRouteId: true } },
+          fieldReceipt: { select: { deliveryRouteId: true } },
         },
       }),
     ]);
@@ -67,8 +68,9 @@ export const collectionService = {
 
     for (const tx of pendingTransactions) {
       pendingAmountDec = pendingAmountDec.plus(roundToTwoDecimals(tx.amount?.toString() ?? 0));
-      if (tx.order?.deliveryRouteId) {
-        driversSet.add(tx.order.deliveryRouteId);
+      const routeId = tx.order?.deliveryRouteId ?? tx.fieldReceipt?.deliveryRouteId ?? null;
+      if (routeId) {
+        driversSet.add(routeId);
       } else if (tx.userId) {
         sellersSet.add(tx.userId);
       }

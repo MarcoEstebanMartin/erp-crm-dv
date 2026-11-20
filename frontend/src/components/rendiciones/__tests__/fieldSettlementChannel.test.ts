@@ -53,7 +53,7 @@ describe('fieldSettlementChannel', () => {
     expect(resolveSettlementChannel(driverByRole)).toBe('DRIVER');
   });
 
-  it('detecta solo rendiciones OPEN/SUBMITTED con recibos activos o saldo pendiente', () => {
+  it('detecta solo rendiciones OPEN/SUBMITTED con saldo o cheques pendientes', () => {
     expect(isPendingOpenSettlement(makeSettlement())).toBe(true);
     expect(isPendingOpenSettlement(makeSettlement({ status: 'APPROVED' }))).toBe(false);
     expect(
@@ -61,6 +61,32 @@ describe('fieldSettlementChannel', () => {
         makeSettlement({
           expectedCash: '0',
           receipts: [],
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isPendingOpenSettlement(
+        makeSettlement({
+          status: 'OPEN',
+          expectedCash: '0',
+          expectedChecksAmount: '0',
+          pendingTransfersAmount: '0',
+          expectedChecksCount: 0,
+          receipts: [
+            {
+              id: 11,
+              receiptNumber: 'REC-C-0000002',
+              provisionalCode: 'PROV-2',
+              personaId: 1,
+              totalAmount: '535560',
+              status: 'VERIFIED',
+              capturedAt: '2026-11-20T01:34:48Z',
+              whatsappStatus: 'PENDING',
+              whatsappError: null,
+              pdfUrl: null,
+              payments: [],
+            },
+          ],
         }),
       ),
     ).toBe(false);

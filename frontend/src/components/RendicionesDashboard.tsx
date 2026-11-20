@@ -144,7 +144,11 @@ const RendicionesDashboard: React.FC = () => {
           fieldBusyId={field.busyId}
           declaredCashById={field.declaredCashById}
           setDeclaredCashById={field.setDeclaredCashById}
-          onApproveFieldSettlement={(s) => void field.handleApproveSettlement(s)}
+          onApproveFieldSettlement={(s) => {
+            void field.handleApproveSettlement(s).then(() => {
+              deposit.fetchDrawers();
+            });
+          }}
           drawers={deposit.drawers}
           onOpenAudit={audit.handleOpenAudit}
           onInspectDrawer={deposit.handleInspectDrawer}

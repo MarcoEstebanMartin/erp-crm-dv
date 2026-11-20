@@ -4,6 +4,7 @@ import {
   computeCollectorSettlementSummary,
   computeReceiptBreakdown,
   computeReversalAmount,
+  evaluateMirrorTransactionSync,
   evaluateSettlementArqueo,
 } from './fieldReceipts.engine';
 
@@ -106,5 +107,100 @@ describe('fieldReceipts.engine — Motor Matemático de Recibos en Calle', () =>
   it('calcula reversión exacta ante rechazo de cheque/transferencia o anulación', () => {
     expect(computeReversalAmount(85000).toNumber()).toBe(85000);
     expect(() => computeReversalAmount(0)).toThrow();
+  });
+
+  it('evalúa la sincronización de Transaction espejo en todos los escenarios posibles', () => {
+    // 1. Todo CLEARED en efectivo
+    expect(
+      evaluateMirrorTransactionSync({
+        receiptStatus: 'ISSUED',
+        payments: [{ paymentMethod: 'CASH', amount: 15000, status: 'CLEARED' }],
+      }),
+    ).toEqual({
+      action: 'MARK_VERIFIED',
+      amount: 15000,
+      bankAccountId: null,
+      receiptStatus: 'VERIFIED',
+    });
+
+    // 2. Todo CLEARED por transferencia con bankAccountId
+    expect(
+      evaluateMirrorTransactionSync({
+        receiptStatus: 'PENDING_VERIFICATION',
+        payments: [
+          { paymentMethod: 'BANK_TRANSFER', amount: 535560, status: 'CLEARED', bankAccountId: 22 },
+        ],
+      }),
+    ).toEqual({
+      action: 'MARK_VERIFIED',
+      amount: 535560,
+      bankAccountId: 22,
+      receiptStatus: 'VERIFIED',
+    });
+
+    // 3. Mixto todo CLEARED (efectivo + transferencia)
+    expect(
+      evaluateMirrorTransactionSync({
+        receiptStatus: 'PENDING_VERIFICATION',
+        payments: [
+          { paymentMethod: 'CASH', amount: 10000, status: 'CLEARED' },
+          { paymentMethod: 'BANK_TRANSFER', amount: 20000, status: 'CLEARED', bankAccountId: 5 },
+        ],
+      }),
+    ).toEqual({
+      action: 'MARK_VERIFIED',
+      amount: 30000,
+      bankAccountId: 5,
+      receiptStatus: 'VERIFIED',
+    });
+
+    // 4. Mixto con efectivo todavía IN_TRANSIT y transferencia ya CLEARED -> KEEP_PENDING
+    expect(
+      evaluateMirrorTransactionSync({
+        receiptStatus: 'PENDING_VERIFICATION',
+        payments: [
+          { paymentMethod: 'CASH', amount: 10000, status: 'IN_TRANSIT' },
+          { paymentMethod: 'BANK_TRANSFER', amount: 20000, status: 'CLEARED', bankAccountId: 5 },
+        ],
+      }),
+    ).toEqual({
+      action: 'KEEP_PENDING',
+      amount: 30000,
+      bankAccountId: 5,
+    });
+
+    // 5. Mixto con transferencia REJECTED y efectivo CLEARED -> MARK_VERIFIED solo por el efectivo
+    expect(
+      evaluateMirrorTransactionSync({
+        receiptStatus: 'PENDING_VERIFICATION',
+        payments: [
+          { paymentMethod: 'CASH', amount: 10000, status: 'CLEARED' },
+          { paymentMethod: 'BANK_TRANSFER', amount: 20000, status: 'REJECTED', bankAccountId: 5 },
+        ],
+      }),
+    ).toEqual({
+      action: 'MARK_VERIFIED',
+      amount: 10000,
+      bankAccountId: null,
+      receiptStatus: 'VERIFIED',
+    });
+
+    // 6. Todos los pagos REJECTED -> DELETE
+    expect(
+      evaluateMirrorTransactionSync({
+        receiptStatus: 'PENDING_VERIFICATION',
+        payments: [
+          { paymentMethod: 'BANK_TRANSFER', amount: 20000, status: 'REJECTED', bankAccountId: 5 },
+        ],
+      }),
+    ).toEqual({ action: 'DELETE' });
+
+    // 7. Recibo VOIDED -> DELETE
+    expect(
+      evaluateMirrorTransactionSync({
+        receiptStatus: 'VOIDED',
+        payments: [{ paymentMethod: 'CASH', amount: 15000, status: 'CLEARED' }],
+      }),
+    ).toEqual({ action: 'DELETE' });
   });
 });

@@ -76,7 +76,7 @@ export function summarizeOpenFieldSettlements(
     const transfersDec = roundToIntegerPeso(s.pendingTransfersAmount ?? 0);
     const totalDec = new Decimal(cashDec).plus(checksDec).plus(transfersDec);
 
-    if (activeReceipts.length === 0 && totalDec.lte(0)) continue;
+    if (totalDec.lte(0) && Number(s.expectedChecksCount || 0) <= 0) continue;
 
     const channel = classifyCollectorChannel({
       deliveryRouteId: s.deliveryRouteId,

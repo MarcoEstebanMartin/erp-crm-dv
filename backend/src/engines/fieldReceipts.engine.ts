@@ -202,3 +202,86 @@ export function computeReversalAmount(amount: NumericInput): Decimal {
   }
   return rounded;
 }
+
+export interface MirrorTransactionSyncInput {
+  receiptStatus: FieldReceiptStatusValue;
+  payments: Array<{
+    paymentMethod: FieldPaymentMethod;
+    amount: NumericInput;
+    status: PaymentVerificationStatusValue;
+    bankAccountId?: number | null;
+  }>;
+}
+
+export type MirrorTransactionSyncAction =
+  | { action: 'DELETE' }
+  | {
+      action: 'MARK_VERIFIED';
+      amount: number;
+      bankAccountId: number | null;
+      receiptStatus: 'VERIFIED';
+    }
+  | {
+      action: 'KEEP_PENDING';
+      amount: number;
+      bankAccountId: number | null;
+    };
+
+/**
+ * Determina cómo debe sincronizarse la Transaction espejo a partir del estado
+ * actual del recibo digital y sus medios de pago.
+ */
+export function evaluateMirrorTransactionSync(
+  input: MirrorTransactionSyncInput,
+): MirrorTransactionSyncAction {
+  if (input.receiptStatus === 'VOIDED') {
+    return { action: 'DELETE' };
+  }
+
+  let hasPending = false;
+  let clearedAmount = new Decimal(0);
+  let activeAmount = new Decimal(0);
+  let clearedBankAccountId: number | null = null;
+
+  for (const p of input.payments) {
+    if (p.status === 'IN_TRANSIT' || p.status === 'PENDING_BANK') {
+      hasPending = true;
+    }
+
+    const amt = roundToIntegerPeso(p.amount);
+
+    if (p.status !== 'REJECTED') {
+      activeAmount = activeAmount.plus(amt);
+    }
+
+    if (p.status === 'CLEARED') {
+      clearedAmount = clearedAmount.plus(amt);
+      if (
+        clearedBankAccountId === null &&
+        p.paymentMethod === 'BANK_TRANSFER' &&
+        p.bankAccountId != null
+      ) {
+        clearedBankAccountId = p.bankAccountId;
+      }
+    }
+  }
+
+  if (!hasPending && activeAmount.lte(0)) {
+    return { action: 'DELETE' };
+  }
+
+  if (!hasPending && clearedAmount.gt(0)) {
+    return {
+      action: 'MARK_VERIFIED',
+      amount: clearedAmount.toNumber(),
+      bankAccountId: clearedBankAccountId,
+      receiptStatus: 'VERIFIED',
+    };
+  }
+
+  return {
+    action: 'KEEP_PENDING',
+    amount: activeAmount.toNumber(),
+    bankAccountId: clearedBankAccountId,
+  };
+}

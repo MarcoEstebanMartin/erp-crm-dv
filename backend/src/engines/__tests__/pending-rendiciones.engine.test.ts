@@ -69,6 +69,17 @@ describe('pending-rendiciones.engine', () => {
         collector: { id: 10, username: 'vacio', role: 'VENDEDOR' },
         receipts: [],
       },
+      {
+        id: 5,
+        collectorUserId: 11,
+        status: 'OPEN',
+        expectedCash: '0',
+        expectedChecksCount: 0,
+        expectedChecksAmount: '0',
+        pendingTransfersAmount: '0',
+        collector: { id: 11, username: 'acreditado', role: 'VENDEDOR' },
+        receipts: [{ id: 105, status: 'VERIFIED', deliveryRouteId: null }],
+      },
     ]);
 
     expect(summaries).toHaveLength(2);

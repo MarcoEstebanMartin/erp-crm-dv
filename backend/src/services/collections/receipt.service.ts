@@ -222,11 +222,23 @@ export const receiptService = {
 
     const txRecord = await prisma.transaction.findUnique({
       where: { id: params.receiptId },
-      include: { persona: { select: { id: true, name: true } } },
+      include: {
+        persona: { select: { id: true, name: true } },
+        fieldReceipt: { select: { id: true, receiptNumber: true } },
+      },
     });
 
     if (!txRecord || txRecord.type !== TransactionType.INCOME) {
       throw new AppError('Recibo no encontrado', 404);
+    }
+
+    if (txRecord.fieldReceipt) {
+      const receiptLabel =
+        txRecord.fieldReceipt.receiptNumber || `#${txRecord.fieldReceipt.id}`;
+      throw new AppError(
+        `Este recibo (${receiptLabel}) fue emitido en calle. Anulalo desde Recibos en Calle / Rendiciones.`,
+        409,
+      );
     }
 
     if (txRecord.verified && params.userRole !== Role.ADMIN) {

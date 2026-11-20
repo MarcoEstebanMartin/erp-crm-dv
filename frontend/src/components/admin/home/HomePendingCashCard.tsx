@@ -135,6 +135,7 @@ export function HomePendingCashCard({
               <CashRowButton
                 key={`seller-${s.user?.id}`}
                 label={name}
+                channelLabel="Vendedor"
                 receiptCount={count}
                 cash={cash}
                 checks={checks}
@@ -158,6 +159,7 @@ export function HomePendingCashCard({
               <CashRowButton
                 key={`route-${r.routeId}`}
                 label={label}
+                channelLabel="Repartidor"
                 receiptCount={count}
                 cash={cash}
                 checks={checks}
