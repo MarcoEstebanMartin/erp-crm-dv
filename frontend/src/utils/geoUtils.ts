@@ -14,8 +14,9 @@ export function getFreshCachedGps(maxAgeMs = DEFAULT_GPS_CACHE_MS): GpsCaptureRe
 }
 
 export function warmUpGpsSilently(): void {
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
   if (getFreshCachedGps(60_000)) return;
-  void captureCurrentGpsSilently(2500);
+  void captureCurrentGpsSilently(2500, { highAccuracy: false });
 }
 
 export function __resetGpsCacheForTests(): void {
@@ -28,7 +29,10 @@ export const DEPOT_VILLEGAS = {
   label: 'Depósito Don Venancio · Pringles 116, General Villegas',
 };
 
-export function captureCurrentGpsSilently(timeoutMs = 3500): Promise<GpsCaptureResult | null> {
+export function captureCurrentGpsSilently(
+  timeoutMs = 3500,
+  options?: { highAccuracy?: boolean },
+): Promise<GpsCaptureResult | null> {
   const cached = getFreshCachedGps();
   if (cached) return Promise.resolve(cached);
 
@@ -65,7 +69,11 @@ export function captureCurrentGpsSilently(timeoutMs = 3500): Promise<GpsCaptureR
         window.clearTimeout(timer);
         resolve(null);
       },
-      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 60000 },
+      {
+        enableHighAccuracy: options?.highAccuracy ?? false,
+        timeout: timeoutMs,
+        maximumAge: 90_000,
+      },
     );
   });
 }

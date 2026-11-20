@@ -12,6 +12,11 @@ import {
   enqueueOfflineReceipt,
   generateProvisionalCode,
 } from '../../utils/offlineReceiptQueue';
+import {
+  captureCurrentGpsSilently,
+  getFreshCachedGps,
+  warmUpGpsSilently,
+} from '../../utils/geoUtils';
 
 interface PaymentDraft {
   id: string;
@@ -123,6 +128,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
       setAllowCreditOnAccount(false);
       setNeedsCreditOverride(false);
       setError(null);
+      warmUpGpsSilently();
       if (!dialog.open) dialog.showModal();
     } else if (dialog.open) {
       dialog.close();
@@ -198,19 +204,21 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
     }
 
     const provisionalCode = generateProvisionalCode(collectorUserId);
-    const payload: SyncFieldReceiptPayload = {
-      provisionalCode,
-      personaId: client.id,
-      deliveryRouteId: deliveryRouteId ?? null,
-      billingType: 'INTERNAL',
-      notes: notes.trim() || null,
-      capturedAt: new Date().toISOString(),
-      allowCreditOnAccount: showCreditToggle ? allowCreditOnAccount : false,
-      payments: mappedPayments,
-    };
-
     setSubmitting(true);
     try {
+      const gps = getFreshCachedGps() ?? (await captureCurrentGpsSilently(450));
+      const payload: SyncFieldReceiptPayload = {
+        provisionalCode,
+        personaId: client.id,
+        deliveryRouteId: deliveryRouteId ?? null,
+        billingType: 'INTERNAL',
+        notes: notes.trim() || null,
+        gpsLat: gps?.lat ?? null,
+        gpsLng: gps?.lng ?? null,
+        capturedAt: new Date().toISOString(),
+        allowCreditOnAccount: showCreditToggle ? allowCreditOnAccount : false,
+        payments: mappedPayments,
+      };
       if (navigator.onLine) {
         try {
           const res = await fieldReceiptsApi.syncReceipt(payload);

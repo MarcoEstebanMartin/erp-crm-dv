@@ -25,6 +25,7 @@ export function useGpsTracker({
   const [gpsError, setGpsError] = useState<string | null>(null);
 
   const lastCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const lastPingAtRef = useRef<number>(0);
 
   useEffect(() => {
     if (!isActive || !activeRouteId) {
@@ -44,12 +45,11 @@ export function useGpsTracker({
     const sendGpsPing = (position: GeolocationPosition) => {
       const { latitude, longitude, speed, heading } = position.coords;
 
-      // Desplazamiento mínimo (evitar spam si el vehículo está estacionado)
+      // Desplazamiento mínimo (~30 m) para evitar pings redundantes si el vehículo está detenido
       if (lastCoordsRef.current) {
         const dLat = Math.abs(latitude - lastCoordsRef.current.latitude);
         const dLng = Math.abs(longitude - lastCoordsRef.current.longitude);
-        // Si el cambio es menor a ~10 metros (0.0001 deg) y no es el primer ping, omitir salvo que haya pasado tiempo
-        if (dLat < 0.0001 && dLng < 0.0001 && lastPingTime && (Date.now() - lastPingTime.getTime() < intervalMs * 2)) {
+        if (dLat < 0.00025 && dLng < 0.00025 && lastPingAtRef.current > 0 && Date.now() - lastPingAtRef.current < intervalMs * 3) {
           return;
         }
       }
@@ -64,6 +64,7 @@ export function useGpsTracker({
       })
       .then(() => {
         const now = new Date();
+        lastPingAtRef.current = now.getTime();
         setLastPingTime(now);
         setLastCoords({ latitude, longitude, speed: speedKmH });
         lastCoordsRef.current = { latitude, longitude };
@@ -88,21 +89,17 @@ export function useGpsTracker({
       console.warn('[GPS Tracker]', msg);
     };
 
-    // Solicitar posición inicial inmediatamente
-    navigator.geolocation.getCurrentPosition(sendGpsPing, handlePositionError, {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 10000
-    });
-
-    // Configurar intervalo de sondeo continuo en segundo plano
-    const timer = setInterval(() => {
+    const pollOnce = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       navigator.geolocation.getCurrentPosition(sendGpsPing, handlePositionError, {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 30000
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 45000,
       });
-    }, intervalMs);
+    };
+
+    pollOnce();
+    const timer = setInterval(pollOnce, intervalMs);
 
     return () => {
       clearInterval(timer);
