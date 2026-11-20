@@ -62,6 +62,9 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
   const selectedOrders = modalOrderPool.filter((o) => selectedOrderIds.includes(o.id));
   const metrics = computeTripDisplayMetrics(selectedOrders);
   const [isCustomDriver, setIsCustomDriver] = useState(false);
+  const visibleSelectedCount = filteredPendingOrders.filter((o) => selectedOrderIds.includes(o.id)).length;
+  const allVisibleSelected = filteredPendingOrders.length > 0 && visibleSelectedCount === filteredPendingOrders.length;
+  const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
 
   useEffect(() => {
     if (!show) return;
@@ -201,9 +204,16 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
 
             <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '6px', flexWrap: 'wrap', minHeight: '28px', flexShrink: 0 }}>
-                <span className="tabular-nums" style={{ fontWeight: 600, fontSize: '0.84rem' }}>
-                  Pedidos ({filteredPendingOrders.length})
-                </span>
+                {filteredPendingOrders.length > 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input ref={(el) => { if (el) el.indeterminate = someVisibleSelected; }} id="reparto-select-all-orders" type="checkbox" checked={allVisibleSelected} onChange={handleSelectCityOrders} />
+                    <label htmlFor="reparto-select-all-orders" className="tabular-nums" style={{ fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer', margin: 0 }}>
+                      Todos ({filteredPendingOrders.length})
+                    </label>
+                  </div>
+                ) : (
+                  <span className="tabular-nums" style={{ fontWeight: 600, fontSize: '0.84rem' }}>Pedidos (0)</span>
+                )}
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <select aria-label="Filtrar por localidad" className="input" style={{ width: '132px', padding: '2px 6px', fontSize: '0.78rem', height: '28px' }} value={selectedCityFilter} onChange={(e) => setSelectedCityFilter(e.target.value)}>
                     <option value="ALL">Todas</option>
@@ -214,11 +224,6 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
                       <option value="ALL">Todas</option>
                       {uniqueZones.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
                     </select>
-                  )}
-                  {selectedCityFilter !== 'ALL' && filteredPendingOrders.length > 0 && (
-                    <button type="button" className="btn btn-secondary" style={{ height: '28px', padding: '0 8px', fontSize: '0.74rem' }} onClick={handleSelectCityOrders}>
-                      Sel. localidad
-                    </button>
                   )}
                 </div>
               </div>
