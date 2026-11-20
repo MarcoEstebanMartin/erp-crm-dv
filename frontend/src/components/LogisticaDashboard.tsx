@@ -10,7 +10,7 @@ type LogisticaSubTab = 'mapa' | 'reparto' | 'flota' | 'combustible';
 
 const TABS: Array<{ id: LogisticaSubTab; label: string; Icon: typeof Truck }> = [
   { id: 'reparto', label: 'Hojas de Reparto', Icon: Truck },
-  { id: 'flota', label: 'Flota', Icon: Layers },
+  { id: 'flota', label: 'Flota y Vtos.', Icon: Layers },
   { id: 'mapa', label: 'Mapa', Icon: MapPin },
   { id: 'combustible', label: 'Combustible', Icon: Fuel },
 ];

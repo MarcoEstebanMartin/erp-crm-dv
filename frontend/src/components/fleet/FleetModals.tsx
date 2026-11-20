@@ -1,7 +1,7 @@
 import type { FC, FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
-import type { Expiry, Maintenance, Vehicle } from './fleet.types';
+import { GENERAL_ADMIN_LABEL, isGeneralAdminVehicle, type Expiry, type Maintenance, type Vehicle } from './fleet.types';
 
 interface FleetModalsProps {
   selectedVehicle?: Vehicle;
@@ -202,7 +202,11 @@ export const FleetModals: FC<FleetModalsProps> = (p) => {
 
       <NativeModalDialog isOpen={p.showExpiryModal} onClose={closeExpiry} ariaLabelledBy="fleet-expiry-modal-title" style={{ width: '420px', maxWidth: '94vw', padding: '24px' }}>
         <div className="modal-header">
-          <h2 id="fleet-expiry-modal-title" style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{p.editingExpiryId ? 'Editar Vencimiento' : `Nuevo Vencimiento — ${p.selectedVehicle?.plate || ''}`}</h2>
+          <h2 id="fleet-expiry-modal-title" style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+            {p.editingExpiryId
+              ? 'Editar Vencimiento'
+              : `Nuevo Vencimiento — ${isGeneralAdminVehicle(p.selectedVehicle) ? GENERAL_ADMIN_LABEL : p.selectedVehicle?.plate || ''}`}
+          </h2>
           <button type="button" className="btn btn-ghost" onClick={closeExpiry} style={{ padding: '4px' }} aria-label="Cerrar"><X size={18} aria-hidden="true" /></button>
         </div>
         {p.modalError && <div role="alert" className="alert alert-danger" style={{ marginBottom: '12px' }}>{p.modalError}</div>}
@@ -214,7 +218,7 @@ export const FleetModals: FC<FleetModalsProps> = (p) => {
               <option value="VTE_ITV">VTE / ITV</option>
               <option value="PATENT">Patente</option>
               <option value="CARNET">Licencia Chofer</option>
-              <option value="OTHER">Otro</option>
+              <option value="OTHER">Individual (por nombre)</option>
             </select>
           </div>
           <div className="form-group">
@@ -222,8 +226,8 @@ export const FleetModals: FC<FleetModalsProps> = (p) => {
             <input id="fleet-expiry-date" type="date" className="input" required value={p.expiryForm.expirationDate} onChange={(e) => p.setExpiryForm({ ...p.expiryForm, expirationDate: e.target.value })} />
           </div>
           <div className="form-group">
-            <label htmlFor="fleet-expiry-desc">Detalle</label>
-            <input id="fleet-expiry-desc" type="text" className="input" required value={p.expiryForm.description} onChange={(e) => p.setExpiryForm({ ...p.expiryForm, description: e.target.value })} placeholder="Compañía o póliza" />
+            <label htmlFor="fleet-expiry-desc">Nombre / Detalle</label>
+            <input id="fleet-expiry-desc" type="text" className="input" required value={p.expiryForm.description} onChange={(e) => p.setExpiryForm({ ...p.expiryForm, description: e.target.value })} placeholder="Nombre o detalle" />
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={closeExpiry}>Cancelar</button>

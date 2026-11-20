@@ -59,14 +59,99 @@ export const getMaintenanceLabel = (type: Maintenance['type']): string => {
   }
 };
 
+export const GENERAL_ADMIN_PLATE = 'DEP-GRAL';
+export const GENERAL_ADMIN_LABEL = 'Adm. Gral';
+
+export const isGeneralAdminVehicle = (vehicle?: Pick<Vehicle, 'plate'> | null): boolean =>
+  Boolean(vehicle && vehicle.plate.trim().toUpperCase() === GENERAL_ADMIN_PLATE);
+
 export const getExpiryLabel = (type: Expiry['type']): string => {
   switch (type) {
     case 'INSURANCE': return 'Seguro';
     case 'VTE_ITV': return 'VTE / ITV';
     case 'PATENT': return 'Patente';
     case 'CARNET': return 'Licencia Chofer';
-    default: return 'Otro';
+    default: return 'General';
   }
+};
+
+export const getExpiryGroupLabel = (type: Expiry['type']): string => {
+  switch (type) {
+    case 'INSURANCE': return 'Seguros';
+    case 'VTE_ITV': return 'VTE / ITV';
+    case 'PATENT': return 'Patentes';
+    case 'CARNET': return 'Licencias de Chofer';
+    default: return 'Generales';
+  }
+};
+
+export const getExpiryDisplayName = (expiry: Pick<Expiry, 'type' | 'description'>): string =>
+  expiry.description?.trim() || getExpiryLabel(expiry.type);
+
+export const cleanGroupedExpiryLabel = (expiry: Pick<Expiry, 'type' | 'description'>): string => {
+  const raw = getExpiryDisplayName(expiry);
+  if (expiry.type === 'CARNET') {
+    return raw.replace(/^(carnet|licencia)(\s+chofer)?\s*[:\-–]\s*/i, '').trim() || raw;
+  }
+  return raw;
+};
+
+export type ExpiryListEntry =
+  | { kind: 'group'; key: string; type: Expiry['type']; label: string; items: Expiry[]; nextDate: string }
+  | { kind: 'item'; key: string; expiry: Expiry; nextDate: string };
+
+export const buildExpiryEntries = (expirations: Expiry[]): ExpiryListEntry[] => {
+  const sorted = [...expirations].sort(
+    (a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime(),
+  );
+
+  const byGroupableType = new Map<Expiry['type'], Expiry[]>();
+  const standalone: Expiry[] = [];
+
+  for (const exp of sorted) {
+    if (exp.type === 'OTHER') {
+      standalone.push(exp);
+    } else {
+      const list = byGroupableType.get(exp.type) ?? [];
+      list.push(exp);
+      byGroupableType.set(exp.type, list);
+    }
+  }
+
+  const entries: ExpiryListEntry[] = [];
+
+  for (const [type, items] of byGroupableType.entries()) {
+    if (items.length >= 2) {
+      entries.push({
+        kind: 'group',
+        key: `group-${type}`,
+        type,
+        label: getExpiryGroupLabel(type),
+        items,
+        nextDate: items[0].expirationDate,
+      });
+    } else {
+      entries.push({
+        kind: 'item',
+        key: `item-${items[0].id}`,
+        expiry: items[0],
+        nextDate: items[0].expirationDate,
+      });
+    }
+  }
+
+  for (const exp of standalone) {
+    entries.push({
+      kind: 'item',
+      key: `item-${exp.id}`,
+      expiry: exp,
+      nextDate: exp.expirationDate,
+    });
+  }
+
+  return entries.sort(
+    (a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime(),
+  );
 };
 
 export const isExpiryClose = (dateStr: string): boolean => {

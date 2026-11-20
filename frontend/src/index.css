@@ -2487,4 +2487,91 @@ button.resumen-desc-btn:hover {
   }
 }
 
+/* Acordeón nativo minimalista para grupos de vencimientos (Flota y Vtos.) */
+.fleet-expiry-group {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fleet-expiry-group:last-child {
+  border-bottom: none;
+}
+
+.fleet-expiry-summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast);
+}
+
+.fleet-expiry-summary::-webkit-details-marker {
+  display: none;
+}
+
+.fleet-expiry-summary:hover {
+  background-color: #f8fafc;
+}
+
+.fleet-alert-row {
+  transition: background-color var(--transition-fast);
+}
+
+.fleet-alert-row:hover {
+  background-color: rgba(var(--color-corp-red-rgb), 0.05) !important;
+}
+
+.fleet-expiry-summary:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: -2px;
+}
+
+.fleet-expiry-summary-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fleet-expiry-summary-left::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-right: 1.5px solid #64748b;
+  border-bottom: 1.5px solid #64748b;
+  transform: rotate(-45deg);
+  margin-right: 2px;
+}
+
+.fleet-expiry-group[open] > .fleet-expiry-summary .fleet-expiry-summary-left::before {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fleet-expiry-summary-left::before {
+    transition: transform 0.18s ease;
+  }
+}
+
+.fleet-expiry-group::details-content {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  contain: layout;
+}
+
+.fleet-expiry-group:not([open])::details-content {
+  block-size: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fleet-expiry-group::details-content {
+    transition: block-size 0.2s ease-in-out, content-visibility 0.2s allow-discrete;
+  }
+}
+
+
 

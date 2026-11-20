@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
-import { ALLOWED_FLEET_PROVIDER_NAMES, type Expiry, type Maintenance, type Vehicle } from './fleet.types';
+import { ALLOWED_FLEET_PROVIDER_NAMES, isGeneralAdminVehicle, type Expiry, type Maintenance, type Vehicle } from './fleet.types';
 
 const emptyVehicleForm = () => ({
   plate: '', brand: '', model: '', year: new Date().getFullYear(),
@@ -103,7 +103,14 @@ export function useFleetController() {
   };
 
   const openCreateExpiry = () => {
-    setModalError(null); setEditingExpiryId(null); setExpiryForm(emptyExpiryForm()); setShowExpiryModal(true);
+    const selected = vehicles.find((v) => v.id === selectedVehicleId);
+    setModalError(null);
+    setEditingExpiryId(null);
+    setExpiryForm({
+      ...emptyExpiryForm(),
+      type: isGeneralAdminVehicle(selected) ? 'OTHER' : 'INSURANCE',
+    });
+    setShowExpiryModal(true);
   };
 
   const openEditExpiry = (exp: Expiry) => {
