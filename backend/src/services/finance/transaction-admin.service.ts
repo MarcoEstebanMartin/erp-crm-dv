@@ -11,6 +11,7 @@ import { logAudit } from '../../utils/audit';
 import { roundToIntegerPeso } from '../../core/money';
 import { calculateVerificationDeltas } from '../../engines/drawer-arqueo.engine';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { resolveExpenseCategoryId } from '../expenses/expense-category.helper';
 
 export const transactionAdminService = {
   async getTransactions(query: {
@@ -218,18 +219,38 @@ export const transactionAdminService = {
       cashDrawerId = oficinaDrawer.id;
     }
 
+    const cleanDesc = params.description.trim();
+    const resolvedMethod = (params.paymentMethod as PaymentMethod) || PaymentMethod.CASH;
+
     const transaction = await prisma.transaction.create({
       data: {
         userId: params.userId,
         type: TransactionType.OUTCOME,
-        paymentMethod: (params.paymentMethod as PaymentMethod) || PaymentMethod.CASH,
+        paymentMethod: resolvedMethod,
         billingType: (params.billingType as BillingType) || BillingType.INTERNAL,
         amount: expAmount,
-        description: params.description.trim(),
+        description: cleanDesc,
         cashDrawerId,
         verified: true,
       },
     });
+
+    // Sincronización automática con la Planilla de Gastos (apuntando al mismo transactionId)
+    const categoryId = await resolveExpenseCategoryId(prisma as any, cleanDesc);
+    if (categoryId) {
+      await prisma.expense.create({
+        data: {
+          amount: expAmount,
+          date: new Date(),
+          description: cleanDesc,
+          categoryId,
+          userId: params.userId,
+          paymentMethod: resolvedMethod,
+          cashDrawerId: cashDrawerId ?? undefined,
+          transactionId: transaction.id,
+        },
+      });
+    }
 
     await prisma.auditLog.create({
       data: {

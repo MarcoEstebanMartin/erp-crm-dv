@@ -282,10 +282,15 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
     expect(savedExpenseData.transactionId).toBe(500);
   });
 
-  it('createCentralExpense descuenta de Caja Grande (cashDrawerId: null) cuando cashSource es CAJA_GRANDE', async () => {
+  it('createCentralExpense descuenta de Caja Grande (cashDrawerId: null) y sincroniza en Expense cuando cashSource es CAJA_GRANDE', async () => {
     const createTxSpy = vi
       .spyOn(prisma.transaction, 'create')
       .mockResolvedValue({ id: 901, paymentMethod: PaymentMethod.CASH, billingType: BillingType.INTERNAL } as any);
+    vi.spyOn(prisma.expenseCategory, 'findMany').mockResolvedValue([
+      { id: 2, name: 'Servicios', description: null },
+      { id: 11, name: 'Otros Gastos', description: null },
+    ] as any);
+    const createExpenseSpy = vi.spyOn(prisma.expense, 'create').mockResolvedValue({ id: 401 } as any);
     const auditSpy = vi.spyOn(prisma.auditLog, 'create').mockResolvedValue({ id: 1 } as any);
 
     await transactionAdminService.createCentralExpense({
@@ -306,10 +311,21 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
         }),
       }),
     );
+    expect(createExpenseSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          amount: 150000,
+          description: 'Luz',
+          categoryId: 2,
+          transactionId: 901,
+          cashDrawerId: undefined,
+        }),
+      }),
+    );
     expect(auditSpy).toHaveBeenCalledOnce();
   });
 
-  it('createCentralExpense descuenta de Caja Oficina abierta (branch DEPOSITO) cuando cashSource es CAJA_OFICINA', async () => {
+  it('createCentralExpense descuenta de Caja Oficina abierta (branch DEPOSITO) y sincroniza en Expense cuando cashSource es CAJA_OFICINA', async () => {
     vi.spyOn(prisma.cashDrawer, 'findFirst').mockResolvedValue({
       id: 3,
       branch: 'DEPOSITO',
@@ -319,6 +335,10 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
     const createTxSpy = vi
       .spyOn(prisma.transaction, 'create')
       .mockResolvedValue({ id: 902, paymentMethod: PaymentMethod.CASH, billingType: BillingType.INTERNAL } as any);
+    vi.spyOn(prisma.expenseCategory, 'findMany').mockResolvedValue([
+      { id: 11, name: 'Otros Gastos', description: null },
+    ] as any);
+    const createExpenseSpy = vi.spyOn(prisma.expense, 'create').mockResolvedValue({ id: 402 } as any);
     vi.spyOn(prisma.auditLog, 'create').mockResolvedValue({ id: 2 } as any);
 
     await transactionAdminService.createCentralExpense({
@@ -335,6 +355,17 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
         data: expect.objectContaining({
           type: TransactionType.OUTCOME,
           amount: 45000,
+          cashDrawerId: 3,
+        }),
+      }),
+    );
+    expect(createExpenseSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          amount: 45000,
+          description: 'Artículos de limpieza',
+          categoryId: 11,
+          transactionId: 902,
           cashDrawerId: 3,
         }),
       }),

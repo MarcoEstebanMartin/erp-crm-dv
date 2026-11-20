@@ -18,6 +18,15 @@ const { mockTx, mockPrisma, mockLogAudit } = vi.hoisted(() => {
       create: vi.fn(),
       update: vi.fn(),
     },
+    expenseCategory: {
+      findMany: vi.fn(),
+    },
+    vehicleMaintenance: {
+      create: vi.fn(),
+    },
+    vehicle: {
+      update: vi.fn(),
+    },
   };
 
   return {
@@ -26,6 +35,9 @@ const { mockTx, mockPrisma, mockLogAudit } = vi.hoisted(() => {
       expense: {
         findUnique: vi.fn(),
         findMany: vi.fn(),
+      },
+      vehicle: {
+        findUnique: vi.fn(),
       },
       $transaction: vi.fn(async (cb: (t: typeof tx) => Promise<unknown>) => cb(tx)),
     },
@@ -43,6 +55,7 @@ vi.mock('../../utils/audit', () => ({
 
 import { expenseService } from '../expenses/expense.service';
 import { createBulkExpensesRecords } from '../expenses/expense-bulk.service';
+import { vehicleMaintenanceService } from '../fleet/vehicle-maintenance.service';
 
 describe('expenseService & expense-bulk.service — Caja Grande y edición atómica', () => {
   beforeEach(() => {
@@ -257,5 +270,42 @@ describe('expenseService & expense-bulk.service — Caja Grande y edición atóm
       { year: 2026, month: 11, count: 1, total: 1500000 },
       { year: 2026, month: 5, count: 2, total: 2000000 },
     ]);
+  });
+
+  it('vehicleMaintenanceService.createMaintenance sincroniza automáticamente en Expense sin duplicar Transaction', async () => {
+    mockPrisma.vehicle.findUnique.mockResolvedValue({
+      id: 4,
+      plate: 'AE123CD',
+      currentOdometer: 50000,
+    });
+    mockTx.transaction.create.mockResolvedValue({ id: 777 });
+    mockTx.vehicleMaintenance.create.mockResolvedValue({ id: 88, cost: 185000 });
+    mockTx.expenseCategory.findMany.mockResolvedValue([
+      { id: 5, name: 'Combustible' },
+      { id: 7, name: 'Mantenimiento' },
+    ]);
+    mockTx.expense.create.mockResolvedValue({ id: 999 });
+
+    await vehicleMaintenanceService.createMaintenance({
+      userId: 1,
+      vehicleId: 4,
+      type: 'FUEL',
+      description: 'Carga YPF',
+      cost: 185000,
+      odometer: 50420,
+      affectFinance: true,
+      paymentMethod: PaymentMethod.CASH,
+    });
+
+    expect(mockTx.transaction.create).toHaveBeenCalledTimes(1);
+    expect(mockTx.expense.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        amount: 185000,
+        description: 'AE123CD - Carga YPF',
+        categoryId: 5,
+        vehicleId: 4,
+        transactionId: 777,
+      }),
+    });
   });
 });

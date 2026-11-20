@@ -17,7 +17,7 @@ const createInitialForm = () => ({
   odometer: '',
   date: new Date().toISOString().substring(0, 10),
   supplierId: '',
-  affectFinance: false,
+  affectFinance: true,
   paymentMethod: 'CASH',
   bankAccountId: '',
   billingType: 'INTERNAL',
