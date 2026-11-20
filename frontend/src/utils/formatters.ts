@@ -32,6 +32,7 @@ export function formatResponsibleName(d: any): string {
     .replace(/^Caja:\s*/i, '')
     .replace(/^VENDEDOR:\s*/i, '')
     .replace(/^REPARTIDOR:\s*/i, '')
+    .replace(/^ADMINISTRACI[OÓ]N:\s*/i, '')
     .trim();
 
   // Quitar el sufijo de ruta entre paréntesis ej: "(Ruta #1)"

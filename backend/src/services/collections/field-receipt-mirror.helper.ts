@@ -377,12 +377,14 @@ export async function createSettlementCashDrawerAndLinkMirrors(
     receiptDeliveryRouteIds: params.activeReceipts.map((r) => r.deliveryRouteId),
     collectorRole: params.collector?.role,
   });
-  const drawerType = channel === 'DRIVER' ? 'REPARTIDOR' : 'VENDEDOR';
+  const isAdminCollector = channel !== 'DRIVER' && params.collector?.role === 'ADMIN';
+  const drawerType =
+    channel === 'DRIVER' ? 'REPARTIDOR' : isAdminCollector ? 'ADMINISTRACION' : 'VENDEDOR';
 
   const branchName =
     channel === 'DRIVER'
       ? `REPARTIDOR: ${(params.deliveryRoute?.driverName || params.collector?.username || `#${params.collectorUserId}`).toUpperCase()}${params.deliveryRouteId ? ` (Ruta #${params.deliveryRouteId})` : ''}`
-      : `VENDEDOR: ${(params.collector?.username || `#${params.collectorUserId}`).toUpperCase()}`;
+      : `${drawerType}: ${(params.collector?.username || `#${params.collectorUserId}`).toUpperCase()}`;
 
   const expectedChecksDec = roundToIntegerPeso(params.expectedChecksAmount);
   const closingBalance = roundToIntegerPeso(params.expectedCash).plus(expectedChecksDec).toNumber();

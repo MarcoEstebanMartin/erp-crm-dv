@@ -1,5 +1,6 @@
 import { MapPin, X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
+import { classifyDrawerHistoryRow } from './drawerHistoryHelpers';
 
 interface InspectDrawerModalProps {
   inspectDrawer: any | null;
@@ -15,12 +16,10 @@ export default function InspectDrawerModal({
   onClose,
 }: InspectDrawerModalProps) {
   const isClosed = inspectDrawer?.status === 'CLOSED';
-  const isDepo =
-    inspectDrawer?.drawerType === 'DEPOSITO' || inspectDrawer?.branch === 'DEPOSITO';
-  const isCentral =
-    inspectDrawer?.drawerType === 'CENTRAL' ||
-    inspectDrawer?.branch === 'CENTRAL' ||
-    inspectDrawer?.branch === 'CONSOLIDADA';
+  const meta = inspectDrawer ? classifyDrawerHistoryRow(inspectDrawer) : null;
+  const isDepo = Boolean(meta?.isDepo);
+  const isCentral = Boolean(meta?.isCentral);
+  const showOpenCloseTimes = isDepo || !isClosed;
   const currentExpected = inspectDrawer
     ? isClosed
       ? Number(inspectDrawer.closingBalance)
@@ -46,7 +45,13 @@ export default function InspectDrawerModal({
           <div className="modal-header" style={{ marginBottom: '20px' }}>
             <h3 id="inspect-drawer-title" style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
               {inspectDrawer.status === 'OPEN' ? 'Caja Activa: ' : 'Arqueo: '}
-              {isDepo ? 'Caja Oficina' : isCentral ? 'Caja Grande' : inspectDrawer.branch}
+              {isDepo
+                ? 'Caja Oficina'
+                : isCentral
+                ? 'Caja Grande'
+                : meta
+                ? `${meta.badgeLabel} · ${meta.responsibleName}`
+                : inspectDrawer.branch}
             </h3>
             <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose} aria-label="Cerrar">
               <X size={18} aria-hidden="true" />
@@ -65,21 +70,30 @@ export default function InspectDrawerModal({
                     {inspectDrawer.status === 'OPEN' ? 'Abierta' : 'Cerrada'}
                   </span>
                 </div>
-                <div>
-                  <strong>Apertura:</strong> {new Date(inspectDrawer.openedAt).toLocaleString('es-AR')}
-                </div>
-                <div>
-                  <strong>Cierre:</strong>{' '}
-                  {isClosed ? (
-                    new Date(inspectDrawer.closedAt).toLocaleString('es-AR')
-                  ) : (
-                    <span style={{ color: 'var(--text-secondary)' }}>En operación</span>
-                  )}
-                </div>
+                {showOpenCloseTimes ? (
+                  <>
+                    <div>
+                      <strong>Apertura:</strong> {new Date(inspectDrawer.openedAt).toLocaleString('es-AR')}
+                    </div>
+                    <div>
+                      <strong>Cierre:</strong>{' '}
+                      {isClosed ? (
+                        new Date(inspectDrawer.closedAt).toLocaleString('es-AR')
+                      ) : (
+                        <span style={{ color: 'var(--text-secondary)' }}>En operación</span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <strong>Fecha:</strong>{' '}
+                    {new Date(inspectDrawer.closedAt || inspectDrawer.openedAt).toLocaleString('es-AR')}
+                  </div>
+                )}
                 <div>
                   <strong>Usuario:</strong> {inspectDrawer.user?.username || 'Desconocido'}
                 </div>
-                {!isDepo && !isCentral && inspectDrawer.routeNote && (
+                {meta?.showRouteNote && (
                   <div style={{ color: '#0284c7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                     <MapPin size={14} color="#0284c7" aria-hidden="true" />
                     <span>{inspectDrawer.routeNote}</span>

@@ -137,14 +137,16 @@ export const rendicionService = {
 
     let txs: any[] = [];
     let branchName = '';
-    const drawerType = params.sellerId ? 'VENDEDOR' : 'REPARTIDOR';
+    let drawerType = params.sellerId ? 'VENDEDOR' : 'REPARTIDOR';
 
     if (params.sellerId) {
       const sellerUser = await prisma.user.findUnique({ where: { id: Number(params.sellerId) } });
       if (!sellerUser) {
         throw new AppError('Vendedor no encontrado', 404);
       }
-      branchName = `VENDEDOR: ${sellerUser.username.toUpperCase()}`;
+      const isAdminUser = sellerUser.role === 'ADMIN';
+      drawerType = isAdminUser ? 'ADMINISTRACION' : 'VENDEDOR';
+      branchName = `${drawerType}: ${sellerUser.username.toUpperCase()}`;
 
       const allSellerTxs = await prisma.transaction.findMany({
         where: {

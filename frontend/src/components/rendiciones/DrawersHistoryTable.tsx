@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, MapPin } from 'lucide-react';
-import { formatResponsibleName } from '../../utils/formatters';
+import { classifyDrawerHistoryRow, formatDrawerDateSummary } from './drawerHistoryHelpers';
 
 interface DrawersHistoryTableProps {
   loadingHistory: boolean;
@@ -58,8 +58,7 @@ export default function DrawersHistoryTable({
           <thead>
             <tr>
               <th scope="col">Responsable</th>
-              <th scope="col">Apertura</th>
-              <th scope="col">Cierre</th>
+              <th scope="col">Fecha</th>
               <th scope="col">Fondo Inicial</th>
               <th scope="col">Saldo Teórico</th>
               <th scope="col">Arqueo Real</th>
@@ -73,13 +72,13 @@ export default function DrawersHistoryTable({
           <tbody>
             {loadingHistory ? (
               <tr>
-                <td colSpan={11} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>
+                <td colSpan={10} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>
                   Cargando historial...
                 </td>
               </tr>
             ) : filteredHistory.length === 0 ? (
               <tr>
-                <td colSpan={11} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>
+                <td colSpan={10} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>
                   Sin arqueos en el período.
                 </td>
               </tr>
@@ -100,32 +99,8 @@ export default function DrawersHistoryTable({
                   }
                 });
 
-                const isDepo = d.drawerType === 'DEPOSITO' || d.branch === 'DEPOSITO';
-                const isCentral =
-                  d.drawerType === 'CENTRAL' || d.branch === 'CENTRAL' || d.branch === 'CONSOLIDADA';
-                const isRep = d.drawerType === 'REPARTIDOR' || d.branch?.startsWith('REPARTIDOR');
-
-                const badgeBg = isCentral
-                  ? '#fef3c7'
-                  : isDepo
-                  ? '#f1f5f9'
-                  : isRep
-                  ? '#ecfdf5'
-                  : '#eff6ff';
-                const badgeColor = isCentral
-                  ? '#92400e'
-                  : isDepo
-                  ? '#475569'
-                  : isRep
-                  ? '#047857'
-                  : '#1d4ed8';
-                const badgeLabel = isCentral
-                  ? 'Caja Grande'
-                  : isDepo
-                  ? 'Oficina'
-                  : isRep
-                  ? 'Repartidor'
-                  : 'Vendedor';
+                const meta = classifyDrawerHistoryRow(d);
+                const dateInfo = formatDrawerDateSummary(d, meta.isDepo);
 
                 return (
                   <tr
@@ -147,30 +122,38 @@ export default function DrawersHistoryTable({
                             borderRadius: '12px',
                             fontSize: '0.72rem',
                             fontWeight: 600,
-                            backgroundColor: badgeBg,
-                            color: badgeColor,
+                            backgroundColor: meta.badgeBg,
+                            color: meta.badgeColor,
                           }}
                         >
-                          {badgeLabel}
+                          {meta.badgeLabel}
                         </span>
                       </div>
                       <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                        {formatResponsibleName(d)}
+                        {meta.responsibleName}
                       </div>
-                      {!isDepo && !isCentral && d.routeNote && (
+                      {meta.showRouteNote && (
                         <div style={{ fontSize: '0.78rem', color: '#0284c7', marginTop: '3px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <MapPin size={12} color="#0284c7" aria-hidden="true" />
                           <span>{d.routeNote}</span>
                         </div>
                       )}
-                      {!isCentral && d.notes && (
+                      {!meta.isCentral && d.notes && (
                         <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '2px' }}>
                           {d.notes}
                         </div>
                       )}
                     </td>
-                    <td style={{ fontSize: '0.8rem' }}>{new Date(d.openedAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                    <td style={{ fontSize: '0.8rem' }}>{new Date(d.closedAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                      <time dateTime={dateInfo.isoDateTime} className="tabular-nums" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {dateInfo.primaryLabel}
+                      </time>
+                      {dateInfo.rangeLabel && (
+                        <div className="tabular-nums" style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {dateInfo.rangeLabel}
+                        </div>
+                      )}
+                    </td>
                     <td className="tabular-nums">${Number(d.openingBalance).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</td>
                     <td className="tabular-nums" style={{ color: 'var(--text-secondary)' }}>${Number(d.closingBalance).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</td>
                     <td className="tabular-nums" style={{ fontWeight: 600 }}>${Number(d.realBalance).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</td>
