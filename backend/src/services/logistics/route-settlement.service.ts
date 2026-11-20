@@ -10,10 +10,36 @@ import {
   evaluateRouteSettlementActions,
   type RouteFieldReceiptInput,
 } from '../../engines/route-settlement.engine';
-import { emitirFacturaAFIP } from '../afip.service';
+import {
+  computeInvoiceTaxBreakdown,
+  recordInvoicePerceptions,
+} from '../orders/order-tax.helpers';
+import {
+  executeDeferredCaeRequest,
+  resolveAfipCaeOrContingency,
+} from '../orders/order-cae-deferred.helper';
+import { enqueueDeferredAfipCaeRetry } from '../resilience/external-integrations-retry.service';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { notifyWebOrderStatusForErpOrder } from '../orders/web-order-status-bridge.service';
 import { generateUniqueVerificationCode } from '../../core/receiptToken';
+
+const activeRouteSettlementLocks = new Map<number, Promise<any>>();
+
+async function withRouteSettlementLock<T>(
+  routeId: number,
+  task: () => Promise<T>,
+): Promise<T> {
+  const prev = activeRouteSettlementLocks.get(routeId) ?? Promise.resolve();
+  const current = prev.catch(() => undefined).then(() => task());
+  activeRouteSettlementLocks.set(routeId, current);
+  try {
+    return await current;
+  } finally {
+    if (activeRouteSettlementLocks.get(routeId) === current) {
+      activeRouteSettlementLocks.delete(routeId);
+    }
+  }
+}
 
 export interface RouteOrderSettlementItem {
   orderId: number;
@@ -38,6 +64,13 @@ interface AfipInvoiceResult {
   invoiceNumber: string;
   cae: string | null;
   caeDueDate: Date | null;
+  shouldEnqueueDeferredCae: boolean;
+  net: number;
+  tax: number;
+  percepIIBB: number;
+  percepIVA: number;
+  finalTotal: number;
+  isFacturaAOfficial: boolean;
 }
 
 async function resolveRoutePaymentDestination(
@@ -99,12 +132,15 @@ function normalizeOptionalPeso(val?: number | null): number | null | undefined {
 
 export const routeSettlementService = {
   async settleDeliveryRoute(input: SettleDeliveryRouteInput): Promise<void> {
+    return withRouteSettlementLock(input.routeId, async () => {
     const route = await prisma.deliveryRoute.findUnique({
       where: { id: input.routeId },
       include: {
         orders: {
           include: {
-            persona: { select: { id: true, name: true, cuit: true } },
+            persona: {
+              select: { id: true, name: true, cuit: true, iibbAliquot: true, province: true, address: true },
+            },
             transactions: {
               where: { type: TransactionType.INCOME },
               select: { amount: true },
@@ -185,19 +221,37 @@ export const routeSettlementService = {
 
       if (order.status === OrderStatus.PREPARED && order.billingType === BillingType.OFFICIAL) {
         try {
-          const cuit = order.persona?.cuit;
-          const invoiceType = cuit && cuit.length > 5 ? InvoiceType.FACTURA_A : InvoiceType.FACTURA_B;
-          const afipRes = await emitirFacturaAFIP({
-            total: roundToIntegerPeso(order.totalAmount.toString()).toNumber(),
-            clientDocType: invoiceType === InvoiceType.FACTURA_A ? 80 : 99,
-            clientCuit: invoiceType === InvoiceType.FACTURA_A ? cuit?.replace(/\D/g, '') || '0' : '0',
-            invoiceType: invoiceType === InvoiceType.FACTURA_A ? 'A' : 'B',
+          const baseTotal = roundToIntegerPeso(order.totalAmount.toString()).toNumber();
+          const taxBreakdown = await computeInvoiceTaxBreakdown(
+            baseTotal,
+            BillingType.OFFICIAL,
+            order.persona || {},
+          );
+          const caeRes = await resolveAfipCaeOrContingency({
+            orderId: order.id,
+            billingType: BillingType.OFFICIAL,
+            finalInvoiceType: taxBreakdown.finalInvoiceType,
+            cuitLimpio: taxBreakdown.cuitLimpio,
+            docType: taxBreakdown.docType,
+            officialOrderTotal: taxBreakdown.finalTotal,
+            isFacturaAOfficial: taxBreakdown.isFacturaAOfficial,
+            net: taxBreakdown.net,
+            tax: taxBreakdown.tax,
+            percepIIBB: taxBreakdown.percepIIBB,
+            percepIVA: taxBreakdown.percepIVA,
           });
           afipResults[order.id] = {
-            invoiceType,
-            invoiceNumber: afipRes.invoiceNumber,
-            cae: afipRes.cae,
-            caeDueDate: afipRes.caeDueDate ? new Date(afipRes.caeDueDate) : null,
+            invoiceType: taxBreakdown.finalInvoiceType,
+            invoiceNumber: caeRes.finalInvoiceNumber,
+            cae: caeRes.finalCae,
+            caeDueDate: caeRes.finalCaeDueDate ? new Date(caeRes.finalCaeDueDate) : null,
+            shouldEnqueueDeferredCae: caeRes.shouldEnqueueDeferredCae,
+            net: taxBreakdown.net,
+            tax: taxBreakdown.tax,
+            percepIIBB: taxBreakdown.percepIIBB,
+            percepIVA: taxBreakdown.percepIVA,
+            finalTotal: taxBreakdown.finalTotal,
+            isFacturaAOfficial: taxBreakdown.isFacturaAOfficial,
           };
         } catch (err: any) {
           throw new AppError(
@@ -244,34 +298,63 @@ export const routeSettlementService = {
         });
         if (!freshOrder) continue;
 
-        const totalAmount = roundToIntegerPeso(order.totalAmount.toString()).toNumber();
+        const afipInfo = afipResults[order.id];
+        const totalAmount =
+          order.billingType === BillingType.OFFICIAL && afipInfo
+            ? afipInfo.finalTotal
+            : roundToIntegerPeso(order.totalAmount.toString()).toNumber();
 
         if (freshOrder.status === OrderStatus.PREPARED) {
+          const now = new Date();
           let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
           let finalInvoiceNumber = `INT-${order.id.toString().padStart(5, '0')}`;
           let finalCae: string | null = null;
           let finalCaeDueDate: Date | null = null;
 
+          const fiscalUpdateData: Record<string, any> = {
+            invoicedAt: now,
+          };
+
           if (order.billingType === BillingType.OFFICIAL) {
-            const afipInfo = afipResults[order.id];
             if (!afipInfo) throw new Error(`Falta información de AFIP para pedido #${order.id}`);
             finalInvoiceType = afipInfo.invoiceType;
             finalInvoiceNumber = afipInfo.invoiceNumber;
             finalCae = afipInfo.cae;
             finalCaeDueDate = afipInfo.caeDueDate;
+            fiscalUpdateData.netAmount = afipInfo.net;
+            fiscalUpdateData.taxAmount = afipInfo.tax;
+            fiscalUpdateData.percepcionAmount = afipInfo.percepIIBB;
+            fiscalUpdateData.percepcionIvaAmount = afipInfo.percepIVA;
+            fiscalUpdateData.totalAmount = afipInfo.finalTotal;
           }
 
           await tx.order.update({
             where: { id: order.id },
             data: {
               status: OrderStatus.DELIVERED,
-              deliveredAt: new Date(),
+              deliveredAt: now,
               invoiceType: finalInvoiceType,
               invoiceNumber: finalInvoiceNumber,
               cae: finalCae,
               caeDueDate: finalCaeDueDate ? new Date(finalCaeDueDate) : null,
+              ...fiscalUpdateData,
             },
           });
+
+          if (
+            order.billingType === BillingType.OFFICIAL &&
+            afipInfo &&
+            (afipInfo.percepIIBB > 0 || afipInfo.percepIVA > 0)
+          ) {
+            await recordInvoicePerceptions(tx, {
+              personaId: order.personaId,
+              invoiceNumber: finalInvoiceNumber,
+              percepIIBB: afipInfo.percepIIBB,
+              percepIVA: afipInfo.percepIVA,
+              isFacturaAOfficial: afipInfo.isFacturaAOfficial,
+              provinceOrAddress: order.persona?.province || order.persona?.address || null,
+            });
+          }
 
           await recordLedgerMovement(tx, {
             personaId: order.personaId,
@@ -355,6 +438,15 @@ export const routeSettlementService = {
       }
     }
 
+    for (const [orderIdStr, info] of Object.entries(afipResults)) {
+      if (info.shouldEnqueueDeferredCae) {
+        const deferredOrderId = Number(orderIdStr);
+        enqueueDeferredAfipCaeRetry(deferredOrderId, () =>
+          executeDeferredCaeRequest(deferredOrderId),
+        );
+      }
+    }
+
     await logAudit({
       userId: input.userId,
       action: 'SETTLE_DELIVERY_ROUTE',
@@ -369,6 +461,7 @@ export const routeSettlementService = {
         checksDeclared: normalizeOptionalPeso(input.checksDeclared),
         transfersDeclared: normalizeOptionalPeso(input.transfersDeclared),
       },
+    });
     });
   },
 };

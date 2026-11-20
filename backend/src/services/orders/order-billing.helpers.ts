@@ -104,13 +104,21 @@ export function prepareInvoiceSplitItems(params: {
 
     if (config) {
       const qtyOficial = Math.ceil(item.quantity / 2);
-      const qtyInterno = Math.floor(item.quantity / 2);
+      const qtyInterno = Math.max(0, item.quantity - qtyOficial);
       let weightOficial: number | null = null;
       let weightInterno: number | null = null;
       if (item.weight) {
-        const halfW = roundToThreeDecimalsWeight(toDecimal(item.weight).dividedBy(2));
-        weightOficial = halfW.toNumber();
-        weightInterno = roundToThreeDecimalsWeight(toDecimal(item.weight).minus(halfW)).toNumber();
+        const totalW = roundToThreeDecimalsWeight(item.weight);
+        if (qtyInterno === 0) {
+          // Producto de 1 sola unidad (ej. 1 horma pesable): no se descarta medio peso;
+          // se conserva el 100% del peso facturable en la rama Oficial.
+          weightOficial = totalW.toNumber();
+          weightInterno = null;
+        } else {
+          const halfW = roundToThreeDecimalsWeight(totalW.dividedBy(2));
+          weightOficial = halfW.toNumber();
+          weightInterno = roundToThreeDecimalsWeight(totalW.minus(halfW)).toNumber();
+        }
       }
 
       if (qtyOficial > 0) {

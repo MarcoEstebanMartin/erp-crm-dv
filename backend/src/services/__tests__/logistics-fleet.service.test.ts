@@ -49,7 +49,18 @@ describe('Logística y Flota Services (Decimal.js, AccountLedger y Sanitización
 
     const ledgerEntries: any[] = [];
     const mockTx: any = {
-      order: { update: vi.fn().mockResolvedValue({}) },
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      order: {
+        findUnique: vi.fn().mockImplementation(({ where }) =>
+          Promise.resolve({
+            id: where.id,
+            status: OrderStatus.PREPARED,
+            deliveredAt: null,
+            invoiceNumber: null,
+          }),
+        ),
+        update: vi.fn().mockResolvedValue({}),
+      },
       user: { findFirst: vi.fn().mockResolvedValue({ id: 5, username: 'matias' }) },
       cashDrawer: { findFirst: vi.fn().mockResolvedValue({ id: 33 }) },
       bankAccount: { findFirst: vi.fn().mockResolvedValue({ id: 1 }) },
@@ -68,7 +79,10 @@ describe('Logística y Flota Services (Decimal.js, AccountLedger y Sanitización
         ),
         update: vi.fn().mockResolvedValue({}),
       },
-      deliveryRoute: { update: vi.fn().mockResolvedValue({ id: 12, status: 'COMPLETED' }) },
+      deliveryRoute: {
+        findUnique: vi.fn().mockResolvedValue({ status: 'IN_TRANSIT' }),
+        update: vi.fn().mockResolvedValue({ id: 12, status: 'COMPLETED' }),
+      },
     };
 
     vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
@@ -238,7 +252,15 @@ describe('Logística y Flota Services (Decimal.js, AccountLedger y Sanitización
 
     const createdTxs: any[] = [];
     const mockTx: any = {
-      order: { update: vi.fn().mockResolvedValue({}) },
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      order: {
+        findUnique: vi.fn().mockResolvedValue({
+          status: OrderStatus.DELIVERED,
+          deliveredAt: new Date(),
+          invoiceNumber: 'INT-00053',
+        }),
+        update: vi.fn().mockResolvedValue({}),
+      },
       bankAccount: { findFirst: vi.fn().mockResolvedValue({ id: 2 }) },
       persona: { update: vi.fn().mockResolvedValue({ id: 21, outstandingBalance: '0.00' }) },
       accountLedger: { create: vi.fn().mockResolvedValue({ id: 1 }) },
@@ -249,7 +271,10 @@ describe('Logística y Flota Services (Decimal.js, AccountLedger y Sanitización
         }),
         update: vi.fn().mockResolvedValue({}),
       },
-      deliveryRoute: { update: vi.fn().mockResolvedValue({ id: 4, status: 'COMPLETED' }) },
+      deliveryRoute: {
+        findUnique: vi.fn().mockResolvedValue({ status: 'IN_TRANSIT' }),
+        update: vi.fn().mockResolvedValue({ id: 4, status: 'COMPLETED' }),
+      },
     };
 
     vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));

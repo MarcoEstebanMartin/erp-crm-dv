@@ -18,8 +18,27 @@ import {
 } from './credit-note-stock.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 
+const activeCreditNoteApprovalLocks = new Map<number, Promise<any>>();
+
+async function withCreditNoteApprovalLock<T>(
+  creditNoteId: number,
+  task: () => Promise<T>,
+): Promise<T> {
+  const prev = activeCreditNoteApprovalLocks.get(creditNoteId) ?? Promise.resolve();
+  const current = prev.catch(() => undefined).then(() => task());
+  activeCreditNoteApprovalLocks.set(creditNoteId, current);
+  try {
+    return await current;
+  } finally {
+    if (activeCreditNoteApprovalLocks.get(creditNoteId) === current) {
+      activeCreditNoteApprovalLocks.delete(creditNoteId);
+    }
+  }
+}
+
 export const creditNoteApprovalService = {
   async approveCreditNote(params: { id: number; adminId: number }) {
+    return withCreditNoteApprovalLock(params.id, async () => {
     const creditNote = await prisma.creditNote.findUnique({
       where: { id: params.id },
       include: { persona: true, items: true },
@@ -158,6 +177,7 @@ export const creditNoteApprovalService = {
     });
 
     return updated;
+    });
   },
 
   async rejectCreditNote(params: { id: number; adminId: number }) {

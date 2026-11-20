@@ -1,10 +1,31 @@
 import prisma from '../../utils/prisma';
-import { BillingType, InvoiceType } from '@prisma/client';
+import { BillingType, InvoiceType, OrderStatus } from '@prisma/client';
 import { emitirFacturaAFIP } from '../afip.service';
 import {
   executeWithResilientRetry,
   isTransientExternalError,
 } from '../resilience/external-integrations-retry.service';
+
+const activeOrderBillingLocks = new Map<number, Promise<any>>();
+
+/**
+ * Serializa operaciones AFIP/facturación por orderId para evitar doble emisión de CAE.
+ */
+export async function withOrderBillingLock<T>(
+  orderId: number,
+  task: () => Promise<T>,
+): Promise<T> {
+  const prev = activeOrderBillingLocks.get(orderId) ?? Promise.resolve();
+  const current = prev.catch(() => undefined).then(() => task());
+  activeOrderBillingLocks.set(orderId, current);
+  try {
+    return await current;
+  } finally {
+    if (activeOrderBillingLocks.get(orderId) === current) {
+      activeOrderBillingLocks.delete(orderId);
+    }
+  }
+}
 
 export async function resolveAfipCaeOrContingency(params: {
   orderId: number;
@@ -85,69 +106,77 @@ export async function resolveAfipCaeOrContingency(params: {
 }
 
 export async function executeDeferredCaeRequest(orderId: number) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { persona: true },
-  });
+  return withOrderBillingLock(orderId, async () => {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { persona: true },
+    });
 
-  if (!order) {
-    const err: any = new Error('Pedido no encontrado.');
-    err.statusCode = 404;
-    throw err;
-  }
+    if (!order) {
+      const err: any = new Error('Pedido no encontrado.');
+      err.statusCode = 404;
+      throw err;
+    }
 
-  if (order.cae) {
-    throw new Error(`Este pedido ya posee CAE asignado (CAE: ${order.cae}).`);
-  }
+    if (order.status === OrderStatus.CANCELLED) {
+      const err: any = new Error('No se puede solicitar CAE para un pedido anulado.');
+      err.statusCode = 400;
+      throw err;
+    }
 
-  if (order.billingType !== BillingType.OFFICIAL) {
-    throw new Error('Solo se puede solicitar CAE para comprobantes de Sucursal A (Oficial).');
-  }
+    if (order.cae) {
+      throw new Error(`Este pedido ya posee CAE asignado (CAE: ${order.cae}).`);
+    }
 
-  const cuitLimpio = (order.persona.cuit || '').replace(/\D/g, '');
-  const isFacturaA = order.invoiceType === InvoiceType.FACTURA_A;
-  const docType =
-    cuitLimpio.length === 11
-      ? 80
-      : cuitLimpio.length === 7 || cuitLimpio.length === 8
-        ? 96
-        : 99;
-  const resolvedClientCuit = docType === 99 ? '0' : cuitLimpio;
+    if (order.billingType !== BillingType.OFFICIAL) {
+      throw new Error('Solo se puede solicitar CAE para comprobantes de Sucursal A (Oficial).');
+    }
 
-  const afipRes = await executeWithResilientRetry(
-    () =>
-      emitirFacturaAFIP({
-        clientCuit: resolvedClientCuit,
-        clientDocType: docType,
-        invoiceType: isFacturaA ? 'A' : 'B',
-        total: Number(order.totalAmount),
-        neto: isFacturaA ? Number(order.netAmount || 0) : undefined,
-        iva: isFacturaA ? Number(order.taxAmount || 0) : undefined,
-        percepcionAmount: isFacturaA ? Number(order.percepcionAmount || 0) : undefined,
-        percepcionIvaAmount: isFacturaA ? Number(order.percepcionIvaAmount || 0) : undefined,
-      }),
-    {
-      maxAttempts: 2,
-      baseDelayMs: 800,
-      maxDelayMs: 2_500,
-      isRetryable: isTransientExternalError,
-    },
-  );
+    const cuitLimpio = (order.persona.cuit || '').replace(/\D/g, '');
+    const isFacturaA = order.invoiceType === InvoiceType.FACTURA_A;
+    const docType =
+      cuitLimpio.length === 11
+        ? 80
+        : cuitLimpio.length === 7 || cuitLimpio.length === 8
+          ? 96
+          : 99;
+    const resolvedClientCuit = docType === 99 ? '0' : cuitLimpio;
 
-  const updated = await prisma.order.update({
-    where: { id: order.id },
-    data: {
+    const afipRes = await executeWithResilientRetry(
+      () =>
+        emitirFacturaAFIP({
+          clientCuit: resolvedClientCuit,
+          clientDocType: docType,
+          invoiceType: isFacturaA ? 'A' : 'B',
+          total: Number(order.totalAmount),
+          neto: isFacturaA ? Number(order.netAmount || 0) : undefined,
+          iva: isFacturaA ? Number(order.taxAmount || 0) : undefined,
+          percepcionAmount: isFacturaA ? Number(order.percepcionAmount || 0) : undefined,
+          percepcionIvaAmount: isFacturaA ? Number(order.percepcionIvaAmount || 0) : undefined,
+        }),
+      {
+        maxAttempts: 2,
+        baseDelayMs: 800,
+        maxDelayMs: 2_500,
+        isRetryable: isTransientExternalError,
+      },
+    );
+
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        invoiceNumber: afipRes.invoiceNumber,
+        invoicedAt: new Date(),
+        cae: afipRes.cae,
+        caeDueDate: afipRes.caeDueDate ? new Date(afipRes.caeDueDate) : null,
+      },
+      include: { items: { include: { product: true } }, persona: true },
+    });
+
+    return {
+      updated,
       invoiceNumber: afipRes.invoiceNumber,
-      invoicedAt: new Date(),
       cae: afipRes.cae,
-      caeDueDate: afipRes.caeDueDate ? new Date(afipRes.caeDueDate) : null,
-    },
-    include: { items: { include: { product: true } }, persona: true },
+    };
   });
-
-  return {
-    updated,
-    invoiceNumber: afipRes.invoiceNumber,
-    cae: afipRes.cae,
-  };
 }

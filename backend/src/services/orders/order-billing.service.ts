@@ -7,6 +7,7 @@ import { prepareInvoiceSplitItems } from './order-billing.helpers';
 import {
   executeDeferredCaeRequest,
   resolveAfipCaeOrContingency,
+  withOrderBillingLock,
 } from './order-cae-deferred.helper';
 import { executeInvoiceOrderSettlementTx } from './order-invoice-tx.helper';
 import { enqueueDeferredAfipCaeRetry } from '../resilience/external-integrations-retry.service';
@@ -23,21 +24,6 @@ export interface InvoiceOrderDto {
   deferCae?: boolean;
   deliveryMethod?: DeliveryMethod;
   markPickedUp?: boolean;
-}
-
-const activeOrderBillingLocks = new Map<number, Promise<any>>();
-
-async function withOrderBillingLock<T>(orderId: number, task: () => Promise<T>): Promise<T> {
-  const prev = activeOrderBillingLocks.get(orderId) ?? Promise.resolve();
-  const current = prev.catch(() => undefined).then(() => task());
-  activeOrderBillingLocks.set(orderId, current);
-  try {
-    return await current;
-  } finally {
-    if (activeOrderBillingLocks.get(orderId) === current) {
-      activeOrderBillingLocks.delete(orderId);
-    }
-  }
 }
 
 export class OrderBillingService {
