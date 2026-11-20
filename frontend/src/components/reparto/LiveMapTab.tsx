@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { api } from '../../utils/api';
 import { OfficialGoogleMap } from '../common/OfficialGoogleMap';
+import { LiveMapClientLocationModal } from './LiveMapClientLocationModal';
 import { LiveMapSidePanel } from './LiveMapSidePanel';
 import {
   buildLiveMapScene,
@@ -20,6 +21,7 @@ export default function LiveMapTab() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fixingClientId, setFixingClientId] = useState<number | null>(null);
+  const [editingLocationEvent, setEditingLocationEvent] = useState<LiveMapEventItem | null>(null);
   const [selection, setSelection] = useState<LiveMapSelection>(null);
   const [layers, setLayers] = useState<LiveMapLayers>({
     sellers: true,
@@ -195,6 +197,7 @@ export default function LiveMapTab() {
           onSelect={setSelection}
           fixingClientId={fixingClientId}
           onFixClientCoords={handleFixClientCoords}
+          onEditClientLocation={setEditingLocationEvent}
         />
 
         <div
@@ -219,6 +222,12 @@ export default function LiveMapTab() {
           />
         </div>
       </div>
+
+      <LiveMapClientLocationModal
+        event={editingLocationEvent}
+        onClose={() => setEditingLocationEvent(null)}
+        onSaved={() => fetchLiveMap(date)}
+      />
     </div>
   );
 }

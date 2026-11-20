@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, MapPin, Truck, User } from 'lucide-react';
+import { ArrowLeft, Check, LocateFixed, MapPin, Truck, User } from 'lucide-react';
 import {
   eventTypeLabel,
   formatDistanceEs,
@@ -15,6 +15,7 @@ interface LiveMapSidePanelProps {
   onSelect: (next: LiveMapSelection) => void;
   fixingClientId: number | null;
   onFixClientCoords: (event: LiveMapEventItem) => Promise<void>;
+  onEditClientLocation: (event: LiveMapEventItem) => void;
 }
 
 const ROW_BASE_STYLE: React.CSSProperties = {
@@ -37,6 +38,7 @@ export function LiveMapSidePanel({
   onSelect,
   fixingClientId,
   onFixClientCoords,
+  onEditClientLocation,
 }: LiveMapSidePanelProps) {
   const selectedSeller =
     selection?.kind === 'seller'
@@ -137,22 +139,24 @@ export function LiveMapSidePanel({
                     </div>
                   )}
 
-                  {(ev.distanceStatus === 'FAR' || ev.distanceStatus === 'CLIENT_NO_GPS' || ev.distanceStatus === 'EVENT_NO_GPS') && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginTop: '2px' }}>
-                      <span
-                        style={{
-                          fontSize: '0.72rem',
-                          fontWeight: 600,
-                          color: ev.distanceStatus === 'FAR' ? '#E30613' : 'var(--text-secondary)',
-                        }}
-                      >
-                        {ev.distanceStatus === 'FAR'
-                          ? formatDistanceEs(ev.distanceMeters)
-                          : ev.distanceStatus === 'CLIENT_NO_GPS'
-                            ? 'Cliente sin GPS'
-                            : 'Sin GPS'}
-                      </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        color: ev.distanceStatus === 'FAR' ? '#E30613' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {ev.distanceStatus === 'FAR'
+                        ? formatDistanceEs(ev.distanceMeters)
+                        : ev.distanceStatus === 'CLIENT_NO_GPS'
+                          ? 'Cliente sin GPS'
+                          : ev.distanceStatus === 'EVENT_NO_GPS'
+                            ? 'Sin GPS'
+                            : ''}
+                    </span>
 
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
                       {canFix && (
                         <button
                           type="button"
@@ -165,8 +169,18 @@ export function LiveMapSidePanel({
                           {isFixing ? 'Guardando' : 'Fijar acá'}
                         </button>
                       )}
+
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => onEditClientLocation(ev)}
+                        style={{ padding: '2px 7px', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <LocateFixed size={12} aria-hidden="true" />
+                        Ubicar
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </li>
               );
             })}

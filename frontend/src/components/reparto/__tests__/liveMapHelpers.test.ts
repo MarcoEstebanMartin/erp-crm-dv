@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { buildClientAddressQuery } from '../LiveMapClientLocationModal';
 import {
   buildLiveMapScene,
   formatDistanceEs,
@@ -178,5 +179,12 @@ describe('liveMapHelpers', () => {
     expect(scene.markers).toHaveLength(0);
     expect(scene.gpsLocation?.vehiclePlate).toBe('AF123CD · Gemini Reparto');
     expect(scene.gpsTrail).toHaveLength(2);
+  });
+
+  it('arma la búsqueda priorizando dirección y localidad del cliente', () => {
+    expect(buildClientAddressQuery('Rivadavia 350', 'General Villegas')).toBe(
+      'Rivadavia 350, General Villegas, Buenos Aires, Argentina',
+    );
+    expect(buildClientAddressQuery('  Mitre 120 ', null)).toContain('Mitre 120');
   });
 });
