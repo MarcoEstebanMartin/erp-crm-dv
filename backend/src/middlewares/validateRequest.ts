@@ -8,11 +8,14 @@ import { ZodSchema, ZodError } from 'zod';
 export const validateRequest = (schema: ZodSchema) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await schema.parseAsync({
+      const parsed: any = await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
       });
+      if (parsed && typeof parsed === 'object' && parsed.body !== undefined) {
+        req.body = parsed.body;
+      }
       next();
     } catch (error) {
       if (error instanceof ZodError) {

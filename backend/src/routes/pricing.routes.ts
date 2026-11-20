@@ -7,6 +7,12 @@ import {
   deleteSplitBillingConfig 
 } from '../controllers/pricing.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { validateRequest } from '../middlewares/validateRequest';
+import {
+  createDiscountRuleSchema,
+  createSplitBillingSchema,
+  positiveIdParamSchema,
+} from '../validators/misc-routes.validator';
 import { Role } from '@prisma/client';
 
 const router = Router();
@@ -16,10 +22,10 @@ router.use(authenticateJWT);
 router.use(requireRole([Role.ADMIN, Role.FACTURACION]));
 
 router.get('/rules', getPricingRules);
-router.post('/rules', createDiscountRule);
-router.delete('/rules/:id', deleteDiscountRule);
+router.post('/rules', validateRequest(createDiscountRuleSchema), createDiscountRule);
+router.delete('/rules/:id', validateRequest(positiveIdParamSchema), deleteDiscountRule);
 
-router.post('/split', createSplitBillingConfig);
-router.delete('/split/:id', deleteSplitBillingConfig);
+router.post('/split', validateRequest(createSplitBillingSchema), createSplitBillingConfig);
+router.delete('/split/:id', validateRequest(positiveIdParamSchema), deleteSplitBillingConfig);
 
 export default router;

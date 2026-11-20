@@ -50,6 +50,6 @@ router.post(
   idempotencyGuard,
   approveOrderDraft,
 );
-router.post('/campaigns/broadcast', crmAdminOnly, broadcastCampaign);
+router.post('/campaigns/broadcast', ...crmAdminOnly, idempotencyGuard, broadcastCampaign);
 
 export default router;

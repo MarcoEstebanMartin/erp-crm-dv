@@ -19,6 +19,7 @@ import {
   getFuelAnalytics,
 } from '../controllers/fuel.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   createExpirySchema,
@@ -50,7 +51,7 @@ router.delete('/:id', canAdminFleet, validateRequest(fleetIdParamSchema), delete
 router.get('/fuel', getFuelLogs);
 router.get('/fuel/analytics', getFuelAnalytics);
 router.post('/fuel', canOperateFleet, validateRequest(createFuelLogSchema), createFuelLog);
-router.post('/fuel/settle', canAdminFleet, validateRequest(settleFuelLogsSchema), settleFuelLogs);
+router.post('/fuel/settle', canAdminFleet, validateRequest(settleFuelLogsSchema), idempotencyGuard, settleFuelLogs);
 router.delete('/fuel/:id', canAdminFleet, validateRequest(fleetIdParamSchema), deleteFuelLog);
 
 // Mantenimientos

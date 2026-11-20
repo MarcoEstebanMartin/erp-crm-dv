@@ -18,6 +18,7 @@ import {
   createDocument,
 } from '../controllers/hr.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { validateRequest } from '../middlewares/validate.middleware';
 import {
   employeeIdParamSchema,
@@ -43,12 +44,12 @@ router.delete('/employees/:id', authenticateJWT, requireRole([Role.ADMIN]), vali
 
 // Adelantos
 router.get('/advances', authenticateJWT, canManageHr, getAdvances);
-router.post('/advances', authenticateJWT, canManageHr, validateRequest(createAdvanceSchema), createAdvance);
+router.post('/advances', authenticateJWT, canManageHr, validateRequest(createAdvanceSchema), idempotencyGuard, createAdvance);
 
 // Liquidaciones de Sueldo (Payroll)
 router.get('/payrolls', authenticateJWT, canManageHr, getPayrolls);
 router.get('/payrolls/calculate', authenticateJWT, canManageHr, validateRequest(calculatePayrollQuerySchema), calculatePayroll);
-router.post('/payrolls', authenticateJWT, canManageHr, validateRequest(createPayrollSchema), createPayroll);
+router.post('/payrolls', authenticateJWT, canManageHr, validateRequest(createPayrollSchema), idempotencyGuard, createPayroll);
 
 // Vacaciones y Licencias
 router.get('/vacations', authenticateJWT, canManageHr, getVacations);

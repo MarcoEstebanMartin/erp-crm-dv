@@ -34,11 +34,14 @@ import {
 
 const router = Router();
 
+const canOperateDrawers = requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR, Role.DEPOSITO]);
+const canViewAllDrawers = requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]);
+
 // Rutas generales de caja
-router.post('/drawers/open', authenticateJWT, validateRequest(openDrawerSchema), idempotencyGuard, openDrawer);
-router.post('/drawers/close', authenticateJWT, validateRequest(closeDrawerSchema), idempotencyGuard, closeDrawer);
-router.get('/drawers/active', authenticateJWT, getActiveDrawer);
-router.get('/drawers/active-all', authenticateJWT, getActiveDrawers);
+router.post('/drawers/open', authenticateJWT, canOperateDrawers, validateRequest(openDrawerSchema), idempotencyGuard, openDrawer);
+router.post('/drawers/close', authenticateJWT, canOperateDrawers, validateRequest(closeDrawerSchema), idempotencyGuard, closeDrawer);
+router.get('/drawers/active', authenticateJWT, canOperateDrawers, getActiveDrawer);
+router.get('/drawers/active-all', authenticateJWT, canViewAllDrawers, getActiveDrawers);
 router.get(
   '/drawers/history',
   authenticateJWT,

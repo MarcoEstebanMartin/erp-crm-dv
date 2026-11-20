@@ -17,10 +17,25 @@ import {
   receivePurchaseOrderSchema,
 } from '../validators/purchase.validator';
 
+const ALLOWED_OCR_MIMES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+]);
+
 const router = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_OCR_MIMES.has(file.mimetype)) {
+      cb(new Error('Tipo de archivo no permitido. Solo se aceptan PDF, JPG, PNG o WEBP.'));
+      return;
+    }
+    cb(null, true);
+  },
 });
 
 router.use(authenticateJWT);

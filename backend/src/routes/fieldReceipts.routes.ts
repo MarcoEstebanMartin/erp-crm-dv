@@ -12,6 +12,7 @@ import {
   voidFieldReceipt,
 } from '../controllers/fieldReceipts.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
   approveSettlementSchema,
@@ -45,6 +46,7 @@ router.post(
   authenticateJWT,
   requireRole(TREASURY_ROLES),
   validateRequest(approveSettlementSchema),
+  idempotencyGuard,
   approveSettlement,
 );
 router.post(
@@ -52,6 +54,7 @@ router.post(
   authenticateJWT,
   requireRole(TREASURY_ROLES),
   validateRequest(verifyTransferSchema),
+  idempotencyGuard,
   verifyTransferPayment,
 );
 router.post(
@@ -59,6 +62,7 @@ router.post(
   authenticateJWT,
   requireRole(TREASURY_ROLES),
   validateRequest(rejectCheckSchema),
+  idempotencyGuard,
   rejectCheckPayment,
 );
 router.post(
@@ -66,6 +70,7 @@ router.post(
   authenticateJWT,
   requireRole(TREASURY_ROLES),
   validateRequest(voidFieldReceiptSchema),
+  idempotencyGuard,
   voidFieldReceipt,
 );
 

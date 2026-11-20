@@ -19,7 +19,12 @@ const router = Router();
 
 router.use(authenticateJWT);
 
-router.get('/:id', validateRequest(creditNoteIdParamSchema), getCreditNoteById);
+router.get(
+  '/:id',
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(creditNoteIdParamSchema),
+  getCreditNoteById,
+);
 router.post(
   '/:id/approve',
   requireRole([Role.ADMIN]),
