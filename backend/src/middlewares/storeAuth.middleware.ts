@@ -3,8 +3,13 @@ import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import { env } from '../config/env.config';
 import prisma from '../utils/prisma';
-import { sessionCache } from '../utils/session-cache.util';
 import {
+  computePasswordVersion,
+  isSystemUsername,
+  sessionCache,
+} from '../utils/session-cache.util';
+import {
+  clearStaffSessionCookie,
   clearStoreSessionCookie,
   extractStoreToken,
   isCrossSiteCookieMutationBlocked,
@@ -28,6 +33,7 @@ interface RawTokenPayload {
   id?: number;
   role?: string;
   type?: string;
+  pwdVer?: string;
 }
 
 /**
@@ -134,18 +140,68 @@ export async function authenticateStoreClientJWT(
     // Caso 2: Personal interno autorizado (ADMIN o FACTURACION)
     if (decoded.id) {
       const staffId = Number(decoded.id);
+      if (!Number.isInteger(staffId) || staffId <= 0) {
+        res.status(401).json({
+          status: 'error',
+          message: 'Token de personal inválido.',
+          code: 'TOKEN_INVALID',
+        });
+        return;
+      }
+
       let activeStaff = sessionCache.getStaffSession(staffId);
 
-      if (!activeStaff) {
+      if (activeStaff) {
+        if (activeStaff.pwdVer && decoded.pwdVer !== activeStaff.pwdVer) {
+          clearStaffSessionCookie(req, res);
+          res.status(401).json({
+            status: 'error',
+            message: 'Tu contraseña o sesión fue actualizada. Iniciá sesión nuevamente.',
+            code: 'SESSION_REVOKED',
+          });
+          return;
+        }
+      } else {
         const staffDb = await prisma.user.findUnique({
           where: { id: staffId },
-          select: { id: true, isActive: true, role: true },
+          select: { id: true, isActive: true, role: true, passwordHash: true, username: true },
         });
 
-        if (staffDb && staffDb.isActive) {
-          activeStaff = { id: staffDb.id, role: staffDb.role, isActive: true };
-          sessionCache.setStaffSession(staffId, activeStaff);
+        if (
+          !staffDb ||
+          !staffDb.isActive ||
+          (staffDb.username && isSystemUsername(staffDb.username))
+        ) {
+          sessionCache.invalidateStaffSession(staffId);
+          clearStaffSessionCookie(req, res);
+          res.status(401).json({
+            status: 'error',
+            message: 'Cuenta desactivada o inactiva.',
+            code: 'USER_INACTIVE',
+          });
+          return;
         }
+
+        const expectedPwdVer = staffDb.passwordHash
+          ? computePasswordVersion(staffDb.passwordHash)
+          : undefined;
+        if (expectedPwdVer && decoded.pwdVer !== expectedPwdVer) {
+          clearStaffSessionCookie(req, res);
+          res.status(401).json({
+            status: 'error',
+            message: 'Tu contraseña o sesión fue actualizada. Iniciá sesión nuevamente.',
+            code: 'SESSION_REVOKED',
+          });
+          return;
+        }
+
+        activeStaff = {
+          id: staffDb.id,
+          role: staffDb.role,
+          isActive: true,
+          pwdVer: expectedPwdVer,
+        };
+        sessionCache.setStaffSession(staffId, activeStaff);
       }
 
       if (

@@ -1,8 +1,21 @@
-import { Request, Response } from 'express';
-import crypto from 'crypto';
+import { Response } from 'express';
+import { BillingType, SalesChannel } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { whatsAppService, normalizeWaId } from '../services/whatsapp.service';
+import { OrderService } from '../services/order.service';
 import { AuthenticatedRequest } from '../types';
+
+const SAFE_CRM_PERSONA_SELECT = {
+  id: true,
+  name: true,
+  phone: true,
+  cuit: true,
+  address: true,
+  priceList: true,
+  sellerId: true,
+  isClient: true,
+  isActive: true,
+} as const;
 
 /**
  * Obtener lista de conversaciones CRM
@@ -13,7 +26,8 @@ export async function getConversations(req: AuthenticatedRequest, res: Response)
       orderBy: { lastMessageAt: 'desc' },
       include: {
         persona: {
-          include: {
+          select: {
+            ...SAFE_CRM_PERSONA_SELECT,
             seller: {
               select: { id: true, username: true }
             }
@@ -86,7 +100,9 @@ export async function getMessagesByConversation(req: AuthenticatedRequest, res: 
     const conversation = await prisma.crmConversation.findUnique({
       where: { id: conversationId },
       include: {
-        persona: true,
+        persona: {
+          select: SAFE_CRM_PERSONA_SELECT,
+        },
         drafts: {
           orderBy: { createdAt: 'desc' },
           take: 5
@@ -244,89 +260,138 @@ export async function parseOrderDraft(req: AuthenticatedRequest, res: Response):
 
 /**
  * Aprobar Borrador de Pedido (Human-in-the-Loop)
+ * - Recalcula precios y congela snapshots históricos exclusivamente en servidor vía OrderService.
+ * - Bloqueo atómico anti-duplicados con updateMany({ id, status: 'PENDING' }).
  */
 export async function approveOrderDraft(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const rawDraftId = Array.isArray(req.params.draftId) ? req.params.draftId[0] : req.params.draftId;
-    const draftId = parseInt(rawDraftId, 10);
-
-    const draft = await prisma.crmOrderDraft.findUnique({
-      where: { id: draftId },
-      include: { conversation: { include: { persona: true } } }
-    });
-
-    if (!draft || draft.status !== 'PENDING') {
-      res.status(400).json({ status: 'error', message: 'Borrador no válido o ya procesado.' });
+    if (!req.user?.id) {
+      res.status(401).json({ status: 'error', message: 'Sesión de usuario requerida.' });
       return;
     }
 
-    const customItems = req.body?.items;
-    const items = (Array.isArray(customItems) && customItems.length > 0)
-      ? customItems
-      : JSON.parse(draft.itemsJson || '[]');
+    const rawDraftId = Array.isArray(req.params.draftId) ? req.params.draftId[0] : req.params.draftId;
+    const draftId = parseInt(rawDraftId, 10);
+    if (!Number.isInteger(draftId) || draftId <= 0) {
+      res.status(400).json({ status: 'error', message: 'ID de borrador inválido.' });
+      return;
+    }
 
-    if (items.length === 0) {
+    const draft = await prisma.crmOrderDraft.findUnique({
+      where: { id: draftId },
+      include: {
+        conversation: {
+          select: {
+            id: true,
+            personaId: true,
+          },
+        },
+      },
+    });
+
+    if (!draft || draft.status !== 'PENDING') {
+      res.status(409).json({ status: 'error', message: 'Borrador no válido o ya procesado.' });
+      return;
+    }
+
+    const rawItemsSource: unknown[] =
+      Array.isArray(req.body?.items) && req.body.items.length > 0
+        ? req.body.items
+        : JSON.parse(draft.itemsJson || '[]');
+
+    const sanitizedItems = rawItemsSource
+      .map((item: any) => ({
+        productId: Number(item?.productId),
+        quantity: Number(item?.quantity),
+        weight: item?.weight !== undefined && Number(item.weight) > 0 ? Number(item.weight) : undefined,
+      }))
+      .filter(
+        (item) =>
+          Number.isInteger(item.productId) &&
+          item.productId > 0 &&
+          Number.isInteger(item.quantity) &&
+          item.quantity > 0,
+      );
+
+    if (sanitizedItems.length === 0) {
       res.status(400).json({ status: 'error', message: 'El borrador no contiene ítems válidos.' });
       return;
     }
 
     const personaId = draft.personaId || draft.conversation.personaId;
     if (!personaId) {
-      res.status(400).json({ status: 'error', message: 'Asigne un cliente a la conversación antes de aprobar la orden.' });
+      res.status(400).json({
+        status: 'error',
+        message: 'Asigne un cliente a la conversación antes de aprobar la orden.',
+      });
       return;
     }
 
-    const userId = req.user?.id || 1;
+    // Reclamo atómico del borrador para evitar doble aprobación concurrente
+    const claimed = await prisma.crmOrderDraft.updateMany({
+      where: { id: draftId, status: 'PENDING' },
+      data: { status: 'APPROVED' },
+    });
 
-    const calculatedTotal = items.reduce((acc: number, item: any) => {
-      const q = Number(item.quantity) || 1;
-      const p = Number(item.unitPrice) || 0;
-      return acc + (q * p);
-    }, 0);
+    if (claimed.count === 0) {
+      res.status(409).json({ status: 'error', message: 'Borrador ya procesado por otra solicitud.' });
+      return;
+    }
 
-    const { newOrder } = await prisma.$transaction(async (tx) => {
-      const orderCreated = await tx.order.create({
-        data: {
-          personaId,
-          sellerId: userId,
-          billingType: 'INTERNAL',
-          invoiceType: 'PRESUPUESTO',
-          status: 'PENDING',
-          totalAmount: calculatedTotal > 0 ? calculatedTotal : draft.totalEstimated,
-          items: {
-            create: items.map((item: any) => ({
-              productId: item.productId,
-              quantity: Number(item.quantity) || 1,
-              unitPrice: Number(item.unitPrice) || 0,
-              subtotal: Number(item.subtotal) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0))
-            }))
-          }
-        }
+    let newOrder;
+    try {
+      const requestedBilling =
+        req.body?.billingType === BillingType.OFFICIAL ? BillingType.OFFICIAL : BillingType.INTERNAL;
+
+      newOrder = await OrderService.createOrder({
+        sellerId: req.user.id,
+        userRole: req.user.role,
+        personaId,
+        billingType: requestedBilling,
+        salesChannel: SalesChannel.TELEFONICO,
+        notes: typeof req.body?.notes === 'string' && req.body.notes.trim()
+          ? req.body.notes.trim()
+          : `Aprobado desde Borrador CRM #${draftId}`,
+        items: sanitizedItems,
       });
+    } catch (createError) {
+      await prisma.crmOrderDraft
+        .update({
+          where: { id: draftId },
+          data: { status: 'PENDING' },
+        })
+        .catch(() => {});
+      throw createError;
+    }
 
-      await tx.crmOrderDraft.update({
-        where: { id: draftId },
-        data: {
-          status: 'APPROVED',
-          orderId: orderCreated.id,
-          itemsJson: JSON.stringify(items),
-          totalEstimated: calculatedTotal > 0 ? calculatedTotal : draft.totalEstimated
-        }
-      });
-
-      return { newOrder: orderCreated };
+    await prisma.crmOrderDraft.update({
+      where: { id: draftId },
+      data: {
+        orderId: newOrder.id,
+        itemsJson: JSON.stringify(sanitizedItems),
+        totalEstimated: newOrder.totalAmount,
+      },
     });
 
     res.status(200).json({
       status: 'success',
       data: {
         message: '¡Borrador aprobado exitosamente y convertido en Preventa ERP!',
-        order: newOrder
-      }
+        order: newOrder,
+      },
     });
   } catch (error: any) {
     console.error('Error al aprobar borrador CRM:', error);
-    res.status(500).json({ status: 'error', message: 'Error interno al aprobar orden.' });
+    const statusCode = typeof error?.statusCode === 'number' ? error.statusCode : 400;
+    const isClientError =
+      statusCode >= 400 &&
+      statusCode < 500 &&
+      typeof error?.message === 'string' &&
+      !error.message.includes('Prisma');
+    res.status(isClientError ? statusCode : 500).json({
+      status: 'error',
+      message: isClientError ? error.message : 'Error interno al aprobar orden.',
+    });
   }
 }
 
@@ -357,7 +422,9 @@ export async function linkPersonaToConversation(req: AuthenticatedRequest, res: 
         contactName: persona.name
       },
       include: {
-        persona: true
+        persona: {
+          select: SAFE_CRM_PERSONA_SELECT,
+        }
       }
     });
 
@@ -386,7 +453,9 @@ export async function assignConversation(req: AuthenticatedRequest, res: Respons
         assignedSellerId: assignedUserId ? Number(assignedUserId) : null
       },
       include: {
-        persona: true,
+        persona: {
+          select: SAFE_CRM_PERSONA_SELECT,
+        },
         assignedUser: { select: { id: true, username: true, role: true } }
       }
     });
@@ -398,64 +467,6 @@ export async function assignConversation(req: AuthenticatedRequest, res: Respons
   } catch (error: any) {
     console.error('Error al derivar conversación:', error);
     res.status(500).json({ status: 'error', message: 'Error al derivar conversación.' });
-  }
-}
-
-/**
- * Webhook de Meta: Verificación GET
- */
-export async function verifyWebhook(req: Request, res: Response): Promise<void> {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
-  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'dv_crm_secure_token';
-
-  if (mode === 'subscribe' && token === verifyToken) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
-  }
-}
-
-/**
- * Webhook de Meta: Recepción POST con verificación HMAC SHA256
- */
-export async function handleWebhook(req: Request, res: Response): Promise<void> {
-  try {
-    const appSecret = process.env.WHATSAPP_APP_SECRET;
-    if (appSecret) {
-      const signature = req.headers['x-hub-signature-256'] as string;
-      if (!signature) {
-        res.status(401).send('Firma X-Hub-Signature-256 no provista.');
-        return;
-      }
-      const hmac = crypto.createHmac('sha256', appSecret);
-      const expectedSignature = 'sha256=' + hmac.update(JSON.stringify(req.body)).digest('hex');
-      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
-        res.status(403).send('Firma de webhook inválida.');
-        return;
-      }
-    }
-
-    const body = req.body;
-    if (body.object === 'whatsapp_business_account') {
-      for (const entry of body.entry || []) {
-        for (const change of entry.changes || []) {
-          const value = change.value;
-          if (value && value.messages) {
-            for (const msg of value.messages) {
-              await whatsAppService.handleIncomingMessage(msg);
-            }
-          }
-        }
-      }
-      res.status(200).send('EVENT_RECEIVED');
-    } else {
-      res.sendStatus(404);
-    }
-  } catch (error: any) {
-    console.error('Error en Webhook Meta:', error);
-    res.status(500).send('SERVER_ERROR');
   }
 }
 

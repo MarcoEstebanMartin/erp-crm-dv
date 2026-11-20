@@ -6,6 +6,7 @@ export interface UserPayload {
   username: string;
   role: Role;
   pwdVer?: string;
+  scope?: 'staff';
 }
 
 export interface AuthenticatedRequest extends Request {

@@ -92,6 +92,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         username: user.username,
         role: user.role,
         pwdVer,
+        scope: 'staff',
       },
       env.JWT_SECRET,
       { expiresIn: '30d' }
@@ -261,6 +262,7 @@ export async function changeOwnPassword(req: AuthenticatedRequest, res: Response
         username: user.username,
         role: user.role,
         pwdVer,
+        scope: 'staff',
       },
       env.JWT_SECRET,
       { expiresIn: '30d' },

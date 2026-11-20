@@ -12,6 +12,7 @@ import {
   createProductImageCacheFallback,
 } from './middlewares/product-image-cache.middleware';
 import { extractStaffToken } from './utils/cookie-auth.util';
+import { verifyStaffJwtToken } from './middlewares/auth';
 
 // Importación de Rutas
 import authRoutes from './routes/auth.routes';
@@ -141,7 +142,9 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/offers', offerRoutes);
 app.use('/api/hr', hrRoutes);
 const guardEmbeddedPublicStore = (req: Request, res: Response, next: NextFunction): void => {
-  if (env.ENABLE_EMBEDDED_STORE || extractStaffToken(req)) {
+  const extractedStaff = extractStaffToken(req);
+  const hasValidStaffSession = Boolean(extractedStaff && verifyStaffJwtToken(extractedStaff.token));
+  if (env.ENABLE_EMBEDDED_STORE || hasValidStaffSession) {
     next();
     return;
   }

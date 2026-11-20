@@ -16,6 +16,9 @@ import {
 import { verifyWebhook, handleWebhook } from '../controllers/crm_whatsapp_webhook.controller';
 import { broadcastCampaign } from '../controllers/crm_campaign.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { validateRequest } from '../middlewares/validateRequest';
+import { idempotencyGuard } from '../middlewares/idempotency.middleware';
+import { approveOrderDraftSchema } from '../validators/crm_whatsapp.validator';
 import { Role } from '@prisma/client';
 
 const router = Router();
@@ -26,6 +29,7 @@ router.post('/webhook', handleWebhook);
 
 // 2. Rutas Internas de Gestión CRM (Protegidas con Autenticación JWT y Roles de Sistema)
 const crmOperational = [authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR, Role.DEPOSITO])];
+const crmOrderApproval = [authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR])];
 const crmAdminOnly = [authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION])];
 
 router.get('/conversations', crmOperational, getConversations);
@@ -39,7 +43,13 @@ router.put('/conversations/:id/assign', crmAdminOnly, assignConversation);
 router.delete('/conversations/:id', crmAdminOnly, deleteConversation);
 router.post('/orders/:orderId/notify-delivery', crmOperational, sendDeliveryNotification);
 router.post('/conversations/:id/parse-order', crmOperational, parseOrderDraft);
-router.post('/drafts/:draftId/approve', crmOperational, approveOrderDraft);
+router.post(
+  '/drafts/:draftId/approve',
+  ...crmOrderApproval,
+  validateRequest(approveOrderDraftSchema),
+  idempotencyGuard,
+  approveOrderDraft,
+);
 router.post('/campaigns/broadcast', crmAdminOnly, broadcastCampaign);
 
 export default router;
