@@ -220,6 +220,7 @@ model Product {
   approximateWeight Decimal? @db.Decimal(12, 3)
   imageUrl          String?
   commercialCategory String?
+  storeHighlight     String?
   pickingZone        String?
   defaultLocation    String?
   previousCostPrice  Decimal? @db.Decimal(12, 2)

@@ -27,6 +27,8 @@ export interface StoreProduct {
   listPriceC: number;
   stock: number;
   isPesable: boolean;
+  approximateWeight?: number | null;
+  estimatedPiecePrice?: number | null;
   unitsPerBox: number;
   imageUrl: string | null;
   rubroId: number | null;
@@ -35,12 +37,28 @@ export interface StoreProduct {
   commercialGroupName?: string;
   commercialGroupIcon?: string;
   isOffer: boolean;
+  storeHighlight?: 'OFERTON' | 'DESTACADO' | null;
   offerDiscount: number;
   previousPrice?: number | null;
   specialTag?: string | null;
   offerName: string | null;
   minOrderQuantity?: number;
 }
+
+export interface StoreCategoryGroup {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+export interface StoreProductSection {
+  id: string;
+  name: string;
+  icon: string;
+  products: StoreProduct[];
+}
+
+export type CatalogViewMode = 'grid' | 'list';
 
 export interface CartItem {
   product: StoreProduct;
@@ -60,6 +78,19 @@ export interface PendingClientInfo {
 
 export const formatMoney = (val: number): string =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val);
+
+export const formatIntegerMoney = (val: number): string =>
+  `$${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 }).format(Math.round(val))}`;
+
+export const formatApproxWeight = (kg: number): string =>
+  new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(kg);
+
+export function resolveProductImageSrc(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('http')) return imageUrl;
+  if (imageUrl.startsWith('/')) return `${imageUrl}?v=1.2`;
+  return `/uploads/products/${imageUrl}?v=1.2`;
+}
 
 export function checkShowAccountBalance(client: ClientProfile | null): boolean {
   if (!client || !client.priceList) return false;
@@ -112,4 +143,46 @@ export function filterAndSortStoreProducts(
     }
     return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
   });
+}
+
+export function groupProductsByCategory(
+  products: StoreProduct[],
+  commercialGroups: StoreCategoryGroup[]
+): StoreProductSection[] {
+  const byId = new Map<string, StoreProduct[]>();
+  for (const p of products) {
+    const gid = p.commercialGroupId || 'otros';
+    const bucket = byId.get(gid);
+    if (bucket) {
+      bucket.push(p);
+    } else {
+      byId.set(gid, [p]);
+    }
+  }
+
+  const sections: StoreProductSection[] = [];
+  const added = new Set<string>();
+
+  for (const g of commercialGroups) {
+    if (g.id === 'all' || g.id === 'bultos') continue;
+    const list = byId.get(g.id);
+    if (list && list.length > 0) {
+      sections.push({ id: g.id, name: g.name, icon: g.icon, products: list });
+      added.add(g.id);
+    }
+  }
+
+  for (const [gid, list] of byId.entries()) {
+    if (!added.has(gid) && list.length > 0) {
+      const sample = list[0];
+      sections.push({
+        id: gid,
+        name: sample.commercialGroupName || 'Otros',
+        icon: sample.commercialGroupIcon || '📦',
+        products: list,
+      });
+    }
+  }
+
+  return sections;
 }

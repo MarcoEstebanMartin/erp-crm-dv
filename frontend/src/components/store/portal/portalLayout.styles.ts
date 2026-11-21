@@ -7,14 +7,9 @@ export const portalLayoutStyles: { [key: string]: any } = {
     paddingBottom: '60px'
   },
   topNavbar: {
-    background: '#1e293b',
-    borderBottom: '1px solid #0f172a',
-    padding: '16px 28px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '16px'
+    background: '#0f172a',
+    borderBottom: '1px solid #1e293b',
+    padding: '12px 24px',
   },
   navBrand: {
     display: 'flex',
@@ -85,22 +80,17 @@ export const portalLayoutStyles: { [key: string]: any } = {
     cursor: 'pointer'
   },
   tabNav: {
-    display: 'flex',
-    gap: '8px',
     background: '#ffffff',
     borderBottom: '1px solid #e2e8f0',
-    padding: '0 28px',
-    overflowX: 'auto',
-    WebkitOverflowScrolling: 'touch',
-    whiteSpace: 'nowrap'
+    padding: '0 24px',
   },
   tabItem: {
     background: 'none',
     border: 'none',
     borderBottom: '2px solid transparent',
     color: '#64748b',
-    padding: '16px 20px',
-    fontSize: '14px',
+    padding: '12px 16px',
+    fontSize: '13.5px',
     fontWeight: 500,
     cursor: 'pointer'
   },
@@ -110,10 +100,10 @@ export const portalLayoutStyles: { [key: string]: any } = {
     fontWeight: 700
   },
   tabContent: {
-    maxWidth: '1650px',
+    maxWidth: '1840px',
     width: '100%',
     margin: '0 auto',
-    padding: '24px 28px',
+    padding: '24px 24px',
     boxSizing: 'border-box'
   },
   successBanner: {

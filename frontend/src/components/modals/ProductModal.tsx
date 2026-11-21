@@ -141,6 +141,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       rubroId: data.rubroId ? Number(data.rubroId) : null,
       providerId: data.providerId ? Number(data.providerId) : null,
       commercialCategory: data.commercialCategory || null,
+      storeHighlight: data.storeHighlight === 'OFERTON' || data.storeHighlight === 'DESTACADO' ? data.storeHighlight : null,
       minStock: Number(data.minStock || 0),
       isPesable: Boolean(data.isPesable),
       unitsPerBox: Number(data.unitsPerBox || 1),

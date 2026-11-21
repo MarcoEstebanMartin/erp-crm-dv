@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma';
+import { appCache } from '../utils/cache';
 import { logAudit } from '../utils/audit';
 import { matchesPhoneticQuery } from '../core/search';
 import { roundToIntegerPeso, roundToTwoDecimals } from '../core/money';
@@ -178,6 +179,10 @@ export class ProductService {
         minOrderQuantity: data.minOrderQuantity !== undefined ? Math.max(1, Number(data.minOrderQuantity)) : 1,
         approximateWeight: approximateWeight ? Number(approximateWeight) : null,
         commercialCategory: data.commercialCategory ? String(data.commercialCategory).trim() : null,
+        storeHighlight:
+          data.storeHighlight === 'OFERTON' || data.storeHighlight === 'DESTACADO'
+            ? data.storeHighlight
+            : null,
         rubroId: rubroId ? Number(rubroId) : null,
         providerId: providerId ? Number(providerId) : null,
       },
@@ -240,6 +245,12 @@ export class ProductService {
         minOrderQuantity: data.minOrderQuantity !== undefined ? Math.max(1, Number(data.minOrderQuantity)) : undefined,
         approximateWeight: data.approximateWeight !== undefined ? (data.approximateWeight ? Number(data.approximateWeight) : null) : undefined,
         commercialCategory: data.commercialCategory !== undefined ? (data.commercialCategory ? String(data.commercialCategory).trim() : null) : undefined,
+        storeHighlight:
+          data.storeHighlight !== undefined
+            ? data.storeHighlight === 'OFERTON' || data.storeHighlight === 'DESTACADO'
+              ? data.storeHighlight
+              : null
+            : undefined,
         rubro: data.rubroId !== undefined ? (data.rubroId ? { connect: { id: Number(data.rubroId) } } : { disconnect: true }) : undefined,
         provider: data.providerId !== undefined ? (data.providerId ? { connect: { id: Number(data.providerId) } } : { disconnect: true }) : undefined,
         defaultLocation: data.defaultLocation !== undefined ? (data.defaultLocation ? String(data.defaultLocation).trim() : null) : undefined,
@@ -257,6 +268,7 @@ export class ProductService {
         newValues: updated,
       });
     }
+    appCache.invalidateProductCatalog();
     productionOutboundBridgeService.enqueueProductSyncById(updated.id);
     return updated;
   }

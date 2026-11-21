@@ -1,4 +1,5 @@
 import React, { useMemo, useRef } from 'react';
+import './portal/portalStore.css';
 import { WebChatWidget } from './WebChatWidget';
 import {
   type CartItem,
@@ -8,7 +9,6 @@ import {
   type StoreProduct,
   checkShowAccountBalance
 } from './portal/portal.types';
-import { portalLayoutStyles as layoutStyles } from './portal/portalLayout.styles';
 import { usePortalAuth } from './portal/usePortalAuth';
 import { usePortalStore } from './portal/usePortalStore';
 import { PortalLoginView } from './portal/PortalLoginView';
@@ -71,7 +71,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
   }
 
   return (
-    <div style={layoutStyles.portalContainer}>
+    <div className="store-shell">
       <PortalHeaderAndTabs
         client={auth.client}
         logoFailed={auth.logoFailed}

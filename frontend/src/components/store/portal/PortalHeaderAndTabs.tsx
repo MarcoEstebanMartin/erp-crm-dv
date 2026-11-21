@@ -38,41 +38,45 @@ export const PortalHeaderAndTabs: React.FC<PortalHeaderAndTabsProps> = ({
   return (
     <>
       <header style={styles.topNavbar}>
-        <div style={styles.navBrand}>
-          {!logoFailed ? (
-            <img
-              src="/logo.png"
-              alt="Logo DV"
-              style={{ height: '55px', objectFit: 'contain' }}
-              onError={() => setLogoFailed(true)}
-            />
-          ) : (
-            <div style={styles.logoBadge}>TIENDA B2B</div>
-          )}
-          <div>
-            <div style={styles.clientNameTitle}>{client.name}</div>
-            <div style={styles.clientMetaInfo}>CUIT: {client.cuit || 'S/D'}</div>
-          </div>
-        </div>
-
-        <div style={styles.navActions}>
-          {showAccountBalance && (
-            <div style={styles.balanceBadge}>
-              <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase' }}>Cuenta Corriente:</span>
-              <span style={{ fontSize: '14px', fontWeight: 700, color: client.outstandingBalance > 0 ? '#ef4444' : '#10b981' }}>
-                {formatMoney(client.outstandingBalance)}
-              </span>
+        <div className="store-header-inner">
+          <div style={styles.navBrand}>
+            {!logoFailed ? (
+              <img
+                src="/logo.png"
+                alt="Logo Don Venancio"
+                style={{ height: '44px', objectFit: 'contain' }}
+                onError={() => setLogoFailed(true)}
+              />
+            ) : (
+              <div style={styles.logoBadge}>DON VENANCIO</div>
+            )}
+            <div>
+              <div style={styles.clientNameTitle}>{client.name}</div>
+              <div style={styles.clientMetaInfo}>CUIT: {client.cuit || 'S/D'}</div>
             </div>
-          )}
+          </div>
 
-          <button onClick={onOpenCart} style={styles.cartButton}>
-            🛒 Mi Carrito
-            {cartTotalItemsCount > 0 && <span style={styles.cartCountBadge}>{cartTotalItemsCount}</span>}
-          </button>
+          <div style={styles.navActions}>
+            {showAccountBalance && (
+              <div style={styles.balanceBadge}>
+                <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Cuenta Corriente
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: client.outstandingBalance > 0 ? '#f87171' : '#34d399' }}>
+                  {formatMoney(client.outstandingBalance)}
+                </span>
+              </div>
+            )}
 
-          <button onClick={onLogout} style={styles.btnSecondarySmall}>
-            Salir
-          </button>
+            <button type="button" onClick={onOpenCart} style={styles.cartButton}>
+              🛒 Carrito
+              {cartTotalItemsCount > 0 && <span style={styles.cartCountBadge}>{cartTotalItemsCount}</span>}
+            </button>
+
+            <button type="button" onClick={onLogout} style={styles.btnSecondarySmall}>
+              Salir
+            </button>
+          </div>
         </div>
       </header>
 
@@ -101,29 +105,34 @@ export const PortalHeaderAndTabs: React.FC<PortalHeaderAndTabsProps> = ({
       )}
 
       <nav className="store-main-tab-nav" style={styles.tabNav}>
-        <button
-          onClick={() => setActiveTab('catalog')}
-          className={`store-main-tab-item ${activeTab === 'catalog' ? 'active' : ''}`}
-          style={{ ...styles.tabItem, ...(activeTab === 'catalog' ? styles.tabItemActive : {}) }}
-        >
-          🛒 Catálogo Interactivo & Ofertas
-        </button>
-        {showAccountBalance && (
+        <div className="store-tabs-inner">
           <button
-            onClick={() => setActiveTab('account')}
-            className={`store-main-tab-item ${activeTab === 'account' ? 'active' : ''}`}
-            style={{ ...styles.tabItem, ...(activeTab === 'account' ? styles.tabItemActive : {}) }}
+            type="button"
+            onClick={() => setActiveTab('catalog')}
+            className={`store-main-tab-item ${activeTab === 'catalog' ? 'active' : ''}`}
+            style={{ ...styles.tabItem, ...(activeTab === 'catalog' ? styles.tabItemActive : {}) }}
           >
-            📄 Mi Cuenta Corriente
+            Catálogo
           </button>
-        )}
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={`store-main-tab-item ${activeTab === 'orders' ? 'active' : ''}`}
-          style={{ ...styles.tabItem, ...(activeTab === 'orders' ? styles.tabItemActive : {}) }}
-        >
-          📦 Mis Pedidos ({recentOrdersCount})
-        </button>
+          {showAccountBalance && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('account')}
+              className={`store-main-tab-item ${activeTab === 'account' ? 'active' : ''}`}
+              style={{ ...styles.tabItem, ...(activeTab === 'account' ? styles.tabItemActive : {}) }}
+            >
+              Cuenta Corriente
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setActiveTab('orders')}
+            className={`store-main-tab-item ${activeTab === 'orders' ? 'active' : ''}`}
+            style={{ ...styles.tabItem, ...(activeTab === 'orders' ? styles.tabItemActive : {}) }}
+          >
+            Mis Pedidos ({recentOrdersCount})
+          </button>
+        </div>
       </nav>
     </>
   );

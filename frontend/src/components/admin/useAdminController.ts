@@ -351,6 +351,7 @@ export function useAdminController(activeTab: string) {
         minStock: Number(updatedProduct.minStock),
         isPesable: Boolean(updatedProduct.isPesable),
         isActive: updatedProduct.isActive,
+        storeHighlight: updatedProduct.storeHighlight !== undefined ? updatedProduct.storeHighlight : undefined,
         unitsPerBox: Number(updatedProduct.unitsPerBox || 1),
         approximateWeight: updatedProduct.approximateWeight ? Number(updatedProduct.approximateWeight) : 0,
       });
