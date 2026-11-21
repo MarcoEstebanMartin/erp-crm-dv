@@ -110,6 +110,7 @@ describe('Paso A3 — Blindaje Rendiciones, Caja Grande, Bancos, Mostrador y RRH
       },
     ] as any);
     vi.spyOn(prisma.discountRule, 'findMany').mockResolvedValue([] as any);
+    vi.spyOn(prisma.weeklyPromo, 'findMany').mockResolvedValue([] as any);
     vi.spyOn(prisma.cashDrawer, 'findFirst').mockResolvedValue(null);
 
     const afipSpy = vi.spyOn(afipService, 'emitirFacturaAFIP');
