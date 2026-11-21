@@ -1,7 +1,6 @@
 import React from 'react';
-import { Ban, Check, DollarSign, Printer, StickyNote, X } from 'lucide-react';
+import { Ban, Check, DollarSign, StickyNote, X } from 'lucide-react';
 import { getOrderStatusInfo } from '../../utils/orderStatusHelper';
-import { printOrderTicket } from './orderTicketPrinter';
 import { calculateExactLineSubtotalInt } from '../../utils/weeklyPromoCartEvaluator';
 import {
   formatBigIntARS,
@@ -16,7 +15,6 @@ interface AdminOrderDetailsModalProps {
   orderDetailsModal: any | null;
   onClose: () => void;
   onFastInvoice?: (order: any) => void;
-  hidePrintTicket?: boolean;
   fetchData?: () => void;
   onOrderUpdated?: (updatedOrder: any) => void;
   setErrorMsg?: (msg: string | null) => void;
@@ -27,7 +25,6 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
   orderDetailsModal,
   onClose,
   onFastInvoice,
-  hidePrintTicket = false,
   fetchData,
   onOrderUpdated,
   setErrorMsg,
@@ -374,20 +371,7 @@ export const AdminOrderDetailsModal: React.FC<AdminOrderDetailsModalProps> = ({
             }}
           >
             <DollarSign size={16} aria-hidden="true" />
-            <span>Facturar Directo</span>
-          </button>
-        )}
-        {!hidePrintTicket && (
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => {
-              printOrderTicket(orderDetailsModal);
-              onClose();
-            }}
-          >
-            <Printer size={16} aria-hidden="true" />
-            <span>Imprimir Ticket</span>
+            <span>Facturar</span>
           </button>
         )}
         <button type="button" className="btn btn-secondary" onClick={onClose}>
