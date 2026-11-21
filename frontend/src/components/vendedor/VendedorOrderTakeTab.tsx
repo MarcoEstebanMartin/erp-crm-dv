@@ -135,6 +135,16 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
     }
   }, [isActive, selectedClient?.id]);
 
+  const resetAndFocusProdSearch = () => {
+    setProdSearchQuery('');
+    prodSearchInputRef.current?.focus();
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    onAddToCart(product);
+    resetAndFocusProdSearch();
+  };
+
   const handleDirectQtyChange = (productId: number, rawValue: string) => {
     const digits = rawValue.replace(/\D/g, '');
     if (!digits) return;
@@ -257,7 +267,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
             style={searchInputStyle}
           />
           {prodSearchQuery && (
-            <button type="button" aria-label="Limpiar búsqueda de producto" onClick={() => setProdSearchQuery('')} style={clearBtnStyle}>
+            <button type="button" aria-label="Limpiar búsqueda de producto" onClick={resetAndFocusProdSearch} style={clearBtnStyle}>
               <X size={16} aria-hidden="true" />
             </button>
           )}
@@ -291,7 +301,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
                       <button
                         type="button"
                         disabled={outOfStock}
-                        onClick={() => onAddToCart(p)}
+                        onClick={() => handleSelectProduct(p)}
                         style={{
                           flex: 1,
                           minWidth: 0,
@@ -341,7 +351,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
                           <button
                             type="button"
                             disabled={outOfStock}
-                            onClick={() => onAddToCart(p)}
+                            onClick={() => handleSelectProduct(p)}
                             className="btn btn-primary"
                             style={{ padding: '6px 12px', fontSize: '0.82rem', fontWeight: 700, borderRadius: '8px' }}
                             aria-label={`Agregar ${p.name}`}
