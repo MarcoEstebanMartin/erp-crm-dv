@@ -2,7 +2,7 @@
   "name": "Don Venancio — ERP & Preventa",
   "short_name": "DV Preventa",
   "description": "Sistema operativo de Preventa en Ruta, Reparto, Depósito y Gestión Financiera Don Venancio.",
-  "start_url": "/",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
