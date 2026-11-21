@@ -43,7 +43,10 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
     clearCart: () => store.setCart([])
   };
 
-  const showAccountBalance = useMemo(() => checkShowAccountBalance(auth.client), [auth.client]);
+  const showAccountBalance = useMemo(
+    () => !auth.client?.isAdminPreview && checkShowAccountBalance(auth.client),
+    [auth.client]
+  );
 
   if (!auth.client) {
     return (
@@ -65,6 +68,8 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         fetchAvailableClients={auth.fetchAvailableClients}
         handleSelectClient={auth.handleSelectClient}
         handlePinSubmit={auth.handlePinSubmit}
+        isStaffAdmin={auth.isStaffAdmin}
+        onEnterAsAdmin={auth.handleEnterAsAdmin}
         onBackToStaffLogin={onBackToStaffLogin}
       />
     );
@@ -80,6 +85,8 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ onBackToStaffLogin }
         cartTotalItemsCount={store.cartTotalItemsCount}
         onOpenCart={() => store.setIsCartOpen(true)}
         onLogout={auth.handleLogoutClient}
+        onAdminPriceListChange={auth.handleAdminPriceListChange}
+        onBackToStaffLogin={onBackToStaffLogin}
         orderSuccessMessage={store.orderSuccessMessage}
         onClearSuccessMessage={() => store.setOrderSuccessMessage(null)}
         magicBanner={auth.magicBanner}

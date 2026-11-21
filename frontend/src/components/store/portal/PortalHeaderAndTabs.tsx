@@ -10,6 +10,8 @@ interface PortalHeaderAndTabsProps {
   cartTotalItemsCount: number;
   onOpenCart: () => void;
   onLogout: () => void;
+  onAdminPriceListChange?: (list: 'A' | 'B' | 'C') => void;
+  onBackToStaffLogin?: () => void;
   orderSuccessMessage: string | null;
   onClearSuccessMessage: () => void;
   magicBanner: string | null;
@@ -27,6 +29,8 @@ export const PortalHeaderAndTabs: React.FC<PortalHeaderAndTabsProps> = ({
   cartTotalItemsCount,
   onOpenCart,
   onLogout,
+  onAdminPriceListChange,
+  onBackToStaffLogin,
   orderSuccessMessage,
   onClearSuccessMessage,
   magicBanner,
@@ -52,11 +56,49 @@ export const PortalHeaderAndTabs: React.FC<PortalHeaderAndTabsProps> = ({
             )}
             <div>
               <div style={styles.clientNameTitle}>{client.name}</div>
-              <div style={styles.clientMetaInfo}>CUIT: {client.cuit || 'S/D'}</div>
+              <div style={styles.clientMetaInfo}>
+                {client.isAdminPreview ? 'Vista Admin' : `CUIT: ${client.cuit || 'S/D'}`}
+              </div>
             </div>
           </div>
 
           <div style={styles.navActions}>
+            {client.isAdminPreview && onAdminPriceListChange && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  background: '#1e293b',
+                  border: '1px solid #334155',
+                  borderRadius: '8px',
+                  padding: '2px',
+                  gap: '2px',
+                }}
+              >
+                {(['A', 'B', 'C'] as const).map((listKey) => {
+                  const active = (client.priceList || 'A').toUpperCase() === listKey;
+                  return (
+                    <button
+                      key={listKey}
+                      type="button"
+                      onClick={() => onAdminPriceListChange(listKey)}
+                      style={{
+                        background: active ? '#ffffff' : 'transparent',
+                        color: active ? '#0f172a' : '#cbd5e1',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '5px 10px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Lista {listKey}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {showAccountBalance && (
               <div style={styles.balanceBadge}>
                 <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -68,10 +110,18 @@ export const PortalHeaderAndTabs: React.FC<PortalHeaderAndTabsProps> = ({
               </div>
             )}
 
-            <button type="button" onClick={onOpenCart} style={styles.cartButton}>
-              🛒 Carrito
-              {cartTotalItemsCount > 0 && <span style={styles.cartCountBadge}>{cartTotalItemsCount}</span>}
-            </button>
+            {!client.isAdminPreview && (
+              <button type="button" onClick={onOpenCart} style={styles.cartButton}>
+                🛒 Carrito
+                {cartTotalItemsCount > 0 && <span style={styles.cartCountBadge}>{cartTotalItemsCount}</span>}
+              </button>
+            )}
+
+            {client.isAdminPreview && onBackToStaffLogin && (
+              <button type="button" onClick={onBackToStaffLogin} style={styles.btnSecondarySmall}>
+                Panel Admin
+              </button>
+            )}
 
             <button type="button" onClick={onLogout} style={styles.btnSecondarySmall}>
               Salir
@@ -124,14 +174,16 @@ export const PortalHeaderAndTabs: React.FC<PortalHeaderAndTabsProps> = ({
               Cuenta Corriente
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setActiveTab('orders')}
-            className={`store-main-tab-item ${activeTab === 'orders' ? 'active' : ''}`}
-            style={{ ...styles.tabItem, ...(activeTab === 'orders' ? styles.tabItemActive : {}) }}
-          >
-            Mis Pedidos ({recentOrdersCount})
-          </button>
+          {!client.isAdminPreview && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('orders')}
+              className={`store-main-tab-item ${activeTab === 'orders' ? 'active' : ''}`}
+              style={{ ...styles.tabItem, ...(activeTab === 'orders' ? styles.tabItemActive : {}) }}
+            >
+              Mis Pedidos ({recentOrdersCount})
+            </button>
+          )}
         </div>
       </nav>
     </>

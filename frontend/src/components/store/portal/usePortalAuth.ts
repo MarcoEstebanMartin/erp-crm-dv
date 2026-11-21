@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_BASE_URL } from '../../../utils/api';
+import { API_BASE_URL, api } from '../../../utils/api';
 import type {
   CartItem,
   ClientProfile,
@@ -34,6 +34,36 @@ export function usePortalAuth({
   const [hasPin, setHasPin] = useState(true);
   const [logoFailed, setLogoFailed] = useState(false);
   const [magicBanner, setMagicBanner] = useState<string | null>(null);
+  const staffUser = api.getCurrentUser();
+  const isStaffAdmin = staffUser?.role === 'ADMIN';
+
+  const handleEnterAsAdmin = () => {
+    const current = api.getCurrentUser();
+    if (!current || current.role !== 'ADMIN') return;
+    const adminProfile: ClientProfile = {
+      id: 0,
+      name: current.username || 'Admin',
+      cuit: 'ADMIN',
+      address: null,
+      city: null,
+      priceList: 'A',
+      discount: 0,
+      outstandingBalance: 0,
+      creditLimit: 0,
+      isAdminPreview: true,
+    };
+    setClient(adminProfile);
+    localStorage.setItem('store_client_session', JSON.stringify(adminProfile));
+  };
+
+  const handleAdminPriceListChange = (nextList: 'A' | 'B' | 'C') => {
+    setClient((prev) => {
+      if (!prev || !prev.isAdminPreview) return prev;
+      const updated = { ...prev, priceList: nextList };
+      localStorage.setItem('store_client_session', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const handleMagicLogin = async (token: string, draftId?: string | null, targetTab?: string | null) => {
     setIsLoggingIn(true);
@@ -241,6 +271,9 @@ export function usePortalAuth({
     handleSelectClient,
     handlePinSubmit,
     handleLogoutClient,
-    expireSession
+    expireSession,
+    isStaffAdmin,
+    handleEnterAsAdmin,
+    handleAdminPriceListChange,
   };
 }

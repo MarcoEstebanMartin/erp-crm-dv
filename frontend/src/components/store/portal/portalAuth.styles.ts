@@ -5,118 +5,118 @@ export const portalAuthStyles: { [key: string]: any } = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '20px'
+    padding: '20px',
+    fontFamily: "'Outfit', Inter, system-ui, -apple-system, sans-serif",
   },
   loginCard: {
     width: '100%',
-    maxWidth: '520px',
+    maxWidth: '400px',
     background: '#ffffff',
-    borderRadius: '16px',
+    borderRadius: '14px',
     border: '1px solid #e2e8f0',
-    padding: '40px',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)'
+    padding: '32px 28px 24px',
+    boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
   },
   loginHeader: {
-    textAlign: 'center',
-    marginBottom: '28px'
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginBottom: '24px',
   },
   logoTextFallback: {
-    fontSize: '22px',
+    fontSize: '18px',
     fontWeight: 800,
     color: '#0f172a',
-    letterSpacing: '1px'
-  },
-  badgeCorpRed: {
-    display: 'inline-block',
-    background: 'rgba(227, 6, 19, 0.08)',
-    color: '#E30613',
-    fontSize: '11px',
-    fontWeight: 700,
-    letterSpacing: '1px',
-    padding: '4px 12px',
-    borderRadius: '20px',
-    marginBottom: '14px',
-    border: '1px solid rgba(227, 6, 19, 0.2)'
-  },
-  loginTitle: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: '#0f172a',
-    margin: '0 0 8px 0'
-  },
-  loginSubtitle: {
-    fontSize: '14px',
-    color: '#475569',
-    margin: 0,
-    lineHeight: '1.5'
+    letterSpacing: '0.04em',
   },
   loginSearchBox: {
     display: 'flex',
-    gap: '10px',
-    marginBottom: '16px'
+    gap: '8px',
   },
   searchInput: {
     flex: 1,
+    minWidth: 0,
     background: '#ffffff',
     border: '1px solid #cbd5e1',
-    borderRadius: '10px',
-    padding: '13px 18px',
+    borderRadius: '9px',
+    padding: '11px 14px',
     color: '#0f172a',
     fontSize: '14px',
-    outline: 'none'
+    outline: 'none',
   },
   btnPrimary: {
-    background: '#E30613',
-    color: '#fff',
+    background: '#0f172a',
+    color: '#ffffff',
     border: 'none',
-    borderRadius: '10px',
-    padding: '12px 22px',
+    borderRadius: '9px',
+    padding: '11px 18px',
     fontWeight: 600,
-    fontSize: '14px',
-    cursor: 'pointer'
+    fontSize: '13.5px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
   btnSecondarySmall: {
-    background: '#334155',
-    color: '#f8fafc',
-    border: 'none',
-    borderRadius: '8px',
-    padding: '8px 14px',
-    fontSize: '12px',
-    cursor: 'pointer'
+    background: '#f1f5f9',
+    color: '#334155',
+    border: '1px solid #e2e8f0',
+    borderRadius: '9px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  btnAdminDirect: {
+    width: '100%',
+    background: '#f8fafc',
+    color: '#0f172a',
+    border: '1px solid #cbd5e1',
+    borderRadius: '9px',
+    padding: '10px 14px',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    marginBottom: '10px',
   },
   clientListContainer: {
-    maxHeight: '280px',
+    maxHeight: '240px',
     overflowY: 'auto',
-    marginTop: '16px'
+    marginTop: '14px',
   },
   clientGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr',
-    gap: '8px'
+    gap: '6px',
   },
   clientCard: {
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
-    borderRadius: '10px',
-    padding: '14px 18px',
+    borderRadius: '9px',
+    padding: '11px 14px',
     cursor: 'pointer',
-    transition: 'all 0.2s ease'
+    textAlign: 'left',
+    width: '100%',
+  },
+  footerRow: {
+    marginTop: '22px',
+    paddingTop: '16px',
+    borderTop: '1px solid #f1f5f9',
+    textAlign: 'center',
   },
   btnLink: {
     background: 'none',
     border: 'none',
-    color: '#475569',
-    fontSize: '13px',
+    color: '#64748b',
+    fontSize: '12.5px',
+    fontWeight: 500,
     cursor: 'pointer',
-    textDecoration: 'underline'
   },
   errorBanner: {
     background: '#fef2f2',
     color: '#dc2626',
-    border: '1px solid #fca5a5',
+    border: '1px solid #fecaca',
     borderRadius: '8px',
-    padding: '12px 16px',
-    fontSize: '13px',
-    marginBottom: '16px'
-  }
+    padding: '10px 12px',
+    fontSize: '12.5px',
+    marginTop: '12px',
+  },
 };

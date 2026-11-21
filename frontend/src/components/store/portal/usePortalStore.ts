@@ -95,9 +95,11 @@ export function usePortalStore({ client, expireSession }: UsePortalStoreParams) 
   useEffect(() => {
     if (client) {
       fetchCatalog(client.priceList || 'A');
-      fetchAccountData(client.id);
+      if (!client.isAdminPreview && client.id > 0) {
+        fetchAccountData(client.id);
+      }
     }
-  }, [client]);
+  }, [client?.id, client?.priceList, client?.isAdminPreview]);
 
   const filteredProducts = useMemo(
     () => filterAndSortStoreProducts(products, selectedGroupId, selectedRubroId, onlyOffers, searchQuery),

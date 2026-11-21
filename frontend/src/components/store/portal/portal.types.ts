@@ -13,6 +13,7 @@ export interface ClientProfile {
   outstandingBalance: number;
   creditLimit: number;
   paymentTermDays?: number;
+  isAdminPreview?: boolean;
 }
 
 export interface StoreProduct {
