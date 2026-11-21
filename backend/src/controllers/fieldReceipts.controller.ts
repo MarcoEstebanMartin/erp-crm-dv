@@ -27,12 +27,21 @@ export const syncFieldReceipt = async (req: AuthenticatedRequest, res: Response)
   if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
   try {
     const result = await fieldReceiptsService.syncReceipt(req.user.id, req.body);
-    let dispatchResult = null;
+    let dispatchResult: Awaited<ReturnType<typeof whatsappDispatchService.dispatchReceiptPdf>> | null = null;
     if (!result.alreadySynced && Boolean(result.receipt.receiptNumber)) {
-      dispatchResult = await whatsappDispatchService.dispatchReceiptPdf(result.receipt.id);
+      try {
+        dispatchResult = await whatsappDispatchService.dispatchReceiptPdf(result.receipt.id);
+      } catch (err) {
+        console.error('Error generando PDF/WhatsApp tras sincronizar recibo en calle:', err);
+      }
     }
+    const receiptWithPdf =
+      dispatchResult && 'pdfUrl' in dispatchResult && dispatchResult.pdfUrl
+        ? { ...result.receipt, pdfUrl: dispatchResult.pdfUrl }
+        : result.receipt;
     return res.status(result.alreadySynced ? 200 : 201).json({
       ...result,
+      receipt: receiptWithPdf,
       whatsapp: dispatchResult,
     });
   } catch (error) {

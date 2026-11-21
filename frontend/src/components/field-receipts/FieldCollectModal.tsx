@@ -198,8 +198,13 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
           });
           return;
         } catch (err: any) {
-          if (err?.status && err.status >= 400 && err.status < 500) {
-            const msg = String(err.message || 'Datos inválidos en el cobro.');
+          if (typeof err?.status === 'number') {
+            const msg = String(
+              err.message ||
+                (err.status >= 500
+                  ? 'No se pudo registrar el cobro en el servidor. Intentá nuevamente.'
+                  : 'Datos inválidos en el cobro.'),
+            );
             if (err.status === 409 && msg.toLowerCase().includes('favor')) {
               setNeedsCreditOverride(true);
             }

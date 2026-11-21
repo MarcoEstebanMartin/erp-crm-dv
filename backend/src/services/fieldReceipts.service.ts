@@ -30,6 +30,11 @@ import {
   VerifyTransferInput,
 } from '../validators/fieldReceipts.schema';
 
+const FIELD_RECEIPT_TX_OPTIONS = {
+  maxWait: 10_000,
+  timeout: 25_000,
+} as const;
+
 export const fieldReceiptsService = {
   /**
    * Descarga hoja de ruta, clientes con saldo real y bancos para operar sin señal (PWA).
@@ -220,7 +225,7 @@ export const fieldReceiptsService = {
       });
 
       return { receipt: syncedReceipt, alreadySynced: false };
-    });
+    }, FIELD_RECEIPT_TX_OPTIONS);
   },
 
   /**
@@ -281,7 +286,7 @@ export const fieldReceiptsService = {
         where: { id: payment.fieldReceiptId },
         include: { payments: true },
       });
-    });
+    }, FIELD_RECEIPT_TX_OPTIONS);
   },
 
   /**
@@ -329,7 +334,7 @@ export const fieldReceiptsService = {
       await syncMirrorTransactionForFieldReceipt(tx, payment.fieldReceiptId, adminUserId);
 
       return { rejected: true, amountReversed: amountNum };
-    });
+    }, FIELD_RECEIPT_TX_OPTIONS);
   },
 
   /**
@@ -351,7 +356,7 @@ export const fieldReceiptsService = {
       }
 
       return voidFieldReceiptAndReverse(tx, receipt, adminUserId, voidReason);
-    });
+    }, FIELD_RECEIPT_TX_OPTIONS);
   },
 
   /**
@@ -451,6 +456,6 @@ export const fieldReceiptsService = {
           notes: input.notes ?? null,
         },
       });
-    });
+    }, FIELD_RECEIPT_TX_OPTIONS);
   },
 };

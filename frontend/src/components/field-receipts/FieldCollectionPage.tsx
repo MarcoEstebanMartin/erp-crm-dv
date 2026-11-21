@@ -73,8 +73,8 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
         setCollectorUserId(cached.collectorUserId);
       }
       if (navigator.onLine) {
-        const [, bundle, mySettlements] = await Promise.all([
-          flushOfflineReceiptQueue(),
+        const flushResult = await flushOfflineReceiptQueue();
+        const [bundle, mySettlements] = await Promise.all([
           fieldReceiptsApi.getOfflineBundle(),
           fieldReceiptsApi.listMySettlements(),
         ]);
@@ -83,6 +83,16 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
         setBankAccounts(bundle.bankAccounts);
         setCollectorUserId(bundle.collectorUserId);
         setSettlements(mySettlements);
+        if (flushResult.syncedCount > 0) {
+          const synced = flushResult.lastSyncedReceipt;
+          const syncedAmount = synced ? Math.round(Number(synced.totalAmount)) : 0;
+          setFeedback({
+            text: synced?.receiptNumber
+              ? `Recibo ${synced.receiptNumber} sincronizado por $${syncedAmount.toLocaleString('es-AR')}.`
+              : `${flushResult.syncedCount} cobro${flushResult.syncedCount > 1 ? 's' : ''} sincronizado${flushResult.syncedCount > 1 ? 's' : ''}.`,
+            receipt: synced,
+          });
+        }
         lastFetchedAtRef.current = Date.now();
       }
     } catch {
@@ -193,11 +203,17 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
         </div>
       )}
 
-      {pendingQueue.some((item) => item.lastError) && (
-        <div role="alert" style={{ padding: '10px 14px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.84rem' }}>
-          Error al sincronizar: {pendingQueue.find((item) => item.lastError)?.lastError}
-        </div>
-      )}
+      {pendingQueue.some((item) => item.lastError) && (() => {
+        const rawError = pendingQueue.find((item) => item.lastError)?.lastError || '';
+        const cleanError = /^error al sincronizar/i.test(rawError)
+          ? rawError
+          : `Error al sincronizar: ${rawError}`;
+        return (
+          <div role="alert" style={{ padding: '10px 14px', borderRadius: '10px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.84rem' }}>
+            {cleanError}
+          </div>
+        );
+      })()}
 
       {feedback && (
         <div

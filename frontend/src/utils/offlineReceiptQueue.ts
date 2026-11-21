@@ -1,5 +1,6 @@
 import {
   fieldReceiptsApi,
+  type FieldReceiptDTO,
   type OfflineBundleResponse,
   type SyncFieldReceiptPayload,
 } from '../api/fieldReceipts.api';
@@ -104,6 +105,7 @@ async function removeSyncedReceipt(provisionalCode: string): Promise<void> {
 export async function flushOfflineReceiptQueue(): Promise<{
   syncedCount: number;
   remainingCount: number;
+  lastSyncedReceipt?: FieldReceiptDTO;
 }> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     const pending = await getPendingOfflineReceipts();
@@ -112,11 +114,13 @@ export async function flushOfflineReceiptQueue(): Promise<{
 
   const pending = await getPendingOfflineReceipts();
   let syncedCount = 0;
+  let lastSyncedReceipt: FieldReceiptDTO | undefined;
 
   for (const item of pending) {
     try {
       const { customerName: _cn, totalAmount: _ta, queuedAt: _qa, lastError: _le, ...payload } = item;
-      await fieldReceiptsApi.syncReceipt(payload);
+      const res = await fieldReceiptsApi.syncReceipt(payload);
+      lastSyncedReceipt = res.receipt;
       await removeSyncedReceipt(item.provisionalCode);
       syncedCount += 1;
     } catch (err: any) {
@@ -127,7 +131,7 @@ export async function flushOfflineReceiptQueue(): Promise<{
   }
 
   const remaining = await getPendingOfflineReceipts();
-  return { syncedCount, remainingCount: remaining.length };
+  return { syncedCount, remainingCount: remaining.length, lastSyncedReceipt };
 }
 
 export function startOfflineSyncListener(
