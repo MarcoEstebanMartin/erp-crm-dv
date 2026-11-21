@@ -2000,7 +2000,7 @@ dialog.app-native-dialog::backdrop {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 12px;
   min-height: calc(100vh - 180px);
   min-height: calc(100dvh - 180px);
@@ -2133,7 +2133,7 @@ dialog.app-native-dialog::backdrop {
   .vendedor-order-shell {
     min-height: calc(100vh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     min-height: calc(100dvh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    padding: 12px 0 16px;
+    padding: 36px 0 16px;
   }
 
   .vendedor-order-results--products {

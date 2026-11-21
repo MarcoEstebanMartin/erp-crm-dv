@@ -94,7 +94,7 @@ describe('Vendedor — Inicio centrado en zona de pulgar y barra inferior fija f
     expect(orderTabSrc).not.toContain("maxHeight: '420px'");
     expect(orderTabSrc).not.toContain("maxHeight: '240px'");
 
-    expect(cssSrc).toMatch(/\.vendedor-order-shell\s*\{[^}]*justify-content:\s*flex-start;/s);
+    expect(cssSrc).toMatch(/\.vendedor-order-shell\s*\{[^}]*justify-content:\s*center;/s);
     expect(cssSrc).toContain('.vendedor-order-results {');
     expect(cssSrc).toContain('scrollbar-gutter: stable;');
     expect(cssSrc).toContain('overscroll-behavior: contain;');
