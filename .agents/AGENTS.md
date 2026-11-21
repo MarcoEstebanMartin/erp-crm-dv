@@ -62,6 +62,11 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
   1. Verificar compilación y tests (`tsc --noEmit` + `vitest run`) si hay cambios pendientes.
   2. Revisar `git status` (garantizando cero archivos `.env` expuestos), ejecutar `git add -A`, `git commit` descriptivo y `git push origin main`.
   3. Confirmar que el árbol quedó 100% limpio (`main...origin/main`) listo para abrirse desde cualquier otra PC.
+- **Auditorías de Integridad disponibles (Pre-Producción / Control bajo demanda, desde `backend/`)**:
+  - `npm run db:audit-receipts` (9 controles de recibos de calle/oficina, rendiciones, cajas y `AccountLedger`; soporta `-- --fix` para estados seguros).
+  - `npm run db:audit-balances` (integridad de saldos de cuentas corrientes; soporta `-- --fix`).
+  - `npm run db:audit-photos` (integridad del banco de fotos de productos).
+  - `npm run db:health-check` (chequeo general de salud de la base de datos).
 
 ## 7. Banco Único de Imágenes de Productos (SQL + Caché Limpia)
 - **Fuente Única de Verdad en SQL (`chatbot-dv.product_images`)**: El banco oficial de fotos de productos vive en PostgreSQL (`chatbot-dv.product_images`) sincronizado con la caché local activa `backend/uploads/products/` (regenerable con `npm run db:sync-from-production`). Prohibido mantener carpetas paralelas duplicadas o acumular fotos huérfanas viejas en disco.
