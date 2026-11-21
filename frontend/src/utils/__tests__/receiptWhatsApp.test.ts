@@ -58,7 +58,7 @@ describe('receiptWhatsApp (mensajes profesionales, minimalistas y sin localhost)
     expect(text).not.toContain('localhost');
   });
 
-  it('genera mensaje limpio para recibo digital de calle sin localhost', () => {
+  it('genera mensaje limpio para recibo digital de calle apuntando al recibo oficial /recibo/:id sin localhost', () => {
     const text = buildFieldReceiptWhatsAppMessage(
       {
         receiptNumber: 'RC-00018',
@@ -66,6 +66,7 @@ describe('receiptWhatsApp (mensajes profesionales, minimalistas y sin localhost)
         totalAmount: 125000,
         capturedAt: '2026-11-18T15:00:00.000Z',
         pdfUrl: '/uploads/receipts/RC-00018.pdf',
+        publicUrl: '/recibo/18?v=DV-1A2B-3C4D-5E6F',
         persona: { name: 'ALMACEN LA ESQUINA' },
         payments: [
           { paymentMethod: 'CASH' },
@@ -78,7 +79,10 @@ describe('receiptWhatsApp (mensajes profesionales, minimalistas y sin localhost)
     expect(text).toContain('*Don Venancio* · Recibo Digital');
     expect(text).toContain('*Cliente:* Almacen la Esquina');
     expect(text).toContain('*Medio:* Efectivo + E-Cheq');
-    expect(text).toContain(`${DEFAULT_PUBLIC_RECEIPT_ORIGIN}/uploads/receipts/RC-00018.pdf`);
+    expect(text).toContain(
+      `${DEFAULT_PUBLIC_RECEIPT_ORIGIN}/recibo/18?v=DV-1A2B-3C4D-5E6F`,
+    );
+    expect(text).not.toContain('/uploads/receipts/');
     expect(text).not.toContain('localhost');
   });
 

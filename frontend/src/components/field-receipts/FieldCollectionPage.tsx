@@ -1,5 +1,5 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { FileDown, RefreshCw, Search, Send, WifiOff, X } from 'lucide-react';
+import { RefreshCw, Search, Send, WifiOff, X } from 'lucide-react';
 import {
   fieldReceiptsApi,
   type CollectorSettlementDTO,
@@ -15,13 +15,9 @@ import {
   startOfflineSyncListener,
   type QueuedFieldReceipt,
 } from '../../utils/offlineReceiptQueue';
-import { downloadReceiptPdf } from '../../utils/receiptPdfGenerator';
 import { buildFieldReceiptWhatsAppMessage } from '../../utils/receiptWhatsApp';
 import { FieldCollectModal } from './FieldCollectModal';
-import {
-  fieldReceiptToPublicData,
-  FieldTodayReceiptsCard,
-} from './FieldTodayReceiptsCard';
+import { FieldTodayReceiptsCard } from './FieldTodayReceiptsCard';
 import {
   ReceiptWhatsAppSendModal,
   type ReceiptWhatsAppTarget,
@@ -49,7 +45,6 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedClient, setSelectedClient] = useState<OfflineBundleClient | null>(null);
   const [feedback, setFeedback] = useState<{ text: string; receipt?: FieldReceiptDTO } | null>(null);
-  const [busyAction, setBusyAction] = useState<'pdf' | null>(null);
   const [waTarget, setWaTarget] = useState<ReceiptWhatsAppTarget | null>(null);
   const lastFetchedAtRef = useRef(0);
   const hasClientsRef = useRef(false);
@@ -154,16 +149,6 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
 
   const openSettlement = settlements.find((s) => s.status === 'OPEN');
 
-  const handleFeedbackPdf = async (receipt: FieldReceiptDTO) => {
-    if (busyAction) return;
-    setBusyAction('pdf');
-    try {
-      await downloadReceiptPdf(fieldReceiptToPublicData(receipt));
-    } finally {
-      setBusyAction(null);
-    }
-  };
-
   const handleFeedbackWhatsApp = (receipt: FieldReceiptDTO) => {
     setWaTarget({
       personaId: receipt.persona?.id ?? receipt.personaId,
@@ -174,7 +159,6 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
       amount: receipt.totalAmount,
       messageText: buildFieldReceiptWhatsAppMessage(receipt, window.location.origin),
       fieldReceiptId: receipt.id,
-      publicReceiptData: fieldReceiptToPublicData(receipt),
     });
   };
 
@@ -246,30 +230,7 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 type="button"
-                onClick={() => void handleFeedbackPdf(feedback.receipt!)}
-                disabled={busyAction !== null}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  minHeight: '34px',
-                  padding: '0 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #111827',
-                  background: '#111827',
-                  color: '#ffffff',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: busyAction ? 'wait' : 'pointer',
-                }}
-              >
-                <FileDown size={14} aria-hidden="true" />
-                <span>{busyAction === 'pdf' ? 'Generando…' : 'Descargar PDF'}</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => void handleFeedbackWhatsApp(feedback.receipt!)}
-                disabled={busyAction !== null}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -278,11 +239,11 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
                   padding: '0 12px',
                   borderRadius: '8px',
                   border: '1px solid #16a34a',
-                  background: '#ffffff',
-                  color: '#15803d',
+                  background: '#16a34a',
+                  color: '#ffffff',
                   fontSize: '0.8rem',
                   fontWeight: 600,
-                  cursor: busyAction ? 'wait' : 'pointer',
+                  cursor: 'pointer',
                 }}
               >
                 <Send size={14} aria-hidden="true" />

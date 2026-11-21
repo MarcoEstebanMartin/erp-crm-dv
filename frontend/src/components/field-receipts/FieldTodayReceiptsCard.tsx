@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, FileDown, Send } from 'lucide-react';
+import { ChevronDown, ChevronUp, Send } from 'lucide-react';
 import {
   fieldReceiptsApi,
   type FieldReceiptDTO,
 } from '../../api/fieldReceipts.api';
-import {
-  downloadReceiptPdf,
-  type PublicReceiptData,
-} from '../../utils/receiptPdfGenerator';
+import { type PublicReceiptData } from '../../utils/receiptPdfGenerator';
 import {
   buildFieldReceiptWhatsAppMessage,
   formatFieldPaymentsSummary,
@@ -37,12 +34,14 @@ export function fieldReceiptToPublicData(receipt: FieldReceiptDTO): PublicReceip
     description,
     createdAt: receipt.capturedAt,
     verified: receipt.status === 'VERIFIED',
-    verificationCode: receipt.provisionalCode,
-    publicUrl: receipt.pdfUrl
-      ? receipt.pdfUrl.startsWith('http')
-        ? receipt.pdfUrl
-        : `${typeof window !== 'undefined' ? window.location.origin : ''}${receipt.pdfUrl}`
-      : null,
+    verificationCode: receipt.verificationCode || receipt.provisionalCode,
+    publicUrl: receipt.publicUrl
+      ? receipt.publicUrl
+      : receipt.pdfUrl
+        ? receipt.pdfUrl.startsWith('http')
+          ? receipt.pdfUrl
+          : `${typeof window !== 'undefined' ? window.location.origin : ''}${receipt.pdfUrl}`
+        : null,
     persona: receipt.persona
       ? { id: receipt.persona.id, name: receipt.persona.name }
       : null,
@@ -59,22 +58,11 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
   onRefresh,
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
   const [waTarget, setWaTarget] = useState<ReceiptWhatsAppTarget | null>(null);
 
   if (receipts.length === 0) return null;
 
   const visibleReceipts = expanded ? receipts : receipts.slice(0, 3);
-
-  const handleDownloadPdf = async (r: FieldReceiptDTO) => {
-    if (busyKey) return;
-    setBusyKey(`pdf-${r.id}`);
-    try {
-      await downloadReceiptPdf(fieldReceiptToPublicData(r));
-    } finally {
-      setBusyKey(null);
-    }
-  };
 
   const handleOpenWhatsApp = (r: FieldReceiptDTO) => {
     setWaTarget({
@@ -86,7 +74,6 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
       amount: r.totalAmount,
       messageText: buildFieldReceiptWhatsAppMessage(r, window.location.origin),
       fieldReceiptId: r.id,
-      publicReceiptData: fieldReceiptToPublicData(r),
     });
   };
 
@@ -132,7 +119,6 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {visibleReceipts.map((r) => {
-          const isPdfBusy = busyKey === `pdf-${r.id}`;
           const methodText = formatFieldPaymentsSummary(r.payments);
           const isVoided = r.status === 'VOIDED';
 
@@ -208,31 +194,6 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => void handleDownloadPdf(r)}
-                    disabled={isPdfBusy}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '5px',
-                      minHeight: '32px',
-                      padding: '0 10px',
-                      borderRadius: '7px',
-                      border: '1px solid #111827',
-                      background: '#111827',
-                      color: '#ffffff',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: isPdfBusy ? 'wait' : 'pointer',
-                      opacity: isPdfBusy ? 0.65 : 1,
-                    }}
-                  >
-                    <FileDown size={13} aria-hidden="true" />
-                    <span>{isPdfBusy ? 'Generando…' : 'PDF'}</span>
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={() => handleOpenWhatsApp(r)}
                     style={{
                       display: 'inline-flex',
@@ -240,11 +201,11 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
                       justifyContent: 'center',
                       gap: '5px',
                       minHeight: '32px',
-                      padding: '0 10px',
+                      padding: '0 12px',
                       borderRadius: '7px',
                       border: '1px solid #16a34a',
-                      background: '#ffffff',
-                      color: '#15803d',
+                      background: '#16a34a',
+                      color: '#ffffff',
                       fontSize: '0.78rem',
                       fontWeight: 600,
                       cursor: 'pointer',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, FileDown, Send, X } from 'lucide-react';
+import { CheckCircle2, Send, X } from 'lucide-react';
 import {
   fieldReceiptsApi,
   type SavedClientWhatsAppDTO,
@@ -9,10 +9,7 @@ import {
   formatReceiptAmountAr,
   normalizeArgentinaWhatsAppPhone,
 } from '../../utils/receiptWhatsApp';
-import {
-  downloadReceiptPdf,
-  type PublicReceiptData,
-} from '../../utils/receiptPdfGenerator';
+import { type PublicReceiptData } from '../../utils/receiptPdfGenerator';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 
 export interface ReceiptWhatsAppTarget {
@@ -45,7 +42,6 @@ export const ReceiptWhatsAppSendModal: React.FC<ReceiptWhatsAppSendModalProps> =
 }) => {
   const [phoneInput, setPhoneInput] = useState('');
   const [saving, setSaving] = useState(false);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,16 +93,6 @@ export const ReceiptWhatsAppSendModal: React.FC<ReceiptWhatsAppSendModalProps> =
       setError(String(err?.message || 'No se pudo guardar el WhatsApp del cliente.'));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDownloadPdf = async () => {
-    if (!target.publicReceiptData || downloadingPdf) return;
-    setDownloadingPdf(true);
-    try {
-      await downloadReceiptPdf(target.publicReceiptData);
-    } finally {
-      setDownloadingPdf(false);
     }
   };
 
@@ -230,38 +216,11 @@ export const ReceiptWhatsAppSendModal: React.FC<ReceiptWhatsAppSendModalProps> =
             padding: '12px 18px',
             borderTop: '1px solid #f1f5f9',
             display: 'flex',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
             alignItems: 'center',
             gap: '8px',
           }}
         >
-          {target.publicReceiptData ? (
-            <button
-              type="button"
-              onClick={() => void handleDownloadPdf()}
-              disabled={downloadingPdf}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                minHeight: '38px',
-                padding: '0 12px',
-                borderRadius: '8px',
-                border: '1px solid #d1d5db',
-                background: '#ffffff',
-                color: '#111827',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                cursor: downloadingPdf ? 'wait' : 'pointer',
-              }}
-            >
-              <FileDown size={14} aria-hidden="true" />
-              <span>{downloadingPdf ? 'Generando…' : 'PDF'}</span>
-            </button>
-          ) : (
-            <span />
-          )}
-
           <button
             type="submit"
             disabled={saving || !isValid}

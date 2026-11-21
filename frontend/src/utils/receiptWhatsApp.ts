@@ -160,6 +160,8 @@ export interface FieldReceiptMessageInput {
   totalAmount: number | string;
   capturedAt?: string | null;
   pdfUrl?: string | null;
+  publicUrl?: string | null;
+  verificationCode?: string | null;
   persona?: { name?: string | null; phone?: string | null } | null;
   payments?: Array<{ paymentMethod: string; isEcheq?: boolean }>;
 }
@@ -185,13 +187,13 @@ export function buildFieldReceiptWhatsAppMessage(
   lines.push(`*Medio:* ${method}`);
   lines.push(`*Importe:* *${total}*`);
 
-  if (receipt.pdfUrl) {
-    const absolutePdf = receipt.pdfUrl.startsWith('http')
-      ? receipt.pdfUrl
-      : `${resolvePublicReceiptOrigin(fallbackOrigin)}${receipt.pdfUrl}`;
+  if (receipt.publicUrl) {
+    const absoluteUrl = receipt.publicUrl.startsWith('http')
+      ? receipt.publicUrl
+      : `${resolvePublicReceiptOrigin(fallbackOrigin)}${receipt.publicUrl}`;
     lines.push('');
-    lines.push('Comprobante PDF:');
-    lines.push(absolutePdf);
+    lines.push('Ver recibo:');
+    lines.push(absoluteUrl);
   }
 
   return lines.join('\n');

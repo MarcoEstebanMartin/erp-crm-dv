@@ -24,6 +24,7 @@ import {
   voidFieldReceiptAndReverse,
 } from './collections/field-receipt-mirror.helper';
 import { generateUniqueVerificationCode } from '../core/receiptToken';
+import { buildOfficeReceiptSecurityMeta } from './collections/receipt.service';
 import {
   ApproveSettlementInput,
   SyncFieldReceiptInput,
@@ -34,6 +35,28 @@ const FIELD_RECEIPT_TX_OPTIONS = {
   maxWait: 10_000,
   timeout: 25_000,
 } as const;
+
+function attachPublicReceiptMeta<
+  T extends {
+    transactionId?: number | null;
+    transaction?: { id: number; verificationCode?: string | null } | null;
+  },
+>(receipt: T) {
+  const txId = receipt.transaction?.id ?? receipt.transactionId ?? null;
+  if (!txId) {
+    return {
+      ...receipt,
+      publicUrl: null as string | null,
+      verificationCode: null as string | null,
+    };
+  }
+  const meta = buildOfficeReceiptSecurityMeta(txId, receipt.transaction?.verificationCode);
+  return {
+    ...receipt,
+    publicUrl: meta.publicUrl,
+    verificationCode: meta.verificationCode,
+  };
+}
 
 export const fieldReceiptsService = {
   /**
@@ -96,10 +119,11 @@ export const fieldReceiptsService = {
         include: {
           payments: true,
           persona: { select: { id: true, name: true, phone: true, whatsappVerifiedAt: true, outstandingBalance: true } },
+          transaction: { select: { id: true, verificationCode: true } },
         },
       });
       if (existing) {
-        return { receipt: existing, alreadySynced: true };
+        return { receipt: attachPublicReceiptMeta(existing), alreadySynced: true };
       }
 
       const persona = await tx.persona.findUnique({ where: { id: input.personaId } });
@@ -221,10 +245,11 @@ export const fieldReceiptsService = {
           payments: true,
           persona: { select: { id: true, name: true, phone: true, whatsappVerifiedAt: true, outstandingBalance: true } },
           collector: { select: { id: true, username: true } },
+          transaction: { select: { id: true, verificationCode: true } },
         },
       });
 
-      return { receipt: syncedReceipt, alreadySynced: false };
+      return { receipt: attachPublicReceiptMeta(syncedReceipt), alreadySynced: false };
     }, FIELD_RECEIPT_TX_OPTIONS);
   },
 
@@ -363,7 +388,7 @@ export const fieldReceiptsService = {
    * Obtiene rendiciones abiertas/pendientes para el panel de tesorería o del cobrador.
    */
   async listSettlements(collectorUserId?: number) {
-    return prisma.collectorSettlement.findMany({
+    const settlements = await prisma.collectorSettlement.findMany({
       where: collectorUserId ? { collectorUserId } : undefined,
       include: {
         collector: { select: { id: true, username: true, role: true } },
@@ -371,6 +396,7 @@ export const fieldReceiptsService = {
           include: {
             persona: { select: { id: true, name: true, phone: true, whatsappVerifiedAt: true } },
             payments: true,
+            transaction: { select: { id: true, verificationCode: true } },
           },
           orderBy: { capturedAt: 'desc' },
         },
@@ -378,6 +404,10 @@ export const fieldReceiptsService = {
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+    return settlements.map((settlement) => ({
+      ...settlement,
+      receipts: settlement.receipts.map((receipt) => attachPublicReceiptMeta(receipt)),
+    }));
   },
 
   /**

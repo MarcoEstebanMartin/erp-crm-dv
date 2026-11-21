@@ -101,6 +101,8 @@ export interface FieldReceiptDTO {
   whatsappStatus: WhatsAppDispatchStatus;
   whatsappError: string | null;
   pdfUrl: string | null;
+  publicUrl?: string | null;
+  verificationCode?: string | null;
   payments: FieldReceiptPaymentDTO[];
 }
 

@@ -14,7 +14,7 @@ import {
 } from '../../core/receiptToken';
 
 const INTERNAL_RECEIPT_DESCRIPTION_PATTERN =
-  /rendici[oó]n|chofer\s*:|ruta\s*#|reparto|vendedor\s*:|pago\s+de\s+|emisor\s*:|cierre\s+de|caja\s+|arqueo|backfill|migraci[oó]n|interno|auditor/i;
+  /rendici[oó]n|chofer\s*:|ruta\s*#|reparto|vendedor\s*:|pago\s+de\s+|emisor\s*:|cierre\s+de|caja\s+|arqueo|backfill|migraci[oó]n|interno|auditor|cobro\s+digital|recibo\s+digital|en\s+calle/i;
 
 export function sanitizePublicReceiptDescription(rawDescription?: string | null): string {
   const trimmed = (rawDescription || '').trim().replace(/\s+/g, ' ');

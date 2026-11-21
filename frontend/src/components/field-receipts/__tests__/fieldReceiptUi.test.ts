@@ -85,9 +85,15 @@ describe('Recibos de Vendedores (UI y PDF moderno)', () => {
     const pageSrc = fs.readFileSync(path.join(dir, 'FieldCollectionPage.tsx'), 'utf8');
     const rowSrc = fs.readFileSync(path.join(dir, 'FieldCollectPaymentRow.tsx'), 'utf8');
     const cardSrc = fs.readFileSync(path.join(dir, 'FieldTodayReceiptsCard.tsx'), 'utf8');
+    const waModalSrc = fs.readFileSync(path.join(dir, 'ReceiptWhatsAppSendModal.tsx'), 'utf8');
 
     expect(modalSrc).toContain('NativeModalDialog');
     expect(modalSrc).not.toMatch(/<dialog\b/);
+
+    // El vendedor solo puede enviar por WhatsApp (sin botón de descarga PDF directo) para capturar números
+    expect(pageSrc).not.toContain('downloadReceiptPdf');
+    expect(cardSrc).not.toContain('downloadReceiptPdf');
+    expect(waModalSrc).not.toContain('downloadReceiptPdf');
 
     // Recibos de hoy aparece antes del buscador/listado de 60 clientes
     expect(pageSrc.indexOf('<FieldTodayReceiptsCard')).toBeGreaterThan(-1);
@@ -97,5 +103,6 @@ describe('Recibos de Vendedores (UI y PDF moderno)', () => {
     expect(pageSrc.split('\n').length).toBeLessThanOrEqual(450);
     expect(rowSrc.split('\n').length).toBeLessThanOrEqual(450);
     expect(cardSrc.split('\n').length).toBeLessThanOrEqual(450);
+    expect(waModalSrc.split('\n').length).toBeLessThanOrEqual(450);
   });
 });

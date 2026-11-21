@@ -42,7 +42,7 @@ export interface PublicReceiptData {
 }
 
 const INTERNAL_CONCEPT_PATTERN =
-  /rendici[oó]n|chofer\s*:|ruta\s*#|reparto|vendedor\s*:|pago\s+de\s+|emisor\s*:|cierre\s+de|caja\s+|arqueo|backfill|migraci[oó]n|interno|auditor/i;
+  /rendici[oó]n|chofer\s*:|ruta\s*#|reparto|vendedor\s*:|pago\s+de\s+|emisor\s*:|cierre\s+de|caja\s+|arqueo|backfill|migraci[oó]n|interno|auditor|cobro\s+digital|recibo\s+digital|en\s+calle/i;
 
 /**
  * Sanitiza cualquier descripción interna (ej. "Rendición Reparto - Chofer: ... - Ruta #3")
