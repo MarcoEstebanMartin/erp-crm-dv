@@ -110,8 +110,8 @@ function App() {
     );
   }
 
-  // Institutional Web landing page only at /web, while / and /login open ERP Login directly
-  if (!user && (location.pathname === '/web' || location.pathname.startsWith('/web/'))) {
+  // Institutional Web landing page at / (and /web), while ERP Login is served at /login and other unauthenticated paths
+  if (!user && (location.pathname === '/' || location.pathname === '/web' || location.pathname.startsWith('/web/'))) {
     return (
       <Suspense fallback={<LoadingSpinner />}>
         <InstitutionalLanding
