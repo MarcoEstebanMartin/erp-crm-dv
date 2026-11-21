@@ -3,10 +3,12 @@ import { Role } from '@prisma/client';
 import {
   approveSettlement,
   getOfflineBundle,
+  getWhatsAppCoverage,
   listAllSettlements,
   listMySettlements,
   rejectCheckPayment,
   resendWhatsAppReceipt,
+  saveClientWhatsApp,
   syncFieldReceipt,
   verifyTransferPayment,
   voidFieldReceipt,
@@ -17,6 +19,7 @@ import { validateRequest } from '../middlewares/validateRequest';
 import {
   approveSettlementSchema,
   rejectCheckSchema,
+  saveClientWhatsAppSchema,
   syncFieldReceiptSchema,
   verifyTransferSchema,
   voidFieldReceiptSchema,
@@ -38,6 +41,14 @@ router.post(
 );
 router.get('/my-settlements', authenticateJWT, requireRole(COLLECTOR_ROLES), listMySettlements);
 router.post('/:id/resend-whatsapp', authenticateJWT, requireRole(COLLECTOR_ROLES), resendWhatsAppReceipt);
+router.patch(
+  '/clients/:personaId/whatsapp',
+  authenticateJWT,
+  requireRole(COLLECTOR_ROLES),
+  validateRequest(saveClientWhatsAppSchema),
+  saveClientWhatsApp,
+);
+router.get('/whatsapp-coverage', authenticateJWT, requireRole(TREASURY_ROLES), getWhatsAppCoverage);
 
 // Rutas administrativas y de tesorería (oficina)
 router.get('/settlements', authenticateJWT, requireRole(TREASURY_ROLES), listAllSettlements);

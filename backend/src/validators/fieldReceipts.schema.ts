@@ -89,6 +89,20 @@ export const approveSettlementSchema = z.object({
   body: approveSettlementBodySchema,
 });
 
+export const saveClientWhatsAppBodySchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .min(8, 'Ingresá un número de WhatsApp válido (mínimo 8 dígitos)')
+    .max(30, 'Número de WhatsApp demasiado largo'),
+  fieldReceiptId: z.coerce.number().int().positive().nullable().optional(),
+});
+
+export const saveClientWhatsAppSchema = z.object({
+  body: saveClientWhatsAppBodySchema,
+});
+
 export type SyncFieldReceiptInput = z.infer<typeof syncFieldReceiptBodySchema>;
 export type VerifyTransferInput = z.infer<typeof verifyTransferBodySchema>;
 export type ApproveSettlementInput = z.infer<typeof approveSettlementBodySchema>;
+export type SaveClientWhatsAppInput = z.infer<typeof saveClientWhatsAppBodySchema>;

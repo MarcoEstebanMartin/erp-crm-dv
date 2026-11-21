@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../types';
 import AppError from '../utils/AppError';
 import { fieldReceiptsService } from '../services/fieldReceipts.service';
 import { whatsappDispatchService } from '../services/whatsappDispatch.service';
+import { clientWhatsAppService } from '../services/collections/client-whatsapp.service';
 
 function handleFieldReceiptError(res: Response, error: unknown, fallback: string) {
   if (error instanceof AppError) {
@@ -129,5 +130,25 @@ export const resendWhatsAppReceipt = async (req: AuthenticatedRequest, res: Resp
     return res.json(result);
   } catch (error) {
     return handleFieldReceiptError(res, error, 'Error al reenviar recibo por WhatsApp');
+  }
+};
+
+export const saveClientWhatsApp = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
+  try {
+    const personaId = Number(req.params.personaId);
+    const updated = await clientWhatsAppService.saveClientWhatsApp(personaId, req.body, req.user.id);
+    return res.json(updated);
+  } catch (error) {
+    return handleFieldReceiptError(res, error, 'Error al guardar WhatsApp del cliente');
+  }
+};
+
+export const getWhatsAppCoverage = async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const coverage = await clientWhatsAppService.getCoverage();
+    return res.json(coverage);
+  } catch (error) {
+    return handleFieldReceiptError(res, error, 'Error al consultar cobertura de WhatsApp');
   }
 };

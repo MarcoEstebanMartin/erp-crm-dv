@@ -92,6 +92,7 @@ export const receiptService = {
             id: true,
             name: true,
             phone: true,
+            whatsappVerifiedAt: true,
           },
         },
         user: {

@@ -115,8 +115,9 @@ model Persona {
   barrio    String?
   province  String?
   zipCode   String?
-  phone     String?
-  email     String?
+  phone              String?
+  whatsappVerifiedAt DateTime?
+  email              String?
   rubro     String?
   birthDate DateTime?
   hireDate  DateTime?

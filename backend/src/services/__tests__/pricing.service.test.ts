@@ -13,6 +13,7 @@ describe('PricingService Unit Tests (Motor de Precios y Reglas)', () => {
     province: null,
     zipCode: null,
     phone: null,
+    whatsappVerifiedAt: null,
     email: null,
     rubro: null,
     isClient: true,

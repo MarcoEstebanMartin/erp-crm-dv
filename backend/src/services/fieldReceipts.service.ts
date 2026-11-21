@@ -44,6 +44,7 @@ export const fieldReceiptsService = {
           city: true,
           address: true,
           phone: true,
+          whatsappVerifiedAt: true,
           route: true,
           saleRouteId: true,
           routeSequence: true,
@@ -88,7 +89,7 @@ export const fieldReceiptsService = {
         where: { provisionalCode: input.provisionalCode },
         include: {
           payments: true,
-          persona: { select: { id: true, name: true, phone: true, outstandingBalance: true } },
+          persona: { select: { id: true, name: true, phone: true, whatsappVerifiedAt: true, outstandingBalance: true } },
         },
       });
       if (existing) {
@@ -204,7 +205,7 @@ export const fieldReceiptsService = {
         where: { id: createdReceipt.id },
         include: {
           payments: true,
-          persona: { select: { id: true, name: true, phone: true, outstandingBalance: true } },
+          persona: { select: { id: true, name: true, phone: true, whatsappVerifiedAt: true, outstandingBalance: true } },
           collector: { select: { id: true, username: true } },
         },
       });
@@ -354,7 +355,7 @@ export const fieldReceiptsService = {
         collector: { select: { id: true, username: true, role: true } },
         receipts: {
           include: {
-            persona: { select: { id: true, name: true } },
+            persona: { select: { id: true, name: true, phone: true, whatsappVerifiedAt: true } },
             payments: true,
           },
           orderBy: { capturedAt: 'desc' },
