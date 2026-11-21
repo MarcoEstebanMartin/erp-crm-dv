@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Camera, CheckCircle2, Plus, Trash2, WifiOff, X } from 'lucide-react';
+import { CheckCircle2, Plus, WifiOff, X } from 'lucide-react';
 import {
   fieldReceiptsApi,
-  type FieldPaymentMethod,
+  type FieldReceiptDTO,
   type OfflineBundleBankAccount,
   type OfflineBundleClient,
   type SyncFieldReceiptPaymentPayload,
@@ -17,19 +17,20 @@ import {
   getFreshCachedGps,
   warmUpGpsSilently,
 } from '../../utils/geoUtils';
+import { NativeModalDialog } from '../modals/NativeModalDialog';
+import {
+  createEmptyPayment,
+  FieldCollectPaymentRow,
+  type PaymentDraft,
+} from './FieldCollectPaymentRow';
 
-interface PaymentDraft {
-  id: string;
-  paymentMethod: FieldPaymentMethod;
-  amount: string;
-  bankAccountId: string;
-  transferReference: string;
-  proofImageUrl: string;
-  checkBank: string;
-  checkNumber: string;
-  checkDueDate: string;
-  checkFrontImageUrl: string;
-  isEcheq: boolean;
+export interface FieldCollectSuccessInfo {
+  offline: boolean;
+  receiptNumber?: string | null;
+  provisionalCode: string;
+  totalAmount: number;
+  whatsappStatus?: string;
+  receipt?: FieldReceiptDTO;
 }
 
 interface FieldCollectModalProps {
@@ -39,38 +40,7 @@ interface FieldCollectModalProps {
   deliveryRouteId?: number | null;
   suggestedAmount?: number | null;
   onClose: () => void;
-  onSuccess: (info: {
-    offline: boolean;
-    receiptNumber?: string | null;
-    provisionalCode: string;
-    totalAmount: number;
-    whatsappStatus?: string;
-  }) => void;
-}
-
-function findDefaultTransferBankId(bankAccounts: OfflineBundleBankAccount[]): string {
-  const mpAccount = bankAccounts.find((b) => {
-    const n = b.name.toLowerCase();
-    return n.includes('mp') || n.includes('mercado pago') || n.includes('mercadopago');
-  });
-  const target = mpAccount ?? bankAccounts[0];
-  return target ? String(target.id) : '';
-}
-
-function createEmptyPayment(defaultAmount = ''): PaymentDraft {
-  return {
-    id: Math.random().toString(36).slice(2, 9),
-    paymentMethod: 'CASH',
-    amount: defaultAmount,
-    bankAccountId: '',
-    transferReference: '',
-    proofImageUrl: '',
-    checkBank: '',
-    checkNumber: '',
-    checkDueDate: '',
-    checkFrontImageUrl: '',
-    isEcheq: false,
-  };
+  onSuccess: (info: FieldCollectSuccessInfo) => void;
 }
 
 async function compressImageFile(file: File): Promise<string> {
@@ -106,7 +76,6 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const submittingRef = useRef(false);
   const [payments, setPayments] = useState<PaymentDraft[]>([]);
   const [notes, setNotes] = useState('');
@@ -116,24 +85,18 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (client) {
-      const preferred =
-        suggestedAmount !== null && suggestedAmount !== undefined && suggestedAmount > 0
-          ? suggestedAmount
-          : client.outstandingBalance;
-      const initialAmt = preferred > 0 ? String(Math.round(preferred)) : '';
-      setPayments([createEmptyPayment(initialAmt)]);
-      setNotes('');
-      setAllowCreditOnAccount(false);
-      setNeedsCreditOverride(false);
-      setError(null);
-      warmUpGpsSilently();
-      if (!dialog.open) dialog.showModal();
-    } else if (dialog.open) {
-      dialog.close();
-    }
+    if (!client) return;
+    const preferred =
+      suggestedAmount !== null && suggestedAmount !== undefined && suggestedAmount > 0
+        ? suggestedAmount
+        : client.outstandingBalance;
+    const initialAmt = preferred > 0 ? String(Math.round(preferred)) : '';
+    setPayments([createEmptyPayment(initialAmt)]);
+    setNotes('');
+    setAllowCreditOnAccount(false);
+    setNeedsCreditOverride(false);
+    setError(null);
+    warmUpGpsSilently();
   }, [client, suggestedAmount]);
 
   if (!client) return null;
@@ -231,10 +194,10 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
             provisionalCode,
             totalAmount,
             whatsappStatus: res.receipt.whatsappStatus,
+            receipt: res.receipt,
           });
           return;
         } catch (err: any) {
-          // Si es error de red/servidor caído, encola offline; si es validación 400/409, muestra el error.
           if (err?.status && err.status >= 400 && err.status < 500) {
             const msg = String(err.message || 'Datos inválidos en el cobro.');
             if (err.status === 409 && msg.toLowerCase().includes('favor')) {
@@ -260,185 +223,90 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   };
 
   return (
-    <dialog
-      ref={dialogRef}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
+    <NativeModalDialog
+      isOpen={Boolean(client)}
+      onClose={onClose}
+      ariaLabelledBy="field-collect-modal-title"
       style={{
-        width: 'min(540px, 95vw)',
-        maxHeight: '90vh',
+        width: 'min(520px, 95vw)',
+        maxHeight: '90dvh',
         borderRadius: '14px',
-        border: '1px solid #e5e7eb',
         padding: 0,
-        boxShadow: '0 20px 45px rgba(0,0,0,0.18)',
       }}
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #f1f5f9' }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>{client.name}</h3>
-            <span style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-              Saldo actual: <strong>${Math.round(client.outstandingBalance).toLocaleString('es-AR')}</strong>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: '90dvh' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '16px 18px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
+          <div style={{ minWidth: 0 }}>
+            <h3
+              id="field-collect-modal-title"
+              style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {client.name}
+            </h3>
+            <span className="tabular-nums" style={{ fontSize: '0.84rem', color: '#6b7280' }}>
+              Saldo: <strong style={{ color: client.outstandingBalance > 0 ? '#dc2626' : '#059669' }}>${Math.round(client.outstandingBalance).toLocaleString('es-AR')}</strong>
             </span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
-            <X size={20} />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '4px', flexShrink: 0 }}
+          >
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
-        <div style={{ padding: '16px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ padding: '16px 18px', overflowY: 'auto', flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {!navigator.onLine && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '8px', background: '#fef3c7', color: '#92400e', fontSize: '0.85rem' }}>
-              <WifiOff size={16} />
-              <span>Sin señal: se emitirá comprobante provisorio y se enviará al volver internet.</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '8px', background: '#fef3c7', color: '#92400e', fontSize: '0.84rem' }}>
+              <WifiOff size={16} aria-hidden="true" />
+              <span>Sin señal: se guarda provisorio y se sincroniza al volver internet.</span>
             </div>
           )}
 
           {payments.map((p, idx) => (
-            <div key={p.id} style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#fafafa' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                <select
-                  value={p.paymentMethod}
-                  onChange={(e) => {
-                    const nextMethod = e.target.value as FieldPaymentMethod;
-                    updatePayment(p.id, {
-                      paymentMethod: nextMethod,
-                      bankAccountId:
-                        nextMethod === 'BANK_TRANSFER' && !p.bankAccountId
-                          ? findDefaultTransferBankId(bankAccounts)
-                          : p.bankAccountId,
-                    });
-                  }}
-                  style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontWeight: 600 }}
-                >
-                  <option value="CASH">Efectivo</option>
-                  <option value="BANK_TRANSFER">Transferencia</option>
-                  <option value="CHECK">Cheque / eCheq</option>
-                </select>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  placeholder="Importe $"
-                  value={p.amount}
-                  onChange={(e) => updatePayment(p.id, { amount: e.target.value })}
-                  style={{ width: '130px', padding: '8px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontWeight: 700, textAlign: 'right' }}
-                />
-                {payments.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setPayments((prev) => prev.filter((item) => item.id !== p.id))}
-                    aria-label={`Quitar pago ${idx + 1}`}
-                    style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer' }}
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                )}
-              </div>
-
-              {p.paymentMethod === 'BANK_TRANSFER' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <select
-                      value={p.bankAccountId}
-                      onChange={(e) => updatePayment(p.id, { bankAccountId: e.target.value })}
-                      style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
-                    >
-                      <option value="">Cuenta destino...</option>
-                      {bankAccounts.map((b) => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="N° Operación / Ref"
-                      value={p.transferReference}
-                      onChange={(e) => updatePayment(p.id, { transferReference: e.target.value })}
-                      style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#374151', cursor: 'pointer' }}>
-                    <Camera size={16} />
-                    <span>{p.proofImageUrl ? 'Foto adjuntada (Cambiar)' : 'Sacar foto comprobante (opcional)'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      style={{ display: 'none' }}
-                      onChange={(e) => void handlePhotoSelect(p.id, 'proofImageUrl', e.target.files?.[0])}
-                    />
-                  </label>
-                </div>
-              )}
-
-              {p.paymentMethod === 'CHECK' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="Banco"
-                      value={p.checkBank}
-                      onChange={(e) => updatePayment(p.id, { checkBank: e.target.value })}
-                      style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="N° de Cheque"
-                      value={p.checkNumber}
-                      onChange={(e) => updatePayment(p.id, { checkNumber: e.target.value })}
-                      style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input
-                      type="date"
-                      value={p.checkDueDate}
-                      onChange={(e) => updatePayment(p.id, { checkDueDate: e.target.value })}
-                      style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
-                    />
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={p.isEcheq}
-                        onChange={(e) => updatePayment(p.id, { isEcheq: e.target.checked })}
-                      />
-                      eCheq
-                    </label>
-                  </div>
-                  {!p.isEcheq && (
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#374151', cursor: 'pointer' }}>
-                      <Camera size={16} />
-                      <span>{p.checkFrontImageUrl ? 'Foto cheque adjuntada (Cambiar)' : 'Sacar foto cheque (opcional)'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        style={{ display: 'none' }}
-                        onChange={(e) => void handlePhotoSelect(p.id, 'checkFrontImageUrl', e.target.files?.[0])}
-                      />
-                    </label>
-                  )}
-                </div>
-              )}
-            </div>
+            <FieldCollectPaymentRow
+              key={p.id}
+              payment={p}
+              index={idx}
+              canRemove={payments.length > 1}
+              bankAccounts={bankAccounts}
+              onUpdate={updatePayment}
+              onRemove={(id) => setPayments((prev) => prev.filter((item) => item.id !== id))}
+              onPhotoSelect={(id, field, file) => void handlePhotoSelect(id, field, file)}
+            />
           ))}
 
           <button
             type="button"
             onClick={() => setPayments((prev) => [...prev, createEmptyPayment()])}
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', border: '1px dashed #9ca3af', background: '#fff', color: '#374151', fontSize: '0.85rem', cursor: 'pointer' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '9px 10px',
+              borderRadius: '8px',
+              border: '1px dashed #9ca3af',
+              background: '#fff',
+              color: '#374151',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
           >
-            <Plus size={15} /> Agregar otro medio de pago
+            <Plus size={15} aria-hidden="true" />
+            <span>Agregar otro medio</span>
           </button>
 
           <input
             type="text"
+            aria-label="Observación"
             placeholder="Observación (opcional)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '0.85rem' }}
+            style={{ width: '100%', padding: '9px 10px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '16px', boxSizing: 'border-box' }}
           />
 
           {showCreditToggle && (
@@ -477,21 +345,21 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
           )}
 
           {error && (
-            <div style={{ padding: '8px 12px', borderRadius: '8px', background: '#fee2e2', color: '#991b1b', fontSize: '0.85rem' }}>
+            <div role="alert" style={{ padding: '9px 12px', borderRadius: '8px', background: '#fee2e2', color: '#991b1b', fontSize: '0.85rem' }}>
               {error}
             </div>
           )}
         </div>
 
-        <div style={{ padding: '14px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+        <div style={{ padding: '14px 18px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', flexShrink: 0, background: '#ffffff' }}>
           <div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
+            <div className="tabular-nums" style={{ fontSize: '1.05rem', fontWeight: 700, color: '#111827' }}>
               Total: ${totalAmount.toLocaleString('es-AR')}
             </div>
-            <div style={{ fontSize: '0.78rem', color: balanceAfter < 0 ? '#059669' : '#6b7280', fontWeight: balanceAfter < 0 ? 600 : 400 }}>
+            <div className="tabular-nums" style={{ fontSize: '0.78rem', color: balanceAfter < 0 ? '#059669' : '#6b7280', fontWeight: balanceAfter < 0 ? 600 : 400 }}>
               {balanceAfter < 0
                 ? `A favor: $${Math.abs(balanceAfter).toLocaleString('es-AR')}`
-                : `Saldo restante: $${balanceAfter.toLocaleString('es-AR')}`}
+                : `Restante: $${balanceAfter.toLocaleString('es-AR')}`}
             </div>
           </div>
           <button
@@ -500,22 +368,25 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
               padding: '10px 18px',
+              minHeight: '42px',
               borderRadius: '8px',
               border: 'none',
               background: '#E30613',
               color: '#fff',
               fontWeight: 700,
+              fontSize: '0.92rem',
               cursor: submitting || blockedByOverpayment ? 'not-allowed' : 'pointer',
               opacity: submitting || blockedByOverpayment ? 0.55 : 1,
             }}
           >
-            <CheckCircle2 size={17} />
-            {submitting ? 'Guardando...' : 'Confirmar Cobro'}
+            <CheckCircle2 size={17} aria-hidden="true" />
+            <span>{submitting ? 'Guardando...' : 'Confirmar Cobro'}</span>
           </button>
         </div>
       </form>
-    </dialog>
+    </NativeModalDialog>
   );
 };

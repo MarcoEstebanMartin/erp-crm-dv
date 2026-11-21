@@ -1,9 +1,10 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCw, Search, Send, WifiOff, X } from 'lucide-react';
+import { FileDown, RefreshCw, Search, Send, WifiOff, X } from 'lucide-react';
 import {
   buildManualWhatsAppUrl,
   fieldReceiptsApi,
   type CollectorSettlementDTO,
+  type FieldReceiptDTO,
   type OfflineBundleBankAccount,
   type OfflineBundleClient,
 } from '../../api/fieldReceipts.api';
@@ -15,7 +16,16 @@ import {
   startOfflineSyncListener,
   type QueuedFieldReceipt,
 } from '../../utils/offlineReceiptQueue';
+import {
+  downloadReceiptPdf,
+  shareOrDownloadReceiptPdf,
+} from '../../utils/receiptPdfGenerator';
+import { buildFieldReceiptWhatsAppMessage } from '../../utils/receiptWhatsApp';
 import { FieldCollectModal } from './FieldCollectModal';
+import {
+  fieldReceiptToPublicData,
+  FieldTodayReceiptsCard,
+} from './FieldTodayReceiptsCard';
 import { buildSearchIndex, filterIndexedItems } from '../vendedor/vendedorHelpers';
 
 interface FieldCollectionPageProps {
@@ -38,7 +48,8 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedClient, setSelectedClient] = useState<OfflineBundleClient | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ text: string; receipt?: FieldReceiptDTO } | null>(null);
+  const [busyAction, setBusyAction] = useState<'pdf' | 'wa' | null>(null);
   const lastFetchedAtRef = useRef(0);
   const hasClientsRef = useRef(false);
   hasClientsRef.current = clients.length > 0;
@@ -132,6 +143,31 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
 
   const openSettlement = settlements.find((s) => s.status === 'OPEN');
 
+  const handleFeedbackPdf = async (receipt: FieldReceiptDTO) => {
+    if (busyAction) return;
+    setBusyAction('pdf');
+    try {
+      await downloadReceiptPdf(fieldReceiptToPublicData(receipt));
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleFeedbackWhatsApp = async (receipt: FieldReceiptDTO) => {
+    if (busyAction) return;
+    setBusyAction('wa');
+    try {
+      await shareOrDownloadReceiptPdf(fieldReceiptToPublicData(receipt), {
+        shareText: buildFieldReceiptWhatsAppMessage(receipt, window.location.origin),
+        whatsappUrl: buildManualWhatsAppUrl(receipt),
+      });
+    } catch {
+      // Usuario canceló compartir
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '820px', margin: '0 auto' }}>
       {(!online || pendingQueue.length > 0) && (
@@ -164,8 +200,80 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
       )}
 
       {feedback && (
-        <div role="status" style={{ padding: '10px 14px', borderRadius: '10px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', fontSize: '0.86rem', fontWeight: 600 }} onClick={() => setFeedback(null)}>
-          {feedback}
+        <div
+          role="status"
+          style={{
+            padding: '12px 14px',
+            borderRadius: '10px',
+            background: '#ecfdf5',
+            border: '1px solid #a7f3d0',
+            color: '#065f46',
+            fontSize: '0.86rem',
+            fontWeight: 600,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+            <span>{feedback.text}</span>
+            <button
+              type="button"
+              aria-label="Cerrar aviso"
+              onClick={() => setFeedback(null)}
+              style={{ background: 'transparent', border: 'none', color: '#065f46', cursor: 'pointer', padding: '2px', flexShrink: 0 }}
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          </div>
+          {feedback.receipt?.receiptNumber && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => void handleFeedbackPdf(feedback.receipt!)}
+                disabled={busyAction !== null}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  minHeight: '34px',
+                  padding: '0 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #111827',
+                  background: '#111827',
+                  color: '#ffffff',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: busyAction ? 'wait' : 'pointer',
+                }}
+              >
+                <FileDown size={14} aria-hidden="true" />
+                <span>{busyAction === 'pdf' ? 'Generando…' : 'Descargar PDF'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleFeedbackWhatsApp(feedback.receipt!)}
+                disabled={busyAction !== null}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  minHeight: '34px',
+                  padding: '0 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #16a34a',
+                  background: '#ffffff',
+                  color: '#15803d',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: busyAction ? 'wait' : 'pointer',
+                }}
+              >
+                <Send size={14} aria-hidden="true" />
+                <span>Enviar WhatsApp</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -184,6 +292,13 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
             <div className="tabular-nums" style={{ fontSize: '1rem', fontWeight: 700 }}>${Math.round(Number(openSettlement.pendingTransfersAmount)).toLocaleString('es-AR')}</div>
           </div>
         </div>
+      )}
+
+      {openSettlement && openSettlement.receipts.length > 0 && (
+        <FieldTodayReceiptsCard
+          receipts={openSettlement.receipts}
+          onRefresh={() => void refreshAll()}
+        />
       )}
 
       <search style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -251,59 +366,6 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
         })}
       </div>
 
-      {openSettlement && openSettlement.receipts.length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '14px 16px' }}>
-          <h4 style={{ margin: '0 0 10px 0', fontSize: '0.95rem', fontWeight: 700 }}>Recibos de hoy</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {openSettlement.receipts.slice(0, 10).map((r) => (
-              <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', paddingBottom: '6px', borderBottom: '1px solid #f3f4f6' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <strong>{r.receiptNumber || 'Transferencia'}</strong> · {r.persona?.name}
-                  {!r.receiptNumber && (
-                    <span style={{ fontSize: '0.72rem', fontWeight: 600, padding: '1px 7px', borderRadius: '999px', background: '#fef3c7', color: '#92400e' }}>
-                      Sin acreditar
-                    </span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 700 }}>${Math.round(Number(r.totalAmount)).toLocaleString('es-AR')}</span>
-                  {r.receiptNumber && r.pdfUrl && (
-                    <a
-                      href={r.pdfUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #d1d5db', color: '#374151', fontSize: '0.75rem', textDecoration: 'none' }}
-                    >
-                      PDF
-                    </a>
-                  )}
-                  {r.receiptNumber && (
-                    <a
-                      href={buildManualWhatsAppUrl(r)}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', border: '1px solid #16a34a', color: '#15803d', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none' }}
-                    >
-                      <Send size={12} /> WhatsApp
-                    </a>
-                  )}
-                  {r.receiptNumber && r.whatsappStatus === 'FAILED' && (
-                    <button
-                      type="button"
-                      onClick={() => void fieldReceiptsApi.resendWhatsApp(r.id).then(() => refreshAll())}
-                      title="Enviar por API Meta"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff', fontSize: '0.75rem', cursor: 'pointer' }}
-                    >
-                      API
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <FieldCollectModal
         client={selectedClient}
         collectorUserId={collectorUserId}
@@ -311,13 +373,14 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
         onClose={() => setSelectedClient(null)}
         onSuccess={(info) => {
           setSelectedClient(null);
-          setFeedback(
-            info.offline
+          setFeedback({
+            text: info.offline
               ? `Guardado offline (${info.provisionalCode}) por $${info.totalAmount.toLocaleString('es-AR')}. Se enviará al volver la señal.`
               : info.receiptNumber
                 ? `Recibo ${info.receiptNumber} emitido por $${info.totalAmount.toLocaleString('es-AR')}.`
                 : `Transferencia registrada por $${info.totalAmount.toLocaleString('es-AR')}. Pendiente de acreditación.`,
-          );
+            receipt: info.receipt,
+          });
           void refreshAll();
         }}
       />
