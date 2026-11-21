@@ -32,6 +32,7 @@ describe('pending-rendiciones.engine', () => {
         receipts: [
           { id: 101, status: 'ISSUED', deliveryRouteId: null },
           { id: 102, status: 'VOIDED', deliveryRouteId: null },
+          { id: 106, status: 'VERIFIED', deliveryRouteId: null },
         ],
       },
       {

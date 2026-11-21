@@ -48,6 +48,7 @@ export interface PendingFieldSettlementSummary {
 }
 
 const OPEN_SETTLEMENT_STATUSES = new Set(['OPEN', 'SUBMITTED']);
+const EXCLUDED_PENDING_RECEIPT_STATUSES = new Set(['VOIDED', 'VERIFIED']);
 
 export function classifyCollectorChannel(params: {
   deliveryRouteId?: number | null;
@@ -71,6 +72,9 @@ export function summarizeOpenFieldSettlements(
     const activeReceipts = (s.receipts || []).filter(
       (r) => String(r.status || '').toUpperCase() !== 'VOIDED',
     );
+    const pendingReceipts = activeReceipts.filter(
+      (r) => !EXCLUDED_PENDING_RECEIPT_STATUSES.has(String(r.status || '').toUpperCase()),
+    );
     const cashDec = roundToIntegerPeso(s.expectedCash ?? 0);
     const checksDec = roundToIntegerPeso(s.expectedChecksAmount ?? 0);
     const transfersDec = roundToIntegerPeso(s.pendingTransfersAmount ?? 0);
@@ -78,15 +82,16 @@ export function summarizeOpenFieldSettlements(
 
     if (totalDec.lte(0) && Number(s.expectedChecksCount || 0) <= 0) continue;
 
+    const receiptsForChannel = pendingReceipts.length > 0 ? pendingReceipts : activeReceipts;
     const channel = classifyCollectorChannel({
       deliveryRouteId: s.deliveryRouteId,
-      receiptDeliveryRouteIds: activeReceipts.map((r) => r.deliveryRouteId),
+      receiptDeliveryRouteIds: receiptsForChannel.map((r) => r.deliveryRouteId),
       collectorRole: s.collector?.role,
     });
 
     const resolvedRouteId =
       s.deliveryRouteId ??
-      activeReceipts.find((r) => r.deliveryRouteId != null)?.deliveryRouteId ??
+      receiptsForChannel.find((r) => r.deliveryRouteId != null)?.deliveryRouteId ??
       null;
 
     const routeLabel = s.deliveryRoute
@@ -106,7 +111,7 @@ export function summarizeOpenFieldSettlements(
       deliveryRouteId: resolvedRouteId,
       routeLabel,
       status: s.status,
-      receiptCount: activeReceipts.length,
+      receiptCount: pendingReceipts.length,
       expectedCash: cashDec.toNumber(),
       expectedChecksCount: Number(s.expectedChecksCount || 0),
       expectedChecksAmount: checksDec.toNumber(),
