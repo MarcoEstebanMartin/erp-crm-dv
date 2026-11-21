@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
   fieldReceiptsApi,
+  type ClientWhatsAppCoverageDTO,
   type CollectorSettlementDTO,
   type OfficeReceiptDTO,
 } from '../../api/fieldReceipts.api';
@@ -13,18 +14,30 @@ export const FieldSettlementsTab: React.FC = () => {
   const confirm = useConfirm();
   const [settlements, setSettlements] = useState<CollectorSettlementDTO[]>([]);
   const [officeReceipts, setOfficeReceipts] = useState<OfficeReceiptDTO[]>([]);
+  const [waCoverage, setWaCoverage] = useState<ClientWhatsAppCoverageDTO | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  const refreshCoverage = useCallback(async () => {
+    try {
+      const cov = await fieldReceiptsApi.getWhatsAppCoverage();
+      setWaCoverage(cov);
+    } catch {
+      // No bloquear la tabla de recibos si falla el indicador
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, office] = await Promise.all([
+      const [list, office, cov] = await Promise.all([
         fieldReceiptsApi.listAllSettlements(),
         fieldReceiptsApi.listOfficeReceipts(200),
+        fieldReceiptsApi.getWhatsAppCoverage().catch(() => null),
       ]);
       setSettlements(list);
       setOfficeReceipts(office);
+      if (cov) setWaCoverage(cov);
     } catch (err: any) {
       setMessage(err?.message || 'Error al cargar recibos');
     } finally {
@@ -88,8 +101,54 @@ export const FieldSettlementsTab: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Recibos</h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+          <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Recibos</h2>
+          {waCoverage && waCoverage.totalActiveClients > 0 && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                border: '1px solid #e5e7eb',
+                background: '#ffffff',
+                fontSize: '0.78rem',
+                color: '#374151',
+              }}
+            >
+              <span>WhatsApp</span>
+              <strong className="tabular-nums" style={{ color: '#111827' }}>
+                {waCoverage.verifiedCount}/{waCoverage.totalActiveClients} ({waCoverage.verifiedPct}%)
+              </strong>
+              <progress
+                value={waCoverage.verifiedCount}
+                max={waCoverage.totalActiveClients}
+                aria-label="Cobertura de WhatsApp verificados"
+                style={{
+                  width: '56px',
+                  height: '6px',
+                  accentColor: waCoverage.readyForApi ? '#16a34a' : '#111827',
+                }}
+              />
+              {waCoverage.readyForApi && (
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    padding: '1px 7px',
+                    borderRadius: '999px',
+                    background: '#ecfdf5',
+                    color: '#047857',
+                  }}
+                >
+                  Listo API
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => void loadData()}
@@ -113,6 +172,7 @@ export const FieldSettlementsTab: React.FC = () => {
         onVoidFieldReceipt={handleVoidFieldReceipt}
         onRejectCheck={handleRejectCheck}
         onResendWhatsApp={handleResendWhatsApp}
+        onClientWhatsAppSaved={() => void refreshCoverage()}
       />
     </div>
   );
