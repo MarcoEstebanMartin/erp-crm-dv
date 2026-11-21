@@ -8,6 +8,7 @@ import { env } from '../config/env.config';
 import {
   computePasswordVersion,
   isSystemUsername,
+  normalizeUserPermissions,
   sessionCache,
 } from '../utils/session-cache.util';
 import { getSystemConfigSnapshot } from '../services/admin/system-config.service';
@@ -98,9 +99,12 @@ export async function login(req: Request, res: Response): Promise<void> {
       { expiresIn: '30d' }
     );
 
+    const normalizedPermissions = normalizeUserPermissions(user.permissions);
+
     sessionCache.setStaffSession(user.id, {
       id: user.id,
       role: user.role,
+      permissions: normalizedPermissions,
       isActive: true,
       pwdVer,
     });
@@ -124,6 +128,7 @@ export async function login(req: Request, res: Response): Promise<void> {
           id: user.id,
           username: user.username,
           role: user.role,
+          permissions: normalizedPermissions,
         },
         config: systemConfig,
       },
@@ -153,6 +158,7 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
         id: true,
         username: true,
         role: true,
+        permissions: true,
         isActive: true,
         createdAt: true,
       },

@@ -8,6 +8,7 @@ import { setRuntimeGoogleMapsApiKey } from '../../utils/googleMapsLoader';
 import { useRepartoGeocoder } from './useRepartoGeocoder';
 import { useRepartoTspRoutes } from './useRepartoTspRoutes';
 import { useRepartoGpsAndSettle } from './useRepartoGpsAndSettle';
+import { isRouteAssignedToUser } from './repartoDriverMatcher';
 import {
   buildEditableOrderPool,
   computeRouteOrderFilters,
@@ -50,12 +51,8 @@ export function useRepartoController() {
 
   const visibleRoutes = useMemo(() => {
     if (isAdminOrOffice) return routes;
-    const uname = (currentUser?.username || '').toLowerCase().trim();
-    return routes.filter((r) => {
-      const dName = (r.driverName || '').toLowerCase().trim();
-      return dName.includes(uname) || uname.includes(dName);
-    });
-  }, [routes, isAdminOrOffice, currentUser?.username]);
+    return routes.filter((r) => isRouteAssignedToUser(r, currentUser));
+  }, [routes, isAdminOrOffice, currentUser?.id, currentUser?.username]);
 
   const { clientCoordsCache, handleUpdateClientCoords } = useRepartoGeocoder({
     pendingOrders, setPendingOrders, routes, setRoutes, selectedRoute, setSelectedRoute,

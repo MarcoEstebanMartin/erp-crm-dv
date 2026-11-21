@@ -1,11 +1,13 @@
 import prisma from '../../utils/prisma';
 import bcrypt from 'bcryptjs';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import { logAudit } from '../../utils/audit';
 import { adminAuditSubService, AuditLogFilters } from './admin-audit.service';
+import type { UserPermissions } from '../../types';
 import {
   computePasswordVersion,
   isSystemUsername,
+  normalizeUserPermissions,
   sessionCache,
 } from '../../utils/session-cache.util';
 
@@ -13,6 +15,7 @@ const USER_PUBLIC_SELECT = {
   id: true,
   username: true,
   role: true,
+  permissions: true,
   isActive: true,
   createdAt: true,
 } as const;
@@ -94,7 +97,7 @@ export class AdminUsersSubService {
    * Crear un nuevo usuario.
    */
   async createUser(
-    data: { username: string; password: string; role: Role },
+    data: { username: string; password: string; role: Role; permissions?: UserPermissions | null },
     adminId?: number,
   ) {
     const cleanUsername = String(data.username || '').trim();
@@ -119,12 +122,14 @@ export class AdminUsersSubService {
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(cleanPassword, salt);
+    const normalizedPermissions = normalizeUserPermissions(data.permissions);
 
     const newUser = await prisma.user.create({
       data: {
         username: cleanUsername,
         passwordHash,
         role: data.role,
+        ...(normalizedPermissions ? { permissions: normalizedPermissions as Prisma.InputJsonValue } : {}),
       },
       select: USER_PUBLIC_SELECT,
     });
@@ -138,6 +143,7 @@ export class AdminUsersSubService {
         newValues: {
           username: newUser.username,
           role: newUser.role,
+          permissions: normalizedPermissions,
         },
       });
     }
@@ -188,7 +194,7 @@ export class AdminUsersSubService {
    */
   async updateUser(
     id: number,
-    data: { username?: string; role?: Role; password?: string },
+    data: { username?: string; role?: Role; password?: string; permissions?: UserPermissions | null },
     adminId?: number,
   ) {
     const user = await prisma.user.findUnique({ where: { id } });
@@ -198,7 +204,7 @@ export class AdminUsersSubService {
       throw new Error(SYSTEM_PROTECTED_ERROR);
     }
 
-    const updateData: { username?: string; role?: Role; passwordHash?: string } = {};
+    const updateData: Prisma.UserUpdateInput = {};
 
     if (data.username !== undefined) {
       const cleanUsername = data.username.trim();
@@ -231,6 +237,17 @@ export class AdminUsersSubService {
       updateData.role = data.role;
     }
 
+    if (data.permissions !== undefined) {
+      if (data.permissions === null) {
+        updateData.permissions = Prisma.JsonNull;
+      } else {
+        const existingPerms = normalizeUserPermissions(user.permissions) || {};
+        const incomingPerms = normalizeUserPermissions(data.permissions) || {};
+        const merged = normalizeUserPermissions({ ...existingPerms, ...incomingPerms });
+        updateData.permissions = merged ? (merged as Prisma.InputJsonValue) : Prisma.JsonNull;
+      }
+    }
+
     if (data.password !== undefined && data.password !== '') {
       const cleanPassword = data.password.trim();
       if (cleanPassword.length < 6) {
@@ -253,10 +270,15 @@ export class AdminUsersSubService {
         action: 'UPDATE_USER',
         entityType: 'User',
         entityId: user.id,
-        oldValues: { username: user.username, role: user.role },
+        oldValues: {
+          username: user.username,
+          role: user.role,
+          permissions: normalizeUserPermissions(user.permissions),
+        },
         newValues: {
           username: updated.username,
           role: updated.role,
+          permissions: normalizeUserPermissions(updated.permissions),
           passwordChanged: Boolean(updateData.passwordHash),
         },
       });

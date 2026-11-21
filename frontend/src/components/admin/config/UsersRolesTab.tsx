@@ -64,6 +64,7 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
     username: '',
     password: '',
     role: 'VENDEDOR',
+    canDeliver: false,
   });
 
   useEffect(() => {
@@ -93,11 +94,16 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
     }
 
     try {
+      const permissionsPayload =
+        userModal.role === 'VENDEDOR'
+          ? { canDeliver: Boolean(userModal.canDeliver) }
+          : undefined;
       if (userModal.isEdit && userModal.id) {
         await api.updateUser(userModal.id, {
           username: cleanUsername,
           role: userModal.role,
           password: cleanPassword,
+          ...(permissionsPayload ? { permissions: permissionsPayload } : {}),
         });
         if (currentUser?.id === userModal.id) {
           await api.getMe();
@@ -108,10 +114,11 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
           username: cleanUsername,
           password: cleanPassword,
           role: userModal.role,
+          ...(permissionsPayload ? { permissions: permissionsPayload } : {}),
         });
         setSuccessMsg('Usuario creado exitosamente.');
       }
-      setUserModal({ open: false, isEdit: false, username: '', password: '', role: 'VENDEDOR' });
+      setUserModal({ open: false, isEdit: false, username: '', password: '', role: 'VENDEDOR', canDeliver: false });
       const dataUsers = await api.getUsers();
       setUsers(dataUsers);
     } catch (err: any) {
@@ -127,6 +134,7 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
       username: u.username,
       password: '',
       role: u.role,
+      canDeliver: Boolean(u.permissions?.canDeliver),
     });
   };
 
@@ -254,10 +262,18 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
                               )}
                             </td>
                             <td style={{ padding: '8px 12px' }}>
-                              <span className="badge" style={{ backgroundColor: group.bg, color: group.color, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', padding: '2px 8px' }}>
-                                {group.icon}
-                                {group.title}
-                              </span>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span className="badge" style={{ backgroundColor: group.bg, color: group.color, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', padding: '2px 8px' }}>
+                                  {group.icon}
+                                  {group.title}
+                                </span>
+                                {u.role === 'VENDEDOR' && u.permissions?.canDeliver && (
+                                  <span className="badge" style={{ backgroundColor: '#EEF2FF', color: '#4338CA', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', padding: '2px 7px' }}>
+                                    <Truck size={12} aria-hidden="true" />
+                                    Reparto
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td style={{ padding: '8px 12px' }}>
                               <span style={{ fontWeight: 600, fontSize: '0.82rem', color: u.isActive !== false ? 'var(--color-success)' : 'var(--color-danger)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>

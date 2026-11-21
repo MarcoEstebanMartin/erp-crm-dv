@@ -936,7 +936,12 @@ export const api = {
     return res.users;
   },
 
-  createUser: async (userData: { username: string; password?: string; role: string }) => {    
+  createUser: async (userData: {
+    username: string;
+    password?: string;
+    role: string;
+    permissions?: { canDeliver?: boolean } | null;
+  }) => {
     const res = await request('/admin/users', {
       method: 'POST',
       body: JSON.stringify(userData)
@@ -951,7 +956,15 @@ export const api = {
     return res.user;
   },
 
-  updateUser: async (id: number, userData: { username?: string; role?: string; password?: string }) => {
+  updateUser: async (
+    id: number,
+    userData: {
+      username?: string;
+      role?: string;
+      password?: string;
+      permissions?: { canDeliver?: boolean } | null;
+    },
+  ) => {
     const res = await request(`/admin/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(userData)

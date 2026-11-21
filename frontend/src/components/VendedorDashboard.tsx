@@ -1,5 +1,11 @@
 import React from 'react';
-import { ShoppingCart, CheckCircle2, History, Receipt, Home, Navigation } from 'lucide-react';
+import { ShoppingCart, CheckCircle2, History, Receipt, Home, Navigation, Truck } from 'lucide-react';
+import { api } from '../utils/api';
+import {
+  getActiveAssignedDeliveryRoutes,
+  hasDeliveryPermission,
+  type AssignableDeliveryRoute,
+} from './reparto/repartoDriverMatcher';
 import { VendedorHomeTab } from './vendedor/VendedorHomeTab';
 import { VendedorOrderTakeTab } from './vendedor/VendedorOrderTakeTab';
 import { VendedorRoutesTab } from './vendedor/VendedorRoutesTab';
@@ -23,10 +29,32 @@ interface VendedorDashboardProps {
 
 export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorDashboardProps) {
   const c = useVendedorController(activeTab);
+  const currentUser = api.getCurrentUser();
+  const canDeliver = hasDeliveryPermission(currentUser);
+  const [activeDeliveryRoutes, setActiveDeliveryRoutes] = React.useState<AssignableDeliveryRoute[]>([]);
   const [collectClientId, setCollectClientId] = React.useState<number | null>(null);
   const [mountedTabs, setMountedTabs] = React.useState<Record<string, boolean>>(() => ({
     [activeTab]: true,
   }));
+
+  React.useEffect(() => {
+    if (!canDeliver) {
+      setActiveDeliveryRoutes([]);
+      return;
+    }
+    if (activeTab !== 'inicio' && activeTab !== 'logistica') return;
+    let cancelled = false;
+    api.getDeliveryRoutes()
+      .then((routes) => {
+        if (cancelled) return;
+        const list = Array.isArray(routes) ? routes : [];
+        setActiveDeliveryRoutes(getActiveAssignedDeliveryRoutes(list, currentUser));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [canDeliver, activeTab, currentUser?.id, currentUser?.username]);
 
   React.useEffect(() => {
     setMountedTabs((prev) => (prev[activeTab] ? prev : { ...prev, [activeTab]: true }));
@@ -82,6 +110,23 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
           <Receipt size={16} /><span>Cobrar</span>
         </button>
 
+        {canDeliver && (
+          <button
+            type="button"
+            className={`vendedor-nav-pill ${activeTab === 'logistica' ? 'vendedor-nav-pill-active' : ''}`}
+            aria-current={activeTab === 'logistica' ? 'page' : undefined}
+            onClick={() => setActiveTab('logistica')}
+          >
+            <Truck size={16} />
+            <span>Reparto</span>
+            {activeDeliveryRoutes.length > 0 && (
+              <span className="tabular-nums" style={{ backgroundColor: activeTab === 'logistica' ? '#fff' : '#4338CA', color: activeTab === 'logistica' ? 'var(--text-primary)' : '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', borderRadius: '10px', marginLeft: '4px' }}>
+                {activeDeliveryRoutes.length}
+              </span>
+            )}
+          </button>
+        )}
+
         <button
           type="button"
           className={`vendedor-nav-pill ${activeTab === 'history' ? 'vendedor-nav-pill-active' : ''}`}
@@ -123,10 +168,13 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
             vendedorRoutes={c.vendedorRoutes}
             selectedRouteId={c.selectedRouteId}
             cartCount={c.cart.length}
+            canDeliver={canDeliver}
+            activeDeliveryRoutes={activeDeliveryRoutes}
             onGoToSell={() => setActiveTab('orders')}
             onGoToRoute={() => setActiveTab('clients')}
             onGoToCollect={() => setActiveTab('field-receipts')}
             onGoToHistory={() => setActiveTab('history')}
+            onGoToReparto={() => setActiveTab('logistica')}
           />
         </div>
       )}

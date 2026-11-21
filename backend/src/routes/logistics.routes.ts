@@ -13,7 +13,7 @@ import {
   getRouteGpsHistory,
   getLiveMap,
 } from '../controllers/logistics.controller';
-import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { authenticateJWT, requireRole, requireRoleOrPermission } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { validateRequest } from '../middlewares/validateRequest';
 import {
@@ -32,6 +32,10 @@ const router = Router();
 router.use(authenticateJWT);
 
 const canManageRoutes = requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]);
+const canOperateDeliveryRoutes = requireRoleOrPermission(
+  [Role.ADMIN, Role.FACTURACION, Role.DEPOSITO],
+  'canDeliver',
+);
 const canSettleOrDeleteRoutes = requireRole([Role.ADMIN, Role.FACTURACION]);
 
 router.get('/resources', getLogisticsResources);
@@ -45,8 +49,8 @@ router.patch(
   idempotencyGuard,
   updateDeliveryRoute,
 );
-router.patch('/:id/status', canManageRoutes, validateRequest(updateRouteStatusSchema), updateRouteStatus);
-router.post('/:id/custody', canManageRoutes, validateRequest(transferRouteCustodySchema), transferRouteCustody);
+router.patch('/:id/status', canOperateDeliveryRoutes, validateRequest(updateRouteStatusSchema), updateRouteStatus);
+router.post('/:id/custody', canOperateDeliveryRoutes, validateRequest(transferRouteCustodySchema), transferRouteCustody);
 router.post(
   '/:id/settle',
   canSettleOrDeleteRoutes,
@@ -54,8 +58,8 @@ router.post(
   idempotencyGuard,
   settleDeliveryRoute,
 );
-router.post('/:id/gps', canManageRoutes, validateRequest(recordRouteGpsPingSchema), recordRouteGpsPing);
-router.get('/:id/gps-history', canManageRoutes, validateRequest(routeIdParamSchema), getRouteGpsHistory);
+router.post('/:id/gps', canOperateDeliveryRoutes, validateRequest(recordRouteGpsPingSchema), recordRouteGpsPing);
+router.get('/:id/gps-history', canOperateDeliveryRoutes, validateRequest(routeIdParamSchema), getRouteGpsHistory);
 router.delete(
   '/:id',
   canSettleOrDeleteRoutes,

@@ -9,6 +9,7 @@ export interface UserFormState {
   username: string;
   password?: string;
   role: string;
+  canDeliver?: boolean;
 }
 
 interface UserFormModalProps {
@@ -29,6 +30,7 @@ export default function UserFormModal({
   const usernameId = useId();
   const passwordId = useId();
   const roleId = useId();
+  const canDeliverId = useId();
 
   const isEditingSelf = Boolean(userModal.isEdit && currentUserId && userModal.id === currentUserId);
   const closeModal = () => setUserModal({ ...userModal, open: false });
@@ -151,6 +153,33 @@ export default function UserFormModal({
               <option value="DEPOSITO">Depósito</option>
             </select>
           </div>
+
+          {userModal.role === 'VENDEDOR' && (
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label
+                htmlFor={canDeliverId}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <input
+                  id={canDeliverId}
+                  name="canDeliver"
+                  type="checkbox"
+                  checked={Boolean(userModal.canDeliver)}
+                  onChange={(e) => setUserModal({ ...userModal, canDeliver: e.target.checked })}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                />
+                <span>También reparte</span>
+              </label>
+            </div>
+          )}
 
           <div
             className="modal-footer"

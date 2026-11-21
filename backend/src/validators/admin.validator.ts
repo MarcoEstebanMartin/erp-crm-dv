@@ -1,6 +1,17 @@
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 
+const userPermissionsSchema = z
+  .object({
+    canSell: z.boolean().optional(),
+    canPick: z.boolean().optional(),
+    canDeliver: z.boolean().optional(),
+    canCollect: z.boolean().optional(),
+    canManageStock: z.boolean().optional(),
+  })
+  .nullable()
+  .optional();
+
 export const createUserSchema = z.object({
   body: z.object({
     username: z
@@ -14,6 +25,7 @@ export const createUserSchema = z.object({
       .min(6, 'La contraseña debe tener al menos 6 caracteres')
       .max(100, 'Contraseña demasiado larga'),
     role: z.nativeEnum(Role),
+    permissions: userPermissionsSchema,
   }),
 });
 
@@ -35,6 +47,7 @@ export const updateUserSchema = z.object({
       .max(50, 'El nombre de usuario no puede superar 50 caracteres')
       .optional(),
     role: z.nativeEnum(Role).optional(),
+    permissions: userPermissionsSchema,
     password: z
       .string()
       .trim()

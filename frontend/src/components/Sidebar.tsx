@@ -24,6 +24,7 @@ import { VendedorBottomNav } from './sidebar/VendedorBottomNav';
 interface SidebarProps {
   username: string;
   role: string;
+  canDeliver?: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onLogout: () => void;
@@ -50,7 +51,7 @@ const ADMIN_PARENT_TAB_MAP: Record<string, string> = {
   rrhh: 'config',
 };
 
-export default function Sidebar({ username, role, activeTab, setActiveTab, onLogout }: SidebarProps) {
+export default function Sidebar({ username, role, canDeliver = false, activeTab, setActiveTab, onLogout }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -107,12 +108,16 @@ export default function Sidebar({ username, role, activeTab, setActiveTab, onLog
       ];
     }
 
-    return [
+    const vendedorItems = [
       { id: 'inicio', label: 'Inicio', icon: <Home size={18} aria-hidden="true" /> },
       { id: 'clients', label: 'Ruta', icon: <Navigation size={18} aria-hidden="true" /> },
       { id: 'orders', label: 'Vender', icon: <ShoppingCart size={18} aria-hidden="true" /> },
       { id: 'field-receipts', label: 'Cobrar', icon: <Receipt size={18} aria-hidden="true" /> },
     ];
+    if (canDeliver) {
+      vendedorItems.push({ id: 'logistica', label: 'Reparto', icon: <Truck size={18} aria-hidden="true" /> });
+    }
+    return vendedorItems;
   };
 
   const handleTabSelect = (tabId: string) => {

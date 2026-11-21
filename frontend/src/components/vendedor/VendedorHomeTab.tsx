@@ -5,17 +5,22 @@ import {
   Navigation,
   Receipt,
   ShoppingCart,
+  Truck,
 } from 'lucide-react';
 import type { SaleRoute } from '../../types';
+import type { AssignableDeliveryRoute } from '../reparto/repartoDriverMatcher';
 
 interface VendedorHomeTabProps {
   vendedorRoutes: SaleRoute[];
   selectedRouteId: number | null;
   cartCount: number;
+  canDeliver?: boolean;
+  activeDeliveryRoutes?: AssignableDeliveryRoute[];
   onGoToSell: () => void;
   onGoToRoute: () => void;
   onGoToCollect: () => void;
   onGoToHistory: () => void;
+  onGoToReparto?: () => void;
 }
 
 /**
@@ -26,17 +31,67 @@ export const VendedorHomeTab: React.FC<VendedorHomeTabProps> = ({
   vendedorRoutes,
   selectedRouteId,
   cartCount,
+  canDeliver = false,
+  activeDeliveryRoutes = [],
   onGoToSell,
   onGoToRoute,
   onGoToCollect,
   onGoToHistory,
+  onGoToReparto,
 }) => {
   const activeRoute = vendedorRoutes.find((r) => r.id === selectedRouteId) || vendedorRoutes[0];
   const routeBadge = activeRoute ? `${activeRoute.name}${activeRoute.dayOfWeek ? ` · ${activeRoute.dayOfWeek}` : ''}` : 'Sin ruta';
+  const primaryTrip = activeDeliveryRoutes[0] || null;
+  const primaryStopsCount = Array.isArray(primaryTrip?.orders) ? primaryTrip.orders.length : 0;
+  const tripSubtitle = primaryTrip
+    ? [
+        `${primaryStopsCount} ${primaryStopsCount === 1 ? 'parada' : 'paradas'}`,
+        primaryTrip.vehiclePlate ? String(primaryTrip.vehiclePlate).trim() : null,
+        activeDeliveryRoutes.length > 1 ? `+${activeDeliveryRoutes.length - 1} más` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
 
   return (
     <div className="vendedor-home-shell">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {canDeliver && primaryTrip && onGoToReparto && (
+          <button
+            type="button"
+            className="vendedor-home-reparto-card"
+            onClick={onGoToReparto}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '18px',
+              borderRadius: '12px',
+              border: '1px solid #4338CA',
+              backgroundColor: '#EEF2FF',
+              color: '#1E1B4B',
+              cursor: 'pointer',
+              textAlign: 'left',
+              boxShadow: '0 2px 6px rgba(67, 56, 202, 0.12)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: '#4338CA', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Truck size={22} aria-hidden="true" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.02rem', fontWeight: 700, lineHeight: 1.2 }}>
+                  {primaryTrip.status === 'IN_TRANSIT' ? 'Viaje en curso' : 'Viaje asignado hoy'}
+                </div>
+                <div className="tabular-nums" style={{ fontSize: '0.8rem', color: '#4338CA', fontWeight: 600, marginTop: '4px' }}>
+                  {tripSubtitle}
+                </div>
+              </div>
+            </div>
+            <ArrowRight size={20} aria-hidden="true" style={{ flexShrink: 0, color: '#4338CA' }} />
+          </button>
+        )}
         <button
           type="button"
           className="vendedor-home-action-btn"

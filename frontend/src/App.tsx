@@ -140,6 +140,7 @@ function App() {
       <Sidebar
         username={user.username}
         role={user.role}
+        canDeliver={Boolean(user.permissions?.canDeliver)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLogout={handleLogout}

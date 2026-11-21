@@ -1,8 +1,28 @@
 import crypto from 'crypto';
 import { Role } from '@prisma/client';
 import { env } from '../config/env.config';
+import type { UserPermissions } from '../types';
 
 export const SYSTEM_USERNAMES = new Set(['OFICINA', 'TIENDA_ONLINE']);
+
+export function normalizeUserPermissions(raw: unknown): UserPermissions | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const source = raw as Record<string, unknown>;
+  const normalized: UserPermissions = {};
+  const keys: Array<keyof UserPermissions> = [
+    'canSell',
+    'canPick',
+    'canDeliver',
+    'canCollect',
+    'canManageStock',
+  ];
+  for (const key of keys) {
+    if (typeof source[key] === 'boolean') {
+      normalized[key] = source[key] as boolean;
+    }
+  }
+  return Object.keys(normalized).length > 0 ? normalized : null;
+}
 
 export function isSystemUsername(username?: string | null): boolean {
   if (!username) return false;
@@ -20,6 +40,7 @@ export function computePasswordVersion(passwordHash: string): string {
 export interface CachedStaffSession {
   id: number;
   role: Role;
+  permissions?: UserPermissions | null;
   isActive: true;
   pwdVer?: string;
 }

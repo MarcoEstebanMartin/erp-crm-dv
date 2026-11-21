@@ -1,12 +1,13 @@
 import { Response, NextFunction } from 'express';
 import jwt, { TokenExpiredError, JsonWebTokenError } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
-import { AuthenticatedRequest, UserPayload } from '../types';
+import { AuthenticatedRequest, UserPayload, UserPermissions } from '../types';
 import { env } from '../config/env.config';
 import prisma from '../utils/prisma';
 import {
   computePasswordVersion,
   isSystemUsername,
+  normalizeUserPermissions,
   sessionCache,
 } from '../utils/session-cache.util';
 import {
@@ -118,10 +119,11 @@ export async function authenticateJWT(
         return;
       }
       req.user.role = cachedStaff.role;
+      req.user.permissions = cachedStaff.permissions ?? null;
     } else {
       const userDb = await prisma.user.findUnique({
         where: { id: userId },
-        select: { isActive: true, role: true, passwordHash: true, username: true },
+        select: { isActive: true, role: true, permissions: true, passwordHash: true, username: true },
       });
       if (!userDb || !userDb.isActive || (userDb.username && isSystemUsername(userDb.username))) {
         sessionCache.invalidateStaffSession(userId);
@@ -145,13 +147,16 @@ export async function authenticateJWT(
         });
         return;
       }
+      const normalizedPermissions = normalizeUserPermissions(userDb.permissions);
       sessionCache.setStaffSession(userId, {
         id: userId,
         role: userDb.role,
+        permissions: normalizedPermissions,
         isActive: true,
         pwdVer: expectedPwdVer,
       });
       req.user.role = userDb.role;
+      req.user.permissions = normalizedPermissions;
     }
 
     next();
@@ -195,6 +200,38 @@ export function requireRole(allowedRoles: Role[]) {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
+      res.status(403).json({
+        status: 'error',
+        message: 'Acceso denegado. Permisos insuficientes para esta operación.',
+      });
+      return;
+    }
+
+    next();
+  };
+}
+
+/**
+ * Middleware para exigir que el usuario autenticado posea ciertos roles (RBAC)
+ * o un permiso granular específico activo (ej. `canDeliver` para vendedores que también reparten).
+ */
+export function requireRoleOrPermission(
+  allowedRoles: Role[],
+  permissionKey: keyof UserPermissions,
+) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        status: 'error',
+        message: 'No autenticado.',
+      });
+      return;
+    }
+
+    const hasAllowedRole = allowedRoles.includes(req.user.role);
+    const hasGranularPermission = Boolean(req.user.permissions?.[permissionKey]);
+
+    if (!hasAllowedRole && !hasGranularPermission) {
       res.status(403).json({
         status: 'error',
         message: 'Acceso denegado. Permisos insuficientes para esta operación.',

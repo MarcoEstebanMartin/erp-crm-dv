@@ -4,11 +4,12 @@ import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { env } from '../../config/env.config';
-import { authenticateJWT } from '../../middlewares/auth';
+import { authenticateJWT, requireRoleOrPermission } from '../../middlewares/auth';
 import { login, getMe, changeOwnPassword } from '../../controllers/auth.controller';
 import { adminUsersSubService } from '../admin/admin-users.service';
 import {
   computePasswordVersion,
+  normalizeUserPermissions,
   sessionCache,
 } from '../../utils/session-cache.util';
 import { STAFF_COOKIE_NAME } from '../../utils/cookie-auth.util';
@@ -51,8 +52,9 @@ describe('Blindaje de Usuarios, Roles y Sesiones — Paso 1', () => {
       id: 14,
       username: 'diego',
       role: Role.VENDEDOR,
+      permissions: null,
     });
-    expect((payload.data.user as any).permissions).toBeUndefined();
+    expect((payload.data.user as any).permissions).toBeNull();
 
     const decodedToken = jwt.verify(payload.data.token, env.JWT_SECRET) as any;
     expect(decodedToken.pwdVer).toBe(computePasswordVersion(passwordHash));
@@ -451,5 +453,69 @@ describe('Blindaje de Usuarios, Roles y Sesiones — Paso 1', () => {
         }),
       }),
     );
+  });
+
+  it('Permite doble función Vendedor + Reparto (canDeliver) en middleware requireRoleOrPermission y persiste permissions en updateUser', async () => {
+    expect(normalizeUserPermissions(null)).toBeNull();
+    expect(normalizeUserPermissions({ canDeliver: true, extra: 'ignored' })).toEqual({
+      canDeliver: true,
+    });
+
+    const mw = requireRoleOrPermission([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO], 'canDeliver');
+
+    // 1. VENDEDOR con canDeliver=true pasa
+    const nextAllowed = vi.fn();
+    const resAllowed: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    mw(
+      { user: { id: 67, username: 'fabian', role: Role.VENDEDOR, permissions: { canDeliver: true } } } as any,
+      resAllowed,
+      nextAllowed,
+    );
+    expect(nextAllowed).toHaveBeenCalledTimes(1);
+    expect(resAllowed.status).not.toHaveBeenCalled();
+
+    // 2. VENDEDOR sin canDeliver recibe 403
+    const nextDenied = vi.fn();
+    const resDenied: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    mw(
+      { user: { id: 66, username: 'diego', role: Role.VENDEDOR, permissions: null } } as any,
+      resDenied,
+      nextDenied,
+    );
+    expect(nextDenied).not.toHaveBeenCalled();
+    expect(resDenied.status).toHaveBeenCalledWith(403);
+
+    // 3. updateUser fusiona permissions y guarda canDeliver=true
+    vi.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce({
+      id: 67,
+      username: 'fabian',
+      role: Role.VENDEDOR,
+      permissions: { canSell: true },
+      isActive: true,
+    } as any);
+    const updateSpy = vi.spyOn(prisma.user, 'update').mockResolvedValueOnce({
+      id: 67,
+      username: 'fabian',
+      role: Role.VENDEDOR,
+      permissions: { canSell: true, canDeliver: true },
+      isActive: true,
+      createdAt: new Date(),
+    } as any);
+    vi.spyOn(prisma.auditLog, 'create').mockResolvedValue({ id: 1 } as any);
+
+    const updated = await adminUsersSubService.updateUser(
+      67,
+      { permissions: { canDeliver: true } },
+      73,
+    );
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 67 },
+        data: expect.objectContaining({
+          permissions: { canSell: true, canDeliver: true },
+        }),
+      }),
+    );
+    expect((updated as any).permissions).toEqual({ canSell: true, canDeliver: true });
   });
 });
