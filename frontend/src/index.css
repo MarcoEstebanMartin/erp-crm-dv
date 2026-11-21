@@ -2005,10 +2005,6 @@ dialog.app-native-dialog::backdrop {
   padding: clamp(72px, 14svh, 130px) 0 16px;
 }
 
-.vendedor-order-shell--has-cart {
-  padding-bottom: 88px;
-}
-
 .vendedor-order-results {
   display: flex;
   flex-direction: column;
@@ -2134,10 +2130,6 @@ dialog.app-native-dialog::backdrop {
 
   .vendedor-order-results--products {
     block-size: 260px;
-  }
-
-  .vendedor-order-shell--has-cart {
-    padding-bottom: 88px;
   }
 
   .vendedor-top-nav-bar {

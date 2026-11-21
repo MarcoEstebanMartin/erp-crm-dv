@@ -17,7 +17,6 @@ interface VendedorOrderCartPanelProps {
   promoEval: FrontendCartPromoEvalResult;
   totalUnits: number;
   loading: boolean;
-  cartSectionRef: React.RefObject<HTMLDivElement | null>;
   qtyInputStyle: React.CSSProperties;
   onUpdateCartQty: (productId: number, change: number) => void;
   onDirectQtyChange: (productId: number, rawValue: string) => void;
@@ -31,7 +30,6 @@ export const VendedorOrderCartPanel: React.FC<VendedorOrderCartPanelProps> = ({
   promoEval,
   totalUnits,
   loading,
-  cartSectionRef,
   qtyInputStyle,
   onUpdateCartQty,
   onDirectQtyChange,
@@ -41,8 +39,7 @@ export const VendedorOrderCartPanel: React.FC<VendedorOrderCartPanelProps> = ({
   const cartTotal = promoEval.totalAmount;
 
   return (
-    <>
-      <div ref={cartSectionRef} className="card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div className="card" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <ShoppingCart size={16} aria-hidden="true" />
@@ -119,60 +116,6 @@ export const VendedorOrderCartPanel: React.FC<VendedorOrderCartPanelProps> = ({
         <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '12px', fontWeight: 700, fontSize: '0.95rem' }} onClick={onConfirmOrder} disabled={loading}>
           {loading ? 'Procesando...' : 'Confirmar pedido'}
         </button>
-      </div>
-
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))',
-          left: '12px',
-          right: '12px',
-          zIndex: 1030,
-          maxWidth: '520px',
-          margin: '0 auto',
-          backgroundColor: '#111827',
-          color: '#ffffff',
-          borderRadius: '12px',
-          padding: '10px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '10px',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.22)',
-        }}
-      >
-        <div style={{ minWidth: 0 }}>
-          <div className="tabular-nums" style={{ fontSize: '0.74rem', color: '#9ca3af', fontWeight: 600 }}>
-            {totalUnits} {totalUnits === 1 ? 'unidad' : 'unidades'}
-          </div>
-          <div className="tabular-nums" style={{ fontSize: '1.08rem', fontWeight: 700 }}>
-            ${cartTotal.toLocaleString('es-AR')}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-          <button
-            type="button"
-            onClick={() => cartSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.25)', backgroundColor: 'transparent', color: '#ffffff', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
-          >
-            Ver
-          </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => {
-              if (!selectedClient) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                return;
-              }
-              onConfirmOrder();
-            }}
-            style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--color-corp-red)', color: '#ffffff', fontSize: '0.82rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? 'Enviando...' : selectedClient ? 'Confirmar' : 'Elegir cliente'}
-          </button>
-        </div>
-      </div>
-    </>
+    </div>
   );
 };

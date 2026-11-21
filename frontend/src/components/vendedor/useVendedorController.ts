@@ -285,7 +285,7 @@ export function useVendedorController(activeTab: string) {
         }
         setTodayVisits((prev) => [...prev.filter((v) => v.personaId !== selectedClient.id), { personaId: selectedClient.id, status: 'ORDERED' }]);
         markLocalVisit(selectedClient.id);
-        setSuccessMsg(`Pedido enviado${gps ? ' (GPS OK)' : ''}.`);
+        setSuccessMsg('Pedido confirmado');
         setCart([]); setOrderNotes(''); setSelectedClient(null); setClientFilter('');
         void fetchData(true);
       } catch (err: any) {

@@ -126,7 +126,6 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
   );
 
   const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartSectionRef = useRef<HTMLDivElement | null>(null);
   const prodSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -153,7 +152,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
   };
 
   return (
-    <div className={`vendedor-order-shell${cart.length > 0 ? ' vendedor-order-shell--has-cart' : ''}`}>
+    <div className="vendedor-order-shell">
       {/* 1. Lupa de Cliente */}
       <div className="card" style={{ padding: '12px' }}>
         {!selectedClient ? (
@@ -408,7 +407,6 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
         promoEval={promoEval}
         totalUnits={totalUnits}
         loading={loading}
-        cartSectionRef={cartSectionRef}
         qtyInputStyle={qtyInputStyle}
         onUpdateCartQty={onUpdateCartQty}
         onDirectQtyChange={handleDirectQtyChange}

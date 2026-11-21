@@ -103,4 +103,20 @@ describe('Vendedor — Inicio centrado en zona de pulgar y barra inferior fija f
     expect(cssSrc).toContain('.vendedor-order-results--products');
     expect(cssSrc).toContain('block-size: 320px;');
   });
+
+  it('elimina la barra flotante duplicada del carrito y muestra "Pedido confirmado" con tilde verde sin GPS OK', () => {
+    const cartPanelSrc = readSrc('components/vendedor/VendedorOrderCartPanel.tsx');
+    const ctrlSrc = readSrc('components/vendedor/useVendedorController.ts');
+    const dashSrc = readSrc('components/VendedorDashboard.tsx');
+
+    expect(cartPanelSrc).toContain('Confirmar pedido');
+    expect(cartPanelSrc).not.toContain("position: 'fixed'");
+    expect(cartPanelSrc).not.toContain('Elegir cliente');
+    expect(cartPanelSrc).not.toContain('cartSectionRef');
+
+    expect(ctrlSrc).toContain("setSuccessMsg('Pedido confirmado')");
+    expect(ctrlSrc).not.toContain('GPS OK');
+
+    expect(dashSrc).toContain('<CheckCircle2 size={17} />');
+  });
 });
