@@ -36,8 +36,8 @@ export default function ChangeOwnPasswordModal({ open, onClose }: ChangeOwnPassw
     setSuccessMsg(null);
 
     const trimmedNew = newPassword.trim();
-    if (trimmedNew.length < 6) {
-      setErrorMsg('Mínimo 6 caracteres.');
+    if (trimmedNew.length < 4) {
+      setErrorMsg('Mínimo 4 caracteres.');
       return;
     }
     if (trimmedNew !== confirmPassword.trim()) {
@@ -122,7 +122,7 @@ export default function ChangeOwnPasswordModal({ open, onClose }: ChangeOwnPassw
               className="input"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              minLength={6}
+              minLength={4}
               required
               autoComplete="new-password"
               style={{ width: '100%' }}
@@ -138,7 +138,7 @@ export default function ChangeOwnPasswordModal({ open, onClose }: ChangeOwnPassw
               className="input"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              minLength={6}
+              minLength={4}
               required
               autoComplete="new-password"
               style={{ width: '100%' }}

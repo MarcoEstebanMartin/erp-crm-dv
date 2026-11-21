@@ -108,8 +108,8 @@ export class AdminUsersSubService {
       throw new Error('Ese nombre está reservado para cuentas automáticas del sistema.');
     }
     const cleanPassword = String(data.password || '').trim();
-    if (cleanPassword.length < 6) {
-      throw new Error('La contraseña debe tener al menos 6 caracteres.');
+    if (cleanPassword.length < 4) {
+      throw new Error('La contraseña debe tener al menos 4 caracteres.');
     }
 
     const existing = await prisma.user.findFirst({
@@ -250,8 +250,8 @@ export class AdminUsersSubService {
 
     if (data.password !== undefined && data.password !== '') {
       const cleanPassword = data.password.trim();
-      if (cleanPassword.length < 6) {
-        throw new Error('La contraseña debe tener al menos 6 caracteres.');
+      if (cleanPassword.length < 4) {
+        throw new Error('La contraseña debe tener al menos 4 caracteres.');
       }
       const salt = await bcrypt.genSalt(10);
       updateData.passwordHash = await bcrypt.hash(cleanPassword, salt);

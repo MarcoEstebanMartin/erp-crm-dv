@@ -16,6 +16,9 @@ interface UserFormModalProps {
   userModal: UserFormState;
   setUserModal: React.Dispatch<React.SetStateAction<UserFormState>>;
   currentUserId?: number;
+  modalError?: string | null;
+  submitting?: boolean;
+  onClearError?: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -23,6 +26,9 @@ export default function UserFormModal({
   userModal,
   setUserModal,
   currentUserId,
+  modalError,
+  submitting = false,
+  onClearError,
   onSubmit,
 }: UserFormModalProps) {
   const [showPassword, setShowPassword] = useState(false);
@@ -33,7 +39,10 @@ export default function UserFormModal({
   const canDeliverId = useId();
 
   const isEditingSelf = Boolean(userModal.isEdit && currentUserId && userModal.id === currentUserId);
-  const closeModal = () => setUserModal({ ...userModal, open: false });
+  const closeModal = () => {
+    onClearError?.();
+    setUserModal({ ...userModal, open: false });
+  };
 
   return (
     <NativeModalDialog
@@ -69,6 +78,22 @@ export default function UserFormModal({
           </button>
         </div>
 
+        {modalError && (
+          <div
+            role="alert"
+            style={{
+              backgroundColor: 'var(--accent-bg-light)',
+              color: 'var(--accent-color)',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              marginBottom: '12px',
+            }}
+          >
+            {modalError}
+          </div>
+        )}
+
         <form onSubmit={onSubmit}>
           <div className="form-group" style={{ marginBottom: '14px' }}>
             <label htmlFor={usernameId} style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
@@ -80,18 +105,24 @@ export default function UserFormModal({
               type="text"
               className="input"
               value={userModal.username}
-              onChange={(e) => setUserModal({ ...userModal, username: e.target.value })}
+              onChange={(e) => {
+                onClearError?.();
+                setUserModal({ ...userModal, username: e.target.value });
+              }}
               minLength={3}
               maxLength={50}
               required
               autoComplete="username"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               style={{ width: '100%' }}
             />
           </div>
 
           <div className="form-group" style={{ marginBottom: '14px' }}>
             <label htmlFor={passwordId} style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
-              {userModal.isEdit ? 'Nueva clave' : 'Clave'}
+              {userModal.isEdit ? 'Nueva clave (mín. 4)' : 'Clave (mín. 4)'}
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -101,8 +132,11 @@ export default function UserFormModal({
                 className="input"
                 placeholder={userModal.isEdit ? 'Dejar vacío para conservar' : undefined}
                 value={userModal.password || ''}
-                onChange={(e) => setUserModal({ ...userModal, password: e.target.value })}
-                minLength={6}
+                onChange={(e) => {
+                  onClearError?.();
+                  setUserModal({ ...userModal, password: e.target.value });
+                }}
+                minLength={4}
                 required={!userModal.isEdit}
                 autoComplete="new-password"
                 style={{ width: '100%', paddingRight: '40px' }}
@@ -185,11 +219,11 @@ export default function UserFormModal({
             className="modal-footer"
             style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}
           >
-            <button type="button" className="btn btn-secondary" onClick={closeModal}>
+            <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={submitting}>
               Cancelar
             </button>
-            <button type="submit" className="btn btn-primary">
-              {userModal.isEdit ? 'Guardar' : 'Crear'}
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Guardando...' : userModal.isEdit ? 'Guardar' : 'Crear'}
             </button>
           </div>
         </form>

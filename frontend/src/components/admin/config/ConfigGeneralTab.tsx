@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Key, Pencil } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { Building2, KeyRound, Pencil } from 'lucide-react';
 import { api } from '../../../utils/api';
 import { type CompanyProfile, formatCompanyPhone, getCompanyProfile } from '../../../utils/companyProfile';
 import ChangeOwnPasswordModal from '../../modals/ChangeOwnPasswordModal';
+import './configGeneralTab.css';
 
 interface ConfigGeneralTabProps {
   setErrorMsg: (msg: string | null) => void;
@@ -12,51 +13,29 @@ interface ConfigGeneralTabProps {
 interface EditFieldSpec {
   key: keyof CompanyProfile;
   label: string;
-  type?: 'text' | 'email' | 'number';
+  type?: 'text' | 'email' | 'tel';
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  autoComplete?: string;
+  identifier?: boolean;
+  numeric?: boolean;
   required?: boolean;
   placeholder?: string;
 }
 
 const COMPANY_EDIT_FIELDS: EditFieldSpec[] = [
-  { key: 'razonSocial', label: 'Razón social', required: true },
-  { key: 'nombreFantasia', label: 'Nombre comercial', required: true },
-  { key: 'cuit', label: 'CUIT', required: true, placeholder: '20-00000000-0' },
-  { key: 'puntoVenta', label: 'Punto de venta', type: 'number', required: true },
-  { key: 'direccion', label: 'Dirección' },
-  { key: 'telefono', label: 'Teléfono' },
-  { key: 'email', label: 'Email', type: 'email' },
-  { key: 'iibb', label: 'IIBB' },
-  { key: 'inicioActividades', label: 'Inicio de actividades', placeholder: 'DD/MM/AAAA' },
+  { key: 'razonSocial', label: 'Razón social', autoComplete: 'organization', required: true },
+  { key: 'nombreFantasia', label: 'Nombre comercial', autoComplete: 'organization', required: true },
+  { key: 'cuit', label: 'CUIT', inputMode: 'numeric', identifier: true, required: true, placeholder: '20-00000000-0' },
+  { key: 'puntoVenta', label: 'Punto de venta', inputMode: 'numeric', identifier: true, numeric: true, required: true },
+  { key: 'direccion', label: 'Dirección', autoComplete: 'street-address' },
+  { key: 'telefono', label: 'Teléfono', type: 'tel', autoComplete: 'tel', inputMode: 'tel' },
+  { key: 'email', label: 'Email', type: 'email', autoComplete: 'email', identifier: true },
+  { key: 'iibb', label: 'IIBB', identifier: true },
+  { key: 'inicioActividades', label: 'Inicio de actividades', inputMode: 'numeric', placeholder: 'DD/MM/AAAA' },
 ];
 
-const s = {
-  card: {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid var(--border-color)',
-    borderRadius: '10px',
-    padding: '24px',
-  } as React.CSSProperties,
-  fieldLabel: {
-    display: 'block',
-    fontSize: '0.75rem',
-    fontWeight: 500,
-    color: '#6B7280',
-    marginBottom: '4px',
-  } as React.CSSProperties,
-  readValue: {
-    fontSize: '0.88rem',
-    fontWeight: 500,
-    color: '#111827',
-    wordBreak: 'break-word',
-  } as React.CSSProperties,
-  dividerTop: {
-    marginTop: '18px',
-    paddingTop: '18px',
-    borderTop: '1px solid #F3F4F6',
-  } as React.CSSProperties,
-};
-
 export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigGeneralTabProps) {
+  const formUid = useId();
   const [company, setCompany] = useState<CompanyProfile>(() => getCompanyProfile());
   const [draft, setDraft] = useState<CompanyProfile>(() => getCompanyProfile());
   const [isEditing, setIsEditing] = useState(false);
@@ -151,7 +130,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
       checked: ignoreStock,
       saving: savingStock,
       onToggle: handleToggleIgnoreStock,
-      activeColor: '#10B981',
+      activeColor: '#111827',
     },
     {
       key: 'afip-mock',
@@ -159,7 +138,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
       checked: afipMockMode,
       saving: savingAfipMock,
       onToggle: handleToggleAfipMock,
-      activeColor: '#F59E0B',
+      activeColor: '#D97706',
     },
   ];
 
@@ -173,95 +152,94 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <section style={s.card}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.02em' }}>
-                {company.nombreFantasia}
-              </h3>
-              <span
-                style={{
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                  fontSize: '0.75rem',
-                  fontWeight: 500,
-                  color: '#374151',
-                  backgroundColor: '#F3F4F6',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '9999px',
-                  padding: '2px 10px',
-                }}
-              >
-                CUIT {company.cuit}
-              </span>
+    <div className="cfg-general">
+      <section className="cfg-surface">
+        <div className="cfg-company-head">
+          <div className="cfg-company-id">
+            <div className="cfg-company-mark" aria-hidden="true">
+              <Building2 size={17} strokeWidth={1.75} />
             </div>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#4B5563' }}>
-              <strong style={{ color: '#111827', fontWeight: 600 }}>{company.razonSocial}</strong>
-              {' · '}PV {formattedPos}
-            </p>
+            <div>
+              <h3 className="cfg-company-title">{company.nombreFantasia}</h3>
+              <p className="cfg-company-meta">
+                <span className="cfg-company-meta-strong">{company.razonSocial}</span>
+                <span className="cfg-dot" aria-hidden="true">·</span>
+                <span>CUIT {company.cuit}</span>
+                <span className="cfg-dot" aria-hidden="true">·</span>
+                <span>PV {formattedPos}</span>
+              </p>
+            </div>
           </div>
 
           {!isEditing && (
             <button
               type="button"
+              className="cfg-btn-ghost"
               onClick={() => { setDraft(company); setErrorMsg(null); setIsEditing(true); }}
-              className="btn btn-secondary"
-              style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              <Pencil size={13} />
+              <Pencil size={13} strokeWidth={1.85} />
               Editar
             </button>
           )}
         </div>
 
         {!isEditing ? (
-          <div style={{ ...s.dividerTop, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px 24px' }}>
+          <dl className="cfg-dl">
             {readItems.map((item) => (
-              <div key={item.label}>
-                <span style={s.fieldLabel}>{item.label}</span>
-                <div style={s.readValue}>{item.value}</div>
+              <div key={item.label} className="cfg-dl-item">
+                <dt className="cfg-dl-term">{item.label}</dt>
+                <dd className="cfg-dl-value">{item.value}</dd>
               </div>
             ))}
-          </div>
+          </dl>
         ) : (
-          <form onSubmit={handleSaveCompany} style={s.dividerTop}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px 16px' }}>
-              {COMPANY_EDIT_FIELDS.map((field) => {
-                const inputId = `company-${String(field.key)}`;
+          <form onSubmit={handleSaveCompany} className="cfg-form">
+            <div className="cfg-form-grid">
+              {COMPANY_EDIT_FIELDS.map((field, index) => {
+                const inputId = `${formUid}-${String(field.key)}`;
+                const isLast = index === COMPANY_EDIT_FIELDS.length - 1;
                 return (
-                  <div key={field.key}>
-                    <label htmlFor={inputId} style={s.fieldLabel}>{field.label}</label>
+                  <div key={field.key} className="cfg-field">
+                    <label htmlFor={inputId} className="cfg-field-label">
+                      {field.label}
+                    </label>
                     <input
                       id={inputId}
                       name={String(field.key)}
                       type={field.type || 'text'}
-                      className="input"
+                      className="cfg-input"
                       required={field.required}
                       placeholder={field.placeholder}
-                      min={field.type === 'number' ? 1 : undefined}
-                      max={field.type === 'number' ? 99999 : undefined}
+                      inputMode={field.inputMode}
+                      autoComplete={field.autoComplete}
+                      autoCorrect={field.identifier ? 'off' : undefined}
+                      autoCapitalize={field.identifier ? 'none' : undefined}
+                      spellCheck={field.identifier ? false : undefined}
+                      enterKeyHint={isLast ? 'done' : 'next'}
                       value={String(draft[field.key] ?? '')}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const parsed = field.numeric
+                          ? raw.replace(/\D/g, '').slice(0, 5)
+                          : raw;
                         setDraft({
                           ...draft,
-                          [field.key]:
-                            field.type === 'number'
-                              ? e.target.value === ''
-                                ? ('' as unknown as number)
-                                : Number(e.target.value)
-                              : e.target.value,
-                        })
-                      }
+                          [field.key]: field.numeric
+                            ? parsed === ''
+                              ? ('' as unknown as number)
+                              : Number(parsed)
+                            : parsed,
+                        });
+                      }}
                     />
                   </div>
                 );
               })}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '18px' }}>
+            <div className="cfg-form-actions">
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="cfg-btn-ghost"
                 onClick={() => { setDraft(company); setErrorMsg(null); setIsEditing(false); }}
                 disabled={savingCompany}
               >
@@ -275,70 +253,41 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
         )}
       </section>
 
-      <section style={s.card}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {operationalRules.map((rule, idx) => (
-            <div
+      <section className="cfg-surface cfg-switch-list">
+        {operationalRules.map((rule) => {
+          const switchId = `${formUid}-${rule.key}`;
+          return (
+            <label
               key={rule.key}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '16px',
-                paddingTop: idx > 0 ? '14px' : 0,
-                borderTop: idx > 0 ? '1px solid #F3F4F6' : 'none',
-              }}
+              htmlFor={switchId}
+              className="cfg-switch-row"
+              data-saving={rule.saving}
             >
-              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#111827' }}>{rule.title}</div>
-
-              <button
-                type="button"
+              <span className="cfg-switch-title">{rule.title}</span>
+              <input
+                id={switchId}
+                name={rule.key}
+                type="checkbox"
                 role="switch"
-                aria-checked={rule.checked}
-                aria-label={rule.title}
+                {...({ switch: '' } as Record<string, string>)}
+                checked={rule.checked}
                 disabled={rule.saving}
-                onClick={rule.onToggle}
-                style={{
-                  width: '40px',
-                  height: '22px',
-                  padding: 0,
-                  border: 'none',
-                  borderRadius: '9999px',
-                  backgroundColor: rule.checked ? rule.activeColor : '#E5E7EB',
-                  position: 'relative',
-                  cursor: rule.saving ? 'wait' : 'pointer',
-                  transition: 'background-color 0.2s ease',
-                  flexShrink: 0,
-                }}
-              >
-                <span
-                  style={{
-                    display: 'block',
-                    width: '18px',
-                    height: '18px',
-                    borderRadius: '50%',
-                    backgroundColor: '#FFFFFF',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.18)',
-                    position: 'absolute',
-                    top: '2px',
-                    left: rule.checked ? '20px' : '2px',
-                    transition: 'left 0.2s ease',
-                  }}
-                />
-              </button>
-            </div>
-          ))}
-        </div>
+                onChange={rule.onToggle}
+                className="cfg-switch-input"
+                style={{ '--switch-active': rule.activeColor } as React.CSSProperties}
+              />
+            </label>
+          );
+        })}
       </section>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+      <div className="cfg-footer-actions">
         <button
           type="button"
+          className="cfg-btn-ghost"
           onClick={() => setChangePwdOpen(true)}
-          className="btn btn-secondary"
-          style={{ padding: '7px 14px', fontSize: '0.84rem', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
-          <Key size={13} />
+          <KeyRound size={13} strokeWidth={1.85} />
           Cambiar Clave
         </button>
       </div>

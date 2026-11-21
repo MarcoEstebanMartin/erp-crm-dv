@@ -58,6 +58,8 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
   const currentUser = api.getCurrentUser();
   const [users, setUsers] = useState<any[]>([]);
   const [showInactive, setShowInactive] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [userModal, setUserModal] = useState<UserFormState>({
     open: false,
     isEdit: false,
@@ -77,22 +79,24 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
+    setModalError(null);
     const cleanUsername = userModal.username.trim();
     const cleanPassword = (userModal.password || '').trim();
 
     if (cleanUsername.length < 3) {
-      setErrorMsg('El nombre de usuario debe tener al menos 3 caracteres.');
+      setModalError('El nombre de usuario debe tener al menos 3 caracteres.');
       return;
     }
-    if (!userModal.isEdit && cleanPassword.length < 6) {
-      setErrorMsg('La contraseña debe tener al menos 6 caracteres.');
+    if (!userModal.isEdit && cleanPassword.length < 4) {
+      setModalError('La contraseña debe tener al menos 4 caracteres.');
       return;
     }
-    if (userModal.isEdit && cleanPassword.length > 0 && cleanPassword.length < 6) {
-      setErrorMsg('La nueva contraseña debe tener al menos 6 caracteres.');
+    if (userModal.isEdit && cleanPassword.length > 0 && cleanPassword.length < 4) {
+      setModalError('La nueva contraseña debe tener al menos 4 caracteres.');
       return;
     }
 
+    setSubmitting(true);
     try {
       const permissionsPayload =
         userModal.role === 'VENDEDOR'
@@ -122,11 +126,14 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
       const dataUsers = await api.getUsers();
       setUsers(dataUsers);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al procesar usuario.');
+      setModalError(err.message || 'Error al procesar usuario.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleOpenEditUser = (u: any) => {
+    setModalError(null);
     setUserModal({
       open: true,
       isEdit: true,
@@ -197,7 +204,10 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
             type="button"
             className="btn btn-primary"
             style={{ padding: '8px 16px', fontSize: '0.85rem' }}
-            onClick={() => setUserModal({ open: true, isEdit: false, username: '', password: '', role: 'VENDEDOR' })}
+            onClick={() => {
+              setModalError(null);
+              setUserModal({ open: true, isEdit: false, username: '', password: '', role: 'VENDEDOR' });
+            }}
           >
             <UserPlus size={16} /> <span style={{ marginLeft: '6px' }}>Nuevo usuario</span>
           </button>
@@ -345,6 +355,9 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
         userModal={userModal}
         setUserModal={setUserModal}
         currentUserId={currentUser?.id}
+        modalError={modalError}
+        submitting={submitting}
+        onClearError={() => setModalError(null)}
         onSubmit={handleUserSubmit}
       />
     </>

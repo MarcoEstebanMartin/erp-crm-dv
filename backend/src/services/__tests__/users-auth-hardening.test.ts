@@ -270,7 +270,7 @@ describe('Blindaje de Usuarios, Roles y Sesiones — Paso 1', () => {
     } as any);
     await expect(
       adminUsersSubService.updateUser(14, { password: '123' }, 1),
-    ).rejects.toThrow(/al menos 6 caracteres/i);
+    ).rejects.toThrow(/al menos 4 caracteres/i);
   });
 
   it('Impide borrado físico cuando hay historial/auditoría sugiriendo Desactivar, y permite borrar cuentas sin historial', async () => {

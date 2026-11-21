@@ -22,7 +22,7 @@ export const createUserSchema = z.object({
     password: z
       .string()
       .trim()
-      .min(6, 'La contraseña debe tener al menos 6 caracteres')
+      .min(4, 'La contraseña debe tener al menos 4 caracteres')
       .max(100, 'Contraseña demasiado larga'),
     role: z.nativeEnum(Role),
     permissions: userPermissionsSchema,
@@ -51,7 +51,7 @@ export const updateUserSchema = z.object({
     password: z
       .string()
       .trim()
-      .min(6, 'La contraseña debe tener al menos 6 caracteres')
+      .min(4, 'La contraseña debe tener al menos 4 caracteres')
       .max(100, 'Contraseña demasiado larga')
       .optional()
       .or(z.literal('')),

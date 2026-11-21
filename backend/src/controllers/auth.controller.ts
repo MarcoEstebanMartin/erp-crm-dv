@@ -228,10 +228,10 @@ export async function changeOwnPassword(req: AuthenticatedRequest, res: Response
   };
   const cleanNewPassword = String(newPassword || '').trim();
 
-  if (cleanNewPassword.length < 6) {
+  if (cleanNewPassword.length < 4) {
     res.status(400).json({
       status: 'error',
-      message: 'La nueva contraseña debe tener al menos 6 caracteres.',
+      message: 'La nueva contraseña debe tener al menos 4 caracteres.',
     });
     return;
   }

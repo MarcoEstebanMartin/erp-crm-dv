@@ -80,7 +80,7 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
       req.user?.id &&
       Number(req.params.id) === req.user.id &&
       typeof req.body?.password === 'string' &&
-      req.body.password.trim().length >= 6
+      req.body.password.trim().length >= 4
     ) {
       const pwdVer = await adminService.getUserPasswordVersion(user.id);
       if (pwdVer) {
