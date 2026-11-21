@@ -181,7 +181,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
             </search>
 
             {deferredClientFilter.trim().length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fff' }}>
+              <div className="vendedor-order-results vendedor-order-results--clients">
                 {filteredClients.length === 0 ? (
                   <div style={{ padding: '14px', textAlign: 'center', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>Sin clientes</div>
                 ) : (
@@ -274,7 +274,7 @@ export const VendedorOrderTakeTab: React.FC<VendedorOrderTakeTabProps> = ({
         </search>
 
         {deferredProdQuery.trim().length > 0 && (
-          <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: '#fff' }}>
+          <div className="vendedor-order-results vendedor-order-results--products">
             {filteredProducts.length === 0 ? (
               <div style={{ padding: '18px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sin productos</div>
             ) : (

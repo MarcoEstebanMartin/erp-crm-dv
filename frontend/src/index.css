@@ -2000,7 +2000,7 @@ dialog.app-native-dialog::backdrop {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
   min-height: calc(100vh - 180px);
   min-height: calc(100dvh - 180px);
@@ -2009,6 +2009,25 @@ dialog.app-native-dialog::backdrop {
 
 .vendedor-order-shell--has-cart {
   padding-bottom: 88px;
+}
+
+.vendedor-order-results {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+.vendedor-order-results--clients {
+  block-size: 220px;
+}
+
+.vendedor-order-results--products {
+  block-size: 320px;
 }
 
 .vendedor-note-input {
@@ -2114,7 +2133,11 @@ dialog.app-native-dialog::backdrop {
   .vendedor-order-shell {
     min-height: calc(100vh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
     min-height: calc(100dvh - 166px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    padding: 36px 0 16px;
+    padding: 12px 0 16px;
+  }
+
+  .vendedor-order-results--products {
+    block-size: 260px;
   }
 
   .vendedor-order-shell--has-cart {

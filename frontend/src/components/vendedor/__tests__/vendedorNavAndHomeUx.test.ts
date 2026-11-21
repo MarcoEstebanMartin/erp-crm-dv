@@ -84,4 +84,21 @@ describe('Vendedor — Inicio centrado en zona de pulgar y barra inferior fija f
     expect(cssSrc).toContain('.vendedor-note-input');
     expect(cssSrc).toContain('field-sizing: content;');
   });
+
+  it('mantiene fijo el tamaño de las listas de búsqueda en Preventa sin saltos verticales ni horizontales', () => {
+    const orderTabSrc = readSrc('components/vendedor/VendedorOrderTakeTab.tsx');
+    const cssSrc = readSrc('index.css');
+
+    expect(orderTabSrc).toContain('vendedor-order-results vendedor-order-results--clients');
+    expect(orderTabSrc).toContain('vendedor-order-results vendedor-order-results--products');
+    expect(orderTabSrc).not.toContain("maxHeight: '420px'");
+    expect(orderTabSrc).not.toContain("maxHeight: '240px'");
+
+    expect(cssSrc).toMatch(/\.vendedor-order-shell\s*\{[^}]*justify-content:\s*flex-start;/s);
+    expect(cssSrc).toContain('.vendedor-order-results {');
+    expect(cssSrc).toContain('scrollbar-gutter: stable;');
+    expect(cssSrc).toContain('overscroll-behavior: contain;');
+    expect(cssSrc).toContain('.vendedor-order-results--products');
+    expect(cssSrc).toContain('block-size: 320px;');
+  });
 });
