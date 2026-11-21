@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { type NumericInput, roundToIntegerPeso } from '../../core/money';
 import { generateUniqueVerificationCode } from '../../core/receiptToken';
+import { paymentAllocationService } from '../finance/payment-allocation.service';
 import {
   type FieldPaymentMethod,
   type MirrorTransactionSyncAction,
@@ -160,6 +161,14 @@ export async function applyTransferClearAndIssueReceipt(
       verifiedAt: params.now,
     },
   });
+
+  if (typeof tx.paymentAllocation?.createMany === 'function') {
+    await paymentAllocationService.allocateTransactionToOrders(tx, {
+      transactionId: createdTx.id,
+      personaId: params.receipt.personaId,
+      amount: params.amountNum,
+    });
+  }
 
   await recordLedgerMovement(tx, {
     personaId: params.receipt.personaId,

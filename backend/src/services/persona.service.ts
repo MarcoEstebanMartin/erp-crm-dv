@@ -325,6 +325,8 @@ export class PersonaService {
   reconcileAllBalances = () => personaLedgerSubService.reconcileAllBalances();
   getPersonaPendingInvoices = (id: number, userId: number, userRole: string) =>
     personaLedgerSubService.getPersonaPendingInvoices(id, userId, userRole);
+  getPersonaPendingInvoicesSummary = (id: number, userId: number, userRole: string) =>
+    personaLedgerSubService.getPersonaPendingInvoicesSummary(id, userId, userRole);
   getPersonaPendingInvoicesCount = (id: number, dbClient?: any) =>
     personaDebtorsSubService.getPersonaPendingInvoicesCount(id, dbClient);
   getDebtorsReport = (userId: number, userRole: string) =>

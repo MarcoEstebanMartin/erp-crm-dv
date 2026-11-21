@@ -200,12 +200,12 @@ export async function getPersonaPendingInvoices(
   }
 
   try {
-    const invoices = await personaService.getPersonaPendingInvoices(
+    const summary = await personaService.getPersonaPendingInvoicesSummary(
       Number(req.params.id),
       userId,
       userRole,
     );
-    res.status(200).json({ status: 'success', data: { invoices } });
+    res.status(200).json({ status: 'success', data: summary });
   } catch (error: any) {
     handlePersonaError(res, error, 'Error al obtener facturas pendientes.');
   }

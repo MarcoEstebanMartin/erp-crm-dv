@@ -6,6 +6,7 @@ import {
   toDecimal,
 } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
+import { paymentAllocationService } from '../finance/payment-allocation.service';
 
 export function getJurisdictionCode(provinceOrAddress?: string | null): string {
   if (!provinceOrAddress) return 'AR-B';
@@ -177,6 +178,24 @@ export async function settleOrderFinancials(
       });
     }
 
+    if (typeof tx.paymentAllocation?.createMany === 'function' && settledPaymentAmount > 0) {
+      const directAmt = Math.min(settledPaymentAmount, Math.max(0, totalOrderAmount));
+      if (directAmt > 0) {
+        await tx.paymentAllocation.createMany({
+          data: [{ transactionId: createdTx.id, orderId, amount: directAmt }],
+          skipDuplicates: true,
+        });
+      }
+      const overflow = roundToTwoDecimals(toDecimal(settledPaymentAmount).minus(directAmt)).toNumber();
+      if (overflow > 0) {
+        await paymentAllocationService.allocateTransactionToOrders(tx, {
+          transactionId: createdTx.id,
+          personaId,
+          amount: overflow,
+        });
+      }
+    }
+
     await recordLedgerMovement(tx, {
       personaId,
       entryType: LedgerEntryType.CREDIT,
@@ -188,6 +207,12 @@ export async function settleOrderFinancials(
       userId: adminId,
       reference: `Recibo #${createdTx.id}`,
       description: description || `Cobro inmediato Factura ${formattedInv}`,
+    });
+  } else if (typeof tx.paymentAllocation?.createMany === 'function' && totalOrderAmount > 0) {
+    await paymentAllocationService.applyAvailableCreditToOrder(tx, {
+      orderId,
+      personaId,
+      orderTotal: totalOrderAmount,
     });
   }
 }

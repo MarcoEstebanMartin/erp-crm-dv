@@ -14,6 +14,7 @@ import {
 } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { assertCollectionAllowed } from '../collections/collection-guard.service';
+import { paymentAllocationService } from '../finance/payment-allocation.service';
 
 export class PersonaPaymentSubService {
   /**
@@ -257,6 +258,14 @@ export class PersonaPaymentSubService {
         createdTransactions.push(transaction);
 
         const isIncome = resolvedType === TransactionType.INCOME;
+        if (isIncome && persona.isClient && typeof tx.paymentAllocation?.createMany === 'function') {
+          await paymentAllocationService.allocateTransactionToOrders(tx, {
+            transactionId: transaction.id,
+            personaId: persona.id,
+            amount: item.amount,
+            preferredOrderId: orderId ? Number(orderId) : null,
+          });
+        }
         const ledgerRes = await recordLedgerMovement(tx, {
           personaId: persona.id,
           entryType: isIncome ? LedgerEntryType.CREDIT : LedgerEntryType.DEBIT,

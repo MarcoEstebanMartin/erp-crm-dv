@@ -14,6 +14,7 @@ import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { assertCollectionAllowed } from './collection-guard.service';
 import { generateUniqueVerificationCode } from '../../core/receiptToken';
 import { buildOfficeReceiptSecurityMeta } from './receipt.service';
+import { paymentAllocationService } from '../finance/payment-allocation.service';
 
 export const collectionService = {
   async getPendingCollections(userId: number, userRole?: Role) {
@@ -172,6 +173,15 @@ export const collectionService = {
       });
 
       const formattedReceiptNumber = `REC-${newTx.movementId.toString().padStart(5, '0')}`;
+      if (typeof tx.paymentAllocation?.createMany === 'function') {
+        await paymentAllocationService.allocateTransactionToOrders(tx, {
+          transactionId: newTx.id,
+          personaId: client.id,
+          amount: roundedAmount,
+          preferredOrderId: params.orderId ? Number(params.orderId) : null,
+          allocateOverflowToFifo: !params.isCreditOnAccount,
+        });
+      }
       await recordLedgerMovement(tx, {
         personaId: client.id,
         entryType: LedgerEntryType.CREDIT,

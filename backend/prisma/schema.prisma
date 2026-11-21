@@ -286,8 +286,9 @@ model Order {
   deliveredAt      DateTime?
   creditNotes     CreditNote[]
   crmDraft        CrmOrderDraft?
-  stockMovements  StockMovement[]
+  stockMovements       StockMovement[]
   accountLedgerEntries AccountLedger[]
+  paymentAllocations   PaymentAllocation[]
 
   @@index([personaId])
   @@index([sellerId])
@@ -465,6 +466,7 @@ model Transaction {
   salaryAdvance SalaryAdvance?
   payroll       Payroll?
   accountLedgerEntries AccountLedger[]
+  paymentAllocations   PaymentAllocation[]
   fieldReceipt         FieldReceipt?
 
   createdAt    DateTime  @default(now())
@@ -484,6 +486,20 @@ model Transaction {
   @@index([movementId])
   @@index([personaId, type, orderId])
   @@index([orderId, type])
+}
+
+model PaymentAllocation {
+  id            Int         @id @default(autoincrement())
+  transactionId Int
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  orderId       Int
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount        Decimal     @db.Decimal(12, 2)
+  createdAt     DateTime    @default(now())
+
+  @@unique([transactionId, orderId])
+  @@index([orderId])
+  @@index([transactionId])
 }
 
 model AuditLog {

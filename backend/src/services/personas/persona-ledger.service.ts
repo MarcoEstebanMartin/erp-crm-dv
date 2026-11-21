@@ -9,6 +9,7 @@ import {
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
 import { computeRunningBalances } from '../../engines/account-ledger.engine';
 import { mapLedgerEntryToViewItem } from '../ledger/account-ledger.service';
+import { paymentAllocationService } from '../finance/payment-allocation.service';
 
 export class PersonaLedgerSubService {
   /**
@@ -141,9 +142,10 @@ export class PersonaLedgerSubService {
   }
 
   /**
-   * Obtiene las facturas pendientes de cobro de un cliente (considerando solo Notas de Crédito APPROVED).
+   * Obtiene el resumen de facturas pendientes de cobro de un cliente usando PaymentAllocation
+   * (considerando imputaciones reales, Notas de Crédito APPROVED y saldo a favor disponible).
    */
-  async getPersonaPendingInvoices(id: number, userId: number, userRole: string) {
+  async getPersonaPendingInvoicesSummary(id: number, userId: number, userRole: string) {
     const persona = await prisma.persona.findUnique({ where: { id } });
     if (!persona) throw new Error('Persona no encontrada.');
 
@@ -151,40 +153,15 @@ export class PersonaLedgerSubService {
       throw new Error('Acceso denegado.');
     }
 
-    const orders = await prisma.order.findMany({
-      where: { personaId: persona.id, status: OrderStatus.DELIVERED },
-      include: {
-        transactions: { where: { type: TransactionType.INCOME } },
-        creditNotes: { where: { status: CreditNoteStatus.APPROVED } },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    return paymentAllocationService.getClientPendingInvoicesWithAllocations(persona.id);
+  }
 
-    return orders
-      .map((order) => {
-        const paidDec = order.transactions.reduce(
-          (acc, tx) => acc.plus(toDecimal(tx.amount)),
-          toDecimal(0),
-        );
-        const cnDec = order.creditNotes.reduce(
-          (acc, cn) => acc.plus(toDecimal(cn.totalAmount)),
-          toDecimal(0),
-        );
-        const pendingDec = toDecimal(order.totalAmount).minus(paidDec).minus(cnDec);
-
-        return {
-          id: order.id,
-          invoiceNumber: order.invoiceNumber || `INT-${order.id.toString().padStart(5, '0')}`,
-          billingType: order.billingType,
-          invoiceType: order.invoiceType,
-          totalAmount: roundToTwoDecimals(order.totalAmount).toNumber(),
-          paidAmount: roundToTwoDecimals(paidDec).toNumber(),
-          creditNotesAmount: roundToTwoDecimals(cnDec).toNumber(),
-          pendingAmount: roundToTwoDecimals(pendingDec).toNumber(),
-          createdAt: order.createdAt,
-        };
-      })
-      .filter((inv) => inv.pendingAmount > 0);
+  /**
+   * Obtiene las facturas pendientes de cobro de un cliente (array compatible con callers existentes).
+   */
+  async getPersonaPendingInvoices(id: number, userId: number, userRole: string) {
+    const summary = await this.getPersonaPendingInvoicesSummary(id, userId, userRole);
+    return summary.invoices;
   }
 }
 

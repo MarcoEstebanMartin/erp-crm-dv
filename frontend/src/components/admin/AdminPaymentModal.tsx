@@ -1,10 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 
 type ClientPaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+
+interface PendingInvoiceOption {
+  id: number;
+  invoiceNumber: string;
+  pendingAmount: number;
+  status?: 'PENDING' | 'PARTIAL' | 'PAID';
+}
+
+interface PreviewLine {
+  key: string;
+  label: string;
+  amount: number;
+  badge: string;
+  isCredit?: boolean;
+}
 
 interface AdminPaymentModalProps {
   paymentModal: { open: boolean; clientId: number; clientName: string } | null;
@@ -32,7 +47,8 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
   const [checkDueDate, setCheckDueDate] = useState('');
   const [isEcheq, setIsEcheq] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentPendingInvoices, setPaymentPendingInvoices] = useState<any[]>([]);
+  const [paymentPendingInvoices, setPaymentPendingInvoices] = useState<PendingInvoiceOption[]>([]);
+  const [availableCredit, setAvailableCredit] = useState(0);
   const [paymentSelectedInvoiceId, setPaymentSelectedInvoiceId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -47,12 +63,61 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
       setPaymentSelectedInvoiceId(null);
       api
         .getPersonaPendingInvoices(paymentModal.clientId)
-        .then((res) => setPaymentPendingInvoices(res?.invoices && Array.isArray(res.invoices) ? res.invoices : []))
-        .catch(() => setPaymentPendingInvoices([]));
+        .then((res) => {
+          setPaymentPendingInvoices(res?.invoices && Array.isArray(res.invoices) ? res.invoices : []);
+          setAvailableCredit(Math.round(Number(res?.totalAvailableCredit || 0)));
+        })
+        .catch(() => {
+          setPaymentPendingInvoices([]);
+          setAvailableCredit(0);
+        });
     } else {
       setPaymentPendingInvoices([]);
+      setAvailableCredit(0);
     }
   }, [paymentModal]);
+
+  const allocationPreview = useMemo<PreviewLine[]>(() => {
+    const parsed = Math.round(Number(paymentAmount));
+    if (!Number.isFinite(parsed) || parsed <= 0 || paymentPendingInvoices.length === 0) return [];
+
+    const ordered = paymentSelectedInvoiceId
+      ? [
+          ...paymentPendingInvoices.filter((i) => i.id === paymentSelectedInvoiceId),
+          ...paymentPendingInvoices.filter((i) => i.id !== paymentSelectedInvoiceId),
+        ]
+      : paymentPendingInvoices;
+
+    let remaining = parsed;
+    const lines: PreviewLine[] = [];
+
+    for (const inv of ordered) {
+      if (remaining <= 0) break;
+      const pending = Math.round(Number(inv.pendingAmount));
+      if (pending <= 0) continue;
+      const applied = Math.min(remaining, pending);
+      const leftAfter = pending - applied;
+      remaining -= applied;
+      lines.push({
+        key: String(inv.id),
+        label: inv.invoiceNumber,
+        amount: applied,
+        badge: leftAfter === 0 ? 'Saldada' : `Resta $${leftAfter.toLocaleString('es-AR')}`,
+      });
+    }
+
+    if (remaining > 0) {
+      lines.push({
+        key: 'credit',
+        label: 'Saldo a favor',
+        amount: remaining,
+        badge: 'Próxima factura',
+        isCredit: true,
+      });
+    }
+
+    return lines;
+  }, [paymentAmount, paymentPendingInvoices, paymentSelectedInvoiceId]);
 
   if (!paymentModal || !paymentModal.open) return null;
 
@@ -122,6 +187,24 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
       </div>
 
       <form onSubmit={handleSubmit}>
+        {availableCredit > 0 && (
+          <div
+            style={{
+              marginBottom: '12px',
+              padding: '8px 10px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-color)',
+              fontSize: '0.82rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            <span style={{ color: 'var(--text-secondary)' }}>Saldo a favor</span>
+            <strong style={{ color: '#15803d' }}>${availableCredit.toLocaleString('es-AR')}</strong>
+          </div>
+        )}
+
         {paymentPendingInvoices.length > 0 && (
           <div className="form-group">
             <label htmlFor="payment-invoice">Imputar</label>
@@ -147,10 +230,12 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
                 }
               }}
             >
-              <option value="">Cuenta general</option>
+              <option value="">Automático (más viejas primero)</option>
               {paymentPendingInvoices.map((inv) => (
                 <option key={inv.id} value={inv.id}>
-                  {inv.invoiceNumber} (${Math.round(Number(inv.pendingAmount)).toLocaleString('es-AR')})
+                  {inv.invoiceNumber}
+                  {inv.status === 'PARTIAL' ? ' · Parcial' : ''} ($
+                  {Math.round(Number(inv.pendingAmount)).toLocaleString('es-AR')})
                 </option>
               ))}
             </select>
@@ -172,6 +257,41 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
             disabled={paymentLoading}
           />
         </div>
+
+        {allocationPreview.length > 0 && (
+          <output
+            htmlFor="payment-amount payment-invoice"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '5px',
+              marginBottom: '14px',
+              padding: '8px 10px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-subtle, #f8fafc)',
+              fontSize: '0.8rem',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {allocationPreview.map((line) => (
+              <div
+                key={line.key}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}
+              >
+                <span style={{ color: line.isCredit ? '#15803d' : 'var(--text-primary)', fontWeight: 500 }}>
+                  {line.label}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong>${line.amount.toLocaleString('es-AR')}</strong>
+                  <span style={{ color: line.badge === 'Saldada' || line.isCredit ? '#15803d' : 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                    {line.badge}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </output>
+        )}
 
         <div className="form-group">
           <label htmlFor="payment-method">Medio de pago</label>

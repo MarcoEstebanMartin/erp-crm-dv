@@ -15,6 +15,7 @@ import {
 } from '../engines/fieldReceipts.engine';
 import { recordLedgerMovement } from './ledger/account-ledger.service';
 import { assertCollectionAllowed } from './collections/collection-guard.service';
+import { paymentAllocationService } from './finance/payment-allocation.service';
 import {
   applyTransferClearAndIssueReceipt,
   createSettlementCashDrawerAndLinkMirrors,
@@ -179,6 +180,14 @@ export const fieldReceiptsService = {
             verified: false,
           },
         });
+
+        if (typeof tx.paymentAllocation?.createMany === 'function') {
+          await paymentAllocationService.allocateTransactionToOrders(tx, {
+            transactionId: transaction.id,
+            personaId: input.personaId,
+            amount: immediateNum,
+          });
+        }
 
         await recordLedgerMovement(tx, {
           personaId: input.personaId,

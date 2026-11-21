@@ -22,6 +22,7 @@ import { enqueueDeferredAfipCaeRetry } from '../resilience/external-integrations
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { notifyWebOrderStatusForErpOrder } from '../orders/web-order-status-bridge.service';
 import { generateUniqueVerificationCode } from '../../core/receiptToken';
+import { paymentAllocationService } from '../finance/payment-allocation.service';
 
 const activeRouteSettlementLocks = new Map<number, Promise<any>>();
 
@@ -367,6 +368,18 @@ export const routeSettlementService = {
             reference: `Pedido #${order.id}`,
             description: `Factura ${order.invoiceNumber || finalInvoiceNumber} (Reparto Ruta #${route.id})`,
           });
+
+          if (
+            evaluatedAction?.action !== 'CREATE_OFFICE_TRANSACTION' &&
+            typeof tx.paymentAllocation?.createMany === 'function' &&
+            totalAmount > 0
+          ) {
+            await paymentAllocationService.applyAvailableCreditToOrder(tx, {
+              orderId: order.id,
+              personaId: order.personaId,
+              orderTotal: totalAmount,
+            });
+          }
         } else if (freshOrder.status === OrderStatus.DELIVERED && !freshOrder.deliveredAt) {
           await tx.order.update({
             where: { id: order.id },
@@ -375,6 +388,15 @@ export const routeSettlementService = {
         }
 
         if (evaluatedAction?.action === 'CREATE_OFFICE_TRANSACTION') {
+          let chargeAmount = totalAmount;
+          if (typeof tx.paymentAllocation?.createMany === 'function') {
+            const pendingOnOrder = await paymentAllocationService.getOrderPendingAmount(order.id, tx);
+            if (pendingOnOrder <= 0) {
+              continue; // Candado anti doble cobro: factura ya cancelada previamente
+            }
+            chargeAmount = Math.min(totalAmount, pendingOnOrder);
+          }
+
           const { cashDrawerId, bankAccountId, txDescription } =
             await resolveRoutePaymentDestination(
               tx, evaluatedAction.paymentMethod, route.driverName, input.userId, order.persona.name, route.id, set,
@@ -388,7 +410,7 @@ export const routeSettlementService = {
               billingType: order.billingType,
               type: TransactionType.INCOME,
               paymentMethod: evaluatedAction.paymentMethod as PaymentMethod,
-              amount: totalAmount,
+              amount: chargeAmount,
               description: txDescription,
               cashDrawerId,
               bankAccountId,
@@ -402,12 +424,21 @@ export const routeSettlementService = {
             data: { receiptNumber: routeReceiptNumber },
           });
 
+          if (typeof tx.paymentAllocation?.createMany === 'function') {
+            await paymentAllocationService.allocateTransactionToOrders(tx, {
+              transactionId: createdRouteTx.id,
+              personaId: order.personaId,
+              amount: chargeAmount,
+              preferredOrderId: order.id,
+            });
+          }
+
           await recordLedgerMovement(tx, {
             personaId: order.personaId,
             entryType: LedgerEntryType.CREDIT,
             sourceType: LedgerSourceType.COLLECTION_RECEIPT,
             billingType: order.billingType,
-            amount: totalAmount,
+            amount: chargeAmount,
             orderId: order.id,
             transactionId: createdRouteTx.id,
             userId: input.userId,

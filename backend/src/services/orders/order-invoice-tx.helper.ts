@@ -1,6 +1,7 @@
 import { BillingType, DeliveryMethod, InvoiceType, OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { roundToIntegerPeso, roundToTwoDecimals } from '../../core/money';
 import { recordInvoicePerceptions, settleOrderFinancials } from './order-tax.helpers';
+import { paymentAllocationService } from '../finance/payment-allocation.service';
 import { reassignSplitStockMovements } from './order-billing.helpers';
 import { ensureFefoLotsForOrderItem } from './order-lot-picking.helper';
 import { lockProductsForUpdate } from '../../utils/db-locks.util';
@@ -275,6 +276,14 @@ export async function executeInvoiceOrderSettlementTx(
     },
     include: { items: { include: { product: true, orderItemLots: true } }, persona: true },
   });
+
+  if (!paymentMethod && typeof tx.paymentAllocation?.createMany === 'function' && officialOrderTotal > 0) {
+    await paymentAllocationService.applyAvailableCreditToOrder(tx, {
+      orderId: order.id,
+      personaId: order.personaId,
+      orderTotal: officialOrderTotal,
+    });
+  }
 
   return { updatedOrder, split: splitApplied, internalOrderId, internalOrderTotal };
 }
