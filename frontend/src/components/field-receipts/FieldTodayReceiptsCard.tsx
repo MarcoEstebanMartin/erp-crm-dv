@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, FileDown, Send } from 'lucide-react';
 import {
-  buildManualWhatsAppUrl,
   fieldReceiptsApi,
   type FieldReceiptDTO,
 } from '../../api/fieldReceipts.api';
 import {
   downloadReceiptPdf,
-  shareOrDownloadReceiptPdf,
   type PublicReceiptData,
 } from '../../utils/receiptPdfGenerator';
 import {
   buildFieldReceiptWhatsAppMessage,
   formatFieldPaymentsSummary,
 } from '../../utils/receiptWhatsApp';
+import {
+  ReceiptWhatsAppSendModal,
+  type ReceiptWhatsAppTarget,
+} from './ReceiptWhatsAppSendModal';
 
 export function fieldReceiptToPublicData(receipt: FieldReceiptDTO): PublicReceiptData {
   const primaryMethod = receipt.payments?.[0]?.paymentMethod || 'CASH';
@@ -58,6 +60,7 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [waTarget, setWaTarget] = useState<ReceiptWhatsAppTarget | null>(null);
 
   if (receipts.length === 0) return null;
 
@@ -73,19 +76,18 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
     }
   };
 
-  const handleShareWhatsApp = async (r: FieldReceiptDTO) => {
-    if (busyKey) return;
-    setBusyKey(`wa-${r.id}`);
-    try {
-      await shareOrDownloadReceiptPdf(fieldReceiptToPublicData(r), {
-        shareText: buildFieldReceiptWhatsAppMessage(r, window.location.origin),
-        whatsappUrl: buildManualWhatsAppUrl(r),
-      });
-    } catch {
-      // Usuario canceló compartir
-    } finally {
-      setBusyKey(null);
-    }
+  const handleOpenWhatsApp = (r: FieldReceiptDTO) => {
+    setWaTarget({
+      personaId: r.persona?.id ?? r.personaId,
+      clientName: r.persona?.name || 'Cliente',
+      phone: r.persona?.phone ?? null,
+      whatsappVerifiedAt: r.persona?.whatsappVerifiedAt ?? null,
+      receiptLabel: r.receiptNumber || r.provisionalCode,
+      amount: r.totalAmount,
+      messageText: buildFieldReceiptWhatsAppMessage(r, window.location.origin),
+      fieldReceiptId: r.id,
+      publicReceiptData: fieldReceiptToPublicData(r),
+    });
   };
 
   return (
@@ -131,7 +133,6 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {visibleReceipts.map((r) => {
           const isPdfBusy = busyKey === `pdf-${r.id}`;
-          const isWaBusy = busyKey === `wa-${r.id}`;
           const methodText = formatFieldPaymentsSummary(r.payments);
           const isVoided = r.status === 'VOIDED';
 
@@ -232,8 +233,7 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => void handleShareWhatsApp(r)}
-                    disabled={isWaBusy}
+                    onClick={() => handleOpenWhatsApp(r)}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -247,8 +247,7 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
                       color: '#15803d',
                       fontSize: '0.78rem',
                       fontWeight: 600,
-                      cursor: isWaBusy ? 'wait' : 'pointer',
-                      opacity: isWaBusy ? 0.65 : 1,
+                      cursor: 'pointer',
                     }}
                   >
                     <Send size={13} aria-hidden="true" />
@@ -281,6 +280,12 @@ export const FieldTodayReceiptsCard: React.FC<FieldTodayReceiptsCardProps> = ({
           );
         })}
       </div>
+
+      <ReceiptWhatsAppSendModal
+        target={waTarget}
+        onClose={() => setWaTarget(null)}
+        onSaved={() => onRefresh()}
+      />
     </section>
   );
 };

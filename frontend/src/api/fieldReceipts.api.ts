@@ -17,6 +17,7 @@ export interface OfflineBundleClient {
   city: string | null;
   address: string | null;
   phone: string | null;
+  whatsappVerifiedAt?: string | null;
   route: string | null;
   saleRouteId: number | null;
   routeSequence: number | null;
@@ -87,7 +88,13 @@ export interface FieldReceiptDTO {
   receiptNumber: string | null;
   provisionalCode: string;
   personaId: number;
-  persona?: { id: number; name: string; phone?: string | null; outstandingBalance?: number | string };
+  persona?: {
+    id: number;
+    name: string;
+    phone?: string | null;
+    whatsappVerifiedAt?: string | null;
+    outstandingBalance?: number | string;
+  };
   totalAmount: number | string;
   status: FieldReceiptStatus;
   capturedAt: string;
@@ -123,7 +130,12 @@ export interface OfficeReceiptDTO {
   verified: boolean;
   createdAt: string;
   personaId: number | null;
-  persona?: { id: number; name: string; phone?: string | null } | null;
+  persona?: {
+    id: number;
+    name: string;
+    phone?: string | null;
+    whatsappVerifiedAt?: string | null;
+  } | null;
   user?: { id: number; username: string } | null;
   order?: { id: number; invoiceNumber: string | null } | null;
   bankAccount?: { id: number; name: string } | null;
@@ -132,14 +144,30 @@ export interface OfficeReceiptDTO {
   publicUrl?: string;
 }
 
-export function buildManualWhatsAppUrl(receipt: FieldReceiptDTO): string {
-  const text = buildFieldReceiptWhatsAppMessage(receipt, window.location.origin);
-  return buildWhatsAppDeepLink(receipt.persona?.phone, text);
+export interface SavedClientWhatsAppDTO {
+  id: number;
+  name: string;
+  phone: string;
+  whatsappVerifiedAt: string;
 }
 
-export function buildOfficeReceiptWhatsAppUrl(receipt: OfficeReceiptDTO): string {
+export interface ClientWhatsAppCoverageDTO {
+  totalActiveClients: number;
+  verifiedCount: number;
+  withPhoneUnverifiedCount: number;
+  missingPhoneCount: number;
+  verifiedPct: number;
+  readyForApi: boolean;
+}
+
+export function buildManualWhatsAppUrl(receipt: FieldReceiptDTO, phoneOverride?: string | null): string {
+  const text = buildFieldReceiptWhatsAppMessage(receipt, window.location.origin);
+  return buildWhatsAppDeepLink(phoneOverride ?? receipt.persona?.phone, text);
+}
+
+export function buildOfficeReceiptWhatsAppUrl(receipt: OfficeReceiptDTO, phoneOverride?: string | null): string {
   const text = buildOfficeReceiptWhatsAppMessage(receipt, window.location.origin);
-  return buildWhatsAppDeepLink(receipt.persona?.phone, text);
+  return buildWhatsAppDeepLink(phoneOverride ?? receipt.persona?.phone, text);
 }
 
 export const fieldReceiptsApi = {
@@ -187,5 +215,14 @@ export const fieldReceiptsApi = {
   },
   resendWhatsApp(receiptId: number) {
     return apiClient.post(`/field-receipts/${receiptId}/resend-whatsapp`, {});
+  },
+  saveClientWhatsApp(
+    personaId: number,
+    payload: { phone: string; fieldReceiptId?: number | null },
+  ): Promise<SavedClientWhatsAppDTO> {
+    return apiClient.patch(`/field-receipts/clients/${personaId}/whatsapp`, payload);
+  },
+  getWhatsAppCoverage(): Promise<ClientWhatsAppCoverageDTO> {
+    return apiClient.get('/field-receipts/whatsapp-coverage');
   },
 };

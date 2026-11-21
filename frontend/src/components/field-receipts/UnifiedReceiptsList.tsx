@@ -1,17 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { FileDown, Search, Trash2 } from 'lucide-react';
 import {
-  buildManualWhatsAppUrl,
-  buildOfficeReceiptWhatsAppUrl,
   type FieldReceiptDTO,
   type OfficeReceiptDTO,
+  type SavedClientWhatsAppDTO,
 } from '../../api/fieldReceipts.api';
 import {
   downloadReceiptPdf,
-  shareOrDownloadReceiptPdf,
   type PublicReceiptData,
 } from '../../utils/receiptPdfGenerator';
-import { buildOfficeReceiptWhatsAppMessage } from '../../utils/receiptWhatsApp';
+import {
+  buildFieldReceiptWhatsAppMessage,
+  buildOfficeReceiptWhatsAppMessage,
+} from '../../utils/receiptWhatsApp';
+import {
+  ReceiptWhatsAppSendModal,
+  type ReceiptWhatsAppTarget,
+} from './ReceiptWhatsAppSendModal';
 
 type ReceiptOriginFilter = 'ALL' | 'OFFICE' | 'SELLER' | 'DRIVER';
 
@@ -33,7 +38,6 @@ interface UnifiedReceiptRow {
   isVoided: boolean;
   verified: boolean;
   viewUrl: string | null;
-  whatsappUrl: string;
   officeReceipt?: OfficeReceiptDTO;
   fieldReceipt?: FieldReceiptDTO;
 }
@@ -45,6 +49,7 @@ interface UnifiedReceiptsListProps {
   onVoidFieldReceipt: (receiptId: number) => Promise<void>;
   onRejectCheck: (paymentId: number) => Promise<void>;
   onResendWhatsApp: (receiptId: number) => Promise<void>;
+  onClientWhatsAppSaved?: (saved: SavedClientWhatsAppDTO) => void;
 }
 
 const WhatsAppLogo: React.FC = () => (
@@ -83,10 +88,13 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
   onVoidFieldReceipt,
   onRejectCheck,
   onResendWhatsApp,
+  onClientWhatsAppSaved,
 }) => {
   const [originFilter, setOriginFilter] = useState<ReceiptOriginFilter>('ALL');
   const [search, setSearch] = useState('');
   const [busyPdfKey, setBusyPdfKey] = useState<string | null>(null);
+  const [waTarget, setWaTarget] = useState<ReceiptWhatsAppTarget | null>(null);
+  const [savedPhones, setSavedPhones] = useState<Record<number, { phone: string; whatsappVerifiedAt: string }>>({});
 
   const toPublicReceiptData = (r: OfficeReceiptDTO): PublicReceiptData => ({
     id: r.id,
@@ -115,19 +123,37 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
     }
   };
 
-  const handleOfficeWhatsAppPdf = async (row: UnifiedReceiptRow) => {
-    const r = row.officeReceipt;
-    if (!r || busyPdfKey) return;
-    setBusyPdfKey(`wa-${row.key}`);
-    try {
-      await shareOrDownloadReceiptPdf(toPublicReceiptData(r), {
-        shareText: buildOfficeReceiptWhatsAppMessage(r),
-        whatsappUrl: row.whatsappUrl,
+  const handleOpenWhatsAppModal = (row: UnifiedReceiptRow) => {
+    if (row.officeReceipt) {
+      const r = row.officeReceipt;
+      const personaId = r.persona?.id ?? r.personaId ?? null;
+      const override = personaId ? savedPhones[personaId] : undefined;
+      setWaTarget({
+        personaId,
+        clientName: row.clientName,
+        phone: override?.phone ?? r.persona?.phone ?? null,
+        whatsappVerifiedAt: override?.whatsappVerifiedAt ?? r.persona?.whatsappVerifiedAt ?? null,
+        receiptLabel: row.receiptNumber,
+        amount: row.amount,
+        messageText: buildOfficeReceiptWhatsAppMessage(r),
+        publicReceiptData: toPublicReceiptData(r),
       });
-    } catch {
-      // Usuario canceló compartir en el celular
-    } finally {
-      setBusyPdfKey(null);
+      return;
+    }
+    if (row.fieldReceipt) {
+      const r = row.fieldReceipt;
+      const personaId = r.persona?.id ?? r.personaId;
+      const override = savedPhones[personaId];
+      setWaTarget({
+        personaId,
+        clientName: row.clientName,
+        phone: override?.phone ?? r.persona?.phone ?? null,
+        whatsappVerifiedAt: override?.whatsappVerifiedAt ?? r.persona?.whatsappVerifiedAt ?? null,
+        receiptLabel: row.receiptNumber,
+        amount: row.amount,
+        messageText: buildFieldReceiptWhatsAppMessage(r, window.location.origin),
+        fieldReceiptId: r.id,
+      });
     }
   };
 
@@ -146,7 +172,6 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
       viewUrl: r.verificationCode
         ? `/recibo/${r.id}?v=${encodeURIComponent(r.verificationCode)}`
         : `/recibo/${r.id}`,
-      whatsappUrl: buildOfficeReceiptWhatsAppUrl(r),
       officeReceipt: r,
     }));
 
@@ -166,7 +191,6 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
         isVoided: receipt.status === 'VOIDED',
         verified: receipt.status === 'VERIFIED',
         viewUrl: receipt.pdfUrl || null,
-        whatsappUrl: buildManualWhatsAppUrl(receipt),
         fieldReceipt: receipt,
       };
     });
@@ -362,11 +386,10 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                           <FileDown size={13} aria-hidden="true" /> PDF
                         </a>
                       )}
-                      {!row.isVoided && row.officeReceipt && (
+                      {!row.isVoided && (
                         <button
                           type="button"
-                          onClick={() => void handleOfficeWhatsAppPdf(row)}
-                          disabled={busyPdfKey === `wa-${row.key}`}
+                          onClick={() => handleOpenWhatsAppModal(row)}
                           title="Enviar por WhatsApp"
                           aria-label="Enviar por WhatsApp"
                           style={{
@@ -380,35 +403,11 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                             border: '1px solid #16a34a',
                             background: '#fff',
                             color: '#16a34a',
-                            cursor: busyPdfKey === `wa-${row.key}` ? 'wait' : 'pointer',
-                            opacity: busyPdfKey === `wa-${row.key}` ? 0.6 : 1,
+                            cursor: 'pointer',
                           }}
                         >
                           <WhatsAppLogo />
                         </button>
-                      )}
-                      {!row.isVoided && !row.officeReceipt && (
-                        <a
-                          href={row.whatsappUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Enviar por WhatsApp"
-                          aria-label="Enviar por WhatsApp"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '6px',
-                            border: '1px solid #16a34a',
-                            background: '#fff',
-                            color: '#16a34a',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          <WhatsAppLogo />
-                        </a>
                       )}
                       {row.fieldReceipt && row.fieldReceipt.whatsappStatus !== 'DELIVERED' && !row.isVoided && (
                         <button
@@ -465,6 +464,20 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
           </table>
         </div>
       )}
+      <ReceiptWhatsAppSendModal
+        target={waTarget}
+        onClose={() => setWaTarget(null)}
+        onSaved={(saved) => {
+          setSavedPhones((prev) => ({
+            ...prev,
+            [saved.id]: {
+              phone: saved.phone,
+              whatsappVerifiedAt: saved.whatsappVerifiedAt,
+            },
+          }));
+          onClientWhatsAppSaved?.(saved);
+        }}
+      />
     </section>
   );
 };

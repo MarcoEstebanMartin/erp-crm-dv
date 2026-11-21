@@ -1,7 +1,6 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { FileDown, RefreshCw, Search, Send, WifiOff, X } from 'lucide-react';
 import {
-  buildManualWhatsAppUrl,
   fieldReceiptsApi,
   type CollectorSettlementDTO,
   type FieldReceiptDTO,
@@ -16,16 +15,17 @@ import {
   startOfflineSyncListener,
   type QueuedFieldReceipt,
 } from '../../utils/offlineReceiptQueue';
-import {
-  downloadReceiptPdf,
-  shareOrDownloadReceiptPdf,
-} from '../../utils/receiptPdfGenerator';
+import { downloadReceiptPdf } from '../../utils/receiptPdfGenerator';
 import { buildFieldReceiptWhatsAppMessage } from '../../utils/receiptWhatsApp';
 import { FieldCollectModal } from './FieldCollectModal';
 import {
   fieldReceiptToPublicData,
   FieldTodayReceiptsCard,
 } from './FieldTodayReceiptsCard';
+import {
+  ReceiptWhatsAppSendModal,
+  type ReceiptWhatsAppTarget,
+} from './ReceiptWhatsAppSendModal';
 import { buildSearchIndex, filterIndexedItems } from '../vendedor/vendedorHelpers';
 
 interface FieldCollectionPageProps {
@@ -49,7 +49,8 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedClient, setSelectedClient] = useState<OfflineBundleClient | null>(null);
   const [feedback, setFeedback] = useState<{ text: string; receipt?: FieldReceiptDTO } | null>(null);
-  const [busyAction, setBusyAction] = useState<'pdf' | 'wa' | null>(null);
+  const [busyAction, setBusyAction] = useState<'pdf' | null>(null);
+  const [waTarget, setWaTarget] = useState<ReceiptWhatsAppTarget | null>(null);
   const lastFetchedAtRef = useRef(0);
   const hasClientsRef = useRef(false);
   hasClientsRef.current = clients.length > 0;
@@ -153,19 +154,18 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
     }
   };
 
-  const handleFeedbackWhatsApp = async (receipt: FieldReceiptDTO) => {
-    if (busyAction) return;
-    setBusyAction('wa');
-    try {
-      await shareOrDownloadReceiptPdf(fieldReceiptToPublicData(receipt), {
-        shareText: buildFieldReceiptWhatsAppMessage(receipt, window.location.origin),
-        whatsappUrl: buildManualWhatsAppUrl(receipt),
-      });
-    } catch {
-      // Usuario canceló compartir
-    } finally {
-      setBusyAction(null);
-    }
+  const handleFeedbackWhatsApp = (receipt: FieldReceiptDTO) => {
+    setWaTarget({
+      personaId: receipt.persona?.id ?? receipt.personaId,
+      clientName: receipt.persona?.name || 'Cliente',
+      phone: receipt.persona?.phone ?? null,
+      whatsappVerifiedAt: receipt.persona?.whatsappVerifiedAt ?? null,
+      receiptLabel: receipt.receiptNumber || receipt.provisionalCode,
+      amount: receipt.totalAmount,
+      messageText: buildFieldReceiptWhatsAppMessage(receipt, window.location.origin),
+      fieldReceiptId: receipt.id,
+      publicReceiptData: fieldReceiptToPublicData(receipt),
+    });
   };
 
   return (
@@ -382,6 +382,29 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
             receipt: info.receipt,
           });
           void refreshAll();
+        }}
+      />
+
+      <ReceiptWhatsAppSendModal
+        target={waTarget}
+        onClose={() => setWaTarget(null)}
+        onSaved={(saved) => {
+          setFeedback((prev) =>
+            prev?.receipt && prev.receipt.personaId === saved.id
+              ? {
+                  ...prev,
+                  receipt: {
+                    ...prev.receipt,
+                    persona: {
+                      ...(prev.receipt.persona ?? { id: saved.id, name: saved.name }),
+                      phone: saved.phone,
+                      whatsappVerifiedAt: saved.whatsappVerifiedAt,
+                    },
+                  },
+                }
+              : prev,
+          );
+          void refreshAll({ silent: true });
         }}
       />
     </div>
