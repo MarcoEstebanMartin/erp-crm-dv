@@ -471,6 +471,106 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
     expect(ledgerCreates).toHaveLength(0);
     expect(mockTx.bankAccount.update).not.toHaveBeenCalled();
     expect(txDeletes).toHaveLength(0);
+    expect(mockTx.fieldReceipt.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 2 },
+        data: expect.objectContaining({
+          status: 'VOIDED',
+          voidReason: 'Todos los medios de pago fueron rechazados',
+          voidedByUserId: 73,
+        }),
+      }),
+    );
+  });
+
+  it('rejectCheckPayment sobre recibo de cheque puro borra Transaction espejo y marca FieldReceipt como VOIDED', async () => {
+    const receiptUpdates: any[] = [];
+    const txDeletes: any[] = [];
+
+    const mockTx: any = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: 30 }]),
+      fieldReceiptPayment: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 30,
+          fieldReceiptId: 30,
+          paymentMethod: PaymentMethod.CHECK,
+          amount: '45000.00',
+          status: 'IN_TRANSIT',
+          checkNumber: '998877',
+          fieldReceipt: {
+            id: 30,
+            personaId: 8785,
+            settlementId: 5,
+            status: 'ISSUED',
+            billingType: BillingType.INTERNAL,
+            receiptNumber: 'REC-C-0000030',
+            transactionId: 300,
+          },
+        }),
+        update: vi.fn().mockResolvedValue({ id: 30, status: 'REJECTED' }),
+      },
+      accountLedger: {
+        create: vi.fn().mockResolvedValue({ id: 90 }),
+      },
+      persona: {
+        findUnique: vi.fn().mockResolvedValue({ id: 8785, outstandingBalance: 45000 }),
+        update: vi.fn().mockResolvedValue({ id: 8785, outstandingBalance: 90000 }),
+      },
+      fieldReceipt: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: 30,
+            status: 'ISSUED',
+            payments: [{ paymentMethod: PaymentMethod.CHECK, amount: '45000.00', status: 'REJECTED' }],
+          },
+        ]),
+        findUnique: vi.fn().mockResolvedValue({
+          id: 30,
+          status: 'ISSUED',
+          transactionId: 300,
+          receiptNumber: 'REC-C-0000030',
+          totalAmount: '45000.00',
+          payments: [
+            {
+              id: 30,
+              paymentMethod: PaymentMethod.CHECK,
+              amount: '45000.00',
+              status: 'REJECTED',
+              bankAccountId: null,
+            },
+          ],
+        }),
+        update: vi.fn().mockImplementation((args) => {
+          receiptUpdates.push(args);
+          return Promise.resolve({ id: 30 });
+        }),
+      },
+      collectorSettlement: {
+        update: vi.fn().mockResolvedValue({ id: 5 }),
+      },
+      transaction: {
+        deleteMany: vi.fn().mockImplementation((args) => {
+          txDeletes.push(args);
+          return Promise.resolve({ count: 1 });
+        }),
+      },
+    };
+
+    vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
+
+    await fieldReceiptsService.rejectCheckPayment(30, 73, 'Sin fondos');
+
+    expect(txDeletes).toEqual([{ where: { id: 300 } }]);
+    expect(receiptUpdates).toContainEqual(
+      expect.objectContaining({
+        where: { id: 30 },
+        data: expect.objectContaining({
+          status: 'VOIDED',
+          voidReason: 'Todos los medios de pago fueron rechazados',
+          voidedByUserId: 73,
+        }),
+      }),
+    );
   });
 
   it('voidFieldReceipt sobre recibo mixto con transferencia PENDING_BANK revierte solo lo efectivamente acreditado', async () => {

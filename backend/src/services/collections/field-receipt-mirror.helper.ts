@@ -44,10 +44,7 @@ export interface CreateSettlementDrawerParams {
 }
 
 export interface ApplyTransferClearParams {
-  payment: {
-    id: number;
-    fieldReceiptId: number;
-  };
+  payment: { id: number; fieldReceiptId: number };
   receipt: {
     id: number;
     receiptNumber: string | null;
@@ -56,12 +53,7 @@ export interface ApplyTransferClearParams {
     collectorUserId: number;
     billingType: BillingType;
     status: FieldReceiptStatus;
-    payments: Array<{
-      id: number;
-      paymentMethod: PaymentMethod;
-      amount: Prisma.Decimal | string | number;
-      status: PaymentVerificationStatus;
-    }>;
+    payments: Array<{ id: number; paymentMethod: PaymentMethod; amount: Prisma.Decimal | string | number; status: PaymentVerificationStatus }>;
   };
   targetBankId: number;
   amountNum: number;
@@ -275,6 +267,14 @@ export async function syncMirrorTransactionForFieldReceipt(
   }
 
   await applyPrimaryMirrorDecision(tx, receipt.id, receipt.transactionId, decision, adminUserId, !hasImmediate);
+
+  if (mappedPayments.length > 0 && mappedPayments.every((p) => p.status === 'REJECTED') && receipt.status !== 'VOIDED') {
+    await tx.fieldReceipt.update({
+      where: { id: receipt.id },
+      data: { status: 'VOIDED', voidReason: 'Todos los medios de pago fueron rechazados', voidedByUserId: adminUserId, voidedAt: new Date() },
+    });
+    return;
+  }
 
   if (hasImmediate && receipt.status !== 'VOIDED') {
     const hasAnyPending = mappedPayments.some((p) => p.status === 'IN_TRANSIT' || p.status === 'PENDING_BANK');
