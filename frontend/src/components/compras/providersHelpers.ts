@@ -219,7 +219,7 @@ export function buildProviderLedgerStatement(
 export function buildEmptyProviderDraft() {
   return {
     id: 0, name: '', cuit: '', address: '', city: '', phone: '', email: '',
-    paymentTermDays: 30, rubro: '', isActive: true, contacts: [],
+    paymentTermDays: 30, rubro: '', providerType: 'MERCADERIA', isActive: true, contacts: [],
   };
 }
 

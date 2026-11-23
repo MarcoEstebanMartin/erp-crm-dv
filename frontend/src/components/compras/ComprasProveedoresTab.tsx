@@ -8,6 +8,7 @@ import {
   matchesProviderSearchQuery,
   tokenizePhoneticClientQuery,
 } from './providersHelpers';
+import { PROVIDER_TYPE_LABELS, ProviderTypeFilterBar, type ProviderTypeFilter } from './ProviderTypeFilterBar';
 
 export interface ComprasProveedoresTabProps {
   isAdmin: boolean;
@@ -31,6 +32,7 @@ export const ComprasProveedoresTab: FC<ComprasProveedoresTabProps> = ({
   onDeleteProvider,
 }) => {
   const [showInactive, setShowInactive] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<ProviderTypeFilter>('ALL');
   const deferredSearch = useDeferredValue(providerSearch);
 
   const filteredProviders = useMemo(() => {
@@ -40,11 +42,13 @@ export const ComprasProveedoresTab: FC<ComprasProveedoresTabProps> = ({
       const isActive = p.isActive !== false;
       if (!showInactive && !isActive) return false;
       if (showInactive && isActive) return false;
+      const pType = p.providerType || 'MERCADERIA';
+      if (typeFilter !== 'ALL' && pType !== typeFilter) return false;
       return !hasSearch || matchesProviderSearchQuery(p, tokens);
     });
-  }, [providers, showInactive, deferredSearch]);
+  }, [providers, showInactive, typeFilter, deferredSearch]);
 
-  const isFiltered = providerSearch.trim().length > 0 || showInactive;
+  const isFiltered = providerSearch.trim().length > 0 || showInactive || typeFilter !== 'ALL';
 
   return (
     <div className="card">
@@ -81,21 +85,9 @@ export const ComprasProveedoresTab: FC<ComprasProveedoresTabProps> = ({
           />
         </search>
 
-        <div
-          className="tabular-nums"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '0 12px',
-            height: '38px',
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            fontSize: '0.82rem',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <ProviderTypeFilterBar value={typeFilter} onChange={setTypeFilter} />
+
+        <div className="tabular-nums" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 12px', height: '38px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
           <span style={{ color: '#64748b', fontWeight: 500 }}>{isFiltered ? 'Filtrados' : 'Total'}</span>
           <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0f172a' }}>
             {filteredProviders.length.toLocaleString('es-AR')}
@@ -195,8 +187,13 @@ export const ComprasProveedoresTab: FC<ComprasProveedoresTabProps> = ({
                     </td>
 
                     <td>
-                      {p.rubro || summary.productsCount > 0 ? (
+                      {p.rubro || summary.productsCount > 0 || (p.providerType && p.providerType !== 'MERCADERIA') ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          {p.providerType && p.providerType !== 'MERCADERIA' && (
+                            <span style={{ backgroundColor: '#111827', color: '#ffffff', padding: '2px 7px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600 }}>
+                              {PROVIDER_TYPE_LABELS[p.providerType as 'RODADOS' | 'SERVICIOS'] || p.providerType}
+                            </span>
+                          )}
                           {p.rubro && (
                             <span style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 500, border: '1px solid #e2e8f0' }}>
                               {p.rubro}

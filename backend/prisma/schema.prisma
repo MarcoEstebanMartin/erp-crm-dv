@@ -106,6 +106,12 @@ model User {
   personaNotes           PersonaNote[]         @relation("PersonaNoteAuthor")
 }
 
+enum ProviderType {
+  MERCADERIA
+  RODADOS
+  SERVICIOS
+}
+
 model Persona {
   id        Int       @id @default(autoincrement())
   name      String
@@ -123,10 +129,11 @@ model Persona {
   hireDate  DateTime?
 
   // Roles de Persona
-  isClient          Boolean @default(true)
-  isProvider        Boolean @default(false)
-  isSeller          Boolean @default(false)
-  isCommissionAgent Boolean @default(false)
+  isClient          Boolean      @default(true)
+  isProvider        Boolean      @default(false)
+  providerType      ProviderType @default(MERCADERIA)
+  isSeller          Boolean      @default(false)
+  isCommissionAgent Boolean      @default(false)
 
   // Datos de Cliente
   creditLimit Decimal @default(0.00) @db.Decimal(12, 2)
@@ -194,6 +201,7 @@ model Persona {
   @@index([sellerId])
   @@index([isClient])
   @@index([isProvider])
+  @@index([isProvider, providerType])
   @@index([saleRouteId])
   @@index([cuit])
   @@index([name])

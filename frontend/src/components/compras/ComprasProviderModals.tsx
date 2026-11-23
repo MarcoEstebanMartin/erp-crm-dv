@@ -184,7 +184,7 @@ export const ComprasProviderModals: FC<{
             )}
 
             <form onSubmit={onProviderSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.8fr 0.9fr', gap: '12px' }}>
                 <div className="form-group">
                   <label htmlFor="prov-cuit">CUIT</label>
                   <div style={{ position: 'relative', width: '100%' }}>
@@ -200,19 +200,20 @@ export const ComprasProviderModals: FC<{
                     <button
                       type="button" onMouseDown={(e) => e.preventDefault()} onClick={handleFetchArca} disabled={!canTriggerArca}
                       title="Consultar padrón ARCA"
-                      style={{
-                        position: 'absolute', right: '4px', top: '4px', bottom: '4px',
-                        display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0 9px', borderRadius: '5px',
-                        fontSize: '0.74rem', fontWeight: 600, cursor: canTriggerArca ? 'pointer' : 'not-allowed',
-                        backgroundColor: canTriggerArca ? '#111827' : '#f1f5f9',
-                        color: canTriggerArca ? '#ffffff' : '#64748b',
-                        border: canTriggerArca ? '1px solid #111827' : '1px solid #cbd5e1',
-                      }}
+                      style={{ position: 'absolute', right: '4px', top: '4px', bottom: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0 9px', borderRadius: '5px', fontSize: '0.74rem', fontWeight: 600, cursor: canTriggerArca ? 'pointer' : 'not-allowed', backgroundColor: canTriggerArca ? '#111827' : '#f1f5f9', color: canTriggerArca ? '#ffffff' : '#64748b', border: canTriggerArca ? '1px solid #111827' : '1px solid #cbd5e1' }}
                     >
                       <Zap size={12} aria-hidden="true" />
                       <span>{isSearchingArca ? 'Buscando...' : 'ARCA'}</span>
                     </button>
                   </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="prov-type">Tipo</label>
+                  <select id="prov-type" className="select" value={providerModal.data.providerType || 'MERCADERIA'} onChange={(e) => setProviderModal((prev) => (prev ? { ...prev, data: { ...prev.data, providerType: e.target.value } } : null))}>
+                    <option value="MERCADERIA">Mercadería</option>
+                    <option value="RODADOS">Rodados</option>
+                    <option value="SERVICIOS">Servicios</option>
+                  </select>
                 </div>
                 <div className="form-group">
                   <label htmlFor="prov-rubro">Rubro / Marcas</label>

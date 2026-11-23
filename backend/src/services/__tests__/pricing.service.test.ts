@@ -18,6 +18,7 @@ describe('PricingService Unit Tests (Motor de Precios y Reglas)', () => {
     rubro: null,
     isClient: true,
     isProvider: false,
+    providerType: 'MERCADERIA',
     isSeller: false,
     isCommissionAgent: false,
     creditLimit: 0 as any,

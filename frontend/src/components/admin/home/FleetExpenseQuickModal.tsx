@@ -56,7 +56,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
         if (cancelled) return;
         setCategories(catsData || []);
         setVehicles(vehiclesData || []);
-        setSuppliers((suppliersData || []).filter((s: any) => s.isActive !== false));
+        setSuppliers((suppliersData || []).filter((s: any) => s.isActive !== false && s.providerType === 'RODADOS'));
         setBankAccounts(bankAccountsData || []);
       })
       .catch((err: any) => {

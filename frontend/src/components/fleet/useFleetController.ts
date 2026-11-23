@@ -59,8 +59,11 @@ export function useFleetController() {
       const bankData = await api.getBankAccounts();
       setBankAccounts(bankData);
       const supplierData = await api.getPersonas('provider');
-      const filteredSuppliers = (supplierData || []).filter((s: any) =>
-        ALLOWED_FLEET_PROVIDER_NAMES.some((name) => s.name.toLowerCase().trim() === name.toLowerCase().trim()),
+      const filteredSuppliers = (supplierData || []).filter(
+        (s: any) => s.isActive !== false && (
+          s.providerType === 'RODADOS' ||
+          ALLOWED_FLEET_PROVIDER_NAMES.some((name) => s.name.toLowerCase().trim() === name.toLowerCase().trim())
+        ),
       );
       setSuppliers(filteredSuppliers);
     } catch (e) {
