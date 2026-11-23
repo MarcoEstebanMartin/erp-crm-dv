@@ -183,10 +183,10 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
       onClose={() => !submitting && onClose()}
       ariaLabelledBy="quick-expense-modal-title"
       closeOnBackdrop={!submitting}
-      style={{ width: '94vw', maxWidth: '520px', padding: '22px 24px', maxHeight: '92vh' }}
+      style={{ width: '94vw', maxWidth: '620px', height: 'min(660px, 90vh)', padding: '24px 28px', display: 'flex', flexDirection: 'column' }}
     >
-      <div className="modal-header" style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)' }}>
-        <h2 id="quick-expense-modal-title" style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+      <div className="modal-header" style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
+        <h2 id="quick-expense-modal-title" style={{ fontSize: '1.08rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
           Nuevo gasto
         </h2>
         <button type="button" aria-label="Cerrar" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose} disabled={submitting}>
@@ -195,13 +195,14 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
       </div>
 
       {loadingData ? (
-        <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Cargando...</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>Cargando...</div>
       ) : errorData ? (
         <div role="alert" style={{ padding: '12px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#E30613', fontSize: '0.84rem' }}>
           {errorData}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} style={{ overflowY: 'auto' }}>
+        <form onSubmit={handleSubmit} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2px' }}>
           <div role="tablist" aria-label="Tipo de gasto" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', padding: '4px', backgroundColor: '#F3F4F6', borderRadius: '8px', marginBottom: '14px' }}>
             {([
               { id: 'GENERAL' as const, label: 'General', icon: <Wallet size={15} aria-hidden="true" /> },
@@ -280,8 +281,9 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
             onBankAccountIdChange={(bankAccountId) => setForm({ ...form, bankAccountId })}
             bankAccounts={bankAccounts}
           />
+          </div>
 
-          <div className="modal-footer" style={{ marginTop: '14px' }}>
+          <div className="modal-footer" style={{ marginTop: 'auto', paddingTop: '14px', borderTop: '1px solid var(--border-color)', flexShrink: 0 }}>
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Guardando...' : 'Guardar'}</button>
           </div>

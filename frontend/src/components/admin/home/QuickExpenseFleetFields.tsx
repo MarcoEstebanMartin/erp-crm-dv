@@ -82,14 +82,26 @@ export function QuickExpenseFleetFields({
 }: QuickExpenseFleetFieldsProps) {
   return (
     <>
-      <div className="form-group">
-        <label htmlFor="quick-expense-vehicle">Vehículo</label>
-        <select id="quick-expense-vehicle" name="vehicleId" required className="select" value={vehicleId} onChange={(e) => onVehicleChange(e.target.value)}>
-          <option value="">Seleccionar...</option>
-          {vehicles.map((v) => (
-            <option key={v.id} value={v.id}>{formatVehicleLabel(v)}</option>
-          ))}
-        </select>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="form-group">
+          <label htmlFor="quick-expense-vehicle">Vehículo</label>
+          <select id="quick-expense-vehicle" name="vehicleId" required className="select" value={vehicleId} onChange={(e) => onVehicleChange(e.target.value)}>
+            <option value="">Seleccionar...</option>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>{formatVehicleLabel(v)}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="quick-expense-supplier">Proveedor</label>
+          <select id="quick-expense-supplier" name="supplierId" className="select" value={supplierId} onChange={(e) => onSupplierChange(e.target.value)}>
+            <option value="">Sin proveedor</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -110,16 +122,6 @@ export function QuickExpenseFleetFields({
           <label htmlFor="quick-expense-odometer">Odómetro (km)</label>
           <input id="quick-expense-odometer" name="odometer" type="number" required className="input tabular-nums" value={odometer} onChange={(e) => onOdometerChange(e.target.value)} />
         </div>
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="quick-expense-supplier">Proveedor</label>
-        <select id="quick-expense-supplier" name="supplierId" className="select" value={supplierId} onChange={(e) => onSupplierChange(e.target.value)}>
-          <option value="">Sin proveedor</option>
-          {suppliers.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
       </div>
     </>
   );
