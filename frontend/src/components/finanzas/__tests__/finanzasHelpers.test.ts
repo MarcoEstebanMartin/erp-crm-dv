@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeFilteredMetricsAndLedger, parseCsvAmount, parseMercadoPagoCsv } from '../finanzasHelpers';
+import { computeCajaGrandeBalance, computeFilteredMetricsAndLedger, parseCsvAmount, parseMercadoPagoCsv } from '../finanzasHelpers';
 
 describe('parseCsvAmount', () => {
   it('parses international decimal dot amounts without multiplying by 100', () => {
@@ -139,5 +139,29 @@ describe('computeFilteredMetricsAndLedger', () => {
     expect(res.detailedTransferItems).toHaveLength(1);
     expect(res.detailedTransferItems[0].id).toBe('transfer-10');
     expect(res.transfers).toHaveLength(2);
+  });
+
+  it('excluye cierres de Caja Grande (drawerType CENTRAL) de Movimientos y de Ingresos en Efectivo', () => {
+    const drawers = [
+      {
+        id: 16,
+        drawerType: 'CENTRAL',
+        branch: 'CENTRAL',
+        status: 'CLOSED',
+        openingBalance: -22848785,
+        closingBalance: -22848785,
+        realBalance: 0,
+        closedAt: '2026-11-23T14:54:32.421Z',
+        user: { username: 'admin' },
+        transactions: [],
+      },
+    ];
+
+    const res = computeFilteredMetricsAndLedger(drawers, [], '2026-11-23', '2026-11-23');
+    expect(res.ledger).toHaveLength(0);
+    expect(res.detailedCashItems).toHaveLength(0);
+    expect(res.cashIncome).toBe(0);
+    expect(res.netIncome).toBe(0);
+    expect(computeCajaGrandeBalance(drawers, [])).toBe(0);
   });
 });

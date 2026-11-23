@@ -92,84 +92,90 @@ export const FinanzasExpenseModal: React.FC<{
   </NativeModalDialog>
 );
 
-export const FinanzasDrawerInspectModal: React.FC<{ inspectingDrawer: any | null; onClose: () => void }> = ({ inspectingDrawer, onClose }) => (
-  <NativeModalDialog
-    isOpen={Boolean(inspectingDrawer)}
-    onClose={onClose}
-    ariaLabelledBy="fin-inspect-drawer-title"
-    style={{ maxWidth: '850px', width: '95vw', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}
-  >
-    {inspectingDrawer && (
-      <>
-        <div className="modal-header" style={{ marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-          <div>
-            <h3 id="fin-inspect-drawer-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FileText size={20} color="var(--color-corp-red)" aria-hidden="true" /> Cierre de Caja — {formatResponsibleName(inspectingDrawer)}
-            </h3>
-            <div style={{ marginTop: '4px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              {new Date(inspectingDrawer.closedAt || inspectingDrawer.openedAt).toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'short' })}
-            </div>
-          </div>
-          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose} aria-label="Cerrar">
-            <X size={18} aria-hidden="true" />
-          </button>
-        </div>
+export const FinanzasDrawerInspectModal: React.FC<{ inspectingDrawer: any | null; onClose: () => void }> = ({ inspectingDrawer, onClose }) => {
+  const isCentral = Boolean(inspectingDrawer && (inspectingDrawer.drawerType === 'CENTRAL' || inspectingDrawer.branch === 'CENTRAL' || inspectingDrawer.branch === 'CONSOLIDADA'));
+  const openingBal = Number(inspectingDrawer?.openingBalance ?? 0);
+  const realBal = Number(inspectingDrawer?.realBalance ?? inspectingDrawer?.closingBalance ?? 0);
+  const diffBal = realBal - openingBal;
+  const formatPesos = (v: number) => `${v < 0 ? '-' : ''}$${Math.round(Math.abs(v)).toLocaleString('es-AR')}`;
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '18px' }}>
-          <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Rendido</span>
-            <div className="tabular-nums" style={{ fontSize: '1.2rem', fontWeight: 700, color: '#047857', fontFamily: 'monospace' }}>
-              +${Math.round(Number(inspectingDrawer.realBalance || inspectingDrawer.closingBalance || 0)).toLocaleString('es-AR')}
-            </div>
-          </div>
-          <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Fondo Inicial</span>
-            <div className="tabular-nums" style={{ fontSize: '1.2rem', fontWeight: 700, fontFamily: 'monospace' }}>
-              ${Math.round(Number(inspectingDrawer.openingBalance || 0)).toLocaleString('es-AR')}
-            </div>
-          </div>
-          <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Comprobantes</span>
-            <div className="tabular-nums" style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1e40af', fontFamily: 'monospace' }}>
-              {inspectingDrawer.transactions?.length || 0} Recibos
-            </div>
-          </div>
-        </div>
+  const summaryCards = isCentral
+    ? [
+        { label: 'Saldo Declarado', value: formatPesos(realBal), color: realBal < 0 ? '#c53030' : 'var(--text-primary)' },
+        { label: 'Saldo Anterior', value: formatPesos(openingBal), color: openingBal < 0 ? '#c53030' : 'var(--text-primary)' },
+        { label: 'Diferencia de Arqueo', value: diffBal > 0 ? `+${formatPesos(diffBal)}` : formatPesos(diffBal), color: diffBal === 0 ? 'var(--text-secondary)' : '#b45309' },
+      ]
+    : [
+        { label: 'Total Rendido', value: `+${formatPesos(realBal)}`, color: '#047857' },
+        { label: 'Fondo Inicial', value: formatPesos(openingBal), color: 'var(--text-primary)' },
+        { label: 'Comprobantes', value: `${inspectingDrawer?.transactions?.length || 0} Recibos`, color: '#1e40af' },
+      ];
 
-        {!inspectingDrawer.transactions?.length ? (
-          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>Sin recibos adjuntos.</div>
-        ) : (
-          <div className="table-container" role="region" aria-label="Comprobantes del cierre" tabIndex={0}>
-            <table style={{ fontSize: '0.84rem' }}>
-              <thead>
-                <tr>
-                  <th scope="col">Fecha</th>
-                  <th scope="col">Recibo</th>
-                  <th scope="col">Cliente</th>
-                  <th scope="col">Medio</th>
-                  <th scope="col" style={{ textAlign: 'right' }}>Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {inspectingDrawer.transactions.map((t: any) => (
-                  <tr key={t.id}>
-                    <td style={{ fontSize: '0.78rem' }}>{new Date(t.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                    <td style={{ fontWeight: 600 }}>{t.receiptNumber || `Pedido #${t.orderId || 'S/N'}`}</td>
-                    <td>{t.persona?.name || 'Varios'}</td>
-                    <td>{t.paymentMethod === 'CASH' ? 'Efectivo' : t.paymentMethod === 'CHECK' ? 'Cheque' : 'Transferencia'}</td>
-                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#047857' }}>
-                      +${Math.round(Number(t.amount)).toLocaleString('es-AR')}
-                    </td>
+  return (
+    <NativeModalDialog isOpen={Boolean(inspectingDrawer)} onClose={onClose} ariaLabelledBy="fin-inspect-drawer-title" style={{ maxWidth: '850px', width: '95vw', padding: '24px', maxHeight: '90vh', overflowY: 'auto' }}>
+      {inspectingDrawer && (
+        <>
+          <div className="modal-header" style={{ marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+            <div>
+              <h3 id="fin-inspect-drawer-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={20} color="var(--color-corp-red)" aria-hidden="true" />
+                {isCentral ? 'Cierre de Caja Grande' : `Cierre de Caja — ${formatResponsibleName(inspectingDrawer)}`}
+              </h3>
+              <div style={{ marginTop: '4px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                {new Date(inspectingDrawer.closedAt || inspectingDrawer.openedAt).toLocaleString('es-AR', { dateStyle: 'full', timeStyle: 'short' })}
+              </div>
+            </div>
+            <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose} aria-label="Cerrar"><X size={18} aria-hidden="true" /></button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '18px' }}>
+            {summaryCards.map((card) => (
+              <div key={card.label} style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{card.label}</span>
+                <div className="tabular-nums" style={{ fontSize: '1.2rem', fontWeight: 700, color: card.color, fontFamily: 'monospace' }}>{card.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {isCentral ? (
+            inspectingDrawer.notes ? (
+              <div style={{ backgroundColor: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.86rem' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>Observaciones</div>
+                <div>{inspectingDrawer.notes}</div>
+              </div>
+            ) : null
+          ) : !inspectingDrawer.transactions?.length ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>Sin recibos adjuntos.</div>
+          ) : (
+            <div className="table-container" role="region" aria-label="Comprobantes del cierre" tabIndex={0}>
+              <table style={{ fontSize: '0.84rem' }}>
+                <thead>
+                  <tr>
+                    <th scope="col">Fecha</th><th scope="col">Recibo</th><th scope="col">Cliente</th><th scope="col">Medio</th>
+                    <th scope="col" style={{ textAlign: 'right' }}>Monto</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </>
-    )}
-  </NativeModalDialog>
-);
+                </thead>
+                <tbody>
+                  {inspectingDrawer.transactions.map((t: any) => (
+                    <tr key={t.id}>
+                      <td style={{ fontSize: '0.78rem' }}>{new Date(t.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      <td style={{ fontWeight: 600 }}>{t.receiptNumber || `Pedido #${t.orderId || 'S/N'}`}</td>
+                      <td>{t.persona?.name || 'Varios'}</td>
+                      <td>{t.paymentMethod === 'CASH' ? 'Efectivo' : t.paymentMethod === 'CHECK' ? 'Cheque' : 'Transferencia'}</td>
+                      <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#047857' }}>
+                        +${Math.round(Number(t.amount)).toLocaleString('es-AR')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </NativeModalDialog>
+  );
+};
 
 export const FinanzasCentralCloseAndBankModals: React.FC<{
   centralCloseOpen: boolean;

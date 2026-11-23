@@ -145,7 +145,9 @@ export const computeFilteredMetricsAndLedger = (
   const [eYear, eMonth, eDay] = filterEndDate.split('-').map(Number);
   const end = new Date(eYear, eMonth - 1, eDay, 23, 59, 59, 999);
 
-  const closedInPeriod = drawers.filter((d: any) => d.status === 'CLOSED' && new Date(d.closedAt) >= start && new Date(d.closedAt) <= end);
+  const closedInPeriod = drawers.filter(
+    (d: any) => d.status === 'CLOSED' && d.drawerType !== 'CENTRAL' && new Date(d.closedAt) >= start && new Date(d.closedAt) <= end,
+  );
 
   let cashIncome = 0, checkIncome = 0;
   closedInPeriod.forEach((d: any) => {

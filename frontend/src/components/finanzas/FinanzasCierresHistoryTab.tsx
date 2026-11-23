@@ -113,8 +113,12 @@ export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps>
               </tr>
             ) : (
               drawers.map((d: any) => {
-                const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
                 const meta = classifyDrawerHistoryRow(d);
+                const displayAmount = meta.isCentral
+                  ? Number(d.realBalance ?? 0)
+                  : Number(d.realBalance ?? 0) - Number(d.openingBalance ?? 0);
+                const amountColor = displayAmount < 0 ? '#c53030' : meta.isCentral ? 'var(--text-primary)' : '#047857';
+                const formattedAmount = `${displayAmount < 0 ? '-' : ''}$${Math.round(Math.abs(displayAmount)).toLocaleString('es-AR')}`;
                 return (
                   <tr key={d.id} style={{ cursor: 'pointer' }} onClick={() => onInspectDrawer(d)}>
                     <td style={{ fontSize: '0.82rem' }}>
@@ -154,10 +158,10 @@ export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps>
                       )}
                     </td>
                     <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                      {d.transactions?.length || 0}
+                      {meta.isCentral ? '—' : d.transactions?.length || 0}
                     </td>
-                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: '#047857' }}>
-                      ${Math.round(netAmount).toLocaleString('es-AR')}
+                    <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, fontFamily: 'monospace', color: amountColor }}>
+                      {formattedAmount}
                     </td>
                   </tr>
                 );
