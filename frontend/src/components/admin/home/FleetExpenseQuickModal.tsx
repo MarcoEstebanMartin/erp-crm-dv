@@ -15,6 +15,7 @@ interface FleetExpenseQuickModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccessMsg?: (msg: string) => void;
+  onSaved?: () => void;
 }
 
 const createInitialForm = () => ({
@@ -33,7 +34,7 @@ const createInitialForm = () => ({
   bankAccountId: '',
 });
 
-export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetExpenseQuickModalProps) {
+export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg, onSaved }: FleetExpenseQuickModalProps) {
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -85,18 +86,11 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
 
   const handleModeChange = (nextMode: ExpenseMode) => {
     setFormError(null);
-    setForm((prev) => {
-      const nextCat =
-        nextMode === 'RODADO'
-          ? matchCategoryId(categories, FLEET_SUBTYPE_HINTS[prev.fleetType].categoryKeyword) || prev.categoryId
-          : prev.categoryId;
-      return { ...prev, mode: nextMode, categoryId: nextCat };
-    });
+    setForm((prev) => ({ ...prev, mode: nextMode }));
   };
 
   const handleFleetTypeChange = (nextType: FleetSubType) => {
-    const suggestedCat = matchCategoryId(categories, FLEET_SUBTYPE_HINTS[nextType].categoryKeyword);
-    setForm((prev) => ({ ...prev, fleetType: nextType, categoryId: suggestedCat || prev.categoryId }));
+    setForm((prev) => ({ ...prev, fleetType: nextType }));
   };
 
   const handlePaymentMethodChange = (method: string) => {
@@ -139,6 +133,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
         });
         setForm(createInitialForm());
         onSuccessMsg?.('Gasto registrado.');
+        onSaved?.();
         onClose();
       } catch (err: any) {
         setFormError(err.message || 'Error al guardar el gasto.');
@@ -170,6 +165,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
       });
       setForm(createInitialForm());
       onSuccessMsg?.('Gasto de rodado registrado.');
+      onSaved?.();
       onClose();
     } catch (err: any) {
       setFormError(err.message || 'Error al guardar el gasto.');

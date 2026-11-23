@@ -5,7 +5,8 @@ import { useConfirm } from '../context/ConfirmContext';
 import FinanceMovementModal from './FinanceMovementModal';
 import { computeCajaGrandeBalance, computeFilteredMetricsAndLedger } from './finanzas/finanzasHelpers';
 import { FinanzasBankReconciliationModal } from './finanzas/FinanzasBankReconciliationModal';
-import { FinanzasExpenseModal, FinanzasDrawerInspectModal, FinanzasCentralCloseAndBankModals } from './finanzas/FinanzasModals';
+import { FinanzasDrawerInspectModal, FinanzasCentralCloseAndBankModals } from './finanzas/FinanzasModals';
+import { FleetExpenseQuickModal } from './admin/home/FleetExpenseQuickModal';
 import { FinanzasBanksCard } from './finanzas/FinanzasBanksCard';
 import { FinanzasTransferenciasTab } from './finanzas/FinanzasTransferenciasTab';
 import { FinanzasCierresHistoryTab } from './finanzas/FinanzasCierresHistoryTab';
@@ -43,13 +44,7 @@ export default function FinanzasDashboard() {
   const [filterEndDate, setFilterEndDate] = useState(() => computeArDatePreset('this_week').endDate);
 
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
-  const [expenseAmount, setExpenseAmount] = useState('');
-  const [expenseDescription, setExpenseDescription] = useState('');
-  const [expenseCashSource, setExpenseCashSource] = useState<'CAJA_GRANDE' | 'CAJA_OFICINA'>('CAJA_GRANDE');
-  const [expensePaymentMethod, setExpensePaymentMethod] = useState('CASH');
-  const [expenseBillingType, setExpenseBillingType] = useState('INTERNAL');
   const [modalError, setModalError] = useState<string | null>(null);
-  const [submittingExpense, setSubmittingExpense] = useState(false);
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [modalCategory, setModalCategory] = useState<'CASH' | 'CHECK' | 'TRANSFER' | 'EXPENSE' | 'NET'>('CASH');
@@ -108,19 +103,6 @@ export default function FinanzasDashboard() {
       setCentralCloseModalOpen(false); setCentralCloseRealBalance('0'); setCentralCloseNotes('');
       fetchFinancialData();
     } catch (err: any) { setModalError(err.message || 'Error al cerrar la Caja Grande.'); } finally { setSubmittingCentralClose(false); }
-  };
-
-  const handleCreateExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const amount = Number(expenseAmount);
-    if (isNaN(amount) || amount <= 0) return setModalError('Ingrese un monto válido mayor a 0.');
-    if (!expenseDescription.trim()) return setModalError('La descripción del gasto es obligatoria.');
-    setSubmittingExpense(true); setModalError(null);
-    try {
-      await api.createExpense(amount, expenseDescription.trim(), expensePaymentMethod, expenseBillingType, expenseCashSource);
-      setExpenseModalOpen(false); setExpenseAmount(''); setExpenseDescription(''); setExpenseCashSource('CAJA_GRANDE'); setExpensePaymentMethod('CASH'); setExpenseBillingType('INTERNAL');
-      fetchFinancialData();
-    } catch (err: any) { setModalError(err.message || 'Error al guardar el gasto.'); } finally { setSubmittingExpense(false); }
   };
 
   const m = computeFilteredMetricsAndLedger(drawers, transactions, filterStartDate, filterEndDate);
@@ -269,12 +251,10 @@ export default function FinanzasDashboard() {
         }}
       />
 
-      <FinanzasExpenseModal
-        isOpen={expenseModalOpen} onClose={() => { setModalError(null); setExpenseModalOpen(false); }}
-        expenseAmount={expenseAmount} setExpenseAmount={setExpenseAmount} expenseDescription={expenseDescription} setExpenseDescription={setExpenseDescription}
-        expenseCashSource={expenseCashSource} setExpenseCashSource={setExpenseCashSource}
-        expensePaymentMethod={expensePaymentMethod} setExpensePaymentMethod={setExpensePaymentMethod} expenseBillingType={expenseBillingType} setExpenseBillingType={setExpenseBillingType}
-        modalError={modalError} submitting={submittingExpense} onSubmit={handleCreateExpense}
+      <FleetExpenseQuickModal
+        isOpen={expenseModalOpen}
+        onClose={() => setExpenseModalOpen(false)}
+        onSaved={fetchFinancialData}
       />
       <FinanzasBankReconciliationModal isOpen={reconModalOpen} onClose={() => setReconModalOpen(false)} bankAccounts={bankAccounts} reconBankId={reconBankId} setReconBankId={setReconBankId} onRefreshMainData={fetchFinancialData} />
       <FinanceMovementModal isOpen={detailModalOpen} onClose={() => setDetailModalOpen(false)} title={modalTitle} categoryKey={modalCategory} dateRangeText={`${filterStartDate} - ${filterEndDate}`} movements={modalMovements} />
