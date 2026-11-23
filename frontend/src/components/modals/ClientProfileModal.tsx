@@ -31,6 +31,7 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
   setErrorMsg,
 }) => {
   const [newContact, setNewContact] = useState({ name: '', phone: '', email: '', role: '' });
+  const [updatingCtaCte, setUpdatingCtaCte] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
 
   if (!clientProfileModal || !clientProfileModal.open || !clientProfileModal.client) return null;
@@ -68,6 +69,23 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
       fetchData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al eliminar contacto.');
+    }
+  };
+
+  const handleUpdateCtaCte = async (nextVal: number) => {
+    setUpdatingCtaCte(true);
+    try {
+      await api.updatePersona(client.id, { ...client, maxUnpaidInvoices: nextVal });
+      setClientProfileModal({
+        ...clientProfileModal,
+        client: { ...client, maxUnpaidInvoices: nextVal },
+      });
+      setSuccessMsg(nextVal > 0 ? `Cuenta corriente actualizada (${nextVal === 0.5 ? '1/2 boleta' : `${nextVal} ${nextVal === 1 ? 'boleta' : 'boletas'}`}).` : 'Cuenta corriente desactivada.');
+      fetchData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al actualizar cuenta corriente.');
+    } finally {
+      setUpdatingCtaCte(false);
     }
   };
 
@@ -169,9 +187,35 @@ const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', fontSize: '0.84rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Límite</span>
-                  <span className="tabular-nums" style={{ fontWeight: 600 }}>{limit > 0 ? `${limit} boletas` : 'Contado'}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <label htmlFor="profile-cta-cte-limit" style={{ color: 'var(--text-secondary)' }}>Límite</label>
+                  {client.isClient ? (
+                    <select
+                      id="profile-cta-cte-limit"
+                      aria-label={`Límite Cta Cte para ${client.name}`}
+                      value={Math.min(limit, 2)}
+                      disabled={updatingCtaCte}
+                      onChange={(e) => void handleUpdateCtaCte(Number(e.target.value))}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        border: `1px solid ${limit > 0 ? '#137333' : 'var(--border-color)'}`,
+                        backgroundColor: limit > 0 ? '#e6f4ea' : '#ffffff',
+                        color: limit > 0 ? '#137333' : 'var(--text-secondary)',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value={0}>Sin Cta Cte</option>
+                      <option value={0.5}>1/2 Boleta</option>
+                      <option value={1}>1 Boleta</option>
+                      <option value={2}>2 Boletas</option>
+                    </select>
+                  ) : (
+                    <span className="tabular-nums" style={{ fontWeight: 600 }}>{limit > 0 ? `${limit} boletas` : 'Contado'}</span>
+                  )}
                 </div>
 
                 {client.isClient && limit > 0 && (

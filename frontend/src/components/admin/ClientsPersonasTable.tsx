@@ -15,15 +15,15 @@ interface ClientPersonaRowProps {
 }
 
 const ClientPersonaRow = React.memo<ClientPersonaRowProps>(({
-  persona: c, personaRoleFilter, isUpdating, onUpdateCtaCte,
+  persona: c, personaRoleFilter,
   onViewClientProfile, onShowResumenModal, onDeletePersona,
 }) => {
   const balance = Number(c.outstandingBalance || 0);
   const absFormatted = Math.abs(Math.round(balance)).toLocaleString('es-AR');
   const balanceText = balance > 0 ? `$${absFormatted}` : balance < 0 ? `+$${absFormatted}` : '$0';
   const balanceColor = balance > 0 ? 'var(--color-danger)' : balance < 0 ? 'var(--color-success)' : 'var(--text-secondary)';
-  const pendingCount = Number(c.pendingInvoicesCount || 0);
   const maxInvoices = Number(c.maxUnpaidInvoices || 0);
+  const hasCtaCte = maxInvoices > 0;
   const subtitleParts = [c.address?.trim(), c.city && c.city !== 'Otros' ? c.city.trim() : ''].filter(Boolean);
   const sellerRouteLabel = c.saleRoute?.name || c.route || '';
 
@@ -73,44 +73,19 @@ const ClientPersonaRow = React.memo<ClientPersonaRowProps>(({
       </td>
       {personaRoleFilter === 'client' && (
         <td style={{ whiteSpace: 'nowrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <select
-              aria-label={`Límite Cta Cte para ${c.name}`}
-              value={Math.min(maxInvoices, 2)}
-              onChange={(e) => onUpdateCtaCte(c, Number(e.target.value))}
-              disabled={isUpdating}
-              style={{
-                padding: '4px 8px', borderRadius: '6px',
-                border: `1px solid ${maxInvoices > 0 ? '#137333' : 'var(--border-color)'}`,
-                backgroundColor: maxInvoices > 0 ? '#e6f4ea' : '#f8f9fa',
-                color: maxInvoices > 0 ? '#137333' : 'var(--text-secondary)',
-                fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer', outline: 'none', width: '118px',
-              }}
-            >
-              <option value={0}>Sin Cta Cte</option>
-              <option value={0.5}>1/2 Boleta</option>
-              <option value={1}>1 Boleta</option>
-              <option value={2}>2 Boletas</option>
-            </select>
-            {isUpdating && <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>...</span>}
-          </div>
-          {maxInvoices > 0 && pendingCount > 0 && (
-            <div
-              className="tabular-nums"
-              style={{
-                fontSize: '0.74rem',
-                color: pendingCount >= maxInvoices ? '#C5221F' : '#92400e',
-                fontWeight: 600,
-                marginTop: '4px',
-                display: 'inline-flex',
-                backgroundColor: pendingCount >= maxInvoices ? '#FCE8E6' : '#FEF3C7',
-                padding: '2px 7px',
-                borderRadius: '10px',
-              }}
-            >
-              {pendingCount} {pendingCount === 1 ? 'boleta' : 'boletas'}
-            </div>
-          )}
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '3px 10px',
+              borderRadius: '12px',
+              fontSize: '0.76rem',
+              fontWeight: 700,
+              backgroundColor: hasCtaCte ? '#e6f4ea' : '#f1f5f9',
+              color: hasCtaCte ? '#137333' : 'var(--text-secondary)',
+            }}
+          >
+            {hasCtaCte ? 'SI' : 'NO'}
+          </span>
         </td>
       )}
       {personaRoleFilter !== 'seller' && (
