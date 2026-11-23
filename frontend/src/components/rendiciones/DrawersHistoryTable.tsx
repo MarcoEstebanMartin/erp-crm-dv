@@ -132,6 +132,23 @@ export default function DrawersHistoryTable({
                       <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
                         {meta.responsibleName}
                       </div>
+                      {meta.activitySummary && (
+                        <div
+                          title={meta.activitySummary}
+                          style={{
+                            fontSize: '0.76rem',
+                            color: 'var(--text-secondary)',
+                            fontWeight: 500,
+                            marginTop: '2px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '240px',
+                          }}
+                        >
+                          {meta.activitySummary}
+                        </div>
+                      )}
                       {meta.showRouteNote && (
                         <div style={{ fontSize: '0.78rem', color: '#0284c7', marginTop: '3px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <MapPin size={12} color="#0284c7" aria-hidden="true" />

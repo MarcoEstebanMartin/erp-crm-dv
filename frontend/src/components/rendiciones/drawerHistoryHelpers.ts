@@ -13,6 +13,7 @@ export interface DrawerClassification {
   badgeColor: string;
   responsibleName: string;
   showRouteNote: boolean;
+  activitySummary: string | null;
 }
 
 export interface DrawerDateSummary {
@@ -23,6 +24,70 @@ export interface DrawerDateSummary {
 
 const ADMIN_BRANCH_PATTERN = /^ADMINISTRACI[OÓ]N\b/i;
 const LEGACY_ADMIN_SELLER_PATTERN = /^VENDEDOR:\s*(ADMIN|ADMINISTRADOR)\b/i;
+const RENDICION_INCOME_PATTERN = /^Ingreso Rendici[oó]n/i;
+const RECEIPT_DESC_PATTERN = /recibo|cobranza|cobro|pago/i;
+
+function pluralize(count: number, singular: string, plural: string): string {
+  return count === 1 ? `1 ${singular}` : `${count} ${plural}`;
+}
+
+/**
+ * Resume en una línea compacta qué movimientos reales contiene un arqueo o cobro
+ * (ej. "Recibo · Juan Pérez", "2 recibos · 1 venta", "1 gasto").
+ */
+export function summarizeDrawerActivity(transactions?: any[] | null): string | null {
+  if (!Array.isArray(transactions) || transactions.length === 0) return null;
+
+  let receipts = 0;
+  let sales = 0;
+  let rendiciones = 0;
+  let otherIncomes = 0;
+  let outcomes = 0;
+
+  for (const t of transactions) {
+    if (!t) continue;
+    if (t.type === 'OUTCOME') {
+      outcomes += 1;
+      continue;
+    }
+    const desc = String(t.description || '').trim();
+    if (RENDICION_INCOME_PATTERN.test(desc)) {
+      rendiciones += 1;
+    } else if (t.orderId != null) {
+      sales += 1;
+    } else if (t.receiptNumber || t.persona?.name || RECEIPT_DESC_PATTERN.test(desc)) {
+      receipts += 1;
+    } else {
+      otherIncomes += 1;
+    }
+  }
+
+  if (transactions.length === 1) {
+    const only = transactions[0];
+    const clientName = String(only?.persona?.name || '').trim();
+    const receiptNum = String(only?.receiptNumber || '').trim();
+    if (receipts === 1) {
+      if (clientName) return `Recibo · ${clientName}`;
+      if (receiptNum) return `Recibo ${receiptNum}`;
+      return '1 recibo';
+    }
+    if (sales === 1) {
+      return clientName ? `Venta #${only.orderId} · ${clientName}` : `Venta #${only.orderId}`;
+    }
+    if (rendiciones === 1) return '1 rendición';
+    if (outcomes === 1) return '1 gasto';
+    return '1 movimiento';
+  }
+
+  const parts: string[] = [];
+  if (receipts > 0) parts.push(pluralize(receipts, 'recibo', 'recibos'));
+  if (sales > 0) parts.push(pluralize(sales, 'venta', 'ventas'));
+  if (rendiciones > 0) parts.push(pluralize(rendiciones, 'rendición', 'rendiciones'));
+  if (otherIncomes > 0) parts.push(pluralize(otherIncomes, 'ingreso', 'ingresos'));
+  if (outcomes > 0) parts.push(pluralize(outcomes, 'gasto', 'gastos'));
+
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
 
 export function classifyDrawerHistoryRow(d: any): DrawerClassification {
   const branch = String(d?.branch || '').trim();
@@ -44,6 +109,8 @@ export function classifyDrawerHistoryRow(d: any): DrawerClassification {
       LEGACY_ADMIN_SELLER_PATTERN.test(branch) ||
       responsibleName.toLowerCase() === 'admin');
 
+  const activitySummary = isCentral ? null : summarizeDrawerActivity(d?.transactions);
+
   if (isCentral) {
     return {
       kind: 'CENTRAL',
@@ -56,6 +123,7 @@ export function classifyDrawerHistoryRow(d: any): DrawerClassification {
       badgeColor: '#92400e',
       responsibleName,
       showRouteNote: false,
+      activitySummary: null,
     };
   }
 
@@ -66,11 +134,12 @@ export function classifyDrawerHistoryRow(d: any): DrawerClassification {
       isDepo: true,
       isRep: false,
       isAdmin: false,
-      badgeLabel: 'Oficina',
-      badgeBg: '#f1f5f9',
-      badgeColor: '#475569',
+      badgeLabel: 'Caja Oficina',
+      badgeBg: '#f0fdfa',
+      badgeColor: '#0f766e',
       responsibleName,
       showRouteNote: false,
+      activitySummary,
     };
   }
 
@@ -86,6 +155,7 @@ export function classifyDrawerHistoryRow(d: any): DrawerClassification {
       badgeColor: '#047857',
       responsibleName,
       showRouteNote: Boolean(d?.routeNote && String(d.routeNote).trim()),
+      activitySummary,
     };
   }
 
@@ -96,11 +166,12 @@ export function classifyDrawerHistoryRow(d: any): DrawerClassification {
       isDepo: false,
       isRep: false,
       isAdmin: true,
-      badgeLabel: 'Administración',
+      badgeLabel: 'Cobro Oficina',
       badgeBg: '#eef2ff',
       badgeColor: '#3730a3',
       responsibleName,
       showRouteNote: false,
+      activitySummary,
     };
   }
 
@@ -115,6 +186,7 @@ export function classifyDrawerHistoryRow(d: any): DrawerClassification {
     badgeColor: '#1d4ed8',
     responsibleName,
     showRouteNote: false,
+    activitySummary,
   };
 }
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { api } from '../../utils/api';
-import { formatResponsibleName } from '../../utils/formatters';
+import { classifyDrawerHistoryRow } from '../rendiciones/drawerHistoryHelpers';
 
 interface FinanzasCierresHistoryTabProps {
   initialDrawers: any[];
@@ -114,6 +114,7 @@ export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps>
             ) : (
               drawers.map((d: any) => {
                 const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
+                const meta = classifyDrawerHistoryRow(d);
                 return (
                   <tr key={d.id} style={{ cursor: 'pointer' }} onClick={() => onInspectDrawer(d)}>
                     <td style={{ fontSize: '0.82rem' }}>
@@ -126,14 +127,32 @@ export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps>
                           borderRadius: '12px',
                           fontSize: '0.72rem',
                           fontWeight: 600,
-                          backgroundColor: d.drawerType === 'CENTRAL' ? '#f1f5f9' : '#ecfdf5',
-                          color: d.drawerType === 'CENTRAL' ? '#334155' : '#047857',
+                          backgroundColor: meta.badgeBg,
+                          color: meta.badgeColor,
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        {d.drawerType === 'CENTRAL' ? 'Caja Grande' : 'Arqueo'}
+                        {meta.badgeLabel}
                       </span>
                     </td>
-                    <td style={{ fontWeight: 600 }}>{formatResponsibleName(d)}</td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{meta.responsibleName}</div>
+                      {meta.activitySummary && (
+                        <div
+                          title={meta.activitySummary}
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-secondary)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '240px',
+                          }}
+                        >
+                          {meta.activitySummary}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                       {d.transactions?.length || 0}
                     </td>

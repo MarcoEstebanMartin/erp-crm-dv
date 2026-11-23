@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { classifyDrawerHistoryRow, formatDrawerDateSummary } from '../drawerHistoryHelpers';
+import {
+  classifyDrawerHistoryRow,
+  formatDrawerDateSummary,
+  summarizeDrawerActivity,
+} from '../drawerHistoryHelpers';
 
 describe('classifyDrawerHistoryRow', () => {
-  it('clasifica un registro legacy "VENDEDOR: ADMIN" como Administración y oculta el pin de ciudad', () => {
+  it('clasifica un registro legacy "VENDEDOR: ADMIN" como Cobro Oficina y oculta el pin de ciudad', () => {
     const res = classifyDrawerHistoryRow({
       drawerType: 'VENDEDOR',
       branch: 'VENDEDOR: ADMIN',
@@ -10,22 +14,26 @@ describe('classifyDrawerHistoryRow', () => {
     });
 
     expect(res.kind).toBe('ADMINISTRACION');
-    expect(res.badgeLabel).toBe('Administración');
+    expect(res.badgeLabel).toBe('Cobro Oficina');
     expect(res.responsibleName).toBe('Admin');
     expect(res.showRouteNote).toBe(false);
   });
 
-  it('clasifica un registro nuevo "ADMINISTRACION: ADMIN" como Administración', () => {
+  it('clasifica un registro nuevo "ADMINISTRACION: ADMIN" como Cobro Oficina con resumen de recibo', () => {
     const res = classifyDrawerHistoryRow({
       drawerType: 'ADMINISTRACION',
       branch: 'ADMINISTRACION: ADMIN',
       routeNote: null,
+      transactions: [
+        { type: 'INCOME', receiptNumber: 'REC-00042', persona: { name: 'Supermercado Norte' } },
+      ],
     });
 
     expect(res.kind).toBe('ADMINISTRACION');
-    expect(res.badgeLabel).toBe('Administración');
+    expect(res.badgeLabel).toBe('Cobro Oficina');
     expect(res.responsibleName).toBe('Admin');
     expect(res.showRouteNote).toBe(false);
+    expect(res.activitySummary).toBe('Recibo · Supermercado Norte');
   });
 
   it('clasifica a Diego Lejarza como Vendedor y oculta el pin de ciudad del cliente', () => {
@@ -54,16 +62,55 @@ describe('classifyDrawerHistoryRow', () => {
     expect(res.showRouteNote).toBe(true);
   });
 
-  it('clasifica Oficina y Caja Grande correctamente', () => {
-    const depo = classifyDrawerHistoryRow({ drawerType: 'DEPOSITO', branch: 'DEPOSITO', user: { username: 'admin' } });
+  it('clasifica Caja Oficina y Caja Grande correctamente', () => {
+    const depo = classifyDrawerHistoryRow({
+      drawerType: 'DEPOSITO',
+      branch: 'DEPOSITO',
+      user: { username: 'admin' },
+      transactions: [
+        { type: 'INCOME', receiptNumber: 'REC-00100', persona: { name: 'Cliente A' } },
+        { type: 'INCOME', orderId: 55, persona: { name: 'Cliente B' } },
+      ],
+    });
     expect(depo.kind).toBe('DEPOSITO');
-    expect(depo.badgeLabel).toBe('Oficina');
+    expect(depo.badgeLabel).toBe('Caja Oficina');
     expect(depo.showRouteNote).toBe(false);
+    expect(depo.activitySummary).toBe('1 recibo · 1 venta');
 
     const central = classifyDrawerHistoryRow({ drawerType: 'CENTRAL', branch: 'CENTRAL', user: { username: 'admin' } });
     expect(central.kind).toBe('CENTRAL');
     expect(central.badgeLabel).toBe('Caja Grande');
     expect(central.showRouteNote).toBe(false);
+    expect(central.activitySummary).toBeNull();
+  });
+});
+
+describe('summarizeDrawerActivity', () => {
+  it('resume un solo recibo, venta, rendición o gasto de forma clara', () => {
+    expect(summarizeDrawerActivity([])).toBeNull();
+    expect(
+      summarizeDrawerActivity([{ type: 'INCOME', receiptNumber: 'REC-00012' }]),
+    ).toBe('Recibo REC-00012');
+    expect(
+      summarizeDrawerActivity([{ type: 'INCOME', orderId: 88, persona: { name: 'Kiosco Central' } }]),
+    ).toBe('Venta #88 · Kiosco Central');
+    expect(
+      summarizeDrawerActivity([{ type: 'INCOME', description: 'Ingreso Rendición de Fondos - VENDEDOR: DIEGO' }]),
+    ).toBe('1 rendición');
+    expect(
+      summarizeDrawerActivity([{ type: 'OUTCOME', description: 'Flete' }]),
+    ).toBe('1 gasto');
+  });
+
+  it('resume múltiples movimientos agrupados por tipo', () => {
+    expect(
+      summarizeDrawerActivity([
+        { type: 'INCOME', receiptNumber: 'REC-001' },
+        { type: 'INCOME', receiptNumber: 'REC-002' },
+        { type: 'INCOME', orderId: 10 },
+        { type: 'OUTCOME', description: 'Nafta' },
+      ]),
+    ).toBe('2 recibos · 1 venta · 1 gasto');
   });
 });
 

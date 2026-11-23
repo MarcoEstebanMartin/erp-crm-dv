@@ -1,4 +1,5 @@
 import { formatDrawerBranchLabel, formatExpenseConcept, formatResponsibleName } from '../../utils/formatters';
+import { classifyDrawerHistoryRow } from '../rendiciones/drawerHistoryHelpers';
 
 export const isEcheqTx = (t: any): boolean =>
   t?.paymentMethod === 'CHECK' && /\(echeq\)|e-?cheq/i.test(String(t?.description || ''));
@@ -247,13 +248,11 @@ export const computeFilteredMetricsAndLedger = (
   const ledgerItems: any[] = [];
   closedInPeriod.forEach((d: any) => {
     const netAmount = Number(d.realBalance || 0) - Number(d.openingBalance || 0);
-    const methodsSet = new Set<string>();
-    (d.transactions || []).forEach((t: any) => {
-      if (t.paymentMethod) methodsSet.add(formatPaymentMethodLabel(t.paymentMethod));
-    });
-    const methods = Array.from(methodsSet);
+    const methods = Array.from(new Set<string>((d.transactions || []).filter((t: any) => t.paymentMethod).map((t: any) => formatPaymentMethodLabel(t.paymentMethod))));
+    const meta = classifyDrawerHistoryRow(d);
     ledgerItems.push({
-      id: `drawer-${d.id}`, date: d.closedAt, type: 'INGRESO', description: formatResponsibleName(d), detail: null,
+      id: `drawer-${d.id}`, date: d.closedAt, type: 'INGRESO', description: meta.responsibleName,
+      detail: meta.activitySummary ? `${meta.badgeLabel} · ${meta.activitySummary}` : meta.badgeLabel,
       paymentMethod: methods.length === 1 ? methods[0] : methods.length > 1 ? 'Varios' : 'Efectivo', amount: netAmount, drawer: d,
     });
   });
