@@ -39,17 +39,20 @@ export default function AuditLogsFilterBar({
     onApply();
   };
 
+  const applyPatch = (patch: Partial<AuditLogQueryFilters>) => {
+    const next: AuditLogQueryFilters = { ...draftFilters, ...patch };
+    onDraftChange(patch);
+    onApply(next);
+  };
+
   const applyDatePreset = (daysBack: number) => {
     const today = new Date();
     const start = new Date(today);
     start.setDate(today.getDate() - daysBack);
-    const next: AuditLogQueryFilters = {
-      ...draftFilters,
+    applyPatch({
       startDate: toLocalIsoDate(start),
       endDate: toLocalIsoDate(today),
-    };
-    onDraftChange({ startDate: next.startDate, endDate: next.endDate });
-    onApply(next);
+    });
   };
 
   return (
@@ -111,7 +114,7 @@ export default function AuditLogsFilterBar({
               name="userId"
               className="select"
               value={draftFilters.userId === undefined ? '' : String(draftFilters.userId)}
-              onChange={(e) => onDraftChange({ userId: e.target.value ? Number(e.target.value) : '' })}
+              onChange={(e) => applyPatch({ userId: e.target.value ? Number(e.target.value) : '' })}
             >
               <option value="">Todos</option>
               {users.map((u) => (
@@ -129,7 +132,7 @@ export default function AuditLogsFilterBar({
               name="module"
               className="select"
               value={draftFilters.module || ''}
-              onChange={(e) => onDraftChange({ module: e.target.value })}
+              onChange={(e) => applyPatch({ module: e.target.value })}
             >
               <option value="">Todos</option>
               {AUDIT_MODULES.map((m) => (
@@ -147,7 +150,7 @@ export default function AuditLogsFilterBar({
               name="status"
               className="select"
               value={draftFilters.status || ''}
-              onChange={(e) => onDraftChange({ status: e.target.value })}
+              onChange={(e) => applyPatch({ status: e.target.value })}
             >
               <option value="">Todos</option>
               <option value="SUCCESS">Exitosos</option>
@@ -164,7 +167,7 @@ export default function AuditLogsFilterBar({
               type="date"
               className="input"
               value={draftFilters.startDate || ''}
-              onChange={(e) => onDraftChange({ startDate: e.target.value })}
+              onChange={(e) => applyPatch({ startDate: e.target.value })}
             />
           </div>
 
@@ -176,7 +179,7 @@ export default function AuditLogsFilterBar({
               type="date"
               className="input"
               value={draftFilters.endDate || ''}
-              onChange={(e) => onDraftChange({ endDate: e.target.value })}
+              onChange={(e) => applyPatch({ endDate: e.target.value })}
             />
           </div>
         </div>

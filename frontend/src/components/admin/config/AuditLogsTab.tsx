@@ -91,6 +91,21 @@ export default function AuditLogsTab() {
     };
   }, [auditPage, appliedFilters]);
 
+  useEffect(() => {
+    const draftSearch = (draftFilters.search || '').trim();
+    const appliedSearch = (appliedFilters.search || '').trim();
+    if (draftSearch === appliedSearch) return;
+
+    const delayMs = draftSearch === '' ? 0 : 300;
+    const timer = window.setTimeout(() => {
+      setExpandedLogId(null);
+      setAuditPage(1);
+      setAppliedFilters((prev) => ({ ...prev, search: draftFilters.search || '' }));
+    }, delayMs);
+
+    return () => window.clearTimeout(timer);
+  }, [draftFilters.search, appliedFilters.search]);
+
   const handleDraftChange = (patch: Partial<AuditLogQueryFilters>) => {
     setDraftFilters((prev) => ({ ...prev, ...patch }));
   };
@@ -150,7 +165,13 @@ export default function AuditLogsTab() {
         tabIndex={0}
         role="region"
         aria-label="Registros de auditoría"
-        style={{ maxHeight: 'min(680px, 75vh)', overflow: 'auto' }}
+        aria-busy={loading}
+        style={{
+          maxHeight: 'min(680px, 75vh)',
+          overflow: 'auto',
+          opacity: loading ? 0.55 : 1,
+          transition: 'opacity 150ms ease',
+        }}
       >
         <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead style={{ position: 'sticky', insetBlockStart: 0, zIndex: 1 }}>
