@@ -29,7 +29,7 @@ export function QuickExpensePaymentFields({
   const showBankAccount = paymentMethod === 'BANK_TRANSFER' || paymentMethod === 'CHECK';
 
   return (
-    <div style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '12px', backgroundColor: 'var(--bg-light, #f5f5f7)', marginBottom: '12px' }}>
+    <div style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '12px', backgroundColor: 'var(--bg-light, #f5f5f7)', marginBottom: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: affectFinance ? '10px' : 0 }}>
         <input
           type="checkbox"

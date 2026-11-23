@@ -184,7 +184,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
       onClose={() => !submitting && onClose()}
       ariaLabelledBy="quick-expense-modal-title"
       closeOnBackdrop={!submitting}
-      style={{ width: '94vw', maxWidth: '620px', height: 'min(640px, 94vh)', padding: '22px 26px', display: 'flex', flexDirection: 'column' }}
+      style={{ width: '94vw', maxWidth: '620px', minHeight: '620px', padding: '22px 26px', display: 'flex', flexDirection: 'column' }}
     >
       <div className="modal-header" style={{ marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
         <h2 id="quick-expense-modal-title" style={{ fontSize: '1.08rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
@@ -224,7 +224,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
             })}
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ flex: 1 }}>
 
           {formError && (
             <div role="alert" style={{ marginBottom: '12px', padding: '8px 12px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#E30613', fontSize: '0.82rem', fontWeight: 600 }}>
