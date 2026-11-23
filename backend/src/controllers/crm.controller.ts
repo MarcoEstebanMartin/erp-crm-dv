@@ -9,35 +9,85 @@ import { canViewProductCosts } from '../utils/product-sanitizer.util';
  */
 export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    // 1. Clientes Inactivos (sin compras en los últimos 15 días)
     const fifteenDaysAgo = new Date();
     fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    const inactiveClients = await prisma.persona.findMany({
-      where: {
-        isClient: true,
-        isActive: true,
-        orders: {
-          none: {
-            createdAt: {
-              gte: fifteenDaysAgo,
-            },
+    const [inactiveClients, allActiveProducts, activeClients, expiringLots] = await Promise.all([
+      // 1. Clientes Inactivos (sin compras en los últimos 15 días)
+      prisma.persona.findMany({
+        where: {
+          isClient: true,
+          isActive: true,
+          orders: { none: { createdAt: { gte: fifteenDaysAgo } } },
+        },
+        select: {
+          id: true,
+          name: true,
+          cuit: true,
+          phone: true,
+          outstandingBalance: true,
+          orders: {
+            select: { createdAt: true },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
           },
         },
-      },
-      include: {
-        orders: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
+      }),
+      // 2. Productos con stock mínimo configurado para reabastecimiento
+      prisma.product.findMany({
+        where: { isActive: true, minStock: { gt: 0 } },
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          stock: true,
+          minStock: true,
+          costPrice: true,
+          provider: { select: { id: true, name: true } },
         },
-      },
-    });
+      }),
+      // 3. Clientes con al menos un pedido (últimos 10 pedidos para evitar escaneo ilimitado)
+      prisma.persona.findMany({
+        where: { isClient: true, isActive: true, orders: { some: {} } },
+        select: {
+          id: true,
+          name: true,
+          orders: {
+            select: {
+              items: {
+                select: {
+                  productId: true,
+                  quantity: true,
+                  product: { select: { id: true, name: true, sku: true, listPrice: true } },
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          },
+        },
+      }),
+      // 4. Lotes por vencer (próximos 30 días con stock > 0)
+      prisma.productLot.findMany({
+        where: {
+          stock: { gt: 0 },
+          expirationDate: { gte: today, lte: thirtyDaysFromNow },
+        },
+        select: {
+          id: true,
+          lotNumber: true,
+          expirationDate: true,
+          stock: true,
+          productId: true,
+          product: { select: { name: true, sku: true } },
+        },
+        orderBy: { expirationDate: 'asc' },
+      }),
+    ]);
 
-    // 2. Recomendaciones de reabastecimiento (IA) - Productos con stock real debajo del mínimo configurado
-    const allActiveProducts = await prisma.product.findMany({
-      where: { isActive: true, minStock: { gt: 0 } },
-      include: { provider: { select: { id: true, name: true } } },
-    });
     const lowStockProducts = allActiveProducts.filter((p) => p.stock < p.minStock);
     const showCosts = canViewProductCosts(req.user?.role);
 
@@ -53,90 +103,42 @@ export async function getCRMAlerts(req: AuthenticatedRequest, res: Response): Pr
       costPrice: showCosts ? roundToTwoDecimals(p.costPrice || 0).toNumber() : 0,
     }));
 
-    // 3. Sugerencias de Consumo Personalizadas por Cliente
-    // Para cada cliente activo, sugerir productos que compra frecuentemente pero no compró en su último pedido.
-    const activeClients = await prisma.persona.findMany({
-      where: { isClient: true, isActive: true },
-      include: {
-        orders: {
-          include: {
-            items: {
-              include: {
-                product: true,
-              },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
-
-    const consumerSuggestions = activeClients.map(client => {
-      if (client.orders.length === 0) {
-        return {
-          clientId: client.id,
-          clientName: client.name,
-          suggestedProducts: []
-        };
-      }
-
-      // Obtener histórico de productos comprados
-      const allPurchasedProducts: { [key: number]: { product: any, count: number } } = {};
-      client.orders.forEach(order => {
-        order.items.forEach(item => {
-          if (!allPurchasedProducts[item.productId]) {
-            allPurchasedProducts[item.productId] = { product: item.product, count: 0 };
-          }
-          allPurchasedProducts[item.productId].count += item.quantity;
-        });
-      });
-
-      // Obtener productos del último pedido
-      const lastOrderProductIds = new Set<number>();
-      if (client.orders[0]) {
-        client.orders[0].items.forEach(item => lastOrderProductIds.add(item.productId));
-      }
-
-      // Filtrar productos históricos que no están en el último pedido
-      const suggestions = Object.values(allPurchasedProducts)
-        .filter(item => !lastOrderProductIds.has(item.product.id))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 3)
-        .map(item => ({
-          productId: item.product.id,
-          name: item.product.name,
-          sku: item.product.sku,
-          listPrice: roundToIntegerPeso(item.product.listPrice || 0).toNumber(),
-          frequency: item.count,
-        }));
-
-      return {
-        clientId: client.id,
-        clientName: client.name,
-        suggestedProducts: suggestions,
-      };
-    }).filter(item => item.suggestedProducts.length > 0);
-
-    // 4. Lotes por vencer (próximos 30 días con stock > 0)
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    const today = new Date();
-
-    const expiringLots = await prisma.productLot.findMany({
-      where: {
-        stock: { gt: 0 },
-        expirationDate: {
-          gte: today,
-          lte: thirtyDaysFromNow
+    const consumerSuggestions = activeClients
+      .map((client) => {
+        if (client.orders.length === 0) {
+          return { clientId: client.id, clientName: client.name, suggestedProducts: [] };
         }
-      },
-      include: {
-        product: true
-      },
-      orderBy: {
-        expirationDate: 'asc'
-      }
-    });
+
+        const allPurchasedProducts: Record<number, { product: { id: number; name: string; sku: string; listPrice: any }; count: number }> = {};
+        client.orders.forEach((order) => {
+          order.items.forEach((item) => {
+            if (!allPurchasedProducts[item.productId]) {
+              allPurchasedProducts[item.productId] = { product: item.product, count: 0 };
+            }
+            allPurchasedProducts[item.productId].count += item.quantity;
+          });
+        });
+
+        const lastOrderProductIds = new Set<number>();
+        if (client.orders[0]) {
+          client.orders[0].items.forEach((item) => lastOrderProductIds.add(item.productId));
+        }
+
+        const suggestions = Object.values(allPurchasedProducts)
+          .filter((item) => !lastOrderProductIds.has(item.product.id))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3)
+          .map((item) => ({
+            productId: item.product.id,
+            name: item.product.name,
+            sku: item.product.sku,
+            listPrice: roundToIntegerPeso(item.product.listPrice || 0).toNumber(),
+            frequency: item.count,
+          }));
+
+        return { clientId: client.id, clientName: client.name, suggestedProducts: suggestions };
+      })
+      .filter((item) => item.suggestedProducts.length > 0);
 
     res.status(200).json({
       status: 'success',
