@@ -314,7 +314,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', width: '100%' }}>
+      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', width: '100%', flexWrap: 'wrap' }}>
         <WarehouseMapGrid
           matrix={filteredMatrix}
           slotStockMap={slotStockMap}

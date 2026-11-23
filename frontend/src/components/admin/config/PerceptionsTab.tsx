@@ -41,7 +41,7 @@ export default function PerceptionsTab({ setErrorMsg, setSuccessMsg }: TabMessag
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '20px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', alignItems: 'start' }}>
       <form onSubmit={handleCreatePerception} className="card" style={{ padding: '20px' }}>
         <h3 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 700 }}>Nueva percepción</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

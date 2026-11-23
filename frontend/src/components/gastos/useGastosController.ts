@@ -99,7 +99,7 @@ export function useGastosController() {
         ]);
         setCategories(cats || []);
         api.getBankAccounts().then((b) => setBankAccounts(b || [])).catch(() => {});
-        fetch(`${API_BASE_URL}/fleet/vehicles`, { credentials: 'include' })
+        fetch(`${API_BASE_URL}/fleet`, { credentials: 'include' })
           .then((r) => r.text())
           .then((t) => {
             const json = t?.trim() ? JSON.parse(t) : {};

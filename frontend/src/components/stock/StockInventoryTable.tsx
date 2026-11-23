@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import StockInventoryRow from './StockInventoryRow';
+
+const INITIAL_VISIBLE_ROWS = 50;
+const VISIBLE_ROWS_STEP = 50;
 
 interface StockInventoryTableProps {
   filteredProducts: any[];
@@ -39,15 +42,43 @@ export default function StockInventoryTable({
   canMutateStock = true
 }: StockInventoryTableProps) {
   const columnCount = canViewCosts ? 8 : 6;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ROWS);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_ROWS);
+  }, [filteredProducts.length]);
+
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount],
+  );
+  const hasMoreRows = visibleProducts.length < filteredProducts.length;
+
+  useEffect(() => {
+    if (!hasMoreRows || typeof IntersectionObserver === 'undefined') return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleCount((prev) => Math.min(prev + VISIBLE_ROWS_STEP, filteredProducts.length));
+        }
+      },
+      { rootMargin: '250px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreRows, filteredProducts.length]);
 
   return (
+    <div style={{ marginBottom: '24px' }}>
     <div
       className="table-container"
       style={{
         borderRadius: '10px',
         overflowX: 'auto',
         border: '1px solid var(--border-color)',
-        marginBottom: '24px'
       }}
     >
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -71,7 +102,7 @@ export default function StockInventoryTable({
               </td>
             </tr>
           ) : (
-            filteredProducts.map((p) => (
+            visibleProducts.map((p) => (
               <StockInventoryRow
                 key={p.id}
                 product={p}
@@ -90,6 +121,22 @@ export default function StockInventoryTable({
           )}
         </tbody>
       </table>
+    </div>
+    {filteredProducts.length > 0 && (
+      <div ref={sentinelRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 4px 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+        <span className="tabular-nums">Mostrando <strong>{visibleProducts.length}</strong> de <strong>{filteredProducts.length}</strong> productos</span>
+        {hasMoreRows && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ fontSize: '0.76rem', padding: '5px 12px', borderRadius: '6px' }}
+            onClick={() => setVisibleCount(filteredProducts.length)}
+          >
+            Mostrar todos ({filteredProducts.length})
+          </button>
+        )}
+      </div>
+    )}
     </div>
   );
 }

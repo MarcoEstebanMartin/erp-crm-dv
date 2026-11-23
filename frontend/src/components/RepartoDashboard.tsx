@@ -196,7 +196,7 @@ export default function RepartoDashboard() {
                         </td>
                         <td>
                           <span style={{
-                            fontSize: '0.75rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px',
+                            fontSize: '0.75rem', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', whiteSpace: 'nowrap', display: 'inline-block',
                             backgroundColor: r.status === 'COMPLETED' ? 'var(--color-success-bg)' : r.status === 'IN_TRANSIT' ? 'var(--color-info-bg)' : 'var(--color-warning-bg)',
                             color: r.status === 'COMPLETED' ? 'var(--color-success)' : r.status === 'IN_TRANSIT' ? 'var(--color-info)' : 'var(--color-warning)',
                           }}>
