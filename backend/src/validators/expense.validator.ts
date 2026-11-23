@@ -14,6 +14,7 @@ export const createExpenseSchema = z.object({
     description: z.string().trim().min(1, 'La descripción es obligatoria.').max(500),
     date: z.string().optional().nullable(),
     paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'CHECK', 'OTHER']),
+    affectFinance: z.boolean().optional(),
     cashSource: z.enum(['CAJA_GRANDE', 'CAJA_OFICINA']).optional().nullable(),
     cashDrawerId: z.coerce.number().int().positive().optional().nullable(),
     bankAccountId: z.coerce.number().int().positive().optional().nullable(),

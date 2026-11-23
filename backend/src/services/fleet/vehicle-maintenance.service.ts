@@ -130,7 +130,7 @@ export const vehicleMaintenanceService = {
             userId: input.userId,
             paymentMethod: resolvedMethod,
             cashDrawerId: resolvedCashDrawerId ?? undefined,
-            bankAccountId: input.bankAccountId ? Number(input.bankAccountId) : undefined,
+            bankAccountId: input.affectFinance && input.bankAccountId ? Number(input.bankAccountId) : undefined,
             vehicleId: input.vehicleId,
             transactionId: transactionId ?? undefined,
           },

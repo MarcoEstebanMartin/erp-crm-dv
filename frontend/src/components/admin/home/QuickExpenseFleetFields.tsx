@@ -17,6 +17,44 @@ export function matchCategoryId(categories: Array<{ id: number; name: string }>,
   return found ? String(found.id) : '';
 }
 
+const SHORT_BRANDS: Record<string, string> = {
+  'MERCEDES BENZ': 'MB',
+  'MERCEDES-BENZ': 'MB',
+  VOLKSWAGEN: 'VW',
+  PEUGEOT: 'Peugeot',
+  AUDI: 'Audi',
+  KYC: 'KYC',
+};
+
+function toTitleCase(text: string): string {
+  return text
+    .trim()
+    .split(/\s+/)
+    .map((w) => {
+      if (/^(MB|VW|KYC|A1|VTV)$/i.test(w)) return w.toUpperCase();
+      if (w.toLowerCase() === 'y' || w.toLowerCase() === 'de') return w.toLowerCase();
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
+
+export function formatVehicleLabel(v: { plate?: string; brand?: string; model?: string }): string {
+  const rawBrand = String(v.brand || '').trim();
+  const rawModel = String(v.model || '').trim();
+  const rawPlate = String(v.plate || '').trim();
+  const upperBrand = rawBrand.toUpperCase();
+  const upperPlate = rawPlate.toUpperCase();
+
+  const isInternalCode = upperPlate.includes('-') || upperBrand.startsWith('AUTOELEVADOR') || upperBrand.startsWith('ADMINISTRACION');
+  const brandShort = SHORT_BRANDS[upperBrand] || toTitleCase(rawBrand);
+  const cleanModel = toTitleCase(rawModel.replace(/\b(1\.4 T SPORTBACK|ELECTRICO)\b/gi, '').trim());
+
+  let title = rawBrand && rawModel ? `${brandShort} ${cleanModel}`.trim() : brandShort || cleanModel || rawPlate;
+  if (upperBrand.startsWith('ADMINISTRACION')) title = 'Depósito y Choferes';
+
+  return isInternalCode || !rawPlate ? title : `${title} · ${rawPlate}`;
+}
+
 interface QuickExpenseFleetFieldsProps {
   vehicles: any[];
   suppliers: any[];
@@ -49,7 +87,7 @@ export function QuickExpenseFleetFields({
         <select id="quick-expense-vehicle" name="vehicleId" required className="select" value={vehicleId} onChange={(e) => onVehicleChange(e.target.value)}>
           <option value="">Seleccionar...</option>
           {vehicles.map((v) => (
-            <option key={v.id} value={v.id}>{v.plate} · {v.brand} {v.model} ({v.currentOdometer} km)</option>
+            <option key={v.id} value={v.id}>{formatVehicleLabel(v)}</option>
           ))}
         </select>
       </div>

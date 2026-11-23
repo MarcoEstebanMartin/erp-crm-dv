@@ -1128,7 +1128,7 @@ export const api = {
     return res?.data?.periods || [];
   },
 
-  createExpenseNew: async (data: { amount: number; categoryId: number; description: string; date?: string; paymentMethod: string; cashSource?: 'CAJA_GRANDE' | 'CAJA_OFICINA'; cashDrawerId?: number; bankAccountId?: number; vehicleId?: number; billingType?: string }) => {
+  createExpenseNew: async (data: { amount: number; categoryId: number; description: string; date?: string; paymentMethod: string; affectFinance?: boolean; cashSource?: 'CAJA_GRANDE' | 'CAJA_OFICINA'; cashDrawerId?: number; bankAccountId?: number; vehicleId?: number; billingType?: string }) => {
     return await request('/expenses', {
       method: 'POST',
       body: JSON.stringify(data)

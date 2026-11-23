@@ -88,6 +88,7 @@ export const expenseService = {
     description: string;
     date?: string | null;
     paymentMethod: PaymentMethod;
+    affectFinance?: boolean;
     cashSource?: 'CAJA_GRANDE' | 'CAJA_OFICINA' | null;
     cashDrawerId?: number | null;
     bankAccountId?: number | null;
@@ -100,13 +101,14 @@ export const expenseService = {
     }
 
     const expenseDate = params.date ? new Date(params.date) : new Date();
+    const shouldAffectFinance = params.affectFinance !== false;
 
     return prisma.$transaction(async (tx) => {
       let transactionId: number | undefined;
       let resolvedCashDrawerId: number | undefined;
       let resolvedBankAccountId: number | undefined;
 
-      if (params.paymentMethod === PaymentMethod.CASH) {
+      if (shouldAffectFinance && params.paymentMethod === PaymentMethod.CASH) {
         if (params.cashSource === 'CAJA_GRANDE') {
           const trans = await tx.transaction.create({
             data: {
@@ -173,7 +175,7 @@ export const expenseService = {
           });
           transactionId = trans.id;
         }
-      } else if (params.paymentMethod === PaymentMethod.BANK_TRANSFER) {
+      } else if (shouldAffectFinance && params.paymentMethod === PaymentMethod.BANK_TRANSFER) {
         if (!params.bankAccountId) {
           throw new AppError('Debe seleccionar una cuenta bancaria para pagos por transferencia.', 400);
         }

@@ -31,7 +31,6 @@ const createInitialForm = () => ({
   paymentMethod: 'CASH',
   cashSource: 'CAJA_GRANDE' as CashSourceOption,
   bankAccountId: '',
-  billingType: 'INTERNAL',
 });
 
 export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetExpenseQuickModalProps) {
@@ -119,8 +118,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
     if (!amountVal || amountVal <= 0) return setFormError('Ingresá un monto mayor a cero.');
     if (!form.description.trim()) return setFormError('Ingresá una descripción.');
 
-    const checkFinance = form.mode === 'GENERAL' || form.affectFinance;
-    if (checkFinance && form.paymentMethod === 'BANK_TRANSFER' && !form.bankAccountId) {
+    if (form.affectFinance && form.paymentMethod === 'BANK_TRANSFER' && !form.bankAccountId) {
       return setFormError('Seleccioná una cuenta bancaria.');
     }
 
@@ -134,9 +132,10 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
           description: form.description.trim(),
           date: form.date,
           paymentMethod: form.paymentMethod,
-          cashSource: form.paymentMethod === 'CASH' ? form.cashSource : undefined,
-          bankAccountId: form.bankAccountId ? Number(form.bankAccountId) : undefined,
-          billingType: form.billingType,
+          affectFinance: form.affectFinance,
+          cashSource: form.affectFinance && form.paymentMethod === 'CASH' ? form.cashSource : undefined,
+          bankAccountId: form.affectFinance && form.bankAccountId ? Number(form.bankAccountId) : undefined,
+          billingType: 'INTERNAL',
         });
         setForm(createInitialForm());
         onSuccessMsg?.('Gasto registrado.');
@@ -164,9 +163,9 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
         categoryId: form.categoryId ? Number(form.categoryId) : null,
         affectFinance: form.affectFinance,
         paymentMethod: form.paymentMethod,
-        cashSource: form.paymentMethod === 'CASH' ? form.cashSource : null,
-        bankAccountId: form.bankAccountId ? Number(form.bankAccountId) : null,
-        billingType: form.billingType,
+        cashSource: form.affectFinance && form.paymentMethod === 'CASH' ? form.cashSource : null,
+        bankAccountId: form.affectFinance && form.bankAccountId ? Number(form.bankAccountId) : null,
+        billingType: 'INTERNAL',
       });
       setForm(createInitialForm());
       onSuccessMsg?.('Gasto de rodado registrado.');
@@ -271,16 +270,15 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
 
           <QuickExpensePaymentFields
             idPrefix="quick-expense"
+            affectFinance={form.affectFinance}
+            onAffectFinanceChange={(affectFinance) => setForm({ ...form, affectFinance })}
             paymentMethod={form.paymentMethod}
             onPaymentMethodChange={handlePaymentMethodChange}
             cashSource={form.cashSource}
             onCashSourceChange={(cashSource) => setForm({ ...form, cashSource })}
-            billingType={form.billingType}
-            onBillingTypeChange={(billingType) => setForm({ ...form, billingType })}
             bankAccountId={form.bankAccountId}
             onBankAccountIdChange={(bankAccountId) => setForm({ ...form, bankAccountId })}
             bankAccounts={bankAccounts}
-            optionalToggle={form.mode === 'RODADO' ? { checked: form.affectFinance, onChange: (affectFinance) => setForm({ ...form, affectFinance }) } : undefined}
           />
 
           <div className="modal-footer" style={{ marginTop: '14px' }}>

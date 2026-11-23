@@ -374,4 +374,67 @@ describe('expenseService & expense-bulk.service — Caja Grande y edición atóm
       }),
     ).rejects.toThrow('No hay una Caja Oficina abierta.');
   });
+
+  it('expenseService.createExpense con affectFinance=false registra el gasto sin crear Transaction ni tocar banco', async () => {
+    mockTx.expense.create.mockResolvedValue({ id: 1010, amount: 45000 });
+
+    await expenseService.createExpense({
+      userId: 1,
+      amount: 45000,
+      categoryId: 2,
+      description: 'Luz ya abonada',
+      paymentMethod: PaymentMethod.CASH,
+      affectFinance: false,
+      cashSource: 'CAJA_GRANDE',
+    });
+
+    expect(mockTx.transaction.create).not.toHaveBeenCalled();
+    expect(mockTx.bankAccount.update).not.toHaveBeenCalled();
+    expect(mockTx.expense.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          amount: 45000,
+          transactionId: undefined,
+          cashDrawerId: undefined,
+          bankAccountId: undefined,
+        }),
+      }),
+    );
+  });
+
+  it('vehicleMaintenanceService.createMaintenance con affectFinance=false no crea Transaction ni toca banco', async () => {
+    mockPrisma.vehicle.findUnique.mockResolvedValue({
+      id: 4,
+      plate: 'AE123CD',
+      currentOdometer: 50000,
+    });
+    mockTx.vehicleMaintenance.create.mockResolvedValue({ id: 90, cost: 80000 });
+    mockTx.expense.create.mockResolvedValue({ id: 1011 });
+
+    await vehicleMaintenanceService.createMaintenance({
+      userId: 1,
+      vehicleId: 4,
+      type: 'SERVICE',
+      description: 'Cambio de aceite (histórico)',
+      cost: 80000,
+      odometer: 50200,
+      affectFinance: false,
+      paymentMethod: PaymentMethod.BANK_TRANSFER,
+      bankAccountId: 1,
+      categoryId: 7,
+    });
+
+    expect(mockTx.transaction.create).not.toHaveBeenCalled();
+    expect(mockTx.bankAccount.update).not.toHaveBeenCalled();
+    expect(mockTx.expense.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        amount: 80000,
+        categoryId: 7,
+        vehicleId: 4,
+        transactionId: undefined,
+        cashDrawerId: undefined,
+        bankAccountId: undefined,
+      }),
+    });
+  });
 });
