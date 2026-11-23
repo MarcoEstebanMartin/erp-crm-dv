@@ -8,7 +8,6 @@ import { useFieldRendiciones } from './rendiciones/useFieldRendiciones';
 import PendingRendicionesTabs from './rendiciones/PendingRendicionesTabs';
 import { PendingFieldTransfersCard } from './rendiciones/FieldSettlementCards';
 import RendicionAuditModal from './rendiciones/RendicionAuditModal';
-import DrawersHistoryTable from './rendiciones/DrawersHistoryTable';
 import CajaOpenModal from './rendiciones/CajaOpenModal';
 import InspectDrawerModal from './rendiciones/InspectDrawerModal';
 import ArqueoResultModal from './rendiciones/ArqueoResultModal';
@@ -199,16 +198,6 @@ const RendicionesDashboard: React.FC = () => {
         onDeleteReceipt={audit.handleDeleteReceipt}
         onClose={audit.handleCloseAudit}
         onSubmit={audit.handleVerifySubmit}
-      />
-
-      <DrawersHistoryTable
-        loadingHistory={deposit.loadingHistory}
-        filteredHistory={deposit.filteredHistory}
-        filterStartDate={deposit.filterStartDate}
-        onFilterStartDateChange={deposit.setFilterStartDate}
-        filterEndDate={deposit.filterEndDate}
-        onFilterEndDateChange={deposit.setFilterEndDate}
-        onInspectDrawer={deposit.handleInspectDrawer}
       />
 
       <CajaOpenModal

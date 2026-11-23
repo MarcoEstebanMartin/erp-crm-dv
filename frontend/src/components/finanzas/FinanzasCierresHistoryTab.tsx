@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { api } from '../../utils/api';
-import { classifyDrawerHistoryRow } from '../rendiciones/drawerHistoryHelpers';
+import { classifyDrawerHistoryRow, type DrawerKind } from '../rendiciones/drawerHistoryHelpers';
 
 interface FinanzasCierresHistoryTabProps {
   initialDrawers: any[];
@@ -9,6 +9,16 @@ interface FinanzasCierresHistoryTabProps {
 }
 
 const PAGE_SIZE = 30;
+type KindFilter = 'ALL' | DrawerKind;
+
+const KIND_FILTERS: Array<{ key: KindFilter; label: string }> = [
+  { key: 'ALL', label: 'Todos' },
+  { key: 'CENTRAL', label: 'Caja Grande' },
+  { key: 'DEPOSITO', label: 'Caja Oficina' },
+  { key: 'VENDEDOR', label: 'Vendedores' },
+  { key: 'REPARTIDOR', label: 'Reparto' },
+  { key: 'ADMINISTRACION', label: 'Mostrador' },
+];
 
 export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps> = ({
   initialDrawers,
@@ -17,6 +27,7 @@ export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps>
   const [drawers, setDrawers] = useState<any[]>(initialDrawers.slice(0, PAGE_SIZE));
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [kindFilter, setKindFilter] = useState<KindFilter>('ALL');
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(initialDrawers.length >= PAGE_SIZE);
 
@@ -42,6 +53,9 @@ export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps>
       setLoading(false);
     }
   };
+
+  const classifiedRows = drawers.map((d: any) => ({ drawer: d, meta: classifyDrawerHistoryRow(d) }));
+  const visibleRows = kindFilter === 'ALL' ? classifiedRows : classifiedRows.filter((row) => row.meta.kind === kindFilter);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -89,8 +103,35 @@ export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps>
           )}
         </div>
         <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-          Mostrando {drawers.length} {drawers.length === 1 ? 'cierre' : 'cierres'}
+          Mostrando {visibleRows.length} {visibleRows.length === 1 ? 'cierre' : 'cierres'}
         </span>
+      </div>
+
+      <div role="group" aria-label="Filtrar cierres por tipo" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {KIND_FILTERS.map((f) => {
+          const active = kindFilter === f.key;
+          return (
+            <button
+              key={f.key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setKindFilter(f.key)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '999px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: active ? '1px solid #0f172a' : '1px solid var(--border-color)',
+                backgroundColor: active ? '#0f172a' : 'transparent',
+                color: active ? '#ffffff' : 'var(--text-secondary)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {f.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="table-container table-container--sticky" role="region" aria-label="Historial de cierres y arqueos" tabIndex={0}>
@@ -105,15 +146,14 @@ export const FinanzasCierresHistoryTab: React.FC<FinanzasCierresHistoryTabProps>
             </tr>
           </thead>
           <tbody>
-            {drawers.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
                   Sin cierres en este rango
                 </td>
               </tr>
             ) : (
-              drawers.map((d: any) => {
-                const meta = classifyDrawerHistoryRow(d);
+              visibleRows.map(({ drawer: d, meta }) => {
                 const displayAmount = meta.isCentral
                   ? Number(d.realBalance ?? 0)
                   : Number(d.realBalance ?? 0) - Number(d.openingBalance ?? 0);
