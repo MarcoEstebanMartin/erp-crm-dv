@@ -29,6 +29,7 @@ export function useGastosController() {
   const [compareManuallySet, setCompareManuallySet] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'planilla' | 'categorias'>('planilla');
+  const [scopeFilter, setScopeFilter] = useState<'ALL' | 'GENERAL' | 'RODADO'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategoryId, setFilterCategoryId] = useState('');
 
@@ -231,9 +232,28 @@ export function useGastosController() {
     }
   };
 
+  const matchesScope = useCallback(
+    (e: Expense) => {
+      const isVehicle = Boolean(e.vehicleId || e.vehicle);
+      if (scopeFilter === 'RODADO') return isVehicle;
+      if (scopeFilter === 'GENERAL') return !isVehicle;
+      return true;
+    },
+    [scopeFilter],
+  );
+
+  const filteredExpenses = useMemo(() => expenses.filter(matchesScope), [expenses, matchesScope]);
+  const filteredCompareExpenses = useMemo(() => compareExpenses.filter(matchesScope), [compareExpenses, matchesScope]);
+
   const comparisonRows = useMemo(
-    () => buildComparisonRows({ expenses, compareExpenses, filterCategoryId, searchQuery }),
-    [expenses, compareExpenses, filterCategoryId, searchQuery],
+    () =>
+      buildComparisonRows({
+        expenses: filteredExpenses,
+        compareExpenses: filteredCompareExpenses,
+        filterCategoryId,
+        searchQuery,
+      }),
+    [filteredExpenses, filteredCompareExpenses, filterCategoryId, searchQuery],
   );
 
   const missingRows = useMemo(
@@ -254,20 +274,20 @@ export function useGastosController() {
     refreshAll,
   });
 
-  const totalGasto = useMemo(() => expenses.reduce((sum, e) => sum + Math.round(Number(e.amount)), 0), [expenses]);
-  const totalCompare = useMemo(() => compareExpenses.reduce((sum, e) => sum + Math.round(Number(e.amount)), 0), [compareExpenses]);
+  const totalGasto = useMemo(() => filteredExpenses.reduce((sum, e) => sum + Math.round(Number(e.amount)), 0), [filteredExpenses]);
+  const totalCompare = useMemo(() => filteredCompareExpenses.reduce((sum, e) => sum + Math.round(Number(e.amount)), 0), [filteredCompareExpenses]);
   const totalDiff = totalGasto - totalCompare;
   const totalDiffPct = totalCompare > 0 ? (totalDiff / totalCompare) * 100 : null;
 
   const sortedCategories = useMemo(
-    () => buildCategoryStats(expenses, totalGasto),
-    [expenses, totalGasto],
+    () => buildCategoryStats(filteredExpenses, totalGasto),
+    [filteredExpenses, totalGasto],
   );
 
   return {
-    isAdmin, activeTab, setActiveTab, searchQuery, setSearchQuery, filterCategoryId, setFilterCategoryId,
+    isAdmin, activeTab, setActiveTab, scopeFilter, setScopeFilter, searchQuery, setSearchQuery, filterCategoryId, setFilterCategoryId,
     selectedYear, selectedMonth, compareYear, compareMonth, periods, navigateMonth, setComparePeriod,
-    expenses, compareExpenses, comparisonRows, missingRows, categories, vehicles, bankAccounts,
+    expenses: filteredExpenses, compareExpenses: filteredCompareExpenses, comparisonRows, missingRows, categories, vehicles, bankAccounts,
     loading, savingRowKey, savedRowKey, errorMsg, setErrorMsg, successMsg, setSuccessMsg,
     totalGasto, totalCompare, totalDiff, totalDiffPct, sortedCategories,
     handleDeleteExpense, handleInlineSaveAmount, handleQuickCopyRow, handleQuickAddRow,

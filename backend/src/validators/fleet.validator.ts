@@ -54,7 +54,9 @@ export const createMaintenanceSchema = z.object({
     supplierId: nullablePositiveInt,
     affectFinance: z.boolean().optional(),
     paymentMethod: z.enum(['CASH', 'BANK_TRANSFER', 'CHECK', 'OTHER']).optional(),
+    cashSource: z.enum(['CAJA_GRANDE', 'CAJA_OFICINA']).optional().nullable(),
     bankAccountId: nullablePositiveInt,
+    categoryId: nullablePositiveInt,
     billingType: z.enum(['OFFICIAL', 'INTERNAL']).optional(),
   }),
 });

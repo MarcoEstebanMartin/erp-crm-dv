@@ -21,7 +21,9 @@ export interface CreateMaintenanceInput {
   supplierId?: number | null;
   affectFinance?: boolean;
   paymentMethod?: PaymentMethod | string;
+  cashSource?: 'CAJA_GRANDE' | 'CAJA_OFICINA' | null;
   bankAccountId?: number | null;
+  categoryId?: number | null;
   billingType?: BillingType | string;
 }
 
@@ -54,8 +56,28 @@ export const vehicleMaintenanceService = {
 
     const result = await prisma.$transaction(async (tx) => {
       let transactionId: number | null = null;
+      let resolvedCashDrawerId: number | null = null;
 
       if (input.affectFinance) {
+        if (resolvedMethod === PaymentMethod.CASH && input.cashSource === 'CAJA_OFICINA') {
+          const activeDrawer = tx.cashDrawer?.findFirst
+            ? await tx.cashDrawer.findFirst({
+                where: {
+                  status: 'OPEN',
+                  OR: [{ branch: 'DEPOSITO' }, { drawerType: 'DEPOSITO' }],
+                },
+                orderBy: { openedAt: 'desc' },
+              })
+            : null;
+          if (!activeDrawer) {
+            throw new AppError(
+              'No hay una Caja Oficina abierta. Abrí Caja Oficina para registrar gastos desde ella.',
+              400,
+            );
+          }
+          resolvedCashDrawerId = activeDrawer.id;
+        }
+
         if (resolvedMethod === PaymentMethod.BANK_TRANSFER && input.bankAccountId && tx.bankAccount?.update) {
           await tx.bankAccount.update({
             where: { id: Number(input.bankAccountId) },
@@ -73,6 +95,7 @@ export const vehicleMaintenanceService = {
             description: `Gasto de Flota (${vehicle.plate}) - ${cleanDescription}`,
             verified: true,
             personaId: input.supplierId ? Number(input.supplierId) : null,
+            cashDrawerId: resolvedCashDrawerId,
             bankAccountId: input.bankAccountId ? Number(input.bankAccountId) : null,
           },
         });
@@ -94,7 +117,9 @@ export const vehicleMaintenanceService = {
 
       // Sincronización automática con la Planilla de Gastos (sin duplicar movimiento financiero)
       const categoryHint = input.type === 'FUEL' ? 'Combustible' : 'Mantenimiento';
-      const categoryId = await resolveExpenseCategoryId(tx as any, categoryHint);
+      const categoryId = input.categoryId
+        ? Number(input.categoryId)
+        : await resolveExpenseCategoryId(tx as any, categoryHint);
       if (categoryId && tx.expense?.create) {
         await tx.expense.create({
           data: {
@@ -104,6 +129,7 @@ export const vehicleMaintenanceService = {
             categoryId,
             userId: input.userId,
             paymentMethod: resolvedMethod,
+            cashDrawerId: resolvedCashDrawerId ?? undefined,
             bankAccountId: input.bankAccountId ? Number(input.bankAccountId) : undefined,
             vehicleId: input.vehicleId,
             transactionId: transactionId ?? undefined,

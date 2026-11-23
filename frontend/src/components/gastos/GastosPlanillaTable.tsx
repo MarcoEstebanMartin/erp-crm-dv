@@ -161,7 +161,26 @@ export function GastosPlanillaTable({
                 <tr key={row.rowKey}>
                   <td style={{ ...tdBase, padding: '0 8px 0 14px', color: isPending ? '#6B7280' : '#111827', fontWeight: isPending ? 400 : 500, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description}</span>
+                        {row.currentExpense?.vehicle?.plate && (
+                          <span
+                            style={{
+                              flexShrink: 0,
+                              fontSize: '0.68rem',
+                              fontWeight: 600,
+                              fontFamily: 'monospace',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              backgroundColor: '#F3F4F6',
+                              border: '1px solid #E5E7EB',
+                              color: '#374151',
+                            }}
+                          >
+                            {row.currentExpense.vehicle.plate}
+                          </span>
+                        )}
+                      </div>
                       {isAdmin && row.currentExpense && (
                         <button
                           type="button"

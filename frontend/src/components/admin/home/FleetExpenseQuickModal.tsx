@@ -1,7 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { Truck, Wallet, X } from 'lucide-react';
 import { api } from '../../../utils/api';
 import { NativeModalDialog } from '../../modals/NativeModalDialog';
+import { QuickExpensePaymentFields, type CashSourceOption } from './QuickExpensePaymentFields';
+import {
+  FLEET_SUBTYPE_HINTS,
+  QuickExpenseFleetFields,
+  matchCategoryId,
+  type ExpenseMode,
+  type FleetSubType,
+} from './QuickExpenseFleetFields';
 
 interface FleetExpenseQuickModalProps {
   isOpen: boolean;
@@ -10,20 +18,24 @@ interface FleetExpenseQuickModalProps {
 }
 
 const createInitialForm = () => ({
-  vehicleId: '',
-  type: 'FUEL',
-  description: '',
-  cost: '',
-  odometer: '',
+  mode: 'GENERAL' as ExpenseMode,
+  amount: '',
   date: new Date().toISOString().substring(0, 10),
+  categoryId: '',
+  description: '',
+  vehicleId: '',
+  fleetType: 'FUEL' as FleetSubType,
+  odometer: '',
   supplierId: '',
   affectFinance: true,
   paymentMethod: 'CASH',
+  cashSource: 'CAJA_GRANDE' as CashSourceOption,
   bankAccountId: '',
   billingType: 'INTERNAL',
 });
 
 export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetExpenseQuickModalProps) {
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
@@ -31,7 +43,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
   const [submitting, setSubmitting] = useState(false);
   const [errorData, setErrorData] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [gastoForm, setGastoForm] = useState(createInitialForm);
+  const [form, setForm] = useState(createInitialForm);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -40,9 +52,10 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
     setErrorData(null);
     setFormError(null);
 
-    Promise.all([api.getVehicles(), api.getPersonas('provider'), api.getBankAccounts()])
-      .then(([vehiclesData, suppliersData, bankAccountsData]) => {
+    Promise.all([api.getExpenseCategories(), api.getVehicles(), api.getPersonas('provider'), api.getBankAccounts()])
+      .then(([catsData, vehiclesData, suppliersData, bankAccountsData]) => {
         if (cancelled) return;
+        setCategories(catsData || []);
         setVehicles(vehiclesData || []);
         setSuppliers((suppliersData || []).filter((s: any) => s.isActive !== false));
         setBankAccounts(bankAccountsData || []);
@@ -54,56 +67,109 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
         if (!cancelled) setLoadingData(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [isOpen]);
 
   const selectedVehicle = useMemo(
-    () => (gastoForm.vehicleId ? vehicles.find((v) => v.id === Number(gastoForm.vehicleId)) || null : null),
-    [gastoForm.vehicleId, vehicles],
+    () => (form.vehicleId ? vehicles.find((v) => v.id === Number(form.vehicleId)) || null : null),
+    [form.vehicleId, vehicles],
   );
 
   useEffect(() => {
     if (selectedVehicle) {
-      setGastoForm((prev) => ({
+      setForm((prev) => ({
         ...prev,
         odometer: prev.odometer ? prev.odometer : String(selectedVehicle.currentOdometer || 0),
       }));
     }
   }, [selectedVehicle]);
 
-  const handleSaveGasto = async (e: React.FormEvent) => {
+  const handleModeChange = (nextMode: ExpenseMode) => {
+    setFormError(null);
+    setForm((prev) => {
+      const nextCat =
+        nextMode === 'RODADO'
+          ? matchCategoryId(categories, FLEET_SUBTYPE_HINTS[prev.fleetType].categoryKeyword) || prev.categoryId
+          : prev.categoryId;
+      return { ...prev, mode: nextMode, categoryId: nextCat };
+    });
+  };
+
+  const handleFleetTypeChange = (nextType: FleetSubType) => {
+    const suggestedCat = matchCategoryId(categories, FLEET_SUBTYPE_HINTS[nextType].categoryKeyword);
+    setForm((prev) => ({ ...prev, fleetType: nextType, categoryId: suggestedCat || prev.categoryId }));
+  };
+
+  const handlePaymentMethodChange = (method: string) => {
+    setForm((prev) => ({
+      ...prev,
+      paymentMethod: method,
+      bankAccountId:
+        (method === 'BANK_TRANSFER' || method === 'CHECK') && !prev.bankAccountId && bankAccounts.length > 0
+          ? String(bankAccounts[0].id)
+          : prev.bankAccountId,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    if (!gastoForm.vehicleId) return setFormError('Seleccioná un vehículo.');
-    if (!gastoForm.cost || Number(gastoForm.cost) <= 0) return setFormError('Ingresá un monto mayor a cero.');
-    if (!gastoForm.odometer || Number(gastoForm.odometer) < 0) return setFormError('Ingresá un odómetro válido.');
-    if (
-      gastoForm.affectFinance &&
-      (gastoForm.paymentMethod === 'BANK_TRANSFER' || gastoForm.paymentMethod === 'CHECK') &&
-      !gastoForm.bankAccountId
-    ) {
+
+    const amountVal = Number(form.amount);
+    if (!amountVal || amountVal <= 0) return setFormError('Ingresá un monto mayor a cero.');
+    if (!form.description.trim()) return setFormError('Ingresá una descripción.');
+
+    const checkFinance = form.mode === 'GENERAL' || form.affectFinance;
+    if (checkFinance && form.paymentMethod === 'BANK_TRANSFER' && !form.bankAccountId) {
       return setFormError('Seleccioná una cuenta bancaria.');
     }
 
+    if (form.mode === 'GENERAL') {
+      if (!form.categoryId) return setFormError('Seleccioná una categoría.');
+      setSubmitting(true);
+      try {
+        await api.createExpenseNew({
+          amount: amountVal,
+          categoryId: Number(form.categoryId),
+          description: form.description.trim(),
+          date: form.date,
+          paymentMethod: form.paymentMethod,
+          cashSource: form.paymentMethod === 'CASH' ? form.cashSource : undefined,
+          bankAccountId: form.bankAccountId ? Number(form.bankAccountId) : undefined,
+          billingType: form.billingType,
+        });
+        setForm(createInitialForm());
+        onSuccessMsg?.('Gasto registrado.');
+        onClose();
+      } catch (err: any) {
+        setFormError(err.message || 'Error al guardar el gasto.');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    if (!form.vehicleId) return setFormError('Seleccioná un vehículo.');
+    if (form.odometer === '' || Number(form.odometer) < 0) return setFormError('Ingresá un odómetro válido.');
+
     setSubmitting(true);
     try {
-      await api.createVehicleMaintenance(Number(gastoForm.vehicleId), {
-        type: gastoForm.type,
-        description: gastoForm.description.trim(),
-        cost: Number(gastoForm.cost),
-        odometer: Number(gastoForm.odometer),
-        date: gastoForm.date,
-        supplierId: gastoForm.supplierId ? Number(gastoForm.supplierId) : null,
-        affectFinance: gastoForm.affectFinance,
-        paymentMethod: gastoForm.paymentMethod,
-        bankAccountId: gastoForm.bankAccountId ? Number(gastoForm.bankAccountId) : null,
-        billingType: gastoForm.billingType,
+      await api.createVehicleMaintenance(Number(form.vehicleId), {
+        type: FLEET_SUBTYPE_HINTS[form.fleetType].backendType,
+        description: form.description.trim(),
+        cost: amountVal,
+        odometer: Number(form.odometer),
+        date: form.date,
+        supplierId: form.supplierId ? Number(form.supplierId) : null,
+        categoryId: form.categoryId ? Number(form.categoryId) : null,
+        affectFinance: form.affectFinance,
+        paymentMethod: form.paymentMethod,
+        cashSource: form.paymentMethod === 'CASH' ? form.cashSource : null,
+        bankAccountId: form.bankAccountId ? Number(form.bankAccountId) : null,
+        billingType: form.billingType,
       });
-
-      setGastoForm(createInitialForm());
-      onSuccessMsg?.('Gasto de flota registrado.');
+      setForm(createInitialForm());
+      onSuccessMsg?.('Gasto de rodado registrado.');
       onClose();
     } catch (err: any) {
       setFormError(err.message || 'Error al guardar el gasto.');
@@ -115,15 +181,16 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
   return (
     <NativeModalDialog
       isOpen={isOpen}
-      onClose={onClose}
-      ariaLabelledBy="fleet-expense-modal-title"
-      style={{ width: '94vw', maxWidth: '520px', padding: '22px 24px', maxHeight: '90vh' }}
+      onClose={() => !submitting && onClose()}
+      ariaLabelledBy="quick-expense-modal-title"
+      closeOnBackdrop={!submitting}
+      style={{ width: '94vw', maxWidth: '520px', padding: '22px 24px', maxHeight: '92vh' }}
     >
       <div className="modal-header" style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)' }}>
-        <h2 id="fleet-expense-modal-title" style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-          Gasto de flota
+        <h2 id="quick-expense-modal-title" style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+          Nuevo gasto
         </h2>
-        <button type="button" aria-label="Cerrar" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose}>
+        <button type="button" aria-label="Cerrar" className="btn btn-ghost" style={{ padding: '4px' }} onClick={onClose} disabled={submitting}>
           <X size={18} aria-hidden="true" />
         </button>
       </div>
@@ -135,129 +202,86 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
           {errorData}
         </div>
       ) : (
-        <form onSubmit={handleSaveGasto} style={{ overflowY: 'auto' }}>
+        <form onSubmit={handleSubmit} style={{ overflowY: 'auto' }}>
+          <div role="tablist" aria-label="Tipo de gasto" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', padding: '4px', backgroundColor: '#F3F4F6', borderRadius: '8px', marginBottom: '14px' }}>
+            {([
+              { id: 'GENERAL' as const, label: 'General', icon: <Wallet size={15} aria-hidden="true" /> },
+              { id: 'RODADO' as const, label: 'Rodado', icon: <Truck size={15} aria-hidden="true" /> },
+            ]).map((tab) => {
+              const active = form.mode === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => handleModeChange(tab.id)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 10px', border: 'none', borderRadius: '6px', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer', backgroundColor: active ? '#FFFFFF' : 'transparent', color: active ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: active ? '0 1px 2px rgba(0,0,0,0.08)' : 'none' }}
+                >
+                  {tab.icon}{tab.label}
+                </button>
+              );
+            })}
+          </div>
+
           {formError && (
             <div role="alert" style={{ marginBottom: '12px', padding: '8px 12px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#E30613', fontSize: '0.82rem', fontWeight: 600 }}>
               {formError}
             </div>
           )}
 
+          {form.mode === 'RODADO' && (
+            <QuickExpenseFleetFields
+              vehicles={vehicles}
+              suppliers={suppliers}
+              vehicleId={form.vehicleId}
+              fleetType={form.fleetType}
+              odometer={form.odometer}
+              supplierId={form.supplierId}
+              onVehicleChange={(vehicleId) => setForm({ ...form, vehicleId, odometer: '' })}
+              onFleetTypeChange={handleFleetTypeChange}
+              onOdometerChange={(odometer) => setForm({ ...form, odometer })}
+              onSupplierChange={(supplierId) => setForm({ ...form, supplierId })}
+            />
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="form-group">
+              <label htmlFor="quick-expense-amount">Monto ($)</label>
+              <input id="quick-expense-amount" name="amount" type="number" step="0.01" min="0.01" required className="input tabular-nums" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="quick-expense-date">Fecha</label>
+              <input id="quick-expense-date" name="date" type="date" required className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            </div>
+          </div>
+
           <div className="form-group">
-            <label htmlFor="fleet-vehicle">Vehículo</label>
-            <select id="fleet-vehicle" name="vehicleId" required className="select" value={gastoForm.vehicleId} onChange={(e) => setGastoForm({ ...gastoForm, vehicleId: e.target.value, odometer: '' })}>
+            <label htmlFor="quick-expense-category">Categoría</label>
+            <select id="quick-expense-category" name="categoryId" required={form.mode === 'GENERAL'} className="select" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
               <option value="">Seleccionar...</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.plate} · {v.brand} {v.model} ({v.currentOdometer} km)
-                </option>
-              ))}
+              {categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="form-group">
-              <label htmlFor="fleet-type">Tipo</label>
-              <select id="fleet-type" name="type" className="select" value={gastoForm.type} onChange={(e) => setGastoForm({ ...gastoForm, type: e.target.value })}>
-                <option value="FUEL">Combustible</option>
-                <option value="SERVICE">Service</option>
-                <option value="REPAIR">Taller</option>
-                <option value="CLEANING">Lavadero</option>
-                <option value="OTHER">Otro</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="fleet-date">Fecha</label>
-              <input id="fleet-date" name="date" type="date" required className="input" value={gastoForm.date} onChange={(e) => setGastoForm({ ...gastoForm, date: e.target.value })} />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="form-group">
-              <label htmlFor="fleet-odometer">Odómetro (km)</label>
-              <input id="fleet-odometer" name="odometer" type="number" required className="input" value={gastoForm.odometer} onChange={(e) => setGastoForm({ ...gastoForm, odometer: e.target.value })} />
-              {selectedVehicle && (
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-                  Actual: {selectedVehicle.currentOdometer} km
-                </span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="fleet-cost">Monto ($)</label>
-              <input id="fleet-cost" name="cost" type="number" step="0.01" required className="input" value={gastoForm.cost} onChange={(e) => setGastoForm({ ...gastoForm, cost: e.target.value })} />
-            </div>
-          </div>
-
           <div className="form-group">
-            <label htmlFor="fleet-description">Detalle</label>
-            <input id="fleet-description" name="description" type="text" required className="input" value={gastoForm.description} onChange={(e) => setGastoForm({ ...gastoForm, description: e.target.value })} />
+            <label htmlFor="quick-expense-description">Detalle</label>
+            <input id="quick-expense-description" name="description" type="text" required className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="fleet-supplier">Proveedor</label>
-            <select id="fleet-supplier" name="supplierId" className="select" value={gastoForm.supplierId} onChange={(e) => setGastoForm({ ...gastoForm, supplierId: e.target.value })}>
-              <option value="">Sin proveedor</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '12px', backgroundColor: 'var(--bg-light, #f5f5f7)', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input type="checkbox" id="fleet-affect-finance" name="affectFinance" checked={gastoForm.affectFinance} onChange={(e) => setGastoForm({ ...gastoForm, affectFinance: e.target.checked })} />
-              <label htmlFor="fleet-affect-finance" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Imputar egreso en caja/banco
-              </label>
-            </div>
-
-            {gastoForm.affectFinance && (
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label htmlFor="fleet-payment-method" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                      Medio de pago
-                    </label>
-                    <select id="fleet-payment-method" name="paymentMethod" className="select" value={gastoForm.paymentMethod} onChange={(e) => setGastoForm({ ...gastoForm, paymentMethod: e.target.value })}>
-                      <option value="CASH">Efectivo</option>
-                      <option value="BANK_TRANSFER">Transferencia</option>
-                      <option value="CHECK">Cheque</option>
-                      <option value="OTHER">Otro</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="fleet-billing-type" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                      Comprobante
-                    </label>
-                    <select id="fleet-billing-type" name="billingType" className="select" value={gastoForm.billingType} onChange={(e) => setGastoForm({ ...gastoForm, billingType: e.target.value })}>
-                      <option value="INTERNAL">Interno</option>
-                      <option value="OFFICIAL">Oficial</option>
-                    </select>
-                  </div>
-                </div>
-
-                {(gastoForm.paymentMethod === 'BANK_TRANSFER' || gastoForm.paymentMethod === 'CHECK') && (
-                  <div>
-                    <label htmlFor="fleet-bank-account" style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                      Cuenta bancaria
-                    </label>
-                    <select id="fleet-bank-account" name="bankAccountId" required className="select" value={gastoForm.bankAccountId} onChange={(e) => setGastoForm({ ...gastoForm, bankAccountId: e.target.value })}>
-                      <option value="">Seleccionar...</option>
-                      {bankAccounts.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.bankName} · {b.accountNumber}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <QuickExpensePaymentFields
+            idPrefix="quick-expense"
+            paymentMethod={form.paymentMethod}
+            onPaymentMethodChange={handlePaymentMethodChange}
+            cashSource={form.cashSource}
+            onCashSourceChange={(cashSource) => setForm({ ...form, cashSource })}
+            billingType={form.billingType}
+            onBillingTypeChange={(billingType) => setForm({ ...form, billingType })}
+            bankAccountId={form.bankAccountId}
+            onBankAccountIdChange={(bankAccountId) => setForm({ ...form, bankAccountId })}
+            bankAccounts={bankAccounts}
+            optionalToggle={form.mode === 'RODADO' ? { checked: form.affectFinance, onChange: (affectFinance) => setForm({ ...form, affectFinance }) } : undefined}
+          />
 
           <div className="modal-footer" style={{ marginTop: '14px' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>Cancelar</button>

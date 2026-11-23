@@ -9,6 +9,7 @@ const { mockTx, mockPrisma, mockLogAudit } = vi.hoisted(() => {
     },
     cashDrawer: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
     },
     transaction: {
       create: vi.fn(),
@@ -307,5 +308,70 @@ describe('expenseService & expense-bulk.service — Caja Grande y edición atóm
         transactionId: 777,
       }),
     });
+  });
+
+  it('vehicleMaintenanceService.createMaintenance respeta CAJA_OFICINA y categoryId personalizada', async () => {
+    mockPrisma.vehicle.findUnique.mockResolvedValue({
+      id: 4,
+      plate: 'AE123CD',
+      currentOdometer: 50000,
+    });
+    mockTx.cashDrawer.findFirst.mockResolvedValue({ id: 42, status: 'OPEN', drawerType: 'DEPOSITO' });
+    mockTx.transaction.create.mockResolvedValue({ id: 778 });
+    mockTx.vehicleMaintenance.create.mockResolvedValue({ id: 89, cost: 95000 });
+    mockTx.expense.create.mockResolvedValue({ id: 1000 });
+
+    await vehicleMaintenanceService.createMaintenance({
+      userId: 1,
+      vehicleId: 4,
+      type: 'OTHER',
+      description: 'Seguro mensual',
+      cost: 95000,
+      odometer: 50000,
+      affectFinance: true,
+      paymentMethod: PaymentMethod.CASH,
+      cashSource: 'CAJA_OFICINA',
+      categoryId: 6,
+    });
+
+    expect(mockTx.transaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        amount: 95000,
+        cashDrawerId: 42,
+        paymentMethod: PaymentMethod.CASH,
+      }),
+    });
+    expect(mockTx.expense.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        amount: 95000,
+        categoryId: 6,
+        cashDrawerId: 42,
+        vehicleId: 4,
+        transactionId: 778,
+      }),
+    });
+  });
+
+  it('vehicleMaintenanceService.createMaintenance lanza error si se elige CAJA_OFICINA y no hay caja abierta', async () => {
+    mockPrisma.vehicle.findUnique.mockResolvedValue({
+      id: 4,
+      plate: 'AE123CD',
+      currentOdometer: 50000,
+    });
+    mockTx.cashDrawer.findFirst.mockResolvedValue(null);
+
+    await expect(
+      vehicleMaintenanceService.createMaintenance({
+        userId: 1,
+        vehicleId: 4,
+        type: 'REPAIR',
+        description: 'Cambio de cubierta',
+        cost: 120000,
+        odometer: 50100,
+        affectFinance: true,
+        paymentMethod: PaymentMethod.CASH,
+        cashSource: 'CAJA_OFICINA',
+      }),
+    ).rejects.toThrow('No hay una Caja Oficina abierta.');
   });
 });
