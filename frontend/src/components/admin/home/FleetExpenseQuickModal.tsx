@@ -153,6 +153,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
 
     setSubmitting(true);
     try {
+      const autoCategoryId = matchCategoryId(categories, FLEET_SUBTYPE_HINTS[form.fleetType].categoryKeyword);
       await api.createVehicleMaintenance(Number(form.vehicleId), {
         type: FLEET_SUBTYPE_HINTS[form.fleetType].backendType,
         description: form.description.trim(),
@@ -160,7 +161,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
         odometer: Number(form.odometer),
         date: form.date,
         supplierId: form.supplierId ? Number(form.supplierId) : null,
-        categoryId: form.categoryId ? Number(form.categoryId) : null,
+        categoryId: autoCategoryId ? Number(autoCategoryId) : null,
         affectFinance: form.affectFinance,
         paymentMethod: form.paymentMethod,
         cashSource: form.affectFinance && form.paymentMethod === 'CASH' ? form.cashSource : null,
@@ -183,9 +184,9 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
       onClose={() => !submitting && onClose()}
       ariaLabelledBy="quick-expense-modal-title"
       closeOnBackdrop={!submitting}
-      style={{ width: '94vw', maxWidth: '620px', height: 'min(660px, 90vh)', padding: '24px 28px', display: 'flex', flexDirection: 'column' }}
+      style={{ width: '94vw', maxWidth: '620px', height: 'min(640px, 94vh)', padding: '22px 26px', display: 'flex', flexDirection: 'column' }}
     >
-      <div className="modal-header" style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
+      <div className="modal-header" style={{ marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
         <h2 id="quick-expense-modal-title" style={{ fontSize: '1.08rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
           Nuevo gasto
         </h2>
@@ -202,8 +203,7 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
         </div>
       ) : (
         <form onSubmit={handleSubmit} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '2px' }}>
-          <div role="tablist" aria-label="Tipo de gasto" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', padding: '4px', backgroundColor: '#F3F4F6', borderRadius: '8px', marginBottom: '14px' }}>
+          <div role="tablist" aria-label="Tipo de gasto" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', padding: '4px', backgroundColor: '#F3F4F6', borderRadius: '8px', marginBottom: '12px', flexShrink: 0 }}>
             {([
               { id: 'GENERAL' as const, label: 'General', icon: <Wallet size={15} aria-hidden="true" /> },
               { id: 'RODADO' as const, label: 'Rodado', icon: <Truck size={15} aria-hidden="true" /> },
@@ -223,6 +223,8 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
               );
             })}
           </div>
+
+          <div style={{ flex: 1, overflowY: 'auto' }}>
 
           {formError && (
             <div role="alert" style={{ marginBottom: '12px', padding: '8px 12px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#E30613', fontSize: '0.82rem', fontWeight: 600 }}>
@@ -256,13 +258,15 @@ export function FleetExpenseQuickModal({ isOpen, onClose, onSuccessMsg }: FleetE
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="quick-expense-category">Categoría</label>
-            <select id="quick-expense-category" name="categoryId" required={form.mode === 'GENERAL'} className="select" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
-              <option value="">Seleccionar...</option>
-              {categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-            </select>
-          </div>
+          {form.mode === 'GENERAL' && (
+            <div className="form-group">
+              <label htmlFor="quick-expense-category">Categoría</label>
+              <select id="quick-expense-category" name="categoryId" required className="select" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
+                <option value="">Seleccionar...</option>
+                {categories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="quick-expense-description">Detalle</label>
