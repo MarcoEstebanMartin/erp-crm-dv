@@ -1,7 +1,7 @@
 import { CreditNoteStatus, OrderStatus, TransactionType } from '@prisma/client';
 import { Decimal } from 'decimal.js';
 import prisma from '../../utils/prisma';
-import { roundToTwoDecimals, toDecimal, type NumericInput } from '../../core/money';
+import { roundToIntegerPeso, roundToTwoDecimals, toDecimal, type NumericInput } from '../../core/money';
 import {
   computeClientReceivablesSummary,
   computeOrderPendingAmount,
@@ -74,7 +74,7 @@ export class PaymentAllocationService {
     const allocatableOrders: AllocatableOrderInput[] = orders.map((o) => ({
       id: o.id,
       invoiceNumber: formatInvoiceNumber(o),
-      totalAmount: o.totalAmount.toString(),
+      totalAmount: roundToIntegerPeso(o.totalAmount.toString()),
       allocatedAmount: sumDecimals(o.paymentAllocations.map((a) => a.amount)),
       creditNotesAmount: sumDecimals(o.creditNotes.map((cn) => cn.totalAmount)),
     }));
@@ -124,7 +124,7 @@ export class PaymentAllocationService {
     }
 
     const pendingDec = computeOrderPendingAmount({
-      totalAmount: params.orderTotal ?? order.totalAmount.toString(),
+      totalAmount: roundToIntegerPeso(params.orderTotal ?? order.totalAmount.toString()),
       allocatedAmount: sumDecimals(order.paymentAllocations.map((a) => a.amount)),
       creditNotesAmount: sumDecimals(order.creditNotes.map((cn) => cn.totalAmount)),
     });
@@ -194,7 +194,7 @@ export class PaymentAllocationService {
     if (!order) return 0;
 
     return computeOrderPendingAmount({
-      totalAmount: order.totalAmount.toString(),
+      totalAmount: roundToIntegerPeso(order.totalAmount.toString()),
       allocatedAmount: sumDecimals(order.paymentAllocations.map((a) => a.amount)),
       creditNotesAmount: sumDecimals(order.creditNotes.map((cn) => cn.totalAmount)),
     }).toNumber();
@@ -230,7 +230,7 @@ export class PaymentAllocationService {
     const allocatableOrders: AllocatableOrderInput[] = orders.map((o) => ({
       id: o.id,
       invoiceNumber: formatInvoiceNumber(o),
-      totalAmount: o.totalAmount.toString(),
+      totalAmount: roundToIntegerPeso(o.totalAmount.toString()),
       allocatedAmount: sumDecimals(o.paymentAllocations.map((a) => a.amount)),
       creditNotesAmount: sumDecimals(o.creditNotes.map((cn) => cn.totalAmount)),
     }));
@@ -307,7 +307,7 @@ export class PaymentAllocationService {
       const orderState = orders.map((o) => ({
         id: o.id,
         invoiceNumber: formatInvoiceNumber(o),
-        totalAmount: o.totalAmount.toString(),
+        totalAmount: roundToIntegerPeso(o.totalAmount.toString()),
         allocatedAmount: new Decimal(0),
         creditNotesAmount: sumDecimals(o.creditNotes.map((cn) => cn.totalAmount)),
       }));

@@ -21,7 +21,7 @@ import {
   deletePersonaNote,
   updatePersonaTrustTags,
 } from '../controllers/persona-notes.controller';
-import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { authenticateJWT, requireRole, requireRoleOrPermission } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
@@ -49,8 +49,8 @@ router.get('/sellers', authenticateJWT, getSellers);
 router.get('/sellers/:id/profile', authenticateJWT, getSellerProfileStats);
 router.get('/afip/:cuit', authenticateJWT, getAfipData);
 router.get('/:id', authenticateJWT, getPersonaById);
-router.get('/:id/ledger', authenticateJWT, getPersonaLedger);
-router.get('/:id/pending-invoices', authenticateJWT, getPersonaPendingInvoices);
+router.get('/:id/ledger', authenticateJWT, requireRoleOrPermission([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR], 'canDeliver'), getPersonaLedger);
+router.get('/:id/pending-invoices', authenticateJWT, requireRoleOrPermission([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR], 'canDeliver'), getPersonaPendingInvoices);
 
 
 // Rutas de creación, edición y cobros (ADMIN, FACTURACION y VENDEDOR)
