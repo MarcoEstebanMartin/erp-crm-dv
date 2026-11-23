@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, MapPin } from 'lucide-react';
-import { classifyDrawerHistoryRow, DrawerKind, formatDrawerDateSummary } from './drawerHistoryHelpers';
+import { classifyDrawerHistoryRow, type DrawerKind, formatDrawerDateSummary } from './drawerHistoryHelpers';
 
 interface DrawersHistoryTableProps {
   loadingHistory: boolean;
