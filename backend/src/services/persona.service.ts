@@ -185,6 +185,17 @@ export class PersonaService {
         webPin: data.webPin != null ? String(data.webPin).trim() : null,
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
         hireDate: data.hireDate ? new Date(data.hireDate) : null,
+        ...(Array.isArray(data.trustTags) && (userRole === Role.ADMIN || userRole === Role.FACTURACION)
+          ? {
+              trustTags: Array.from(
+                new Set<string>(
+                  data.trustTags
+                    .map((t: unknown) => (typeof t === 'string' ? t.trim() : ''))
+                    .filter((t: string) => t.length > 0),
+                ),
+              ).slice(0, 5),
+            }
+          : {}),
       },
     });
 
@@ -256,6 +267,19 @@ export class PersonaService {
         webPin: data.webPin !== undefined ? (data.webPin ? String(data.webPin).trim() : null) : undefined,
         birthDate: data.birthDate !== undefined ? (data.birthDate ? new Date(data.birthDate) : null) : undefined,
         hireDate: data.hireDate !== undefined ? (data.hireDate ? new Date(data.hireDate) : null) : undefined,
+        ...(data.trustTags !== undefined &&
+        Array.isArray(data.trustTags) &&
+        (userRole === Role.ADMIN || userRole === Role.FACTURACION)
+          ? {
+              trustTags: Array.from(
+                new Set<string>(
+                  data.trustTags
+                    .map((t: unknown) => (typeof t === 'string' ? t.trim() : ''))
+                    .filter((t: string) => t.length > 0),
+                ),
+              ).slice(0, 5),
+            }
+          : {}),
       },
     });
 

@@ -131,14 +131,14 @@ describe('AdminAuditSubService — Búsqueda, Filtros y Esquema (Paso 2)', () =>
     vi.restoreAllMocks();
   });
 
-  it('construye where exacto con userId, módulo STOCK_WMS, status ERROR y rango horario Argentina (-03:00)', async () => {
+  it('construye where exacto con userId, módulo STOCK_CATALOG, status ERROR y rango horario Argentina (-03:00)', async () => {
     const findManySpy = vi.spyOn(prisma.auditLog, 'findMany').mockReturnValue([] as any);
     const countSpy = vi.spyOn(prisma.auditLog, 'count').mockReturnValue(0 as any);
     vi.spyOn(prisma, '$transaction').mockResolvedValue([[], 0] as any);
 
     const res = await adminAuditSubService.getAuditLogs(1, 30, {
       userId: 7,
-      module: 'STOCK_WMS',
+      module: 'STOCK_CATALOG',
       status: 'ERROR',
       startDate: '2026-11-14',
       endDate: '2026-11-14',
@@ -159,17 +159,18 @@ describe('AdminAuditSubService — Búsqueda, Filtros y Esquema (Paso 2)', () =>
       ]),
     );
     expect(JSON.stringify(passedWhere)).toContain('ASSIGN_WMS_LOCATION');
+    expect(JSON.stringify(passedWhere)).toContain('BULK_UPDATE_PRICES');
     expect(countSpy).toHaveBeenCalledWith({ where: passedWhere });
   });
 
-  it('filtra el módulo STAFF sin mezclar ingresos LOGIN por entityType User suelto', async () => {
-    const where = (await buildAuditLogWhere({ module: 'STAFF' })) as any;
+  it('agrupa accesos, usuarios/RRHH y configuración dentro del módulo SYSTEM', async () => {
+    const where = (await buildAuditLogWhere({ module: 'SYSTEM' })) as any;
     const serialized = JSON.stringify(where);
 
+    expect(serialized).toContain('LOGIN');
     expect(serialized).toContain('TOGGLE_USER_STATUS');
+    expect(serialized).toContain('UPDATE_CONFIG');
     expect(serialized).toContain('Employee');
-    expect(where.OR).not.toContainEqual({ entityType: 'User' });
-    expect(serialized).not.toContain('"LOGIN"');
   });
 
   it('resuelve búsqueda de texto por producto, JSONB parametrizado y palabras clave en español (ubicación)', async () => {
@@ -199,7 +200,7 @@ describe('AdminAuditSubService — Búsqueda, Filtros y Esquema (Paso 2)', () =>
         limit: '30',
         search: 'Playadito',
         userId: '5',
-        module: 'STOCK_WMS',
+        module: 'STOCK_CATALOG',
         status: 'WARNING',
         startDate: '2026-11-01',
         endDate: '2026-11-14',

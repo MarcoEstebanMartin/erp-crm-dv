@@ -65,14 +65,14 @@ export const ClientGpsPickerSection: React.FC<ClientGpsPickerSectionProps> = ({
   };
 
   return (
-    <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
+    <div style={{ paddingTop: '2px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: hasCoords ? '#15803d' : 'var(--text-secondary)', fontWeight: 600 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: hasCoords ? '#15803d' : 'var(--text-secondary)', fontWeight: 500 }}>
           <MapPin size={14} aria-hidden="true" />
           <span className="tabular-nums">
             {hasCoords
-              ? `GPS exacto (${parsedLat.toFixed(5)}, ${parsedLng.toFixed(5)})`
-              : 'Sin coordenadas GPS'}
+              ? `${parsedLat.toFixed(5)}, ${parsedLng.toFixed(5)}`
+              : 'Sin GPS'}
           </span>
         </div>
 

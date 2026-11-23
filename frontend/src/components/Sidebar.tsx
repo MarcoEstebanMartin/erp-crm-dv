@@ -25,6 +25,7 @@ interface SidebarProps {
   username: string;
   role: string;
   canDeliver?: boolean;
+  canPick?: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onLogout: () => void;
@@ -51,7 +52,7 @@ const ADMIN_PARENT_TAB_MAP: Record<string, string> = {
   rrhh: 'config',
 };
 
-export default function Sidebar({ username, role, canDeliver = false, activeTab, setActiveTab, onLogout }: SidebarProps) {
+export default function Sidebar({ username, role, canDeliver = false, canPick = false, activeTab, setActiveTab, onLogout }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -116,6 +117,9 @@ export default function Sidebar({ username, role, canDeliver = false, activeTab,
     ];
     if (canDeliver) {
       vendedorItems.push({ id: 'logistica', label: 'Reparto', icon: <Truck size={18} aria-hidden="true" /> });
+    }
+    if (canPick) {
+      vendedorItems.push({ id: 'deposito', label: 'Depósito', icon: <Warehouse size={18} aria-hidden="true" /> });
     }
     return vendedorItems;
   };

@@ -598,7 +598,7 @@ export const api = {
     });
   },
 
-  registerPayment: async (personaId: number, paymentData: { amount?: number, paymentMethod?: string, payments?: { amount: number, paymentMethod: string, bankAccountId?: number | null, description?: string, checkNumber?: string, checkBank?: string, checkDueDate?: string, isEcheq?: boolean }[], description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, bankAccountId?: number | null, checkNumber?: string, checkBank?: string, checkDueDate?: string, isEcheq?: boolean, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
+  registerPayment: async (personaId: number, paymentData: { amount?: number, paymentMethod?: string, payments?: { amount: number, paymentMethod: string, bankAccountId?: number | null, description?: string, checkNumber?: string, checkBank?: string, checkDueDate?: string, isEcheq?: boolean }[], description?: string, branch?: string, type?: string, supplierInvoiceId?: number, orderId?: number, bankAccountId?: number | null, checkNumber?: string, checkBank?: string, checkDueDate?: string, isEcheq?: boolean, allowCreditOnAccount?: boolean, retenciones?: { taxType: 'GANANCIAS' | 'IIBB', number: string, amount: number }[] }) => {    
     const res = await request(`/personas/${personaId}/payments`, {
       method: 'POST',
       body: JSON.stringify(paymentData)
@@ -623,12 +623,16 @@ export const api = {
   },
 
   // --- PEDIDOS ---
-  getOrders: async (billingType?: BillingType, status?: OrderStatus) => {    
-    
+  getOrders: async (
+    billingType?: BillingType,
+    status?: OrderStatus,
+    options?: { pickingQueue?: boolean },
+  ) => {
     let path = '/orders';
     const params = [];
     if (billingType) params.push(`billingType=${billingType}`);
     if (status) params.push(`status=${status}`);
+    if (options?.pickingQueue) params.push('pickingQueue=true');
     if (params.length > 0) path += `?${params.join('&')}`;
 
     const res = await request(path);
@@ -940,7 +944,7 @@ export const api = {
     username: string;
     password?: string;
     role: string;
-    permissions?: { canDeliver?: boolean } | null;
+    permissions?: { canDeliver?: boolean; canPick?: boolean } | null;
   }) => {
     const res = await request('/admin/users', {
       method: 'POST',
@@ -962,7 +966,7 @@ export const api = {
       username?: string;
       role?: string;
       password?: string;
-      permissions?: { canDeliver?: boolean } | null;
+      permissions?: { canDeliver?: boolean; canPick?: boolean } | null;
     },
   ) => {
     const res = await request(`/admin/users/${id}`, {

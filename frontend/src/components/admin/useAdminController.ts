@@ -308,18 +308,61 @@ export function useAdminController(activeTab: string) {
     );
   }, [clientModal.open, loadClientMetaIfNeeded]);
 
+  const buildEditablePersonaData = (persona: any) => ({
+    ...persona,
+    id: persona.id,
+    name: persona.name || '',
+    cuit: persona.cuit || '',
+    address: persona.address || '',
+    city: persona.city || '',
+    barrio: persona.barrio || '',
+    phone: persona.phone || '',
+    email: persona.email || '',
+    webPin: persona.webPin || '',
+    creditLimit: persona.creditLimit ? Number(persona.creditLimit) : 0,
+    maxUnpaidInvoices: persona.maxUnpaidInvoices ? Number(persona.maxUnpaidInvoices) : 0,
+    priceList: persona.priceList || 'A',
+    discount: persona.discount ? Number(persona.discount) : 0,
+    isClient: !!persona.isClient,
+    isProvider: !!persona.isProvider,
+    isSeller: !!persona.isSeller,
+    isCommissionAgent: !!persona.isCommissionAgent,
+    route: persona.route || '',
+    saleRouteId: persona.saleRouteId || null,
+    sellerId: persona.sellerId || null,
+    isActive: persona.isActive !== false,
+    hireDate: persona.hireDate ? String(persona.hireDate).slice(0, 10) : '',
+    trustTags: Array.isArray(persona.trustTags) ? persona.trustTags : [],
+    pendingTagDraft: '',
+  });
+
   const handleViewClientProfile = async (client: any) => {
     setErrorMsg(null);
+    setClientModal({ open: true, mode: 'edit', data: buildEditablePersonaData(client) });
     try {
       const data = await api.getPersonaLedger(client.id);
-      setClientProfileModal({ open: true, client: data.persona || client, ledger: data.ledger || [] });
-    } catch (err: any) { setErrorMsg(err.message || 'Error al obtener extracto de cuenta corriente.'); }
+      if (data?.persona) {
+        setClientModal((prev: any) =>
+          prev?.open && prev?.mode === 'edit' && prev?.data?.id === client.id
+            ? { ...prev, data: buildEditablePersonaData({ ...prev.data, ...data.persona }) }
+            : prev,
+        );
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al obtener datos actualizados de la ficha.');
+    }
   };
 
   const handleRefreshClientProfile = async (clientId: number) => {
     try {
       const data = await api.getPersonaLedger(clientId);
-      setClientProfileModal({ open: true, client: data.persona, ledger: data.ledger });
+      if (data?.persona) {
+        setClientModal((prev: any) =>
+          prev?.open && prev?.mode === 'edit' && prev?.data?.id === clientId
+            ? { ...prev, data: buildEditablePersonaData({ ...prev.data, ...data.persona }) }
+            : prev,
+        );
+      }
     } catch (err) { console.error(err); }
   };
 

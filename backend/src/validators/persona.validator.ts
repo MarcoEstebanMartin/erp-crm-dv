@@ -50,6 +50,7 @@ export const createPersonaSchema = z.object({
     isActive: z.boolean().optional(),
     rubro: z.string().optional().nullable(),
     hireDate: z.string().optional().nullable().or(z.literal('')),
+    trustTags: z.array(z.string().trim().min(1).max(60)).max(5).optional(),
   }),
 });
 
@@ -92,6 +93,7 @@ export const updatePersonaSchema = z.object({
     isActive: z.boolean().optional(),
     rubro: z.string().optional().nullable(),
     hireDate: z.string().optional().nullable().or(z.literal('')),
+    trustTags: z.array(z.string().trim().min(1).max(60)).max(5).optional(),
   }),
 });
 
@@ -122,6 +124,8 @@ export const recordPersonaPaymentSchema = z.object({
     supplierInvoiceId: z.union([z.number(), z.string()]).optional().nullable(),
     orderId: z.number().optional().nullable(),
     bankAccountId: z.union([z.number(), z.string()]).optional().nullable(),
+    allowCreditOnAccount: z.boolean().optional(),
+    isCreditOnAccount: z.boolean().optional(),
     retenciones: z.array(z.object({
       taxType: z.enum(['GANANCIAS', 'IIBB']),
       number: z.string(),

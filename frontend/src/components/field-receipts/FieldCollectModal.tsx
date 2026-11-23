@@ -234,12 +234,13 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
       ariaLabelledBy="field-collect-modal-title"
       style={{
         width: 'min(520px, 95vw)',
-        maxHeight: '90dvh',
+        height: 'min(560px, 88dvh)',
+        maxHeight: '88dvh',
         borderRadius: '14px',
         padding: 0,
       }}
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: '90dvh' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '16px 18px', borderBottom: '1px solid #f1f5f9', flexShrink: 0 }}>
           <div style={{ minWidth: 0 }}>
             <h3

@@ -141,6 +141,7 @@ function App() {
         username={user.username}
         role={user.role}
         canDeliver={Boolean(user.permissions?.canDeliver)}
+        canPick={Boolean(user.permissions?.canPick)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLogout={handleLogout}

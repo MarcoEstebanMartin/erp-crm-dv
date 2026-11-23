@@ -6,7 +6,6 @@ import ClientsTab from './admin/ClientsTab';
 import OrdersTab from './admin/OrdersTab';
 import ProductsTab from './admin/ProductsTab';
 import ConfigTab from './admin/ConfigTab';
-import ClientProfileModal from './modals/ClientProfileModal';
 import SellerProfileModal from './modals/SellerProfileModal';
 import EditOrderModal from './modals/EditOrderModal';
 import ProductModal from './modals/ProductModal';
@@ -235,17 +234,18 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       <EditOrderModal editOrderModal={c.editOrderModal} setEditOrderModal={c.setEditOrderModal} products={c.products} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />
       <ProductModal productModal={c.productModal} setProductModal={c.setProductModal} rubrosList={c.rubrosList} providersList={c.providersList} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />
       {c.showResumenModal && <ResumenCuentaModal client={c.showResumenModal} onClose={() => c.setShowResumenModal(null)} />}
-      <ClientModal clientModal={c.clientModal} setClientModal={c.setClientModal} availableSellers={c.availableSellers} availableSaleRoutes={c.availableSaleRoutes} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} setClientsVersion={c.setClientsVersion} />
+      <ClientModal clientModal={c.clientModal} setClientModal={c.setClientModal} availableSellers={c.availableSellers} availableSaleRoutes={c.availableSaleRoutes} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} setClientsVersion={c.setClientsVersion} setPaymentModal={c.setPaymentModal} />
       <ImportZipModal isOpen={c.importZipModalOpen} onClose={() => { c.setImportZipModalOpen(false); c.fetchData(); }} />
-      <ClientProfileModal clientProfileModal={c.clientProfileModal} setClientProfileModal={c.setClientProfileModal} setClientModal={c.setClientModal} setPaymentModal={c.setPaymentModal} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />
       {c.sellerProfileModal?.open && <SellerProfileModal sellerId={c.sellerProfileModal.sellerId} onClose={() => c.setSellerProfileModal(null)} onOpenReport={() => setActiveTab('reports')} />}
 
       <AdminPaymentModal
         paymentModal={c.paymentModal}
-        clientProfileModal={c.clientProfileModal}
+        clientProfileModal={c.clientModal?.open && c.clientModal?.mode === 'edit' && c.clientModal?.data?.id ? { open: true, client: c.clientModal.data, ledger: [] } : null}
         onClose={() => c.setPaymentModal(null)}
         onSuccess={async (clientId) => {
-          if (c.clientProfileModal?.client?.id === clientId) await c.handleRefreshClientProfile(clientId);
+          if (c.clientModal?.open && c.clientModal?.mode === 'edit' && c.clientModal?.data?.id === clientId) {
+            await c.handleRefreshClientProfile(clientId);
+          }
           c.fetchData();
           c.setClientsVersion((prev) => prev + 1);
         }}

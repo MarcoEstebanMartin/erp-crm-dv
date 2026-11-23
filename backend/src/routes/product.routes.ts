@@ -36,7 +36,7 @@ import {
   upsertWarehouseCell,
   resetWarehouseCell,
 } from '../controllers/warehouse-layout.controller';
-import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { authenticateJWT, requireRole, requireRoleOrPermission } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
@@ -76,7 +76,7 @@ router.get(
 router.get(
   '/stock/expiring-lots',
   authenticateJWT,
-  requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]),
+  requireRoleOrPermission([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO], 'canPick'),
   getExpiringLots,
 );
 router.get('/barcode/:barcode', authenticateJWT, getProductByBarcode);

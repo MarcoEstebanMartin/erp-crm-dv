@@ -10,6 +10,7 @@ export interface UserFormState {
   password?: string;
   role: string;
   canDeliver?: boolean;
+  canPick?: boolean;
 }
 
 interface UserFormModalProps {
@@ -37,6 +38,7 @@ export default function UserFormModal({
   const passwordId = useId();
   const roleId = useId();
   const canDeliverId = useId();
+  const canPickId = useId();
 
   const isEditingSelf = Boolean(userModal.isEdit && currentUserId && userModal.id === currentUserId);
   const closeModal = () => {
@@ -189,7 +191,17 @@ export default function UserFormModal({
           </div>
 
           {userModal.role === 'VENDEDOR' && (
-            <div className="form-group" style={{ marginBottom: '16px' }}>
+            <fieldset
+              className="form-group"
+              style={{
+                border: 'none',
+                padding: 0,
+                margin: '0 0 16px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
               <label
                 htmlFor={canDeliverId}
                 style={{
@@ -212,7 +224,30 @@ export default function UserFormModal({
                 />
                 <span>También reparte</span>
               </label>
-            </div>
+
+              <label
+                htmlFor={canPickId}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                <input
+                  id={canPickId}
+                  name="canPick"
+                  type="checkbox"
+                  checked={Boolean(userModal.canPick)}
+                  onChange={(e) => setUserModal({ ...userModal, canPick: e.target.checked })}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                />
+                <span>También depósito</span>
+              </label>
+            </fieldset>
           )}
 
           <div

@@ -47,6 +47,8 @@ interface RepartoCreateRouteModalProps {
   errorMsg?: string | null;
 }
 
+const COMPANION_OPTIONS = ['Thiago'] as const;
+
 export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
   show, editingRouteId, onClose, onSubmit,
   driverName, setDriverName, setDriverEmployeeId, companionName, setCompanionName,
@@ -61,7 +63,6 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
   const metrics = computeTripDisplayMetrics(selectedOrders);
   const [isCustomDriver, setIsCustomDriver] = useState(false);
   const [isCustomCompanion, setIsCustomCompanion] = useState(false);
-  const companionOptions = driverOptions.filter((d) => !driverName || d.fullName !== driverName);
   const visibleSelectedCount = filteredPendingOrders.filter((o) => selectedOrderIds.includes(o.id)).length;
   const allVisibleSelected = filteredPendingOrders.length > 0 && visibleSelectedCount === filteredPendingOrders.length;
   const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
@@ -69,7 +70,7 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
   useEffect(() => {
     if (!show) return;
     setIsCustomDriver(Boolean(driverName && !driverOptions.some((d) => d.fullName === driverName)));
-    setIsCustomCompanion(Boolean(companionName && !driverOptions.some((d) => d.fullName === companionName)));
+    setIsCustomCompanion(Boolean(companionName && !COMPANION_OPTIONS.includes(companionName as (typeof COMPANION_OPTIONS)[number])));
   }, [show, editingRouteId]);
 
   return (
@@ -122,7 +123,7 @@ export const RepartoCreateRouteModal: FC<RepartoCreateRouteModalProps> = ({
                   setIsCustomCompanion(false); setCompanionName(nextName);
                 }}>
                   <option value="">Opcional</option>
-                  {companionOptions.map((d) => <option key={`comp-${d.employeeId ?? 'x'}-${d.fullName}`} value={d.fullName}>{d.fullName}</option>)}
+                  {COMPANION_OPTIONS.map((name) => <option key={`comp-${name}`} value={name}>{name}</option>)}
                   <option value="CUSTOM">Otro</option>
                 </select>
               </div>

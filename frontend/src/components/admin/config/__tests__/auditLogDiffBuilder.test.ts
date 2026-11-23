@@ -38,7 +38,7 @@ describe('Inspección Detallada y Módulos de Auditoría (Paso 2)', () => {
     expect(inspection.metadata).toEqual(
       expect.arrayContaining([
         { label: 'Registro', value: '#410' },
-        { label: 'Módulo', value: 'Productos, Precios y Ofertas' },
+        { label: 'Módulo', value: 'Stock y Catálogo' },
         { label: 'Afecta a', value: 'Yerba Playadito 1kg (SKU 0102)' },
         { label: 'Origen IP', value: '192.168.1.25' },
         { label: 'Resultado', value: 'Exitoso' },
@@ -74,7 +74,7 @@ describe('Inspección Detallada y Módulos de Auditoría (Paso 2)', () => {
       },
     });
 
-    expect(inspection.metadata).toContainEqual({ label: 'Módulo', value: 'Stock, Lotes y Depósito' });
+    expect(inspection.metadata).toContainEqual({ label: 'Módulo', value: 'Stock y Catálogo' });
     expect(inspection.batchItems).toEqual([
       {
         productId: 1626,
@@ -109,7 +109,7 @@ describe('Inspección Detallada y Módulos de Auditoría (Paso 2)', () => {
 
     expect(failedLogin.errorBanner).toBe('Contraseña incorrecta.');
     expect(failedLogin.metadata).toContainEqual({ label: 'Origen IP', value: 'Red local' });
-    expect(failedLogin.metadata).toContainEqual({ label: 'Módulo', value: 'Accesos y Seguridad' });
+    expect(failedLogin.metadata).toContainEqual({ label: 'Módulo', value: 'Sistema' });
     expect(failedLogin.changes).toEqual([{ key: 'username', label: 'Usuario', after: 'marcos' }]);
 
     const toggleUser = buildAuditLogInspection({
@@ -126,7 +126,7 @@ describe('Inspección Detallada y Módulos de Auditoría (Paso 2)', () => {
     expect(toggleUser.changes).toEqual([
       { key: 'isActive', label: 'Estado activo', before: 'Activo', after: 'Inactivo' },
     ]);
-    expect(resolveAuditModuleLabel('TOGGLE_USER_STATUS', 'User')).toBe('Empleados y RRHH');
-    expect(AUDIT_MODULES).toHaveLength(10);
+    expect(resolveAuditModuleLabel('TOGGLE_USER_STATUS', 'User')).toBe('Sistema');
+    expect(AUDIT_MODULES).toHaveLength(6);
   });
 });

@@ -21,7 +21,7 @@ import {
   updateOrderDeliveryHandler,
 } from '../controllers/order-delivery.controller';
 import { parseAiOrderHandler } from '../controllers/order-ai.controller';
-import { authenticateJWT, requireRole } from '../middlewares/auth';
+import { authenticateJWT, requireRole, requireRoleOrPermission } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
@@ -86,8 +86,13 @@ router.post('/', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Rol
 // Editar pedido PENDING (ADMIN, FACTURACION y VENDEDOR)
 router.put('/:id', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]), validateRequest(updateOrderSchema), updateOrder);
 
-// Actualización de estado del pedido (Picking - ADMIN, FACTURACION y DEPOSITO)
-router.put('/:id/status', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), validateRequest(updateOrderStatusSchema), updateOrderStatus);
+const canPickOrders = requireRoleOrPermission(
+  [Role.ADMIN, Role.FACTURACION, Role.DEPOSITO],
+  'canPick',
+);
+
+// Actualización de estado del pedido (Picking - ADMIN, FACTURACION, DEPOSITO o permiso canPick)
+router.put('/:id/status', authenticateJWT, canPickOrders, validateRequest(updateOrderStatusSchema), updateOrderStatus);
 
 // Designación de entrega (Viaje específico o Retiro en local)
 router.patch(
@@ -105,10 +110,10 @@ router.post('/:id/invoice', authenticateJWT, requireRole([Role.ADMIN, Role.FACTU
 // Solicitar CAE a AFIP para pre-factura oficial
 router.post('/:id/request-cae', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), idempotencyGuard, requestCaeForOrder);
 
-// Actualizar pesos de productos pesables (ADMIN, FACTURACION, DEPOSITO)
-router.put('/:id/weights', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), validateRequest(updateOrderWeightsSchema), updateOrderWeights);
+// Actualizar pesos de productos pesables (ADMIN, FACTURACION, DEPOSITO o permiso canPick)
+router.put('/:id/weights', authenticateJWT, canPickOrders, validateRequest(updateOrderWeightsSchema), updateOrderWeights);
 
 // Confirmación rápida de armado (Data Entry de Alta Eficiencia)
-router.post('/:id/confirm-armado', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO]), validateRequest(confirmArmadoSchema), idempotencyGuard, confirmArmado);
+router.post('/:id/confirm-armado', authenticateJWT, canPickOrders, validateRequest(confirmArmadoSchema), idempotencyGuard, confirmArmado);
 
 export default router;

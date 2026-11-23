@@ -187,6 +187,14 @@ export function useClientModalController({
             : null,
         isActive: data.isActive !== false,
         hireDate: data.hireDate ? data.hireDate : null,
+        trustTags: Array.from(
+          new Set([
+            ...(Array.isArray(data.trustTags) ? data.trustTags : []),
+            ...(typeof data.pendingTagDraft === 'string' && data.pendingTagDraft.trim()
+              ? [data.pendingTagDraft.trim()]
+              : []),
+          ]),
+        ).slice(0, 5),
       };
 
       if (mode === 'create') await api.createPersona(payload);

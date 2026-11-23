@@ -326,9 +326,9 @@ export default function ProductsList({
                         }}
                       >
                         {p.storeHighlight === 'OFERTON'
-                          ? '🔥 Ofertón'
+                          ? 'Ofertón'
                           : p.storeHighlight === 'DESTACADO'
-                            ? '⭐ Destacado'
+                            ? 'Destacado'
                             : 'Normal'}
                       </button>
                     </td>

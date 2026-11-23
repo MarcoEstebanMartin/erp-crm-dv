@@ -4,6 +4,8 @@ import { Role, BillingType, DeliveryMethod, OrderStatus } from '@prisma/client';
 export interface GetOrdersQuery {
   userId: number;
   userRole: string;
+  canPick?: boolean;
+  pickingQueue?: string;
   billingType?: string;
   status?: string;
   statusGroup?: string;
@@ -167,6 +169,8 @@ export class OrderQueriesService {
     const {
       userId,
       userRole,
+      canPick,
+      pickingQueue,
       billingType,
       status,
       statusGroup,
@@ -180,7 +184,11 @@ export class OrderQueriesService {
     const andClauses: Record<string, any>[] = [];
 
     if (userRole === Role.VENDEDOR) {
-      andClauses.push({ sellerId: userId });
+      if (canPick && pickingQueue === 'true') {
+        andClauses.push({ status: { in: [OrderStatus.PENDING, OrderStatus.PREPARING] } });
+      } else {
+        andClauses.push({ sellerId: userId });
+      }
     }
     if (billingType) {
       andClauses.push({ billingType: billingType as BillingType });
@@ -306,7 +314,7 @@ export class OrderQueriesService {
   /**
    * Obtiene el detalle completo de un pedido con lotes, transacciones y vendedor.
    */
-  static async getOrderById(orderId: number, userId: number, userRole: string) {
+  static async getOrderById(orderId: number, userId: number, userRole: string, canPick: boolean = false) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -351,9 +359,13 @@ export class OrderQueriesService {
     }
 
     if (userRole === Role.VENDEDOR && order.sellerId !== userId) {
-      const err: any = new Error('Acceso denegado. No podés ver pedidos de otros vendedores.');
-      err.statusCode = 403;
-      throw err;
+      const canInspectForPicking =
+        canPick && (order.status === OrderStatus.PENDING || order.status === OrderStatus.PREPARING);
+      if (!canInspectForPicking) {
+        const err: any = new Error('Acceso denegado. No podés ver pedidos de otros vendedores.');
+        err.statusCode = 403;
+        throw err;
+      }
     }
 
     return order;

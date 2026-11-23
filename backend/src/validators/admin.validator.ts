@@ -65,13 +65,9 @@ export const deleteUserSchema = z.object({
 });
 
 export const AUDIT_MODULE_KEYS = [
-  'ACCESS',
-  'STAFF',
-  'STOCK_WMS',
-  'CATALOG',
-  'CLIENTS',
   'SALES',
-  'PURCHASES',
+  'CLIENTS',
+  'STOCK_CATALOG',
   'FINANCE',
   'LOGISTICS',
   'SYSTEM',

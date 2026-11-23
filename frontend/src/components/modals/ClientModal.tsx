@@ -14,6 +14,7 @@ interface ClientModalProps {
   setSuccessMsg: (msg: string | null) => void;
   setErrorMsg: (msg: string | null) => void;
   setClientsVersion: React.Dispatch<React.SetStateAction<number>>;
+  setPaymentModal?: (val: { open: boolean; clientId: number; clientName: string } | null) => void;
 }
 
 const BANNER_STYLES: Record<ModalBannerState['tone'], React.CSSProperties> = {
@@ -23,12 +24,25 @@ const BANNER_STYLES: Record<ModalBannerState['tone'], React.CSSProperties> = {
 };
 
 const ClientModal: React.FC<ClientModalProps> = (props) => {
-  const { clientModal, setClientModal, availableSellers, availableSaleRoutes } = props;
+  const {
+    clientModal,
+    setClientModal,
+    availableSellers,
+    availableSaleRoutes,
+    setPaymentModal,
+  } = props;
   const ctrl = useClientModalController(props);
 
   if (!ctrl.isOpen) return null;
 
+  const isEdit = clientModal?.mode === 'edit' && Boolean(clientModal?.data?.id);
+  const data = clientModal.data || {};
   const handleClose = () => setClientModal({ ...clientModal, open: false });
+
+  const balance = Number(data.outstandingBalance || 0);
+  const absBalance = Math.abs(Math.round(balance)).toLocaleString('es-AR');
+  const balanceText = balance < 0 ? `+$${absBalance}` : `$${absBalance}`;
+  const balanceColor = balance > 0 ? 'var(--color-danger)' : balance < 0 ? 'var(--color-success)' : 'var(--text-primary)';
 
   return (
     <NativeModalDialog
@@ -36,13 +50,11 @@ const ClientModal: React.FC<ClientModalProps> = (props) => {
       onClose={handleClose}
       ariaLabelledBy="client-modal-title"
       style={{
-        maxWidth: '1080px',
-        width: '96vw',
-        height: 'min(680px, 94vh)',
-        maxHeight: '94vh',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '24px 28px',
+        maxWidth: '1040px',
+        width: '94vw',
+        height: 'fit-content',
+        maxHeight: '94dvh',
+        padding: '22px 26px',
         borderRadius: '12px',
       }}
     >
@@ -52,23 +64,70 @@ const ClientModal: React.FC<ClientModalProps> = (props) => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          gap: '16px',
           borderBottom: '1px solid var(--border-color)',
           paddingBottom: '12px',
-          marginBottom: '16px',
+          marginBottom: '18px',
         }}
       >
-        <h3 id="client-modal-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-          {clientModal.mode === 'create' ? 'Nuevo cliente' : clientModal.data?.name || 'Editar cliente'}
-        </h3>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          aria-label="Cerrar"
-          style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={handleClose}
+        <h1
+          id="client-modal-title"
+          style={{
+            margin: 0,
+            fontSize: '1.15rem',
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            minInlineSize: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
         >
-          <X size={18} />
-        </button>
+          {clientModal.mode === 'create' ? 'Nuevo cliente' : data.name || 'Editar cliente'}
+        </h1>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          {isEdit && (data.isClient || data.isProvider) && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 11px',
+                borderRadius: '6px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: '#fafafa',
+                fontSize: '0.84rem',
+              }}
+            >
+              <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>Saldo</span>
+              <span className="tabular-nums" style={{ fontWeight: 700, color: balanceColor }}>
+                {balanceText}
+              </span>
+            </div>
+          )}
+
+          {isEdit && data.isClient && setPaymentModal && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600 }}
+              onClick={() => setPaymentModal({ open: true, clientId: data.id, clientName: data.name })}
+            >
+              Cobrar
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="btn btn-ghost"
+            aria-label="Cerrar"
+            style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={handleClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {ctrl.modalBanner && (
@@ -76,11 +135,11 @@ const ClientModal: React.FC<ClientModalProps> = (props) => {
           role={ctrl.modalBanner.tone === 'error' ? 'alert' : 'status'}
           style={{
             ...BANNER_STYLES[ctrl.modalBanner.tone],
-            padding: '10px 14px',
+            padding: '9px 14px',
             borderRadius: '8px',
             fontSize: '0.83rem',
             fontWeight: 500,
-            marginBottom: '14px',
+            marginBottom: '16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -110,11 +169,11 @@ const ClientModal: React.FC<ClientModalProps> = (props) => {
         </div>
       )}
 
-      <form onSubmit={ctrl.handleClientSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', paddingBottom: '10px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+      <form onSubmit={ctrl.handleClientSubmit} style={{ display: 'flex', flexDirection: 'column', minBlockSize: 0 }}>
+        <div style={{ overflowY: 'auto', overscrollBehavior: 'contain' }}>
+          <div className="client-modal-columns">
             <ClientIdentityRolesCard
-              data={clientModal.data}
+              data={data}
               onChangeData={ctrl.updateData}
               isSearchingAfip={ctrl.isSearchingAfip}
               onFetchAfipData={ctrl.handleFetchAfipData}
@@ -123,7 +182,7 @@ const ClientModal: React.FC<ClientModalProps> = (props) => {
             />
 
             <ClientLocationCommercialCard
-              data={clientModal.data}
+              data={data}
               onChangeData={ctrl.updateData}
               availableSellers={availableSellers}
               availableSaleRoutes={availableSaleRoutes}
@@ -137,7 +196,7 @@ const ClientModal: React.FC<ClientModalProps> = (props) => {
           style={{
             borderTop: '1px solid var(--border-color)',
             paddingTop: '14px',
-            marginTop: 0,
+            marginTop: '18px',
             display: 'flex',
             justifyContent: 'flex-end',
             gap: '10px',
@@ -150,7 +209,7 @@ const ClientModal: React.FC<ClientModalProps> = (props) => {
             type="submit"
             className="btn btn-primary"
             style={{
-              padding: '8px 20px',
+              padding: '8px 22px',
               backgroundColor: 'var(--accent-color)',
               borderColor: 'var(--accent-color)',
               color: '#fff',

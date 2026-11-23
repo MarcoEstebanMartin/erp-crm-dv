@@ -90,15 +90,20 @@ export function useRepartoController() {
         prev?.id ? safeRoutes.find((r: any) => r.id === prev.id) || null : prev,
       );
       if (!isAdminOrOffice) {
-        const uname = (currentUser?.username || '').toLowerCase().trim();
-        const myRoutes = safeRoutes.filter((r: any) => {
-          const dName = (r.driverName || '').toLowerCase().trim();
-          return dName.includes(uname) || uname.includes(dName);
-        });
-        setSelectedRoute(
-          myRoutes.find((r: any) => r.status === 'IN_TRANSIT' || r.custodyStatus === 'LOADED_IN_TRANSIT') ||
-            myRoutes[0] || null,
+        const myActiveRoutes = safeRoutes.filter(
+          (r: any) => isRouteAssignedToUser(r, currentUser) && r.status !== 'COMPLETED',
         );
+        setSelectedRoute((prev: any) => {
+          if (prev?.id) {
+            const kept = myActiveRoutes.find((r: any) => r.id === prev.id);
+            if (kept) return kept;
+          }
+          return (
+            myActiveRoutes.find((r: any) => r.status === 'IN_TRANSIT' || r.custodyStatus === 'LOADED_IN_TRANSIT') ||
+            myActiveRoutes[0] ||
+            null
+          );
+        });
       }
       setPendingOrders(Array.isArray(queueRes?.orders) ? queueRes.orders : []);
       try { setBankAccounts((await api.getBankAccounts()) || []); }

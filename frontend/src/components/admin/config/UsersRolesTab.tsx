@@ -67,6 +67,7 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
     password: '',
     role: 'VENDEDOR',
     canDeliver: false,
+    canPick: false,
   });
 
   useEffect(() => {
@@ -100,7 +101,10 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
     try {
       const permissionsPayload =
         userModal.role === 'VENDEDOR'
-          ? { canDeliver: Boolean(userModal.canDeliver) }
+          ? {
+              canDeliver: Boolean(userModal.canDeliver),
+              canPick: Boolean(userModal.canPick),
+            }
           : undefined;
       if (userModal.isEdit && userModal.id) {
         await api.updateUser(userModal.id, {
@@ -122,7 +126,7 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
         });
         setSuccessMsg('Usuario creado exitosamente.');
       }
-      setUserModal({ open: false, isEdit: false, username: '', password: '', role: 'VENDEDOR', canDeliver: false });
+      setUserModal({ open: false, isEdit: false, username: '', password: '', role: 'VENDEDOR', canDeliver: false, canPick: false });
       const dataUsers = await api.getUsers();
       setUsers(dataUsers);
     } catch (err: any) {
@@ -142,6 +146,7 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
       password: '',
       role: u.role,
       canDeliver: Boolean(u.permissions?.canDeliver),
+      canPick: Boolean(u.permissions?.canPick),
     });
   };
 
@@ -281,6 +286,12 @@ export default function UsersRolesTab({ setErrorMsg, setSuccessMsg }: UsersRoles
                                   <span className="badge" style={{ backgroundColor: '#EEF2FF', color: '#4338CA', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', padding: '2px 7px' }}>
                                     <Truck size={12} aria-hidden="true" />
                                     Reparto
+                                  </span>
+                                )}
+                                {u.role === 'VENDEDOR' && u.permissions?.canPick && (
+                                  <span className="badge" style={{ backgroundColor: '#FEF9E7', color: '#B7950B', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', padding: '2px 7px' }}>
+                                    <Package size={12} aria-hidden="true" />
+                                    Depósito
                                   </span>
                                 )}
                               </div>

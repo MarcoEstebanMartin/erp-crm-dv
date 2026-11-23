@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, X, ChevronRight, Truck, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useRepartoController } from './reparto/useRepartoController';
 import { RepartoActiveRoutePanel } from './reparto/RepartoActiveRoutePanel';
+import { RepartoDriverRoutePanel } from './reparto/RepartoDriverRoutePanel';
 import { RepartoCreateRouteModal } from './reparto/RepartoCreateRouteModal';
 import { RepartoSettleRouteModal } from './reparto/RepartoSettleRouteModal';
 import { PrintRouteSheet } from './reparto/RepartoPrintRouteSheet';
@@ -15,14 +16,8 @@ export default function RepartoDashboard() {
   const [tripsTab, setTripsTab] = useState<TripsTab>('active');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const activeRoutes = useMemo(
-    () => c.visibleRoutes.filter((r) => r.status !== 'COMPLETED'),
-    [c.visibleRoutes],
-  );
-  const historyRoutes = useMemo(
-    () => c.visibleRoutes.filter((r) => r.status === 'COMPLETED'),
-    [c.visibleRoutes],
-  );
+  const activeRoutes = useMemo(() => c.visibleRoutes.filter((r) => r.status !== 'COMPLETED'), [c.visibleRoutes]);
+  const historyRoutes = useMemo(() => c.visibleRoutes.filter((r) => r.status === 'COMPLETED'), [c.visibleRoutes]);
   const displayedRoutes = tripsTab === 'active' ? activeRoutes : historyRoutes;
 
   const tripTabs: Array<{ id: TripsTab; label: string; count: number }> = [
@@ -62,16 +57,47 @@ export default function RepartoDashboard() {
         </div>
       )}
 
-      {!c.isAdminOrOffice && c.visibleRoutes.length === 0 && (
+      {!c.isAdminOrOffice && activeRoutes.length === 0 && (
         <div className="card no-print" style={{ padding: '32px 20px', textAlign: 'center', backgroundColor: '#fff', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
           <Truck size={28} aria-hidden="true" style={{ color: 'var(--text-secondary)' }} />
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Sin viajes asignados</h3>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Sin viajes activos</h3>
         </div>
       )}
 
-      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: c.isAdminOrOffice ? 'repeat(auto-fit, minmax(360px, 1fr))' : '1fr', gap: '20px', alignItems: 'start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
-          {c.isAdminOrOffice && (
+      {!c.isAdminOrOffice && activeRoutes.length > 0 && (
+        <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {activeRoutes.length > 1 && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {activeRoutes.map((r) => {
+                const isSelected = (c.selectedRoute?.id ?? activeRoutes[0]?.id) === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className={isSelected ? 'btn btn-primary' : 'btn btn-secondary'}
+                    onClick={() => c.setSelectedRoute(r)}
+                    style={{ minBlockSize: '44px', padding: '0 14px', fontSize: '0.84rem', fontWeight: 600 }}
+                  >
+                    Viaje #{r.id}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <RepartoDriverRoutePanel
+            selectedRoute={
+              activeRoutes.find((r) => r.id === c.selectedRoute?.id) ?? activeRoutes[0] ?? null
+            }
+            stops={c.activeRouteTspDetails.locations}
+            handleOpenCollectForStop={c.handleOpenCollectForStop}
+          />
+        </div>
+      )}
+
+      {c.isAdminOrOffice && (
+        <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', alignItems: 'start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
               <div className="card" style={{ padding: '14px 16px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: '#fff' }}>
                 <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
@@ -91,19 +117,14 @@ export default function RepartoDashboard() {
                 </span>
               </div>
             </div>
-          )}
 
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
-              <h3 className="card-title" style={{ margin: 0 }}>
-                {c.isAdminOrOffice ? 'Viajes' : 'Mi Viaje'}
-              </h3>
-              {c.isAdminOrOffice && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '12px', flexWrap: 'wrap' }}>
+                <h3 className="card-title" style={{ margin: 0 }}>Viajes</h3>
                 <button type="button" className="btn btn-primary" onClick={c.handleOpenCreateModal}>
                   <Plus size={16} aria-hidden="true" /> Nuevo Viaje
                 </button>
-              )}
-            </div>
+              </div>
 
             <div role="tablist" aria-label="Filtro de viajes" className="linear-tablist" style={{ marginBottom: '12px' }}>
               {tripTabs.map((tab, idx) => {
@@ -221,6 +242,7 @@ export default function RepartoDashboard() {
           />
         </div>
       </div>
+      )}
 
       <FieldCollectModal
         client={c.collectStopTarget?.client ?? null}

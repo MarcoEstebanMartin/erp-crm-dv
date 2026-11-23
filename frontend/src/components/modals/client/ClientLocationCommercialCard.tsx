@@ -12,24 +12,6 @@ const DELIVERY_ROUTES = [
   'SAUCE Y SANSINENA', 'PIEDRITAS', 'BANDERALO Y LARROUDÉ', 'AMERICA Y FORTIN', 'TODOS',
 ];
 
-const CARD_STYLE: React.CSSProperties = {
-  border: '1px solid var(--border-color)',
-  borderRadius: 'var(--radius-md)',
-  padding: '18px',
-  backgroundColor: '#fafafa',
-};
-
-const HEADER_STYLE: React.CSSProperties = {
-  margin: '0 0 14px 0',
-  fontSize: '0.84rem',
-  fontWeight: 700,
-  color: 'var(--text-secondary)',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  borderBottom: '1px solid var(--border-color)',
-  paddingBottom: '8px',
-};
-
 const SELECT_STYLE: React.CSSProperties = {
   height: '38px',
   padding: '6px 10px',
@@ -43,11 +25,17 @@ const SELECT_STYLE: React.CSSProperties = {
 };
 
 const LABEL_STYLE: React.CSSProperties = {
-  fontSize: '0.82rem',
+  fontSize: '0.78rem',
   fontWeight: 600,
-  marginBottom: '6px',
+  marginBottom: '5px',
   display: 'block',
-  color: 'var(--text-primary)',
+  color: 'var(--text-secondary)',
+};
+
+const INPUT_STYLE: React.CSSProperties = {
+  width: '100%',
+  height: '38px',
+  fontSize: '0.9rem',
 };
 
 interface ClientLocationCommercialCardProps {
@@ -81,102 +69,96 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={CARD_STYLE}>
-        <h4 style={HEADER_STYLE}>Ubicación</h4>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minInlineSize: 0 }}>
+      <div className="form-group" style={{ marginBottom: 0 }}>
+        <label htmlFor="client-address" style={LABEL_STYLE}>Dirección</label>
+        <input
+          id="client-address"
+          ref={addressInputRef}
+          type="text"
+          className="input"
+          placeholder="Dirección"
+          value={data.address || ''}
+          onChange={(e) => onChangeData({ address: e.target.value })}
+          style={INPUT_STYLE}
+        />
+      </div>
 
-        <div className="form-group" style={{ marginBottom: '14px' }}>
-          <label htmlFor="client-address" style={LABEL_STYLE}>Dirección</label>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '12px' }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label htmlFor="client-city" style={LABEL_STYLE}>Localidad</label>
           <input
-            id="client-address"
-            ref={addressInputRef}
+            id="client-city"
             type="text"
             className="input"
-            placeholder="Dirección"
-            value={data.address || ''}
-            onChange={(e) => onChangeData({ address: e.target.value })}
-            style={{ width: '100%', height: '38px', fontSize: '0.9rem' }}
+            placeholder="Localidad"
+            value={data.city || ''}
+            onChange={(e) => onChangeData({ city: e.target.value })}
+            style={INPUT_STYLE}
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '14px', marginBottom: '14px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="client-city" style={LABEL_STYLE}>Localidad</label>
-            <input
-              id="client-city"
-              type="text"
-              className="input"
-              placeholder="Localidad"
-              value={data.city || ''}
-              onChange={(e) => onChangeData({ city: e.target.value })}
-              style={{ width: '100%', height: '38px', fontSize: '0.9rem' }}
-            />
-          </div>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label htmlFor="client-barrio" style={LABEL_STYLE}>Barrio</label>
+          <input
+            id="client-barrio"
+            type="text"
+            list="barrio-suggestions"
+            className="input"
+            placeholder="Barrio"
+            value={data.barrio || ''}
+            onChange={(e) => onChangeData({ barrio: e.target.value })}
+            style={INPUT_STYLE}
+          />
+          <datalist id="barrio-suggestions">
+            {BARRIO_SUGGESTIONS.map((b) => (
+              <option key={b} value={b} />
+            ))}
+          </datalist>
+        </div>
+      </div>
 
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="client-barrio" style={LABEL_STYLE}>Barrio</label>
-            <input
-              id="client-barrio"
-              type="text"
-              list="barrio-suggestions"
-              className="input"
-              placeholder="Barrio"
-              value={data.barrio || ''}
-              onChange={(e) => onChangeData({ barrio: e.target.value })}
-              style={{ width: '100%', height: '38px', fontSize: '0.9rem' }}
-            />
-            <datalist id="barrio-suggestions">
-              {BARRIO_SUGGESTIONS.map((b) => (
-                <option key={b} value={b} />
-              ))}
-            </datalist>
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: data.isSeller && !data.isClient ? '1fr 1fr' : '1fr', gap: '12px' }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label htmlFor="client-delivery-route" style={LABEL_STYLE}>Ruta de reparto</label>
+          <select
+            id="client-delivery-route"
+            className="select"
+            value={data.route || ''}
+            onChange={(e) => onChangeData({ route: e.target.value })}
+            style={SELECT_STYLE}
+          >
+            <option value="">Sin ruta</option>
+            {DELIVERY_ROUTES.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: data.isSeller && !data.isClient ? '1fr 1fr' : '1fr', gap: '14px' }}>
+        {data.isSeller && !data.isClient && (
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="client-delivery-route" style={LABEL_STYLE}>Ruta de reparto</label>
+            <label htmlFor="seller-sale-route" style={LABEL_STYLE}>Ruta de preventa</label>
             <select
-              id="client-delivery-route"
+              id="seller-sale-route"
               className="select"
-              value={data.route || ''}
-              onChange={(e) => onChangeData({ route: e.target.value })}
+              value={data.saleRouteId || ''}
+              onChange={(e) => handleSaleRouteChange(e.target.value)}
               style={SELECT_STYLE}
             >
               <option value="">Sin ruta</option>
-              {DELIVERY_ROUTES.map((r) => (
-                <option key={r} value={r}>{r}</option>
+              {availableSaleRoutes.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
           </div>
-
-          {data.isSeller && !data.isClient && (
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="seller-sale-route" style={LABEL_STYLE}>Ruta de preventa</label>
-              <select
-                id="seller-sale-route"
-                className="select"
-                value={data.saleRouteId || ''}
-                onChange={(e) => handleSaleRouteChange(e.target.value)}
-                style={SELECT_STYLE}
-              >
-                <option value="">Sin ruta</option>
-                {availableSaleRoutes.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        <ClientGpsPickerSection data={data} onChangeData={onChangeData} />
+        )}
       </div>
 
-      {Boolean(data.isClient) && (
-        <div style={CARD_STYLE}>
-          <h4 style={HEADER_STYLE}>Condiciones comerciales</h4>
+      <ClientGpsPickerSection data={data} onChangeData={onChangeData} />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '0.85fr 1.15fr', gap: '14px', marginBottom: '14px' }}>
+      {Boolean(data.isClient) && (
+        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: '12px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label htmlFor="client-seller" style={LABEL_STYLE}>Vendedor</label>
               <select
@@ -210,7 +192,7 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 0.55fr', gap: '12px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label htmlFor="client-credit-limit" style={LABEL_STYLE}>Límite Cta Cte</label>
               <select
@@ -240,6 +222,21 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
                 <option value="B">Lista Especial</option>
                 <option value="C">Lista Especial 2</option>
               </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label htmlFor="client-discount" style={LABEL_STYLE}>Dto. %</label>
+              <input
+                id="client-discount"
+                type="number"
+                min={0}
+                max={100}
+                step="0.5"
+                className="input tabular-nums"
+                value={data.discount ?? 0}
+                onChange={(e) => onChangeData({ discount: e.target.value === '' ? 0 : Number(e.target.value) })}
+                style={INPUT_STYLE}
+              />
             </div>
           </div>
         </div>

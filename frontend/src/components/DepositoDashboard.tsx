@@ -20,11 +20,12 @@ import { useDepositoController } from './deposito/useDepositoController';
 interface DepositoDashboardProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  pickingOnly?: boolean;
 }
 
-export default function DepositoDashboard({ activeTab }: DepositoDashboardProps) {
+export default function DepositoDashboard({ activeTab, pickingOnly = false }: DepositoDashboardProps) {
   const confirm = useConfirm();
-  const c = useDepositoController(activeTab, confirm);
+  const c = useDepositoController(activeTab, confirm, pickingOnly);
   const [focusedMapLocation, setFocusedMapLocation] = useState<string | null>(null);
 
   if (activeTab === 'field-receipts') {
@@ -58,28 +59,30 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
 
   return (
     <div style={{ width: '100%' }}>
-      <div className="no-print linear-tablist" role="tablist" aria-label="Depósito WMS" style={{ marginBottom: '20px' }}>
-        {[
-          { id: 'wms-map', label: 'Mapa WMS', icon: <Map size={15} aria-hidden="true" /> },
-          { id: 'picking', label: 'Picking', icon: <ClipboardList size={15} aria-hidden="true" /> },
-          { id: 'stock-list', label: 'Inventario', icon: <Warehouse size={15} aria-hidden="true" /> },
-          { id: 'lot-expiration', label: 'Lotes', icon: <Calendar size={15} aria-hidden="true" /> },
-          { id: 'replenishment', label: 'Reposición', icon: <ShoppingCart size={15} aria-hidden="true" /> },
-        ].map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={c.subTab === t.id}
-            className="linear-tab"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            onClick={() => { c.setSubTab(t.id); c.setSelectedOrder(null); c.setShowConsolidatedView(false); }}
-          >
-            {t.icon}
-            <span>{t.label}</span>
-          </button>
-        ))}
-      </div>
+      {!pickingOnly && (
+        <div className="no-print linear-tablist" role="tablist" aria-label="Depósito WMS" style={{ marginBottom: '20px' }}>
+          {[
+            { id: 'wms-map', label: 'Mapa WMS', icon: <Map size={15} aria-hidden="true" /> },
+            { id: 'picking', label: 'Picking', icon: <ClipboardList size={15} aria-hidden="true" /> },
+            { id: 'stock-list', label: 'Inventario', icon: <Warehouse size={15} aria-hidden="true" /> },
+            { id: 'lot-expiration', label: 'Lotes', icon: <Calendar size={15} aria-hidden="true" /> },
+            { id: 'replenishment', label: 'Reposición', icon: <ShoppingCart size={15} aria-hidden="true" /> },
+          ].map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={c.subTab === t.id}
+              className="linear-tab"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => { c.setSubTab(t.id); c.setSelectedOrder(null); c.setShowConsolidatedView(false); }}
+            >
+              {t.icon}
+              <span>{t.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {c.errorMsg && <div role="alert" className="alert alert-danger" style={{ marginBottom: '16px' }}>{c.errorMsg}</div>}
       {c.successMsg && <div role="status" className="alert alert-success" style={{ marginBottom: '16px' }} onClick={() => c.setSuccessMsg(null)}>{c.successMsg}</div>}
@@ -143,7 +146,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         )
       )}
 
-      {c.subTab === 'replenishment' && !c.selectedOrder && !c.showConsolidatedView && (
+      {!pickingOnly && c.subTab === 'replenishment' && !c.selectedOrder && !c.showConsolidatedView && (
         <DepositoReplenishmentTab
           orders={c.orders}
           allProducts={c.allProducts}
@@ -157,7 +160,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         />
       )}
 
-      {c.subTab === 'wms-map' && !c.selectedOrder && !c.showConsolidatedView && (
+      {!pickingOnly && c.subTab === 'wms-map' && !c.selectedOrder && !c.showConsolidatedView && (
         <Suspense fallback={<div style={{ padding: '24px', color: 'var(--text-secondary)' }}>Cargando mapa WMS...</div>}>
           <WarehouseMap
             products={c.products}
@@ -168,7 +171,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         </Suspense>
       )}
 
-      {c.subTab === 'stock-list' && !c.selectedOrder && !c.showConsolidatedView && (
+      {!pickingOnly && c.subTab === 'stock-list' && !c.selectedOrder && !c.showConsolidatedView && (
         <DepositoStockListTab
           products={c.products}
           searchQuery={c.searchQuery}
@@ -182,7 +185,7 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         />
       )}
 
-      {c.subTab === 'lot-expiration' && !c.selectedOrder && !c.showConsolidatedView && (
+      {!pickingOnly && c.subTab === 'lot-expiration' && !c.selectedOrder && !c.showConsolidatedView && (
         <DepositoLotsExpirationTab
           expiringLots={c.expiringLots}
           allProducts={c.allProducts}
@@ -195,7 +198,9 @@ export default function DepositoDashboard({ activeTab }: DepositoDashboardProps)
         />
       )}
 
-      <DepositoStockAdjustModal stockModal={c.stockModal} setStockModal={c.setStockModal} loading={c.loading} onSubmit={c.handleStockAdjustSubmit} />
+      {!pickingOnly && (
+        <DepositoStockAdjustModal stockModal={c.stockModal} setStockModal={c.setStockModal} loading={c.loading} onSubmit={c.handleStockAdjustSubmit} />
+      )}
       <BultosCloseModal isOpen={c.showBultoModal} bultosData={c.bultosData} setBultosData={c.setBultosData} loading={c.loading} onClose={() => c.setShowBultoModal(false)} onConfirm={c.handleConfirmBultosAndFinish} />
       <DepositoPrintLayouts labelsToPrint={c.labelsToPrint} showConsolidatedView={c.showConsolidatedView} selectedOrdersList={c.selectedOrdersList} consolidatedItems={c.consolidatedItems} />
     </div>

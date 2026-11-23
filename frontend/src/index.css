@@ -821,6 +821,24 @@ dialog.app-native-dialog::backdrop {
   overscroll-behavior: contain;
 }
 
+.client-modal-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 900px) {
+  .client-modal-columns {
+    grid-template-columns: 1fr 1.04fr;
+    gap: 26px;
+  }
+
+  .client-modal-columns > :first-child {
+    border-right: 1px solid var(--border-color);
+    padding-right: 26px;
+  }
+}
+
 /* Navegación / Sub-pestañas subrayadas estilo Linear */
 .linear-underline-nav,
 .linear-tablist {

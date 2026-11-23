@@ -6,7 +6,7 @@ import {
   Role,
   TransactionType,
 } from '@prisma/client';
-import { roundToTwoDecimals, toDecimal } from '../../core/money';
+import { roundToIntegerPeso, roundToTwoDecimals, toDecimal } from '../../core/money';
 import { computeRunningBalances } from '../../engines/account-ledger.engine';
 import { mapLedgerEntryToViewItem } from '../ledger/account-ledger.service';
 import { paymentAllocationService } from '../finance/payment-allocation.service';
@@ -153,7 +153,11 @@ export class PersonaLedgerSubService {
       throw new Error('Acceso denegado.');
     }
 
-    return paymentAllocationService.getClientPendingInvoicesWithAllocations(persona.id);
+    const summary = await paymentAllocationService.getClientPendingInvoicesWithAllocations(persona.id);
+    return {
+      ...summary,
+      outstandingBalance: roundToIntegerPeso(persona.outstandingBalance.toString()).toNumber(),
+    };
   }
 
   /**

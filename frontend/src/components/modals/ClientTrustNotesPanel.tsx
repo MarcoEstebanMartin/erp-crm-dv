@@ -22,6 +22,7 @@ interface ClientTrustNotesPanelProps {
   onClientUpdated: (updatedClient: any) => void;
   onDataChanged: () => void;
   setErrorMsg: (msg: string | null) => void;
+  flat?: boolean;
 }
 
 export const ClientTrustNotesPanel: React.FC<ClientTrustNotesPanelProps> = ({
@@ -29,6 +30,7 @@ export const ClientTrustNotesPanel: React.FC<ClientTrustNotesPanelProps> = ({
   onClientUpdated,
   onDataChanged,
   setErrorMsg,
+  flat = false,
 }) => {
   const [notes, setNotes] = useState<PersonaNoteItem[]>(Array.isArray(client.notes) ? client.notes : []);
   const [loadingNotes, setLoadingNotes] = useState(false);
@@ -128,10 +130,18 @@ export const ClientTrustNotesPanel: React.FC<ClientTrustNotesPanelProps> = ({
   };
 
   return (
-    <div style={{ border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px', backgroundColor: '#fafafa', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <h4 style={{ margin: 0, fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-        Confianza y Bitácora
-      </h4>
+    <div
+      style={
+        flat
+          ? { display: 'flex', flexDirection: 'column', gap: '14px' }
+          : { border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px', backgroundColor: '#fafafa', display: 'flex', flexDirection: 'column', gap: '12px' }
+      }
+    >
+      {!flat && (
+        <h4 style={{ margin: 0, fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+          Confianza y Bitácora
+        </h4>
+      )}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }} role="group" aria-label="Etiquetas de confianza">
         {TRUST_TAGS.map((tag) => {

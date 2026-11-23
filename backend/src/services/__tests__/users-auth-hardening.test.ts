@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { env } from '../../config/env.config';
-import { authenticateJWT, requireRoleOrPermission } from '../../middlewares/auth';
+import { authenticateJWT, requireRole, requireRoleOrPermission } from '../../middlewares/auth';
 import { login, getMe, changeOwnPassword } from '../../controllers/auth.controller';
 import { adminUsersSubService } from '../admin/admin-users.service';
 import {
@@ -517,5 +517,47 @@ describe('Blindaje de Usuarios, Roles y Sesiones — Paso 1', () => {
       }),
     );
     expect((updated as any).permissions).toEqual({ canSell: true, canDeliver: true });
+  });
+
+  it('Permite función Vendedor + Depósito solo armado (canPick) en requireRoleOrPermission y bloquea mutaciones de stock/cancelación', async () => {
+    expect(normalizeUserPermissions({ canDeliver: true, canPick: true })).toEqual({
+      canDeliver: true,
+      canPick: true,
+    });
+
+    const pickMw = requireRoleOrPermission([Role.ADMIN, Role.FACTURACION, Role.DEPOSITO], 'canPick');
+    const stockMw = requireRole([Role.ADMIN, Role.DEPOSITO]);
+
+    const vendedorPolifuncional = {
+      id: 68,
+      username: 'Gemini Ventas',
+      role: Role.VENDEDOR,
+      permissions: { canDeliver: true, canPick: true },
+    };
+
+    // 1. VENDEDOR con canPick=true pasa en rutas de armado/picking
+    const nextPick = vi.fn();
+    const resPick: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    pickMw({ user: vendedorPolifuncional } as any, resPick, nextPick);
+    expect(nextPick).toHaveBeenCalledTimes(1);
+    expect(resPick.status).not.toHaveBeenCalled();
+
+    // 2. El mismo usuario sigue bloqueado (403) en rutas de ajuste de stock
+    const nextStock = vi.fn();
+    const resStock: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    stockMw({ user: vendedorPolifuncional } as any, resStock, nextStock);
+    expect(nextStock).not.toHaveBeenCalled();
+    expect(resStock.status).toHaveBeenCalledWith(403);
+
+    // 3. VENDEDOR sin canPick recibe 403 en rutas de armado/picking
+    const nextDenied = vi.fn();
+    const resDenied: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    pickMw(
+      { user: { id: 69, username: 'vendedor_comun', role: Role.VENDEDOR, permissions: { canDeliver: true } } } as any,
+      resDenied,
+      nextDenied,
+    );
+    expect(nextDenied).not.toHaveBeenCalled();
+    expect(resDenied.status).toHaveBeenCalledWith(403);
   });
 });

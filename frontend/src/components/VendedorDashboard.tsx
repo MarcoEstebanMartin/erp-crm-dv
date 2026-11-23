@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, CheckCircle2, History, Receipt, Home, Navigation, Truck } from 'lucide-react';
+import { ShoppingCart, CheckCircle2, History, Receipt, Home, Navigation, Truck, Warehouse } from 'lucide-react';
 import { api } from '../utils/api';
 import {
   getActiveAssignedDeliveryRoutes,
@@ -31,6 +31,7 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
   const c = useVendedorController(activeTab);
   const currentUser = api.getCurrentUser();
   const canDeliver = hasDeliveryPermission(currentUser);
+  const canPick = Boolean(currentUser?.permissions?.canPick);
   const [activeDeliveryRoutes, setActiveDeliveryRoutes] = React.useState<AssignableDeliveryRoute[]>([]);
   const [collectClientId, setCollectClientId] = React.useState<number | null>(null);
   const [mountedTabs, setMountedTabs] = React.useState<Record<string, boolean>>(() => ({
@@ -124,6 +125,18 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
                 {activeDeliveryRoutes.length}
               </span>
             )}
+          </button>
+        )}
+
+        {canPick && (
+          <button
+            type="button"
+            className={`vendedor-nav-pill ${activeTab === 'deposito' ? 'vendedor-nav-pill-active' : ''}`}
+            aria-current={activeTab === 'deposito' ? 'page' : undefined}
+            onClick={() => setActiveTab('deposito')}
+          >
+            <Warehouse size={16} />
+            <span>Depósito</span>
           </button>
         )}
 
@@ -309,9 +322,9 @@ export default function VendedorDashboard({ activeTab, setActiveTab }: VendedorD
         </React.Suspense>
       )}
 
-      {activeTab === 'deposito' && (
+      {activeTab === 'deposito' && canPick && (
         <React.Suspense fallback={<div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando...</div>}>
-          <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} />
+          <DepositoDashboard activeTab="deposito" setActiveTab={setActiveTab} pickingOnly />
         </React.Suspense>
       )}
 

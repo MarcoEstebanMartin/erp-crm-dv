@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthenticatedRequest } from '../types';
+import { AuthenticatedRequest, UserPermissions } from '../types';
 import { Role, BillingType, OrderStatus, PaymentMethod } from '@prisma/client';
 import { logAudit } from '../utils/audit';
 import { appCache } from '../utils/cache';
@@ -18,12 +18,13 @@ interface OrderActor {
 const ARMADO_ROLES: Role[] = [Role.ADMIN, Role.FACTURACION, Role.DEPOSITO];
 const BILLING_ROLES: Role[] = [Role.ADMIN, Role.FACTURACION];
 
-/** Valida sesión autenticada y roles permitidos para operaciones de pedidos/facturación. */
+/** Valida sesión autenticada y roles o permiso granular permitidos para operaciones de pedidos/facturación. */
 function requireOrderActor(
   req: AuthenticatedRequest,
   res: Response,
   allowedRoles?: Role[],
   deniedMessage: string = 'Acceso denegado.',
+  permissionKey?: keyof UserPermissions,
 ): OrderActor | null {
   const userId = req.user?.id;
   const userRole = req.user?.role as Role | undefined;
@@ -31,7 +32,9 @@ function requireOrderActor(
     res.status(401).json({ status: 'error', message: 'No autorizado.' });
     return null;
   }
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
+  const hasAllowedRole = !allowedRoles || allowedRoles.includes(userRole);
+  const hasPermission = Boolean(permissionKey && req.user?.permissions?.[permissionKey]);
+  if (!hasAllowedRole && !hasPermission) {
     res.status(403).json({ status: 'error', message: deniedMessage });
     return null;
   }
@@ -79,6 +82,9 @@ export async function getOrders(req: AuthenticatedRequest, res: Response): Promi
     const data = await OrderQueriesService.getOrders({
       userId: actor.userId,
       userRole: actor.userRole,
+      canPick: Boolean(req.user?.permissions?.canPick),
+      pickingQueue:
+        typeof req.query.pickingQueue === 'string' ? req.query.pickingQueue.trim() : undefined,
       billingType: req.query.billingType as string | undefined,
       status: rawStatus,
       statusGroup: typeof req.query.statusGroup === 'string' ? req.query.statusGroup.trim() : undefined,
@@ -103,7 +109,12 @@ export async function getOrderById(req: AuthenticatedRequest, res: Response): Pr
   if (!actor) return;
 
   try {
-    const order = await OrderQueriesService.getOrderById(Number(req.params.id), actor.userId, actor.userRole);
+    const order = await OrderQueriesService.getOrderById(
+      Number(req.params.id),
+      actor.userId,
+      actor.userRole,
+      Boolean(req.user?.permissions?.canPick),
+    );
     res.status(200).json({ status: 'success', data: { order } });
   } catch (error: any) {
     respondOrderError(res, error, 500, 'Error al obtener el pedido.');
@@ -157,7 +168,7 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
 }
 
 export async function updateOrderWeights(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const actor = requireOrderActor(req, res, ARMADO_ROLES, 'Permisos insuficientes para actualizar pesos.');
+  const actor = requireOrderActor(req, res, ARMADO_ROLES, 'Permisos insuficientes para actualizar pesos.', 'canPick');
   if (!actor) return;
 
   try {
@@ -176,7 +187,7 @@ export async function updateOrderWeights(req: AuthenticatedRequest, res: Respons
 }
 
 export async function confirmArmado(req: AuthenticatedRequest, res: Response): Promise<void> {
-  const actor = requireOrderActor(req, res, ARMADO_ROLES, 'Permisos insuficientes para confirmar armado.');
+  const actor = requireOrderActor(req, res, ARMADO_ROLES, 'Permisos insuficientes para confirmar armado.', 'canPick');
   if (!actor) return;
 
   try {

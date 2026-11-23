@@ -12,48 +12,6 @@ export interface AuditLogFilters {
 }
 
 const MODULE_WHERE_MAP: Record<AuditModuleKey, Prisma.AuditLogWhereInput> = {
-  ACCESS: { action: { in: ['LOGIN', 'LOGIN_FAILED', 'CHANGE_OWN_PASSWORD'] } },
-  STAFF: {
-    OR: [
-      { action: { in: ['CREATE_USER', 'UPDATE_USER', 'TOGGLE_USER_STATUS', 'DELETE_USER', 'CREATE_EMPLOYEE', 'UPDATE_EMPLOYEE'] } },
-      { entityType: 'Employee' },
-    ],
-  },
-  STOCK_WMS: {
-    OR: [
-      {
-        action: {
-          in: [
-            'ASSIGN_WMS_LOCATION', 'CLEAR_WMS_LOCATION', 'UPSERT_WAREHOUSE_CELL', 'RESET_WAREHOUSE_CELL',
-            'ADJUST_STOCK', 'ADJUST_STOCK_BATCH', 'RECONCILE_STOCK_DRIFT', 'RECONCILE_STOCK',
-            'UPDATE_LOT', 'DELETE_LOT', 'TRANSFER_LOT_STOCK',
-          ],
-        },
-      },
-      { entityType: { in: ['ProductLot', 'WarehouseCell'] } },
-    ],
-  },
-  CATALOG: {
-    OR: [
-      {
-        action: {
-          in: [
-            'CREATE_PRODUCT', 'UPDATE_PRODUCT', 'UPDATE_PRODUCT_IMAGE', 'IMPORT_PRODUCT_IMAGE_ZIP',
-            'IMPORT_PRODUCTS_CSV', 'BULK_UPDATE_PRICES', 'REVERT_PRICES_UNDO', 'SYNC_FROM_PRODUCTION_CATALOG',
-            'EXCEL_IMPORT', 'CREATE_RUBRO', 'UPDATE_RUBRO', 'DELETE_RUBRO',
-            'CREATE_WEEKLY_PROMO', 'TOGGLE_WEEKLY_PROMO', 'DELETE_WEEKLY_PROMO',
-          ],
-        },
-      },
-      { entityType: { in: ['Rubro', 'WeeklyPromo', 'PRODUCTS', 'PRICES'] } },
-    ],
-  },
-  CLIENTS: {
-    OR: [
-      { action: { in: ['CREATE_PERSONA', 'UPDATE_PERSONA', 'DELETE_PERSONA', 'CLIENT_VISIT_FAIL'] } },
-      { entityType: { in: ['CLIENTS', 'PROVIDERS'] } },
-    ],
-  },
   SALES: {
     OR: [
       {
@@ -69,17 +27,28 @@ const MODULE_WHERE_MAP: Record<AuditModuleKey, Prisma.AuditLogWhereInput> = {
       { entityType: { in: ['Order', 'CreditNote'] } },
     ],
   },
-  PURCHASES: {
+  CLIENTS: {
+    OR: [
+      { action: { in: ['CREATE_PERSONA', 'UPDATE_PERSONA', 'DELETE_PERSONA', 'CLIENT_VISIT_FAIL'] } },
+      { entityType: { in: ['Persona', 'CLIENTS', 'PROVIDERS'] } },
+    ],
+  },
+  STOCK_CATALOG: {
     OR: [
       {
         action: {
           in: [
-            'CREATE_PURCHASE_ORDER', 'RECEIVE_PURCHASE_ORDER', 'CREATE_SUPPLIER_INVOICE',
-            'DELETE_SUPPLIER_INVOICE', 'CREATE_TAX_WITHHOLDING', 'UPDATE_PERCEPTION_TYPE',
+            'ASSIGN_WMS_LOCATION', 'CLEAR_WMS_LOCATION', 'UPSERT_WAREHOUSE_CELL', 'RESET_WAREHOUSE_CELL',
+            'ADJUST_STOCK', 'ADJUST_STOCK_BATCH', 'RECONCILE_STOCK_DRIFT', 'RECONCILE_STOCK',
+            'UPDATE_LOT', 'DELETE_LOT', 'TRANSFER_LOT_STOCK',
+            'CREATE_PRODUCT', 'UPDATE_PRODUCT', 'UPDATE_PRODUCT_IMAGE', 'IMPORT_PRODUCT_IMAGE_ZIP',
+            'IMPORT_PRODUCTS_CSV', 'BULK_UPDATE_PRICES', 'REVERT_PRICES_UNDO', 'SYNC_FROM_PRODUCTION_CATALOG',
+            'EXCEL_IMPORT', 'CREATE_RUBRO', 'UPDATE_RUBRO', 'DELETE_RUBRO',
+            'CREATE_WEEKLY_PROMO', 'TOGGLE_WEEKLY_PROMO', 'DELETE_WEEKLY_PROMO',
           ],
         },
       },
-      { entityType: { in: ['PurchaseOrder', 'SupplierInvoice', 'TaxWithholding', 'PerceptionType'] } },
+      { entityType: { in: ['Product', 'ProductLot', 'WarehouseCell', 'Rubro', 'WeeklyPromo', 'PRODUCTS', 'PRICES'] } },
     ],
   },
   FINANCE: {
@@ -92,10 +61,19 @@ const MODULE_WHERE_MAP: Record<AuditModuleKey, Prisma.AuditLogWhereInput> = {
             'CLOSE_CASH_DRAWER', 'CLOSE_CENTRAL_DRAWER', 'CREATE_BANK_ACCOUNT', 'UPDATE_BANK_ACCOUNT',
             'DEPOSIT_CASH_TO_BANK', 'VERIFY_BANK_TRANSFER', 'CREATE_EXPENSE', 'BULK_CREATE_EXPENSES',
             'IMPORT_EXPENSES_EXCEL', 'DELETE_EXPENSE',
+            'CREATE_PURCHASE_ORDER', 'RECEIVE_PURCHASE_ORDER', 'CREATE_SUPPLIER_INVOICE',
+            'DELETE_SUPPLIER_INVOICE', 'CREATE_TAX_WITHHOLDING', 'UPDATE_PERCEPTION_TYPE',
           ],
         },
       },
-      { entityType: { in: ['Transaction', 'CashDrawer', 'BankAccount', 'Expense'] } },
+      {
+        entityType: {
+          in: [
+            'Transaction', 'CashDrawer', 'BankAccount', 'Expense',
+            'PurchaseOrder', 'SupplierInvoice', 'TaxWithholding', 'PerceptionType',
+          ],
+        },
+      },
     ],
   },
   LOGISTICS: {
@@ -121,8 +99,16 @@ const MODULE_WHERE_MAP: Record<AuditModuleKey, Prisma.AuditLogWhereInput> = {
   },
   SYSTEM: {
     OR: [
-      { action: { in: ['UPDATE_CONFIG', 'ENCRYPTED_DATABASE_BACKUP', 'SYNC_BALANCES'] } },
-      { entityType: { in: ['SystemSetting', 'DATABASE'] } },
+      {
+        action: {
+          in: [
+            'LOGIN', 'LOGIN_FAILED', 'CHANGE_OWN_PASSWORD',
+            'CREATE_USER', 'UPDATE_USER', 'TOGGLE_USER_STATUS', 'DELETE_USER', 'CREATE_EMPLOYEE', 'UPDATE_EMPLOYEE',
+            'UPDATE_CONFIG', 'ENCRYPTED_DATABASE_BACKUP', 'SYNC_BALANCES',
+          ],
+        },
+      },
+      { entityType: { in: ['Employee', 'SystemSetting', 'DATABASE'] } },
     ],
   },
 };

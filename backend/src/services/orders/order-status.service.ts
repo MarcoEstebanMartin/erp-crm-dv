@@ -77,7 +77,7 @@ export class OrderStatusService {
       }
     }
 
-    if (userRole === Role.DEPOSITO) {
+    if (userRole === Role.DEPOSITO || userRole === Role.VENDEDOR) {
       if (status !== OrderStatus.PREPARING && status !== OrderStatus.PREPARED) {
         const err: any = new Error(
           'Depósito solo puede pasar pedidos a "Preparando" o "Armado listo para facturar".',

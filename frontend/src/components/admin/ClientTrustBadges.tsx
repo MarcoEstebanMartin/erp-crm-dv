@@ -15,7 +15,7 @@ export const ClientTrustBadges: React.FC<ClientTrustBadgesProps> = ({ trustTags,
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px', marginTop: '5px' }}>
       {tags.map((code) => {
         const meta = TRUST_TAG_MAP[code];
-        if (!meta) return null;
+        const label = meta ? meta.label : code;
         return (
           <span
             key={code}
@@ -24,13 +24,13 @@ export const ClientTrustBadges: React.FC<ClientTrustBadgesProps> = ({ trustTags,
               fontWeight: 600,
               padding: '1px 7px',
               borderRadius: '999px',
-              backgroundColor: meta.bg,
-              color: meta.color,
-              border: `1px solid ${meta.border}`,
+              backgroundColor: meta ? meta.bg : '#f1f5f9',
+              color: meta ? meta.color : '#334155',
+              border: `1px solid ${meta ? meta.border : '#e2e8f0'}`,
               lineHeight: 1.4,
             }}
           >
-            {meta.label}
+            {label}
           </span>
         );
       })}
