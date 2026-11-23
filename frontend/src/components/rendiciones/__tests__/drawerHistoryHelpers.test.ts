@@ -6,7 +6,7 @@ import {
 } from '../drawerHistoryHelpers';
 
 describe('classifyDrawerHistoryRow', () => {
-  it('clasifica un registro legacy "VENDEDOR: ADMIN" como Cobro Oficina y oculta el pin de ciudad', () => {
+  it('clasifica un registro legacy "VENDEDOR: ADMIN" como Mostrador y oculta el pin de ciudad', () => {
     const res = classifyDrawerHistoryRow({
       drawerType: 'VENDEDOR',
       branch: 'VENDEDOR: ADMIN',
@@ -14,12 +14,12 @@ describe('classifyDrawerHistoryRow', () => {
     });
 
     expect(res.kind).toBe('ADMINISTRACION');
-    expect(res.badgeLabel).toBe('Cobro Oficina');
+    expect(res.badgeLabel).toBe('Mostrador');
     expect(res.responsibleName).toBe('Admin');
     expect(res.showRouteNote).toBe(false);
   });
 
-  it('clasifica un registro nuevo "ADMINISTRACION: ADMIN" como Cobro Oficina con resumen de recibo', () => {
+  it('clasifica un registro nuevo "ADMINISTRACION: ADMIN" como Mostrador con resumen de recibo', () => {
     const res = classifyDrawerHistoryRow({
       drawerType: 'ADMINISTRACION',
       branch: 'ADMINISTRACION: ADMIN',
@@ -30,7 +30,7 @@ describe('classifyDrawerHistoryRow', () => {
     });
 
     expect(res.kind).toBe('ADMINISTRACION');
-    expect(res.badgeLabel).toBe('Cobro Oficina');
+    expect(res.badgeLabel).toBe('Mostrador');
     expect(res.responsibleName).toBe('Admin');
     expect(res.showRouteNote).toBe(false);
     expect(res.activitySummary).toBe('Recibo · Supermercado Norte');
@@ -49,7 +49,7 @@ describe('classifyDrawerHistoryRow', () => {
     expect(res.showRouteNote).toBe(false);
   });
 
-  it('muestra routeNote únicamente para Repartidor', () => {
+  it('muestra routeNote únicamente para Reparto', () => {
     const res = classifyDrawerHistoryRow({
       drawerType: 'REPARTIDOR',
       branch: 'REPARTIDOR: AGUSTIN (Ruta #12)',
@@ -57,7 +57,7 @@ describe('classifyDrawerHistoryRow', () => {
     });
 
     expect(res.kind).toBe('REPARTIDOR');
-    expect(res.badgeLabel).toBe('Repartidor');
+    expect(res.badgeLabel).toBe('Reparto');
     expect(res.responsibleName).toBe('Agustín Montiel');
     expect(res.showRouteNote).toBe(true);
   });
