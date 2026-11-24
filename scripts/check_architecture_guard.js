@@ -12,7 +12,6 @@ const ROOTS = ['backend/src', 'frontend/src'];
 // Baseline de archivos legados conocidos > 450 líneas (solo puede achicarse, nunca crecer)
 const LEGACY_ALLOWLIST = new Set([
   'frontend/src/components/deposito/depositomapaData.ts',
-  'frontend/src/utils/api.ts',
   'frontend/src/components/HrDashboard.tsx',
   'frontend/src/components/offers/StandaloneOffersManager.tsx',
   'frontend/src/components/CrmDashboard.tsx',
