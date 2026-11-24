@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import { api } from '../../../utils/api';
 import {
-  BankAccountOption,
-  EmployeeRecord,
+  type BankAccountOption,
+  type EmployeeRecord,
   MONTH_NAMES,
-  OpenCashDrawerOption,
+  type OpenCashDrawerOption,
   formatDateAr,
   formatMoneyAr,
 } from './types';

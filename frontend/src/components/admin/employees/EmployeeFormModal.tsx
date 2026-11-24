@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../../../utils/api';
-import { EmployeeRecord } from './types';
+import type { EmployeeRecord } from './types';
 
 interface EmployeeFormModalProps {
   isOpen: boolean;

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Printer, Trash2, X } from 'lucide-react';
 import { api } from '../../../utils/api';
-import { EmployeeRecord, formatDateAr } from './types';
+import { type EmployeeRecord, formatDateAr } from './types';
 import { printVacationSheet } from './printVacationSheet';
 
 interface EmployeeVacationsModalProps {

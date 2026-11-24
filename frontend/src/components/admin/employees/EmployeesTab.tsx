@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, DollarSign, Pencil, Printer, UserPlus } from 'lucide-react';
 import { api } from '../../../utils/api';
 import {
-  BankAccountOption,
-  EmployeeRecord,
+  type BankAccountOption,
+  type EmployeeRecord,
   MONTH_NAMES,
-  OpenCashDrawerOption,
+  type OpenCashDrawerOption,
   formatDateAr,
   formatMoneyAr,
 } from './types';

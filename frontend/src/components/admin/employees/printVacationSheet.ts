@@ -1,4 +1,4 @@
-import { EmployeeRecord, EmployeeVacationRecord, formatDateAr } from './types';
+import { type EmployeeRecord, type EmployeeVacationRecord, formatDateAr } from './types';
 
 function escapeHtml(text: string): string {
   return text
