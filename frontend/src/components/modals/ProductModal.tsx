@@ -157,7 +157,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
         await api.uploadProductImage(savedProduct.id, selectedImageFile);
       }
       handleClose();
-      setSuccessMsg('Producto guardado correctamente.');
+      setSuccessMsg('__CHECK__');
       fetchData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al guardar producto.');

@@ -67,7 +67,7 @@ export function useAdminController(activeTab: string) {
 
   const [productModal, setProductModal] = useState({
     open: false, mode: 'create',
-    data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, commercialCategory: '', providerId: '' as string | number, imageUrl: null as string | null },
+    data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25 as string | number, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '' as string | number, commercialCategory: '', storeHighlight: null as string | null, providerId: '' as string | number, imageUrl: null as string | null },
   });
   const [importZipModalOpen, setImportZipModalOpen] = useState(false);
   const [clientModal, setClientModal] = useState({
@@ -400,7 +400,7 @@ export function useAdminController(activeTab: string) {
       });
       setProducts((prev) => prev.map((item) => (item.id === updatedProduct.id ? { ...item, ...updatedProduct } : item)));
       await fetchData();
-      setSuccessMsg('Producto actualizado correctamente.');
+      setSuccessMsg('__CHECK__');
     } catch (err: any) { setErrorMsg(err.message || 'Error al actualizar producto.'); }
   };
 

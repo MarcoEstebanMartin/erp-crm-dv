@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { ShoppingCart, Receipt, DollarSign, FileText, TrendingUp, Truck, Warehouse } from 'lucide-react';
+import { Check, ShoppingCart, Receipt, DollarSign, FileText, TrendingUp, Truck, Warehouse } from 'lucide-react';
 import { api } from '../utils/api';
 import HomeTab from './admin/HomeTab';
 import ClientsTab from './admin/ClientsTab';
@@ -63,8 +63,24 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </div>
       )}
       {c.successMsg && (
-        <div style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)', padding: '12px', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '20px', border: '1px solid rgba(52, 199, 89, 0.15)' }} onClick={() => c.setSuccessMsg(null)}>
-          {c.successMsg}
+        <div
+          role="status"
+          aria-label={c.successMsg === '__CHECK__' ? 'Actualizado' : undefined}
+          style={{
+            backgroundColor: 'var(--color-success-bg)',
+            color: 'var(--color-success)',
+            padding: c.successMsg === '__CHECK__' ? '8px 14px' : '12px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.85rem',
+            marginBottom: '20px',
+            border: '1px solid rgba(52, 199, 89, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+          }}
+          onClick={() => c.setSuccessMsg(null)}
+        >
+          {c.successMsg === '__CHECK__' ? <Check size={16} strokeWidth={2.5} aria-hidden="true" /> : c.successMsg}
         </div>
       )}
 

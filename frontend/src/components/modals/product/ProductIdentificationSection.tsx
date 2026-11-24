@@ -19,6 +19,12 @@ export const COMMERCIAL_CATEGORIES = [
   { value: 'Varios', label: 'Varios' },
 ];
 
+export const STORE_HIGHLIGHT_OPTIONS: { id: string; value: 'OFERTON' | 'DESTACADO' | null; label: string }[] = [
+  { id: 'normal', value: null, label: 'Normal' },
+  { id: 'oferton', value: 'OFERTON', label: 'Ofertón' },
+  { id: 'destacado', value: 'DESTACADO', label: 'Destacado' },
+];
+
 interface ProductIdentificationSectionProps {
   mode: string;
   data: any;
@@ -195,45 +201,56 @@ export const ProductIdentificationSection: React.FC<ProductIdentificationSection
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 14px',
-          backgroundColor: 'var(--bg-secondary, #F9FAFB)',
-          borderRadius: '8px',
-          border: '1px solid var(--border-color)',
-        }}
-      >
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, fontWeight: 600, fontSize: '0.84rem' }}>
-          <input
-            type="checkbox"
-            checked={Boolean(data.isPesable)}
-            onChange={(e) => onDataChange({ isPesable: e.target.checked })}
-            style={{ width: '16px', height: '16px', accentColor: 'var(--accent-color, #111827)', cursor: 'pointer' }}
-          />
-          <Scale size={15} color="var(--text-secondary)" aria-hidden="true" />
-          Producto Pesable (Kg)
-        </label>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', padding: '8px 14px', backgroundColor: 'var(--bg-secondary, #F9FAFB)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0, fontWeight: 600, fontSize: '0.84rem' }}>
+            <input type="checkbox" checked={Boolean(data.isPesable)} onChange={(e) => onDataChange({ isPesable: e.target.checked })} style={{ width: '16px', height: '16px', accentColor: 'var(--accent-color, #111827)', cursor: 'pointer' }} />
+            <Scale size={15} color="var(--text-secondary)" aria-hidden="true" />
+            Producto Pesable (Kg)
+          </label>
+          {data.isPesable && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label htmlFor="product-approx-weight" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>Peso Horma (Kg)</label>
+              <input id="product-approx-weight" type="number" step="0.01" className="input tabular-nums" placeholder="4.5" value={data.approximateWeight || ''} onChange={(e) => onDataChange({ approximateWeight: Number(e.target.value) })} style={{ width: '90px', padding: '3px 8px', textAlign: 'center', fontWeight: 600 }} />
+            </div>
+          )}
+        </div>
 
-        {data.isPesable && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label htmlFor="product-approx-weight" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>
-              Peso Horma (Kg)
-            </label>
-            <input
-              id="product-approx-weight"
-              type="number"
-              step="0.01"
-              className="input tabular-nums"
-              placeholder="4.5"
-              value={data.approximateWeight || ''}
-              onChange={(e) => onDataChange({ approximateWeight: Number(e.target.value) })}
-              style={{ width: '90px', padding: '3px 8px', textAlign: 'center', fontWeight: 600 }}
-            />
+        <fieldset style={{ border: 'none', padding: 0, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <legend className="visually-hidden">Tienda</legend>
+          <span aria-hidden="true" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Tienda</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            {STORE_HIGHLIGHT_OPTIONS.map((opt) => {
+              const current = data.storeHighlight === 'OFERTON' || data.storeHighlight === 'DESTACADO' ? data.storeHighlight : null;
+              const isSelected = current === opt.value;
+              const tone = opt.value === 'OFERTON' ? '#E30613' : opt.value === 'DESTACADO' ? '#0f172a' : null;
+              return (
+                <label
+                  key={opt.id}
+                  htmlFor={`product-store-highlight-${opt.id}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '999px',
+                    fontSize: '0.76rem', fontWeight: isSelected ? 700 : 500, cursor: 'pointer', margin: 0,
+                    backgroundColor: isSelected ? (tone ?? '#ffffff') : 'transparent',
+                    border: `1px solid ${isSelected ? (tone ?? 'var(--text-secondary)') : 'var(--border-color)'}`,
+                    color: isSelected ? (tone ? '#ffffff' : 'var(--text-primary)') : 'var(--text-secondary)',
+                  }}
+                >
+                  <input
+                    id={`product-store-highlight-${opt.id}`}
+                    type="radio"
+                    name="storeHighlight"
+                    value={opt.value ?? ''}
+                    checked={isSelected}
+                    onChange={() => onDataChange({ storeHighlight: opt.value })}
+                    style={{ width: '13px', height: '13px', margin: 0, cursor: 'pointer', accentColor: tone ?? '#0f172a' }}
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              );
+            })}
           </div>
-        )}
+        </fieldset>
       </div>
     </div>
   );

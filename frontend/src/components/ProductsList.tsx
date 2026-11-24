@@ -200,7 +200,7 @@ export default function ProductsList({
           </>
         )}
 
-        <button type="button" className="btn btn-primary" style={{ borderRadius: '8px' }} onClick={() => setProductModal({ open: true, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '', commercialCategory: '', providerId: '', imageUrl: null } })}>
+        <button type="button" className="btn btn-primary" style={{ borderRadius: '8px' }} onClick={() => setProductModal({ open: true, mode: 'create', data: { id: 0, sku: '', name: '', description: '', barcode: '', costPrice: 0, listPrice: 0, listPriceB: 0, listPriceC: 0, profitMargin: 25, minStock: 0, isPesable: false, approximateWeight: 0, unitsPerBox: 1, rubroId: '', commercialCategory: '', storeHighlight: null, providerId: '', imageUrl: null } })}>
           <Plus size={16} aria-hidden="true" /><span>Nuevo Producto</span>
         </button>
       </search>
@@ -211,7 +211,6 @@ export default function ProductsList({
             <tr>
               <th scope="col" style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>SKU</th>
               <th scope="col" style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Producto</th>
-              <th scope="col" style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tienda</th>
               <th scope="col" style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pesable</th>
               <th scope="col" style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sin IVA</th>
               <th scope="col" style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Final</th>
@@ -222,7 +221,7 @@ export default function ProductsList({
           </thead>
           <tbody>
             {visibleProducts.length === 0 ? (
-              <tr><td colSpan={showActionsColumn ? 7 : 6} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Sin productos</td></tr>
+              <tr><td colSpan={showActionsColumn ? 6 : 5} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Sin productos</td></tr>
             ) : (
               visibleProducts.map((p) => {
                 const precioFinal = Number(p.listPrice) || 0;
@@ -283,54 +282,6 @@ export default function ProductsList({
                           </div>
                         </div>
                       </div>
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        disabled={!onUpdateProduct}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (!onUpdateProduct) return;
-                          const nextHighlight =
-                            p.storeHighlight === 'OFERTON'
-                              ? 'DESTACADO'
-                              : p.storeHighlight === 'DESTACADO'
-                                ? null
-                                : 'OFERTON';
-                          await onUpdateProduct({ ...p, storeHighlight: nextHighlight });
-                        }}
-                        title="Clic para alternar: Normal → Ofertón → Destacado"
-                        style={{
-                          borderRadius: '999px',
-                          padding: '4px 10px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          cursor: onUpdateProduct ? 'pointer' : 'default',
-                          whiteSpace: 'nowrap',
-                          border:
-                            p.storeHighlight === 'OFERTON'
-                              ? '1px solid #E30613'
-                              : p.storeHighlight === 'DESTACADO'
-                                ? '1px solid #0f172a'
-                                : '1px solid var(--border-color)',
-                          backgroundColor:
-                            p.storeHighlight === 'OFERTON'
-                              ? '#E30613'
-                              : p.storeHighlight === 'DESTACADO'
-                                ? '#0f172a'
-                                : 'transparent',
-                          color:
-                            p.storeHighlight === 'OFERTON' || p.storeHighlight === 'DESTACADO'
-                              ? '#ffffff'
-                              : 'var(--text-secondary)',
-                        }}
-                      >
-                        {p.storeHighlight === 'OFERTON'
-                          ? 'Ofertón'
-                          : p.storeHighlight === 'DESTACADO'
-                            ? 'Destacado'
-                            : 'Normal'}
-                      </button>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                       {p.isPesable ? <span className="badge" style={{ backgroundColor: '#e8f0fe', color: '#1a73e8', fontSize: '0.7rem' }}>SI (~{p.approximateWeight}kg)</span> : <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>NO</span>}
