@@ -114,17 +114,11 @@ function App() {
     );
   }
 
-  // Institutional Web landing page at / (and /web), while ERP Login is served at /login and other unauthenticated paths
-  if (!user && (location.pathname === '/' || location.pathname === '/web' || location.pathname.startsWith('/web/'))) {
+  // Institutional Web landing page only at /web, while root (/) and /login go directly to ERP Login
+  if (!user && (location.pathname === '/web' || location.pathname.startsWith('/web/'))) {
     return (
       <Suspense fallback={<LoadingSpinner />}>
-        <InstitutionalLanding
-          onOpenStore={() => {
-            setIsStoreMode(true);
-            navigate('/tienda');
-          }}
-          onOpenStaffLogin={() => navigate('/login')}
-        />
+        <InstitutionalLanding />
       </Suspense>
     );
   }

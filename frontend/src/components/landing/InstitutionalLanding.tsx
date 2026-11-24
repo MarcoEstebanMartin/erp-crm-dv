@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 
-interface InstitutionalLandingProps {
-  onOpenStore: () => void;
-  onOpenStaffLogin: () => void;
-}
+interface InstitutionalLandingProps {}
 
 const BRANDS_LIST = [
   { id: 'melincue', name: 'Quesos Melincué', filename: 'melincue.png', accent: '#991B1B' },
@@ -16,14 +13,13 @@ const BRANDS_LIST = [
   { id: '308', name: 'Fideos 308', filename: '308.png', accent: '#BE123C' }
 ];
 
-const BrandCardLogo = ({ brand, onClick }: { brand: typeof BRANDS_LIST[0]; onClick: () => void }) => {
+const BrandCardLogo = ({ brand }: { brand: typeof BRANDS_LIST[0] }) => {
   const [imgError, setImgError] = useState(false);
 
   return (
     <div
-      onClick={onClick}
       className="brand-card-hover"
-      title={`Ver catálogo de ${brand.name}`}
+      title={brand.name}
     >
       {!imgError ? (
         <img
@@ -43,12 +39,9 @@ const BrandCardLogo = ({ brand, onClick }: { brand: typeof BRANDS_LIST[0]; onCli
   );
 };
 
-export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
-  onOpenStore,
-  onOpenStaffLogin
-}) => {
+export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = () => {
   const [logoFailed, setLogoFailed] = useState(false);
-  const [activeNav, setActiveNav] = useState<'inicio' | 'empresa' | 'marcas' | 'contacto' | 'tienda' | 'erp'>('inicio');
+  const [activeNav, setActiveNav] = useState<'inicio' | 'empresa' | 'marcas' | 'contacto'>('inicio');
   const [activeSocial, setActiveSocial] = useState<'ig' | 'wsp' | 'fb' | null>(null);
   
   const [contactForm, setContactForm] = useState({
@@ -58,16 +51,8 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
   });
   const [formSent, setFormSent] = useState(false);
 
-  const handleNavClick = (sectionId: string, navKey: 'inicio' | 'empresa' | 'marcas' | 'contacto' | 'tienda' | 'erp') => {
+  const handleNavClick = (sectionId: string, navKey: 'inicio' | 'empresa' | 'marcas' | 'contacto') => {
     setActiveNav(navKey);
-    if (navKey === 'tienda') {
-      onOpenStore();
-      return;
-    }
-    if (navKey === 'erp') {
-      onOpenStaffLogin();
-      return;
-    }
     const elem = document.getElementById(sectionId);
     if (elem) {
       elem.scrollIntoView({ behavior: 'smooth' });
@@ -148,29 +133,6 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
               }}
             >
               Contacto
-            </button>
-
-            <button
-              onClick={() => handleNavClick('tienda', 'tienda')}
-              style={{
-                ...styles.pillNavItem,
-                ...styles.pillNavItemTienda,
-                ...(activeNav === 'tienda' ? styles.pillNavItemActive : {})
-              }}
-            >
-              🛒 Tienda
-            </button>
-
-            <button
-              onClick={() => handleNavClick('erp', 'erp')}
-              style={{
-                ...styles.pillNavItem,
-                ...styles.pillNavItemErp,
-                ...(activeNav === 'erp' ? styles.pillNavItemActive : {})
-              }}
-              title="Acceso al Sistema ERP / CRM Don Venancio"
-            >
-              🔒 Acceso ERP
             </button>
           </nav>
 
@@ -302,7 +264,7 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
 
           <div className="brands-grid-container">
             {BRANDS_LIST.map((brand) => (
-              <BrandCardLogo key={brand.id} brand={brand} onClick={onOpenStore} />
+              <BrandCardLogo key={brand.id} brand={brand} />
             ))}
           </div>
         </div>
@@ -399,10 +361,6 @@ export const InstitutionalLanding: React.FC<InstitutionalLandingProps> = ({
       <footer style={styles.footerClean}>
         <div style={styles.footerContent}>
           <span>© {new Date().getFullYear()} Don Venancio Distribuidora</span>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <button onClick={onOpenStore} style={styles.footerLinkBtn}>Tienda B2B</button>
-            <button onClick={onOpenStaffLogin} style={styles.footerLinkBtn}>Acceso ERP</button>
-          </div>
         </div>
       </footer>
 
