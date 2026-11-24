@@ -13,6 +13,7 @@ import {
 } from './middlewares/product-image-cache.middleware';
 import { extractStaffToken } from './utils/cookie-auth.util';
 import { verifyStaffJwtToken } from './middlewares/auth';
+import { createHealthCheckHandler } from './utils/health-check.util';
 
 // Importación de Rutas
 import authRoutes from './routes/auth.routes';
@@ -161,14 +162,8 @@ app.use('/api/web-chat', guardEmbeddedPublicStore, webChatRoutes);
 app.use('/api/admin/excel', excelImporterRoutes);
 
 
-// 6. Endpoint de Healthcheck
-app.get('/api/health', (_req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'ERP-CRM Backend is running smoothly',
-    timestamp: new Date().toISOString(),
-  });
-});
+// 6. Endpoint de Healthcheck (verifica conectividad real a PostgreSQL y estado draining)
+app.get('/api/health', createHealthCheckHandler());
 
 // 7. Frontend SPA Unificado (en producción) y 404 JSON para subrutas /api inexistentes
 mountSpaFrontend(app);

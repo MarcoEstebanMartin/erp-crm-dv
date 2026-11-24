@@ -261,3 +261,10 @@ export function startNightlyBackupSchedulerIfEnabled(): void {
     nightlyTimer.unref();
   }
 }
+
+export function stopNightlyBackupScheduler(): void {
+  if (nightlyTimer) {
+    clearInterval(nightlyTimer);
+    nightlyTimer = null;
+  }
+}

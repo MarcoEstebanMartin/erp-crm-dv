@@ -1,10 +1,14 @@
 import prisma from './prisma';
 
+let keepAliveTimer: NodeJS.Timeout | null = null;
+
 /**
  * Servicio Keep-Alive para prevenir que Supabase pause el proyecto
  * por inactividad durante períodos sin tráfico de usuarios.
  */
 export function startDbKeepAlive(intervalMinutes = 360) {
+  if (keepAliveTimer) return;
+
   const ping = async () => {
     try {
       await prisma.$queryRaw`SELECT 1`;
@@ -19,6 +23,13 @@ export function startDbKeepAlive(intervalMinutes = 360) {
 
   // Ping periódico (por defecto cada 6 horas)
   const intervalMs = intervalMinutes * 60 * 1000;
-  const timer = setInterval(ping, intervalMs);
-  timer.unref(); // Permite que el proceso de Node finalice limpiamente si es necesario
+  keepAliveTimer = setInterval(ping, intervalMs);
+  keepAliveTimer.unref(); // Permite que el proceso de Node finalice limpiamente si es necesario
+}
+
+export function stopDbKeepAlive(): void {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
 }
