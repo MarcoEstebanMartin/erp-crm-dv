@@ -59,10 +59,18 @@ export const EmployeesTab: React.FC = () => {
 
   const filteredEmployees = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return employees;
-    return employees.filter((e) => {
-      const full = `${e.firstName} ${e.lastName} ${e.cuil || ''} ${e.dni || ''}`.toLowerCase();
-      return full.includes(q);
+    const list = !q
+      ? [...employees]
+      : employees.filter((e) => {
+          const full = `${e.firstName} ${e.lastName} ${e.cuil || ''} ${e.dni || ''}`.toLowerCase();
+          return full.includes(q);
+        });
+    return list.sort((a, b) => {
+      const aMono = a.employmentType === 'MONOTRIBUTISTA' ? 1 : 0;
+      const bMono = b.employmentType === 'MONOTRIBUTISTA' ? 1 : 0;
+      if (aMono !== bMono) return aMono - bMono;
+      const lastCmp = a.lastName.localeCompare(b.lastName, 'es-AR', { sensitivity: 'base' });
+      return lastCmp !== 0 ? lastCmp : a.firstName.localeCompare(b.firstName, 'es-AR', { sensitivity: 'base' });
     });
   }, [employees, search]);
 

@@ -95,7 +95,7 @@ export const employeeService = {
           orderBy: { expirationDate: 'asc' },
         },
       },
-      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      orderBy: [{ employmentType: 'asc' }, { lastName: 'asc' }, { firstName: 'asc' }],
     });
 
     return employees.map((emp) => {
