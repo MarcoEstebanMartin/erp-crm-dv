@@ -58,10 +58,11 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
   2. Ejecutar `ipconfig` para obtener la IPv4 local activa.
   3. Iniciar `npm run dev` en la raíz en segundo plano (`Vite` + `Express`).
   4. Mostrar resumen con estado de GitHub (`al día`), servidores locales e IP WiFi para pruebas móviles.
-- **Comando "cerra" / "cerrar" / "guarda todo" (Cierre Seguro de Jornada)**:
+- **Comando "cerra" / "cerrar" / "cierra" / "guarda todo" (Cierre Seguro de Jornada)**:
   1. Verificar compilación y tests (`tsc --noEmit` + `vitest run`) si hay cambios pendientes.
   2. Revisar `git status` (garantizando cero archivos `.env` expuestos), ejecutar `git add -A`, `git commit` descriptivo y `git push origin main`.
-  3. Confirmar que el árbol quedó 100% limpio (`main...origin/main`) listo para abrirse desde cualquier otra PC.
+  3. Desplegar el servicio **`erp-dv-prueba`** en Railway ejecutando `railway.cmd up --detach -p fa70da17-b02f-4a41-b9ed-686161c04e07 -e 3ea8d1cb-d06d-4368-8f6f-ade2665e0ae8 -s f8b7a8df-aa9d-405d-b685-0aad665050f0` (sin tocar nunca el servicio `don-venancio`).
+  4. Confirmar que el árbol quedó 100% limpio (`main...origin/main`) y que el despliegue en Railway (`https://erp-dv-prueba-production.up.railway.app`) quedó en curso o activo.
 - **Auditorías de Integridad disponibles (Pre-Producción / Control bajo demanda, desde `backend/`)**:
   - `npm run db:audit-receipts` (9 controles de recibos de calle/oficina, rendiciones, cajas y `AccountLedger`; soporta `-- --fix` para estados seguros).
   - `npm run db:audit-balances` (integridad de saldos de cuentas corrientes; soporta `-- --fix`).
