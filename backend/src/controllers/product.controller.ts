@@ -3,7 +3,9 @@ import { MovementType } from '@prisma/client';
 import { AuthenticatedRequest } from '../types';
 import { productService } from '../services/product.service';
 import { appCache } from '../utils/cache';
+import { sendCachedJsonResponse } from '../utils/http-cache.util';
 import {
+  canViewProductCosts,
   sanitizeProductForRole,
   sanitizeProductListForRole,
   stripRestrictedCostFieldsForRole,
@@ -14,14 +16,12 @@ export async function getProducts(req: AuthenticatedRequest, res: Response): Pro
   const userRole = req.user?.role;
   const includeInactive = userRole === 'ADMIN' && all === 'true';
   const isLight = light === 'true';
-  const cacheKey = `products_${search || ''}_${includeInactive}_${isLight ? 'light' : 'full'}`;
+  const costScope = canViewProductCosts(userRole) ? 'cost' : 'nocost';
+  const cacheKey = `products_http_${search || ''}_${includeInactive}_${isLight ? 'light' : 'full'}_${costScope}`;
 
-  const cached = appCache.get<any[]>(cacheKey);
-  if (cached) {
-    res.status(200).json({
-      status: 'success',
-      data: { products: sanitizeProductListForRole(cached, userRole) },
-    });
+  const cachedEntry = appCache.getSerializedJson(cacheKey);
+  if (cachedEntry) {
+    sendCachedJsonResponse(req, res, cachedEntry);
     return;
   }
 
@@ -29,11 +29,13 @@ export async function getProducts(req: AuthenticatedRequest, res: Response): Pro
     const products = isLight
       ? await productService.getProductsLight(search as string, includeInactive)
       : await productService.getProducts(search as string, includeInactive);
-    appCache.set(cacheKey, products, 60);
-    res.status(200).json({
-      status: 'success',
-      data: { products: sanitizeProductListForRole(products, userRole) },
-    });
+    const sanitized = sanitizeProductListForRole(products, userRole);
+    const entry = appCache.setSerializedJson(
+      cacheKey,
+      { status: 'success', data: { products: sanitized } },
+      60,
+    );
+    sendCachedJsonResponse(req, res, entry);
   } catch {
     res.status(500).json({ status: 'error', message: 'Error al obtener los productos.' });
   }
