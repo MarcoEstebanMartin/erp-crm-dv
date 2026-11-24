@@ -45,7 +45,7 @@ export function DirectInvoicePaymentPanel({
               checked={directInvoiceForm.billingType === 'INTERNAL'}
               onChange={() => setDirectInvoiceForm((prev) => ({ ...prev, billingType: 'INTERNAL' }))}
             />
-            Interno
+            Remito
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}>
             <input
@@ -56,7 +56,7 @@ export function DirectInvoicePaymentPanel({
               checked={directInvoiceForm.billingType === 'OFFICIAL'}
               onChange={() => setDirectInvoiceForm((prev) => ({ ...prev, billingType: 'OFFICIAL' }))}
             />
-            AFIP
+            Factura A (CAE)
           </label>
         </div>
         {invalidOfficialCuit && (
