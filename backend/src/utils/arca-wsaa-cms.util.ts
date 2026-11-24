@@ -134,6 +134,103 @@ export function extractRepresentedCuitFromCert(certPem: string): string {
   }
 }
 
+export interface ArcaCertStatus {
+  configured: boolean;
+  alias: string | null;
+  cuit: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  daysRemaining: number | null;
+  status: 'OK' | 'EXPIRING_SOON' | 'EXPIRED' | 'MISSING';
+}
+
+export const ARCA_CERT_WARNING_DAYS = 30;
+
+export function parseArcaCertStatusFromPem(
+  certPem: string,
+  nowMs: number = Date.now(),
+  warningDays: number = ARCA_CERT_WARNING_DAYS,
+): ArcaCertStatus {
+  try {
+    const x509 = new crypto.X509Certificate(certPem);
+    const validFromDate = new Date(x509.validFrom);
+    const validToDate = new Date(x509.validTo);
+    const validToMs = validToDate.getTime();
+    if (Number.isNaN(validToMs)) {
+      return {
+        configured: false,
+        alias: null,
+        cuit: null,
+        validFrom: null,
+        validTo: null,
+        daysRemaining: null,
+        status: 'MISSING',
+      };
+    }
+
+    const cnMatch = /CN=([^\n,]+)/i.exec(x509.subject);
+    const cuitMatch = /CUIT\s*(\d{11})/i.exec(x509.subject);
+    const diffDays = Math.floor((validToMs - nowMs) / 86_400_000);
+    const status: ArcaCertStatus['status'] =
+      diffDays < 0 ? 'EXPIRED' : diffDays <= warningDays ? 'EXPIRING_SOON' : 'OK';
+
+    return {
+      configured: true,
+      alias: cnMatch ? cnMatch[1].trim() : null,
+      cuit: cuitMatch ? cuitMatch[1] : null,
+      validFrom: Number.isNaN(validFromDate.getTime()) ? null : validFromDate.toISOString(),
+      validTo: validToDate.toISOString(),
+      daysRemaining: diffDays,
+      status,
+    };
+  } catch {
+    return {
+      configured: false,
+      alias: null,
+      cuit: null,
+      validFrom: null,
+      validTo: null,
+      daysRemaining: null,
+      status: 'MISSING',
+    };
+  }
+}
+
+function resolveArcaCertPemForInspection(): string | null {
+  const envCertPem = (process.env.ARCA_PADRON_CERT_PEM || process.env.AFIP_CERT_PEM || '').trim();
+  if (envCertPem) return envCertPem.replace(/\\n/g, '\n');
+
+  const candidatePaths = [
+    path.resolve(process.env.ARCA_PADRON_CERT_PATH || './certs/arca.crt'),
+    path.resolve(process.env.AFIP_CERT_PATH || './certs/homo.crt'),
+  ];
+  for (const certPath of candidatePaths) {
+    if (fs.existsSync(certPath)) {
+      return fs.readFileSync(certPath, 'utf8');
+    }
+  }
+  return null;
+}
+
+export function getArcaCertStatus(
+  nowMs: number = Date.now(),
+  warningDays: number = ARCA_CERT_WARNING_DAYS,
+): ArcaCertStatus {
+  const certPem = resolveArcaCertPemForInspection();
+  if (!certPem) {
+    return {
+      configured: false,
+      alias: null,
+      cuit: null,
+      validFrom: null,
+      validTo: null,
+      daysRemaining: null,
+      status: 'MISSING',
+    };
+  }
+  return parseArcaCertStatusFromPem(certPem, nowMs, warningDays);
+}
+
 export function resolveArcaCertAndKey(): { certPem: string; keyPem: string; isProduction: boolean } | null {
   const isPadronProd =
     process.env.ARCA_PADRON_PRODUCTION !== undefined

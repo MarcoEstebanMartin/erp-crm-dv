@@ -12,6 +12,7 @@ import {
   sessionCache,
 } from '../utils/session-cache.util';
 import { getSystemConfigSnapshot } from '../services/admin/system-config.service';
+import { getArcaCertStatus } from '../utils/arca-wsaa-cms.util';
 import {
   clearStaffSessionCookie,
   extractStaffToken,
@@ -119,6 +120,8 @@ export async function login(req: Request, res: Response): Promise<void> {
       newValues: { username: user.username, role: user.role },
     });
     const systemConfig = await getSystemConfigSnapshot();
+    const configPayload =
+      user.role === 'ADMIN' ? { ...systemConfig, afipCertStatus: getArcaCertStatus() } : systemConfig;
 
     res.status(200).json({
       status: 'success',
@@ -130,7 +133,7 @@ export async function login(req: Request, res: Response): Promise<void> {
           role: user.role,
           permissions: normalizedPermissions,
         },
-        config: systemConfig,
+        config: configPayload,
       },
     });
   } catch (error: unknown) {
@@ -173,12 +176,14 @@ export async function getMe(req: AuthenticatedRequest, res: Response): Promise<v
     }
 
     const systemConfig = await getSystemConfigSnapshot();
+    const configPayload =
+      user.role === 'ADMIN' ? { ...systemConfig, afipCertStatus: getArcaCertStatus() } : systemConfig;
 
     res.status(200).json({
       status: 'success',
       data: {
         user,
-        config: systemConfig,
+        config: configPayload,
       },
     });
   } catch (error: unknown) {

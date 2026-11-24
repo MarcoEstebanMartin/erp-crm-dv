@@ -44,6 +44,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
   const [savingStock, setSavingStock] = useState(false);
   const [afipMockMode, setAfipMockMode] = useState<boolean>(() => Boolean(api.getServerConfig()?.afipMockMode));
   const [savingAfipMock, setSavingAfipMock] = useState(false);
+  const [afipCertStatus, setAfipCertStatus] = useState<any>(() => api.getServerConfig()?.afipCertStatus || null);
   const [changePwdOpen, setChangePwdOpen] = useState(false);
   const isEditingRef = useRef(false);
   isEditingRef.current = isEditing;
@@ -59,6 +60,7 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
         if (!isEditingRef.current) setDraft(normalized);
         setIgnoreStock(Boolean(cfg.ignoreStock));
         setAfipMockMode(Boolean(cfg.afipMockMode));
+        if (cfg.afipCertStatus) setAfipCertStatus(cfg.afipCertStatus);
       })
       .catch(() => {});
     return () => {
@@ -143,12 +145,23 @@ export default function ConfigGeneralTab({ setErrorMsg, setSuccessMsg }: ConfigG
   ];
 
   const formattedPos = String(company.puntoVenta || 1).padStart(4, '0');
+  const certExpiryLabel = (() => {
+    if (!afipCertStatus?.configured || !afipCertStatus.validTo) return null;
+    const d = new Date(afipCertStatus.validTo);
+    if (Number.isNaN(d.getTime())) return null;
+    const dateStr = d.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+    const days = Number(afipCertStatus.daysRemaining);
+    if (afipCertStatus.status === 'EXPIRED') return `Vencido el ${dateStr}`;
+    return `Vence ${dateStr} (${days} días)`;
+  })();
+
   const readItems: Array<{ label: string; value: string }> = [
     { label: 'Dirección', value: company.direccion || '—' },
     { label: 'Teléfono', value: formatCompanyPhone(company.telefono) || '—' },
     { label: 'Email', value: company.email || '—' },
     ...(company.iibb ? [{ label: 'IIBB', value: company.iibb }] : []),
     ...(company.inicioActividades ? [{ label: 'Inicio', value: company.inicioActividades }] : []),
+    ...(certExpiryLabel ? [{ label: 'Certificado ARCA', value: certExpiryLabel }] : []),
   ];
 
   return (

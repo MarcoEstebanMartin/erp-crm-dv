@@ -10,6 +10,7 @@ import {
   getSystemConfigSnapshot,
   updateSystemConfig,
 } from '../services/admin/system-config.service';
+import { getArcaCertStatus } from '../utils/arca-wsaa-cms.util';
 import { AuditModuleKey, AuditStatusKey } from '../validators/admin.validator';
 
 export async function getFinancialReports(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -116,7 +117,13 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response): Prom
 export async function getConfig(_req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const snapshot = await getSystemConfigSnapshot({ bypassCache: true });
-    res.status(200).json({ status: 'success', data: snapshot });
+    res.status(200).json({
+      status: 'success',
+      data: {
+        ...snapshot,
+        afipCertStatus: getArcaCertStatus(),
+      },
+    });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: error.message || 'Error al obtener configuración.' });
   }

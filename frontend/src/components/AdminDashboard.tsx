@@ -54,9 +54,33 @@ interface AdminDashboardProps {
 export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboardProps) {
   const c = useAdminController(activeTab);
   const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
+  const afipCert = isAdmin ? api.getServerConfig()?.afipCertStatus : null;
+  const showCertAlert = afipCert?.status === 'EXPIRING_SOON' || afipCert?.status === 'EXPIRED';
+  const certDateStr = afipCert?.validTo
+    ? new Date(afipCert.validTo).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })
+    : '';
 
   return (
     <div style={{ width: '100%' }}>
+      {showCertAlert && (
+        <div
+          role="alert"
+          style={{
+            backgroundColor: afipCert.status === 'EXPIRED' ? '#FEF2F2' : '#FFFBEB',
+            color: afipCert.status === 'EXPIRED' ? '#991B1B' : '#92400E',
+            padding: '10px 14px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            marginBottom: '16px',
+            border: `1px solid ${afipCert.status === 'EXPIRED' ? '#FECACA' : '#FDE68A'}`,
+          }}
+        >
+          {afipCert.status === 'EXPIRED'
+            ? `Certificado ARCA vencido (${certDateStr}). Renovar para emitir CAE.`
+            : `Certificado ARCA vence en ${afipCert.daysRemaining} días (${certDateStr}). Renovar antes del vencimiento.`}
+        </div>
+      )}
       {c.errorMsg && (
         <div style={{ backgroundColor: 'var(--accent-bg-light)', color: 'var(--accent-color)', padding: '12px', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', marginBottom: '20px', border: '1px solid rgba(var(--color-corp-red-rgb), 0.15)' }}>
           {c.errorMsg}
