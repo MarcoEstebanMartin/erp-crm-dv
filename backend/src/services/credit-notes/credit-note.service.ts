@@ -20,6 +20,7 @@ import {
 } from './credit-note-stock.helper';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { parseArgentinaTimestampRange } from '../billing/billing-date-range.helper';
+import { getEligibleOrdersForPersona } from './credit-note-eligible-orders.helper';
 
 export const CREDIT_NOTE_DETAIL_INCLUDE = {
   persona: true,
@@ -75,6 +76,10 @@ export const creditNoteService = {
     return creditNote;
   },
 
+  async getEligibleOrdersForCreditNote(personaId: number, query?: string) {
+    return getEligibleOrdersForPersona(personaId, query);
+  },
+
   async createCreditNote(params: {
     userId: number;
     userRole?: Role;
@@ -107,6 +112,11 @@ export const creditNoteService = {
         throw new AppError('El pedido o factura vinculado no existe.', 404);
       }
       finalBillingType = linkedOrder.billingType;
+    } else if (finalBillingType === BillingType.OFFICIAL) {
+      throw new AppError(
+        'Para emitir una Nota de Crédito Oficial (ARCA/AFIP) es obligatorio seleccionar una factura oficial emitida.',
+        400,
+      );
     }
 
     const enrichedInputs = [];

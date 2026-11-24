@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Check, ShoppingCart, Receipt, DollarSign, FileText, TrendingUp, Truck, Warehouse } from 'lucide-react';
+import { Check, ShoppingCart, FileText, Truck, Warehouse } from 'lucide-react';
 import { api } from '../utils/api';
 import HomeTab from './admin/HomeTab';
 import ClientsTab from './admin/ClientsTab';
@@ -21,21 +21,15 @@ import { AdminQuickClientSearchModal } from './admin/AdminQuickModals';
 import { AdminCreateQuickOrderModal } from './admin/AdminCreateQuickOrderModal';
 import { AdminDirectInvoiceQuickModal } from './admin/AdminDirectInvoiceQuickModal';
 import { useAdminController } from './admin/useAdminController';
+import { CajaHubSection } from './admin/CajaHubSection';
 
 const PriceListModal = lazy(() => import('./PriceListModal'));
-const UnifiedReportsDashboard = lazy(() => import('./UnifiedReportsDashboard'));
 const FulfillmentDashboard = lazy(() => import('./admin/FulfillmentDashboard'));
 const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
-const RendicionesDashboard = lazy(() => import('./RendicionesDashboard'));
-const FieldSettlementsTab = lazy(() =>
-  import('./field-receipts/FieldSettlementsTab').then((m) => ({ default: m.FieldSettlementsTab })),
-);
 const LogisticaDashboard = lazy(() => import('./LogisticaDashboard'));
 const ComprasDashboard = lazy(() => import('./ComprasDashboard'));
-const FinanzasDashboard = lazy(() => import('./FinanzasDashboard'));
 const BillingDashboard = lazy(() => import('./BillingDashboard'));
 const DepositoDashboard = lazy(() => import('./DepositoDashboard'));
-const GastosDashboard = lazy(() => import('./GastosDashboard'));
 const CrmDashboard = lazy(() => import('./CrmDashboard'));
 
 const LoadingDashboard = () => (
@@ -207,49 +201,11 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {activeTab === 'compras' && <Suspense fallback={<LoadingDashboard />}><ComprasDashboard /></Suspense>}
 
       {(activeTab === 'rendiciones' || activeTab === 'reportes' || activeTab === 'reports') && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div role="tablist" aria-label="Caja y finanzas" className="linear-tablist">
-            {[
-              { id: 'general', label: 'Finanzas', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: true },
-              { id: 'rendiciones', label: 'Rendiciones', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
-              { id: 'field-receipts', label: 'Recibos', icon: <Receipt size={15} aria-hidden="true" />, adminOnly: false },
-              { id: 'gastos', label: 'Gastos', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: true },
-              { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={15} aria-hidden="true" />, adminOnly: true },
-            ]
-              .filter((tab) => isAdmin || !tab.adminOnly)
-              .map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={c.cajasSubTab === tab.id}
-                  className="linear-tab"
-                  onClick={() => c.setCajasSubTab(tab.id as any)}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-          </div>
-
-          <Suspense fallback={<LoadingDashboard />}>
-            {c.cajasSubTab === 'field-receipts' ? (
-              <FieldSettlementsTab />
-            ) : c.cajasSubTab === 'rendiciones' ? (
-              <RendicionesDashboard />
-            ) : isAdmin && c.cajasSubTab === 'general' ? (
-              <FinanzasDashboard />
-            ) : isAdmin && c.cajasSubTab === 'gastos' ? (
-              <GastosDashboard />
-            ) : isAdmin && c.cajasSubTab === 'reportes' ? (
-              <UnifiedReportsDashboard orders={c.orders} users={c.users} clients={c.clients} products={c.products} financialReport={c.financialReport} />
-            ) : isAdmin ? (
-              <FinanzasDashboard />
-            ) : (
-              <RendicionesDashboard />
-            )}
-          </Suspense>
-        </div>
+        <CajaHubSection
+          isAdmin={isAdmin} cajasSubTab={c.cajasSubTab} setCajasSubTab={c.setCajasSubTab}
+          orders={c.orders} users={c.users} clients={c.clients} products={c.products}
+          financialReport={c.financialReport} fallback={<LoadingDashboard />}
+        />
       )}
 
       {(activeTab === 'config' || activeTab === 'rrhh') && (

@@ -40,6 +40,7 @@ export default function StockDashboard({
 
   const role = userRole ?? api.getCurrentUser()?.role ?? '';
   const canViewCosts = role === 'ADMIN' || role === 'FACTURACION';
+  const canViewValuation = role === 'ADMIN';
   const canMutateStock = role === 'ADMIN' || role === 'DEPOSITO';
 
   const activeProducts = useMemo(
@@ -171,6 +172,7 @@ export default function StockDashboard({
         filteredCount={filteredProducts.length}
         totalCount={activeProducts.length}
         canViewCosts={canViewCosts}
+        canViewValuation={canViewValuation}
       />
 
       <StockFiltersBar
@@ -210,6 +212,7 @@ export default function StockDashboard({
         onOpenAdjustModal={adjustments.openAdjustModal}
         onJumpToMapLocation={onJumpToMapLocation}
         canViewCosts={canViewCosts}
+        canViewValuation={canViewValuation}
         canMutateStock={canMutateStock}
       />
 

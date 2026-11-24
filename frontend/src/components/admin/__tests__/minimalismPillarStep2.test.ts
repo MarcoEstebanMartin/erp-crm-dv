@@ -117,7 +117,9 @@ describe('Paso 2 Minimalismo Premium — Home, Sidebar y Modales Rápidos de Adm
     expect(sidebar).toContain('aria-current');
 
     const adminDashboard = readSrcFile('components/AdminDashboard.tsx');
-    expect(adminDashboard).toContain('role="tablist"');
+    const cajaHubSection = readSrcFile('components/admin/CajaHubSection.tsx');
+    expect(cajaHubSection).toContain('role="tablist"');
     expect(adminDashboard).not.toContain('aria-controls');
+    expect(cajaHubSection).not.toContain('aria-controls');
   });
 });

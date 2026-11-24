@@ -20,6 +20,7 @@ interface StockInventoryRowProps {
   onOpenAdjustModal: (product: any) => void;
   onJumpToMapLocation?: (locationCode: string) => void;
   canViewCosts?: boolean;
+  canViewValuation?: boolean;
   canMutateStock?: boolean;
 }
 
@@ -40,6 +41,7 @@ export default function StockInventoryRow({
   onOpenAdjustModal,
   onJumpToMapLocation,
   canViewCosts = true,
+  canViewValuation = true,
   canMutateStock = true
 }: StockInventoryRowProps) {
   const displayedStock = getDisplayedStock(p, pendingAdjustments);
@@ -234,15 +236,17 @@ export default function StockInventoryRow({
         </td>
       )}
 
-      {canViewCosts && (
+      {canViewCosts && canViewValuation && (
         <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
           ${valuation.stockValueCost.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
         </td>
       )}
 
-      <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.86rem' }}>
-        ${valuation.stockValueSale.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-      </td>
+      {canViewValuation && (
+        <td style={{ ...NUMERIC_CELL_STYLE, textAlign: 'right', fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.86rem' }}>
+          ${valuation.stockValueSale.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+        </td>
+      )}
 
       <td style={{ padding: '12px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>

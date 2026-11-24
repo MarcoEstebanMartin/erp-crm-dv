@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { X, Printer, Calendar } from 'lucide-react';
 import { api } from '../../utils/api';
+import { billingApi, type EligibleOrderForCreditNote } from '../../api/billing.api';
 import { useConfirm } from '../../context/ConfirmContext';
 import { NativeModalDialog } from './NativeModalDialog';
 import { ResumenCuentaDetailModals } from './ResumenCuentaDetailModals';
+import { StandaloneCreditNoteModal } from '../billing/credit-notes/StandaloneCreditNoteModal';
 import {
   buildResumenRows,
   formatMovementLabel,
@@ -40,6 +42,9 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
   const [selectedWithholding, setSelectedWithholding] = useState<any | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [creditNoteOrder, setCreditNoteOrder] = useState<EligibleOrderForCreditNote | null>(null);
+  const [startingCreditNote, setStartingCreditNote] = useState(false);
+  const [liveTotalBalance, setLiveTotalBalance] = useState<number | null>(null);
   const [actionBanner, setActionBanner] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   useEffect(() => {
@@ -51,6 +56,8 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
     try {
       const res = await api.getPersonaLedger(client.id);
       const ledger = res.ledger || [];
+      const fullSummary = buildResumenRows(ledger, { branchFilter: 'ALL', dateRange: 'all' });
+      setLiveTotalBalance(fullSummary.finalBalance);
       const result = buildResumenRows(ledger, {
         branchFilter,
         dateRange,
@@ -99,9 +106,36 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
     }
   };
 
+  const handleStartCreditNote = async (order: any) => {
+    if (startingCreditNote) return;
+    setStartingCreditNote(true);
+    setActionBanner(null);
+    try {
+      const eligible = await billingApi.getEligibleOrdersForCreditNote(Number(client.id));
+      const matched = eligible.find((o) => o.id === Number(order.id));
+      if (!matched) {
+        setActionBanner({
+          type: 'error',
+          text: 'Esta factura ya fue acreditada al 100% o no admite nuevas Notas de Crédito.',
+        });
+        setSelectedOrder(null);
+        return;
+      }
+      setSelectedOrder(null);
+      setCreditNoteOrder(matched);
+    } catch (err: any) {
+      setActionBanner({
+        type: 'error',
+        text: err?.message || 'No se pudo preparar la Nota de Crédito.',
+      });
+    } finally {
+      setStartingCreditNote(false);
+    }
+  };
+
   const outstandingBalance =
     branchFilter === 'ALL'
-      ? Math.round(Number(client.outstandingBalance || 0))
+      ? Math.round(Number(liveTotalBalance ?? client.outstandingBalance ?? 0))
       : Math.round(Number(filteredFinalBalance ?? client.outstandingBalance ?? 0));
 
   const showOpeningRow = hasPriorEntries && Math.round(priorBalance) !== 0;
@@ -349,6 +383,24 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
         setSelectedWithholding={setSelectedWithholding}
         isAdminOrFacturacion={isAdminOrFacturacion}
         onDeleteReceipt={handleDeleteReceipt}
+        onStartCreditNote={handleStartCreditNote}
+        startingCreditNote={startingCreditNote}
+      />
+
+      <StandaloneCreditNoteModal
+        isOpen={Boolean(creditNoteOrder)}
+        onClose={() => setCreditNoteOrder(null)}
+        client={{ ...client, outstandingBalance }}
+        initialOrder={creditNoteOrder}
+        onSuccess={(note) => {
+          setCreditNoteOrder(null);
+          setActionBanner({
+            type: 'success',
+            text: `Nota de Crédito #${note?.creditNoteNumber || note?.id} emitida.`,
+          });
+          fetchTransactions();
+        }}
+        onError={(msg) => setActionBanner({ type: 'error', text: msg })}
       />
     </NativeModalDialog>
   );

@@ -60,6 +60,12 @@ export const creditNoteApprovalService = {
 
     const totalAmount = roundToTwoDecimals(creditNote.totalAmount.toString()).toNumber();
     const isOfficial = creditNote.billingType === BillingType.OFFICIAL;
+    if (isOfficial && !creditNote.orderId) {
+      throw new AppError(
+        'No se puede aprobar una Nota de Crédito Oficial (ARCA/AFIP) sin una factura asociada.',
+        400,
+      );
+    }
     const linkedOrder = creditNote.orderId
       ? await validateCreditNoteAgainstLinkedOrder(prisma, {
           orderId: creditNote.orderId,

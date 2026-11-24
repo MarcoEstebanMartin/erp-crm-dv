@@ -213,47 +213,29 @@ export function useBillingDashboard(activeTab: string) {
     setCnClientSearchQuery(client.name);
     setLoading(true);
     try {
-      let sourceItems = invoice.items;
-      if (!sourceItems || sourceItems.length === 0) {
-        const matched = await api.getOrderById(invoice.id);
-        sourceItems = matched?.items || [];
+      const eligibleOrders = await billingApi.getEligibleOrdersForCreditNote(Number(client.id));
+      const matchedEligible = eligibleOrders.find((o) => o.id === Number(invoice.id));
+
+      if (!matchedEligible) {
+        setErrorMsg(
+          'Esta factura no admite nuevas Notas de Crédito (puede estar anulada, sin CAE o acreditada al 100%).',
+        );
+        return;
       }
+
+      const { buildCartItemsFromEligibleOrder } = await import(
+        './credit-notes/creditNoteCart.helpers'
+      );
 
       setCreditNoteForm({
         personaId: String(client.id),
-        orderId: String(invoice.id),
-        billingType: invoice.billingType || (client.cuit ? 'OFFICIAL' : 'INTERNAL'),
+        orderId: String(matchedEligible.id),
+        billingType: matchedEligible.billingType,
         reason: 'DEVOLUCION',
-        comments: `Devolución de comprobante #${invoice.invoiceNumber || invoice.id}`,
+        comments: '',
       });
 
-      const itemsToDev = (sourceItems || []).map((item: any) => {
-        const prod = products.find((p) => p.id === item.productId);
-        const isPesable = prod ? prod.isPesable : Boolean(item.product?.isPesable);
-        const approxWeight = prod ? prod.approximateWeight : item.product?.approximateWeight ?? null;
-        const qty = Number(item.quantity);
-        const weight = isPesable
-          ? item.weight
-            ? Number(item.weight)
-            : qty * Number(approxWeight || 1)
-          : null;
-        const unitPrice = Number(item.unitPrice);
-        return {
-          productId: item.productId,
-          name: prod ? prod.name : item.product?.name || `Producto #${item.productId}`,
-          sku: prod ? prod.sku : item.product?.sku || '',
-          orderQuantity: qty,
-          orderWeight: weight,
-          quantity: qty,
-          weight,
-          isPesable,
-          approximateWeight: approxWeight,
-          unitPrice,
-          subtotal: isPesable ? (weight ? Math.round(weight * unitPrice) : 0) : Math.round(qty * unitPrice),
-        };
-      });
-
-      setCreditNoteCart(itemsToDev);
+      setCreditNoteCart(buildCartItemsFromEligibleOrder(matchedEligible));
       setActiveSubTab('notas-credito');
       setShowCreditNoteModal(true);
     } catch (err: any) {

@@ -190,7 +190,11 @@ describe('Paso 4C - Barrel printHelpers, plantillas limpias y hooks postMessage'
     writtenHtml = '';
     printConsolidatedPickingA4({ orders: [sampleOrder], zone: 'ALL', filterLabel: 'Ruta 1' });
     expect(writtenHtml).toContain('PRINT_BATCH_SUCCESS');
-    expect(writtenHtml).toContain('TODAS LAS ZONAS');
+    expect(writtenHtml).toContain('Ruta 1');
+    expect(writtenHtml).toContain('class="zone-row');
+    expect(writtenHtml).toContain('Responsable:');
+    expect(writtenHtml).not.toContain('CONSOLIDADO DE ARMADO');
+    expect(writtenHtml).not.toContain('Pesable');
     expect(writtenHtml).not.toContain('#007AFF');
     expect(writtenHtml).not.toContain('#fef08a');
   });

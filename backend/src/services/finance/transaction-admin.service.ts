@@ -13,16 +13,34 @@ import { calculateVerificationDeltas } from '../../engines/drawer-arqueo.engine'
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { resolveExpenseCategoryId } from '../expenses/expense-category.helper';
 
+const ECHEQ_REGEX = /\(echeq\)|e-?cheq/i;
+
+export function isBankReconcilableTransaction(tx: {
+  type?: string | null;
+  paymentMethod?: string | null;
+  description?: string | null;
+}): boolean {
+  if (tx.type !== TransactionType.INCOME) return false;
+  if (tx.paymentMethod === PaymentMethod.BANK_TRANSFER) return true;
+  return tx.paymentMethod === PaymentMethod.CHECK && ECHEQ_REGEX.test(String(tx.description || ''));
+}
+
 export const transactionAdminService = {
-  async getTransactions(query: {
-    branch?: string;
-    cashDrawerId?: string;
-    bankAccountId?: string;
-    startDate?: string;
-    endDate?: string;
-    paymentMethod?: string;
-    verified?: string;
-  }) {
+  async getTransactions(
+    query: {
+      branch?: string;
+      cashDrawerId?: string;
+      bankAccountId?: string;
+      startDate?: string;
+      endDate?: string;
+      paymentMethod?: string;
+      verified?: string;
+    },
+    options?: {
+      onlyBankReconcilable?: boolean;
+      maskBankBalance?: boolean;
+    },
+  ) {
     const whereClause: Record<string, any> = {};
 
     if (query.branch) {
@@ -39,7 +57,22 @@ export const transactionAdminService = {
       if (query.endDate) whereClause.createdAt.lte = new Date(String(query.endDate));
     }
 
-    return prisma.transaction.findMany({
+    if (options?.onlyBankReconcilable) {
+      whereClause.type = TransactionType.INCOME;
+      whereClause.OR = [
+        { paymentMethod: PaymentMethod.BANK_TRANSFER },
+        {
+          paymentMethod: PaymentMethod.CHECK,
+          description: { contains: 'echeq', mode: 'insensitive' },
+        },
+        {
+          paymentMethod: PaymentMethod.CHECK,
+          description: { contains: 'e-cheq', mode: 'insensitive' },
+        },
+      ];
+    }
+
+    const rows = await prisma.transaction.findMany({
       where: whereClause,
       include: {
         user: {
@@ -56,6 +89,12 @@ export const transactionAdminService = {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    if (!options?.maskBankBalance) return rows;
+    return rows.map((row) => ({
+      ...row,
+      bankAccount: row.bankAccount ? { ...row.bankAccount, balance: 0 } : null,
+    }));
   },
 
   async getTransactionById(id: number) {
@@ -84,6 +123,7 @@ export const transactionAdminService = {
 
   async verifyTransaction(params: {
     userId: number;
+    actorRole?: string;
     txId: number;
     verified: boolean;
     adjustedAmount?: number | null;
@@ -94,6 +134,9 @@ export const transactionAdminService = {
       include: { fieldReceipt: { select: { id: true, receiptNumber: true } } },
     });
     if (!preCheck) throw new AppError('Transacción no encontrada.', 404);
+    if (params.actorRole && params.actorRole !== 'ADMIN' && !isBankReconcilableTransaction(preCheck)) {
+      throw new AppError('Solo podés conciliar transferencias bancarias o eCheqs.', 403);
+    }
     if (preCheck.fieldReceipt) {
       const receiptLabel =
         preCheck.fieldReceipt.receiptNumber || `#${preCheck.fieldReceipt.id}`;
@@ -207,6 +250,10 @@ export const transactionAdminService = {
         adjusted: params.adjustedAmount !== undefined && params.adjustedAmount !== null,
       },
     });
+
+    if (params.actorRole && params.actorRole !== 'ADMIN' && updatedTx.bankAccount) {
+      return { ...updatedTx, bankAccount: { ...updatedTx.bankAccount, balance: 0 } };
+    }
 
     return updatedTx;
   },

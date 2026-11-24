@@ -14,12 +14,14 @@ interface DebtorsByCityReportViewProps {
   setSelectedBranchFilter: (b: string) => void;
   setShowResumenModal: (client: any) => void;
   setPaymentModal: (modal: any) => void;
+  canViewTotals?: boolean;
 }
 
 export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = ({
   debtorsReport, availableCities, selectedCities, setSelectedCities,
   availableSellers, selectedSellerFilter, setSelectedSellerFilter,
   selectedBranchFilter, setSelectedBranchFilter, setShowResumenModal, setPaymentModal,
+  canViewTotals = true,
 }) => {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState('');
@@ -138,18 +140,22 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
               <div className="stat-label">Clientes</div>
               <div className="stat-value tabular-nums" style={{ fontSize: '1.35rem', fontWeight: 700 }}>{filteredDebtors.length}</div>
             </div>
-            <div className="card stat-card" style={{ padding: '14px 16px' }}>
-              <div className="stat-label">Sucursal A</div>
-              <div className="stat-value tabular-nums" style={{ color: '#0f172a', fontSize: '1.35rem', fontWeight: 700 }}>${Math.round(totalA).toLocaleString('es-AR')}</div>
-            </div>
-            <div className="card stat-card" style={{ padding: '14px 16px' }}>
-              <div className="stat-label">Sucursal X</div>
-              <div className="stat-value tabular-nums" style={{ color: '#334155', fontSize: '1.35rem', fontWeight: 700 }}>${Math.round(totalX).toLocaleString('es-AR')}</div>
-            </div>
-            <div className="card stat-card" style={{ padding: '14px 16px' }}>
-              <div className="stat-label">Total</div>
-              <div className="stat-value tabular-nums" style={{ color: 'var(--color-corp-red)', fontSize: '1.35rem', fontWeight: 700 }}>${Math.round(totalConsolidado).toLocaleString('es-AR')}</div>
-            </div>
+            {canViewTotals && (
+              <>
+                <div className="card stat-card" style={{ padding: '14px 16px' }}>
+                  <div className="stat-label">Sucursal A</div>
+                  <div className="stat-value tabular-nums" style={{ color: '#0f172a', fontSize: '1.35rem', fontWeight: 700 }}>${Math.round(totalA).toLocaleString('es-AR')}</div>
+                </div>
+                <div className="card stat-card" style={{ padding: '14px 16px' }}>
+                  <div className="stat-label">Sucursal X</div>
+                  <div className="stat-value tabular-nums" style={{ color: '#334155', fontSize: '1.35rem', fontWeight: 700 }}>${Math.round(totalX).toLocaleString('es-AR')}</div>
+                </div>
+                <div className="card stat-card" style={{ padding: '14px 16px' }}>
+                  <div className="stat-label">Total</div>
+                  <div className="stat-value tabular-nums" style={{ color: 'var(--color-corp-red)', fontSize: '1.35rem', fontWeight: 700 }}>${Math.round(totalConsolidado).toLocaleString('es-AR')}</div>
+                </div>
+              </>
+            )}
           </div>
 
           {Object.keys(groups).sort().map((city) => {

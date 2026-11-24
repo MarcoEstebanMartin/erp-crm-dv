@@ -7,6 +7,7 @@ interface StockKpiCardsProps {
   filteredCount: number;
   totalCount: number;
   canViewCosts?: boolean;
+  canViewValuation?: boolean;
 }
 
 const cardStyle = {
@@ -64,6 +65,7 @@ export default function StockKpiCards({
   filteredCount,
   totalCount,
   canViewCosts = true,
+  canViewValuation = true,
 }: StockKpiCardsProps) {
   const margin = computeExactLatentMargin(stats.totalCost, stats.totalRetailVal);
   const absProfitStr = Math.abs(margin.latentProfit).toLocaleString('es-AR', {
@@ -110,8 +112,8 @@ export default function StockKpiCards({
         </div>
       </div>
 
-      {/* 2. Valorización (Costo) — solo roles autorizados */}
-      {canViewCosts && (
+      {/* 2. Valorización (Costo) — solo administradores */}
+      {canViewCosts && canViewValuation && (
         <div className="card" style={cardStyle}>
           <div style={iconBoxStyle}>
             <Coins size={18} />
@@ -128,30 +130,32 @@ export default function StockKpiCards({
         </div>
       )}
 
-      {/* 3. Valorización (Venta) */}
-      <div className="card" style={cardStyle}>
-        <div style={iconBoxStyle}>
-          <TrendingUp size={18} />
+      {/* 3. Valorización (Venta) — solo administradores */}
+      {canViewValuation && (
+        <div className="card" style={cardStyle}>
+          <div style={iconBoxStyle}>
+            <TrendingUp size={18} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={labelStyle}>Valorización (Venta)</span>
+            <span style={valueStyle}>
+              ${stats.totalRetailVal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+            {canViewCosts ? (
+              <div style={subRowStyle}>
+                <span style={{ color: 'var(--text-secondary)' }}>Margen latente:</span>
+                <span style={{ color: marginColor, fontWeight: 600 }}>
+                  {margin.sign}${absProfitStr} ({margin.sign}{absPctStr}%)
+                </span>
+              </div>
+            ) : (
+              <div style={{ ...subRowStyle, color: 'var(--text-secondary)' }}>
+                <span>Valor a precio de lista</span>
+              </div>
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={labelStyle}>Valorización (Venta)</span>
-          <span style={valueStyle}>
-            ${stats.totalRetailVal.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </span>
-          {canViewCosts ? (
-            <div style={subRowStyle}>
-              <span style={{ color: 'var(--text-secondary)' }}>Margen latente:</span>
-              <span style={{ color: marginColor, fontWeight: 600 }}>
-                {margin.sign}${absProfitStr} ({margin.sign}{absPctStr}%)
-              </span>
-            </div>
-          ) : (
-            <div style={{ ...subRowStyle, color: 'var(--text-secondary)' }}>
-              <span>Valor a precio de lista</span>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* 4. Catálogo Operativo */}
       <div className="card" style={cardStyle}>

@@ -1,28 +1,32 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../../utils/api';
+import { billingApi, type EligibleOrderForCreditNote } from '../../../api/billing.api';
 import { useConfirm } from '../../../context/ConfirmContext';
 import { calculateExactLineSubtotalInt } from '../../../utils/weeklyPromoCartEvaluator';
 import { matchesSmartSearch } from '../../../utils/orderSearchAndStatus.helper';
+import {
+  buildCartItemsFromEligibleOrder,
+  computeCreditNoteCartTotal,
+  type CreditNoteCartItem,
+} from './creditNoteCart.helpers';
 
 export interface UseCreditNotesControllerParams {
   personas: any[];
   products: any[];
   creditNoteForm: any;
   setCreditNoteForm: React.Dispatch<React.SetStateAction<any>>;
-  creditNoteCart: any[];
-  setCreditNoteCart: React.Dispatch<React.SetStateAction<any[]>>;
+  creditNoteCart: CreditNoteCartItem[];
+  setCreditNoteCart: React.Dispatch<React.SetStateAction<CreditNoteCartItem[]>>;
   cnClientSearchQuery: string;
   setCnClientSearchQuery: (query: string) => void;
   setShowCreditNoteModal: (show: boolean) => void;
-  setViewCreditNoteModal: (note: any | null) => void;
+  setViewCreditNoteModal?: (note: any | null) => void;
   setErrorMsg: (msg: string | null) => void;
   setSuccessMsg: (msg: string | null) => void;
   loadData: () => void;
+  onSubmitted?: (creditNote: any) => void;
 }
 
-/**
- * Controla búsquedas inteligentes, armado del carrito, aprobaciones y emisión de Notas de Crédito.
- */
 export function useCreditNotesController({
   personas,
   products,
@@ -37,6 +41,7 @@ export function useCreditNotesController({
   setErrorMsg,
   setSuccessMsg,
   loadData,
+  onSubmitted,
 }: UseCreditNotesControllerParams) {
   const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
   const confirm = useConfirm();
@@ -51,6 +56,11 @@ export function useCreditNotesController({
   const [cnProductQty, setCnProductQty] = useState('1');
   const [cnProductPrice, setCnProductPrice] = useState('');
   const [cnProductWeight, setCnProductWeight] = useState('');
+
+  const [eligibleOrders, setEligibleOrders] = useState<EligibleOrderForCreditNote[]>([]);
+  const [loadingEligibleOrders, setLoadingEligibleOrders] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const eligibleReqSeqRef = useRef(0);
 
   const clientsOnly = useMemo(() => personas.filter((p) => p.isClient), [personas]);
 
@@ -70,18 +80,75 @@ export function useCreditNotesController({
 
   const selectedCNClient = useMemo(() => {
     if (!creditNoteForm.personaId) return null;
-    return personas.find((p: any) => p.id === Number(creditNoteForm.personaId));
+    return personas.find((p: any) => p.id === Number(creditNoteForm.personaId)) || null;
   }, [creditNoteForm.personaId, personas]);
+
+  const selectedEligibleOrder = useMemo(() => {
+    if (!creditNoteForm.orderId) return null;
+    return eligibleOrders.find((o) => o.id === Number(creditNoteForm.orderId)) || null;
+  }, [creditNoteForm.orderId, eligibleOrders]);
+
+  useEffect(() => {
+    const personaIdNum = Number(creditNoteForm.personaId);
+    if (!personaIdNum || Number.isNaN(personaIdNum)) {
+      setEligibleOrders([]);
+      setLoadingEligibleOrders(false);
+      return;
+    }
+
+    const seq = ++eligibleReqSeqRef.current;
+    setLoadingEligibleOrders(true);
+    billingApi
+      .getEligibleOrdersForCreditNote(personaIdNum)
+      .then((orders) => {
+        if (eligibleReqSeqRef.current === seq) {
+          setEligibleOrders(orders);
+        }
+      })
+      .catch(() => {
+        if (eligibleReqSeqRef.current === seq) {
+          setEligibleOrders([]);
+        }
+      })
+      .finally(() => {
+        if (eligibleReqSeqRef.current === seq) {
+          setLoadingEligibleOrders(false);
+        }
+      });
+  }, [creditNoteForm.personaId]);
 
   const handleSelectCNClient = (c: any) => {
     setCreditNoteForm((prev: any) => ({
       ...prev,
       personaId: String(c.id),
-      billingType: c.cuit ? 'OFFICIAL' : 'INTERNAL',
+      orderId: '',
+      billingType: 'INTERNAL',
+      comments: '',
     }));
     setCnClientSearchQuery(c.name);
     setShowCNClientDropdown(false);
     setCreditNoteCart([]);
+  };
+
+  const handleSelectEligibleOrder = (order: EligibleOrderForCreditNote | null) => {
+    if (!order) {
+      setCreditNoteForm((prev: any) => ({
+        ...prev,
+        orderId: '',
+        billingType: 'INTERNAL',
+        comments: '',
+      }));
+      setCreditNoteCart([]);
+      return;
+    }
+
+    setCreditNoteForm((prev: any) => ({
+      ...prev,
+      orderId: String(order.id),
+      billingType: order.billingType,
+      comments: prev.comments || '',
+    }));
+    setCreditNoteCart(buildCartItemsFromEligibleOrder(order));
   };
 
   const handleSelectCNProduct = (p: any) => {
@@ -123,11 +190,12 @@ export function useCreditNotesController({
       {
         productId: prod.id,
         name: prod.name,
-        sku: prod.sku,
+        sku: prod.sku || '',
+        selected: true,
         quantity: qty,
         weight,
-        isPesable: prod.isPesable,
-        approximateWeight: prod.approximateWeight,
+        isPesable: Boolean(prod.isPesable),
+        approximateWeight: prod.approximateWeight ?? 1,
         unitPrice: price,
         subtotal,
       },
@@ -147,7 +215,7 @@ export function useCreditNotesController({
   const handleApproveCreditNote = async (id: number) => {
     if (
       !(await confirm(
-        '¿Está seguro de que desea APROBAR esta Nota de Crédito? Se emitirá el comprobante oficial/interno, se registrará el stock y se descontará del saldo del cliente.',
+        '¿Aprobar esta Nota de Crédito? Se emitirá el comprobante, se ajustará stock si corresponde y se acreditará en cuenta corriente.',
         { type: 'success' },
       ))
     ) {
@@ -159,7 +227,7 @@ export function useCreditNotesController({
       const result = await api.approveCreditNote(id);
       setSuccessMsg('Nota de Crédito aprobada correctamente.');
       loadData();
-      setViewCreditNoteModal(result);
+      setViewCreditNoteModal?.(result);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al aprobar la Nota de Crédito.');
     }
@@ -168,7 +236,7 @@ export function useCreditNotesController({
   const handleRejectCreditNote = async (id: number) => {
     if (
       !(await confirm(
-        '¿Está seguro de que desea RECHAZAR esta Nota de Crédito? Quedará anulada de manera permanente.',
+        '¿Rechazar esta Nota de Crédito? Quedará anulada de manera permanente.',
         { type: 'danger' },
       ))
     ) {
@@ -187,6 +255,7 @@ export function useCreditNotesController({
 
   const handleCreateCreditNoteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setErrorMsg(null);
     setSuccessMsg(null);
 
@@ -195,31 +264,53 @@ export function useCreditNotesController({
       return;
     }
 
-    const itemsToSend = creditNoteCart.filter((item) =>
-      item.isPesable ? Boolean(item.weight && item.weight > 0) : item.quantity > 0,
+    if (creditNoteForm.billingType === 'OFFICIAL' && !creditNoteForm.orderId) {
+      setErrorMsg('Para emitir una Nota de Crédito Oficial (ARCA/AFIP) es obligatorio seleccionar una factura asociada.');
+      return;
+    }
+
+    const itemsToSend = creditNoteCart.filter(
+      (item) =>
+        item.selected !== false &&
+        (item.isPesable ? Boolean(item.weight && item.weight > 0) : item.quantity > 0),
     );
     if (itemsToSend.length === 0) {
-      setErrorMsg('Debe agregar al menos un producto con cantidad/peso a devolver o bonificar.');
+      setErrorMsg('Debe incluir al menos un ítem con cantidad/peso válido.');
       return;
     }
 
     if (creditNoteForm.orderId) {
-      for (const item of itemsToSend) {
-        if (item.quantity > item.orderQuantity) {
-          setErrorMsg(
-            `La cantidad a devolver de ${item.name} (${item.quantity}) no puede superar la cantidad original (${item.orderQuantity}).`,
-          );
-          return;
-        }
-        if (item.isPesable && item.weight && item.orderWeight && item.weight > item.orderWeight) {
-          setErrorMsg(
-            `El peso a devolver de ${item.name} (${item.weight} kg) no puede superar el peso original (${item.orderWeight} kg).`,
-          );
-          return;
+      const totalToCredit = computeCreditNoteCartTotal(itemsToSend);
+      if (
+        selectedEligibleOrder &&
+        totalToCredit > Math.round(selectedEligibleOrder.remainingCreditableAmount)
+      ) {
+        setErrorMsg(
+          `El importe ($${totalToCredit.toLocaleString('es-AR')}) supera el saldo acreditable ($${Math.round(selectedEligibleOrder.remainingCreditableAmount).toLocaleString('es-AR')}).`,
+        );
+        return;
+      }
+
+      if (creditNoteForm.reason === 'DEVOLUCION') {
+        for (const item of itemsToSend) {
+          const maxQty = item.remainingReturnableQuantity ?? item.orderQuantity;
+          if (maxQty !== undefined && item.quantity > maxQty) {
+            setErrorMsg(
+              `La cantidad de ${item.name} (${item.quantity}) supera el disponible para devolver (${maxQty}).`,
+            );
+            return;
+          }
+          if (item.isPesable && item.weight && item.orderWeight && item.weight > item.orderWeight) {
+            setErrorMsg(
+              `El peso de ${item.name} (${item.weight} kg) supera el disponible (${item.orderWeight} kg).`,
+            );
+            return;
+          }
         }
       }
     }
 
+    setSubmitting(true);
     try {
       const payload = {
         personaId: Number(creditNoteForm.personaId),
@@ -236,7 +327,7 @@ export function useCreditNotesController({
       };
 
       const result = await api.createCreditNote(payload);
-      setSuccessMsg(`Nota de Crédito emitida correctamente (#${result.creditNoteNumber || result.id})`);
+      setSuccessMsg(`Nota de Crédito emitida (#${result.creditNoteNumber || result.id})`);
 
       setShowCreditNoteModal(false);
       setCreditNoteCart([]);
@@ -250,9 +341,12 @@ export function useCreditNotesController({
       setCnClientSearchQuery('');
       setCnProductSearchQuery('');
       loadData();
-      setViewCreditNoteModal(result);
+      setViewCreditNoteModal?.(result);
+      onSubmitted?.(result);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al emitir la Nota de Crédito.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -271,6 +365,11 @@ export function useCreditNotesController({
 
   return {
     isAdmin,
+    submitting,
+    eligibleOrders,
+    loadingEligibleOrders,
+    selectedEligibleOrder,
+    handleSelectEligibleOrder,
     cnProductSearchQuery,
     setCnProductSearchQuery,
     showCNClientDropdown,

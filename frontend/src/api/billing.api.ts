@@ -7,6 +7,34 @@ export interface SalesInvoicesQuery {
   billingType?: string;
 }
 
+export interface EligibleOrderItemSummary {
+  productId: number;
+  name: string;
+  sku: string;
+  isPesable: boolean;
+  approximateWeight: number;
+  orderQuantity: number;
+  alreadyReturnedQuantity: number;
+  remainingReturnableQuantity: number;
+  orderWeight: number | null;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export interface EligibleOrderForCreditNote {
+  id: number;
+  invoiceNumber: string | null;
+  invoiceType: string;
+  billingType: 'OFFICIAL' | 'INTERNAL';
+  cae: string | null;
+  createdAt: string;
+  invoicedAt: string | null;
+  totalAmount: number;
+  alreadyCreditedAmount: number;
+  remainingCreditableAmount: number;
+  items: EligibleOrderItemSummary[];
+}
+
 export interface CreditNotesQuery {
   startDate?: string;
   endDate?: string;
@@ -73,6 +101,19 @@ export const billingApi = {
       `/billing/tax-withholdings${qs}`,
     );
     return res?.data?.withholdings ?? res?.withholdings ?? [];
+  },
+
+  async getEligibleOrdersForCreditNote(
+    personaId: number,
+    query?: string,
+  ): Promise<EligibleOrderForCreditNote[]> {
+    const qs = buildSearchParams({ query });
+    const res = await apiClient.get<{
+      status: string;
+      data?: { orders?: EligibleOrderForCreditNote[] };
+      orders?: EligibleOrderForCreditNote[];
+    }>(`/billing/credit-notes/eligible-orders/${personaId}${qs}`);
+    return res?.data?.orders ?? res?.orders ?? [];
   },
 
   async requestOrderCae(orderId: number): Promise<{ message?: string; data?: any }> {

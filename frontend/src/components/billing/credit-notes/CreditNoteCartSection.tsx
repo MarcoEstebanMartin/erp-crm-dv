@@ -1,11 +1,12 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { calculateExactLineSubtotalInt } from '../../../utils/weeklyPromoCartEvaluator';
+import type { CreditNoteCartItem } from './creditNoteCart.helpers';
 
 interface CreditNoteCartSectionProps {
   creditNoteForm: any;
-  creditNoteCart: any[];
-  setCreditNoteCart: React.Dispatch<React.SetStateAction<any[]>>;
+  creditNoteCart: CreditNoteCartItem[];
+  setCreditNoteCart: React.Dispatch<React.SetStateAction<CreditNoteCartItem[]>>;
   selectedCNClient: any;
   cnProductSearchQuery: string;
   setCnProductSearchQuery: (q: string) => void;
@@ -25,9 +26,6 @@ interface CreditNoteCartSectionProps {
   onRemoveCNProduct: (productId: number) => void;
 }
 
-/**
- * Selector de productos y tabla editable de renglones con cálculo entero exacto para Notas de Crédito.
- */
 export function CreditNoteCartSection({
   creditNoteForm,
   creditNoteCart,
@@ -50,15 +48,29 @@ export function CreditNoteCartSection({
   onAddCNProduct,
   onRemoveCNProduct,
 }: CreditNoteCartSectionProps) {
+  const isLinkedOrder = Boolean(creditNoteForm.orderId);
+  const canEditLinkedUnitPrice = creditNoteForm.reason !== 'DEVOLUCION';
+
   const updateCartItemField = (
     idx: number,
-    patch: { unitPrice?: number; quantity?: number; weight?: number },
+    patch: { selected?: boolean; unitPrice?: number; quantity?: number; weight?: number },
   ) => {
     setCreditNoteCart((prev) => {
       const next = [...prev];
       const current = next[idx];
       if (!current) return prev;
-      const updated = { ...current, ...patch };
+      const updated: CreditNoteCartItem = { ...current, ...patch };
+
+      if (patch.quantity !== undefined && patch.quantity > 0 && updated.selected === false) {
+        updated.selected = true;
+      }
+      if (patch.selected === true && updated.quantity <= 0 && (updated.remainingReturnableQuantity ?? 0) > 0) {
+        updated.quantity = updated.remainingReturnableQuantity || 1;
+        if (updated.isPesable && updated.orderWeight) {
+          updated.weight = updated.orderWeight;
+        }
+      }
+
       updated.subtotal = calculateExactLineSubtotalInt({
         unitPriceInt: updated.unitPrice,
         quantity: updated.quantity,
@@ -71,26 +83,56 @@ export function CreditNoteCartSection({
     });
   };
 
+  const handleToggleAllLinkedItems = (selectAll: boolean) => {
+    setCreditNoteCart((prev) =>
+      prev.map((item) => {
+        const maxQty =
+          creditNoteForm.reason === 'DEVOLUCION'
+            ? Number(item.remainingReturnableQuantity ?? item.orderQuantity ?? 0)
+            : Number(item.orderQuantity ?? item.quantity ?? 1);
+        const canSelect = selectAll && maxQty > 0;
+        const nextQty = canSelect ? (item.quantity > 0 ? item.quantity : maxQty) : item.quantity;
+        const nextWeight =
+          canSelect && item.isPesable ? (item.weight && item.weight > 0 ? item.weight : item.orderWeight ?? null) : item.weight;
+        return {
+          ...item,
+          selected: canSelect,
+          quantity: nextQty,
+          weight: nextWeight,
+          subtotal: calculateExactLineSubtotalInt({
+            unitPriceInt: item.unitPrice,
+            quantity: nextQty,
+            isPesable: Boolean(item.isPesable),
+            weight: nextWeight,
+            approximateWeight: item.approximateWeight,
+          }),
+        };
+      }),
+    );
+  };
+
   return (
     <>
-      {selectedCNClient && !creditNoteForm.orderId && (
+      {selectedCNClient && !isLinkedOrder && (
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
+            gridTemplateColumns: '2fr 1fr 0.8fr 0.9fr auto',
             gap: '8px',
             alignItems: 'end',
             borderTop: '1px solid var(--border-color)',
-            paddingTop: '16px',
+            paddingTop: '12px',
           }}
         >
           <div className="form-group" style={{ margin: 0, position: 'relative' }}>
-            <label htmlFor="cn-product-search">Añadir Producto</label>
+            <label htmlFor="cn-product-search" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+              Producto
+            </label>
             <input
               id="cn-product-search"
               type="search"
               className="input"
-              placeholder="Escribí para buscar..."
+              placeholder="Buscar producto..."
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="none"
@@ -101,7 +143,7 @@ export function CreditNoteCartSection({
                 setShowCNProductDropdown(true);
               }}
               onFocus={() => setShowCNProductDropdown(true)}
-              onBlur={() => setTimeout(() => setShowCNProductDropdown(false), 250)}
+              onBlur={() => setTimeout(() => setShowCNProductDropdown(false), 200)}
               onKeyDown={(e) => {
                 if (e.key === 'ArrowDown') {
                   e.preventDefault();
@@ -137,7 +179,8 @@ export function CreditNoteCartSection({
                   overflowY: 'auto',
                   backgroundColor: '#fff',
                   border: '1px solid var(--border-color)',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
+                  marginTop: '2px',
                 }}
               >
                 {filteredCNProducts.map((p, idx) => (
@@ -147,9 +190,10 @@ export function CreditNoteCartSection({
                     onMouseDown={() => onSelectCNProduct(p)}
                     onMouseEnter={() => setActiveCNProductSuggestionIdx(idx)}
                     style={{
-                      padding: '8px',
+                      padding: '8px 10px',
                       cursor: 'pointer',
-                      backgroundColor: idx === activeCNProductSuggestionIdx ? '#e8f0fe' : '#fff',
+                      fontSize: '0.84rem',
+                      backgroundColor: idx === activeCNProductSuggestionIdx ? '#f3f4f6' : '#fff',
                     }}
                   >
                     {p.name}
@@ -160,44 +204,86 @@ export function CreditNoteCartSection({
           </div>
 
           <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="cn-product-price">Precio</label>
+            <label htmlFor="cn-product-price" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+              Precio
+            </label>
             <input
               id="cn-product-price"
               type="number"
-              step="0.01"
-              className="input"
+              inputMode="decimal"
+              step="1"
+              className="input tabular-nums"
               value={cnProductPrice}
               onChange={(e) => setCnProductPrice(e.target.value)}
             />
           </div>
 
           <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="cn-product-qty">Cantidad</label>
+            <label htmlFor="cn-product-qty" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+              Cant.
+            </label>
             <input
               id="cn-product-qty"
               type="number"
-              className="input"
+              inputMode="numeric"
+              className="input tabular-nums"
               value={cnProductQty}
               onChange={(e) => setCnProductQty(e.target.value)}
             />
           </div>
 
           <div className="form-group" style={{ margin: 0 }}>
-            <label htmlFor="cn-product-weight">Kilos (Pesables)</label>
+            <label htmlFor="cn-product-weight" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+              Kilos
+            </label>
             <input
               id="cn-product-weight"
               type="number"
+              inputMode="decimal"
               step="0.001"
-              className="input"
+              className="input tabular-nums"
               value={cnProductWeight}
               onChange={(e) => setCnProductWeight(e.target.value)}
-              placeholder="Kilos"
+              placeholder="kg"
             />
           </div>
 
           <button type="button" className="btn btn-primary" onClick={onAddCNProduct}>
-            Añadir
+            Agregar
           </button>
+        </div>
+      )}
+
+      {isLinkedOrder && creditNoteCart.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151' }}>
+            Ítems de la factura
+          </span>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: '3px 9px', fontSize: '0.76rem' }}
+              onClick={() => handleToggleAllLinkedItems(true)}
+            >
+              Seleccionar todo
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ padding: '3px 9px', fontSize: '0.76rem', color: '#6b7280' }}
+              onClick={() => handleToggleAllLinkedItems(false)}
+            >
+              Limpiar
+            </button>
+          </div>
         </div>
       )}
 
@@ -211,96 +297,132 @@ export function CreditNoteCartSection({
         }}
       >
         {creditNoteCart.length === 0 ? (
-          <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            No hay productos agregados en el detalle.
+          <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
+            {selectedCNClient ? 'Sin ítems en el detalle' : 'Seleccioná un cliente'}
           </div>
         ) : (
           <table style={{ margin: 0 }}>
             <thead>
               <tr>
-                <th>Producto</th>
-                <th>P. Unitario</th>
-                <th>Cantidad</th>
-                <th>Kilos</th>
-                <th>Importe</th>
-                <th style={{ width: '40px' }} />
+                {isLinkedOrder && <th scope="col" style={{ width: '34px' }} />}
+                <th scope="col">Producto</th>
+                <th scope="col" style={{ textAlign: 'right' }}>P. Unit</th>
+                <th scope="col" style={{ textAlign: 'right' }}>Cant.</th>
+                <th scope="col" style={{ textAlign: 'right' }}>Kilos</th>
+                <th scope="col" style={{ textAlign: 'right' }}>Importe</th>
+                {!isLinkedOrder && <th scope="col" style={{ width: '36px' }} />}
               </tr>
             </thead>
             <tbody>
-              {creditNoteCart.map((item, idx) => (
-                <tr key={idx}>
-                  <td>
-                    <strong>{item.name}</strong>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                      SKU: {item.sku}
-                    </div>
-                  </td>
-                  <td>
-                    {creditNoteForm.orderId ? (
-                      <span>${Number(item.unitPrice).toLocaleString('es-AR')}</span>
-                    ) : (
+              {creditNoteCart.map((item, idx) => {
+                const isSelected = item.selected !== false;
+                const maxQty =
+                  creditNoteForm.reason === 'DEVOLUCION'
+                    ? item.remainingReturnableQuantity ?? item.orderQuantity
+                    : item.orderQuantity;
+                const exhausted = isLinkedOrder && creditNoteForm.reason === 'DEVOLUCION' && maxQty === 0;
+
+                return (
+                  <tr
+                    key={`${item.productId}-${idx}`}
+                    style={{ opacity: isSelected ? 1 : 0.45 }}
+                  >
+                    {isLinkedOrder && (
+                      <td style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={exhausted}
+                          aria-label={`Incluir ${item.name}`}
+                          onChange={(e) => updateCartItemField(idx, { selected: e.target.checked })}
+                        />
+                      </td>
+                    )}
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: '0.84rem', color: '#111827' }}>{item.name}</div>
+                      {isLinkedOrder && (item.alreadyReturnedQuantity ?? 0) > 0 && (
+                        <div className="tabular-nums" style={{ fontSize: '0.72rem', color: '#92400e' }}>
+                          Devueltos: {item.alreadyReturnedQuantity}/{item.orderQuantity}
+                        </div>
+                      )}
+                    </td>
+                    <td className="tabular-nums" style={{ textAlign: 'right' }}>
+                      {isLinkedOrder && !canEditLinkedUnitPrice ? (
+                        <span>${Math.round(Number(item.unitPrice)).toLocaleString('es-AR')}</span>
+                      ) : (
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          className="input tabular-nums"
+                          style={{ padding: '4px 6px', maxWidth: '96px', textAlign: 'right', marginLeft: 'auto' }}
+                          disabled={!isSelected}
+                          value={item.unitPrice}
+                          onChange={(e) => updateCartItemField(idx, { unitPrice: Number(e.target.value) })}
+                        />
+                      )}
+                    </td>
+                    <td className="tabular-nums" style={{ textAlign: 'right' }}>
                       <input
                         type="number"
-                        className="input"
-                        style={{ padding: '4px', maxWidth: '100px' }}
-                        value={item.unitPrice}
-                        onChange={(e) => updateCartItemField(idx, { unitPrice: Number(e.target.value) })}
-                      />
-                    )}
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      className="input"
-                      style={{ padding: '4px', maxWidth: '80px' }}
-                      min="0"
-                      max={item.orderQuantity}
-                      value={item.quantity}
-                      onChange={(e) => updateCartItemField(idx, { quantity: Number(e.target.value) })}
-                    />
-                    {item.orderQuantity && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>
-                        Máx: {item.orderQuantity}
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    {item.isPesable ? (
-                      <input
-                        type="number"
-                        step="0.001"
-                        className="input"
-                        style={{ padding: '4px', maxWidth: '100px' }}
+                        inputMode="numeric"
+                        className="input tabular-nums"
+                        style={{ padding: '4px 6px', maxWidth: '72px', textAlign: 'right', marginLeft: 'auto' }}
                         min="0"
-                        max={item.orderWeight}
-                        value={item.weight || ''}
-                        onChange={(e) => updateCartItemField(idx, { weight: Number(e.target.value) })}
+                        max={maxQty}
+                        disabled={!isSelected || exhausted}
+                        value={item.quantity}
+                        onChange={(e) => updateCartItemField(idx, { quantity: Number(e.target.value) })}
                       />
-                    ) : (
-                      <span style={{ color: 'var(--text-secondary)' }}>N/A</span>
+                      {maxQty !== undefined && (
+                        <span style={{ fontSize: '0.7rem', color: '#6b7280', display: 'block' }}>
+                          Máx {maxQty}
+                        </span>
+                      )}
+                    </td>
+                    <td className="tabular-nums" style={{ textAlign: 'right' }}>
+                      {item.isPesable ? (
+                        <>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.001"
+                            className="input tabular-nums"
+                            style={{ padding: '4px 6px', maxWidth: '86px', textAlign: 'right', marginLeft: 'auto' }}
+                            min="0"
+                            max={item.orderWeight ?? undefined}
+                            disabled={!isSelected || exhausted}
+                            value={item.weight ?? ''}
+                            onChange={(e) => updateCartItemField(idx, { weight: Number(e.target.value) })}
+                          />
+                          {item.orderWeight !== null && item.orderWeight !== undefined && (
+                            <span style={{ fontSize: '0.7rem', color: '#6b7280', display: 'block' }}>
+                              Máx {item.orderWeight} kg
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ color: '#9ca3af' }}>—</span>
+                      )}
+                    </td>
+                    <td className="tabular-nums" style={{ fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      ${(isSelected ? Math.round(Number(item.subtotal)) : 0).toLocaleString('es-AR')}
+                    </td>
+                    {!isLinkedOrder && (
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          style={{ color: 'var(--color-danger)', padding: '2px' }}
+                          onClick={() => onRemoveCNProduct(item.productId)}
+                          aria-label={`Quitar ${item.name}`}
+                        >
+                          <X size={15} />
+                        </button>
+                      </td>
                     )}
-                    {item.orderWeight && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block' }}>
-                        Máx: {item.orderWeight} kg
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ fontWeight: 600 }}>${Number(item.subtotal).toLocaleString('es-AR')}</td>
-                  <td>
-                    {!creditNoteForm.orderId && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        style={{ color: 'var(--color-danger)', padding: '2px' }}
-                        onClick={() => onRemoveCNProduct(item.productId)}
-                        aria-label={`Quitar ${item.name}`}
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

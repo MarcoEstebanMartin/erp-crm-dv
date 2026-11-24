@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Role } from '@prisma/client';
 import {
   getCreditNotes,
+  getEligibleOrdersForCreditNote,
   createCreditNote,
   getCreditNoteById,
   approveCreditNote,
@@ -13,11 +14,19 @@ import { validateRequest } from '../middlewares/validateRequest';
 import {
   createCreditNoteSchema,
   creditNoteIdParamSchema,
+  eligibleOrdersParamSchema,
 } from '../validators/creditNote.validator';
 
 const router = Router();
 
 router.use(authenticateJWT);
+
+router.get(
+  '/eligible-orders/:personaId',
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(eligibleOrdersParamSchema),
+  getEligibleOrdersForCreditNote,
+);
 
 router.get(
   '/:id',

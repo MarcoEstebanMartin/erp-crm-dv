@@ -200,13 +200,28 @@ describe('Paso A2 — Blindaje Finanzas y AFIP (Reparto/IVA, Split Pesables y Lo
       creditNoteType: 'NOTA_CREDITO_B',
       reason: 'DESCUENTO',
       personaId: 10,
-      orderId: null,
+      orderId: 501,
       totalAmount: '1210.00',
       netAmount: '1000.00',
       taxAmount: '210.00',
       persona: { id: 10, cuit: null },
       items: [],
     })) as any);
+
+    const mockLinkedOrder = {
+      id: 501,
+      personaId: 10,
+      status: 'DELIVERED',
+      billingType: BillingType.OFFICIAL,
+      invoiceType: 'FACTURA_B',
+      invoiceNumber: '0002-00000100',
+      cae: '75111111111111',
+      totalAmount: '5000.00',
+      invoicedAt: new Date('2026-11-20'),
+      createdAt: new Date('2026-11-20'),
+      items: [],
+    };
+    vi.spyOn(prisma.order, 'findUnique').mockResolvedValue(mockLinkedOrder as any);
 
     const afipNcSpy = vi.spyOn(afipService, 'emitirNotaCreditoAFIP').mockImplementation(async () => {
       await new Promise((r) => setTimeout(r, 25));
@@ -219,8 +234,12 @@ describe('Paso A2 — Blindaje Finanzas y AFIP (Reparto/IVA, Split Pesables y Lo
 
     const mockTx: any = {
       $queryRaw: vi.fn().mockResolvedValue([]),
+      order: {
+        findUnique: vi.fn().mockResolvedValue(mockLinkedOrder),
+      },
       creditNote: {
         findUnique: vi.fn().mockImplementation(async () => ({ id: 88, status })),
+        findMany: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockImplementation(async () => {
           status = CreditNoteStatus.APPROVED;
           return { id: 88, status };

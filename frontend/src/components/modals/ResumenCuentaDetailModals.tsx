@@ -13,6 +13,8 @@ interface ResumenCuentaDetailModalsProps {
   setSelectedWithholding: (w: any | null) => void;
   isAdminOrFacturacion: boolean;
   onDeleteReceipt: (txId: number, receiptDesc: string, creditAmount: number) => void;
+  onStartCreditNote?: (order: any) => void;
+  startingCreditNote?: boolean;
 }
 
 export const ResumenCuentaDetailModals: React.FC<ResumenCuentaDetailModalsProps> = ({
@@ -26,7 +28,16 @@ export const ResumenCuentaDetailModals: React.FC<ResumenCuentaDetailModalsProps>
   setSelectedWithholding,
   isAdminOrFacturacion,
   onDeleteReceipt,
+  onStartCreditNote,
+  startingCreditNote = false,
 }) => {
+  const canEmitCreditNote = Boolean(
+    selectedOrder &&
+      isAdminOrFacturacion &&
+      onStartCreditNote &&
+      selectedOrder.status !== 'CANCELLED' &&
+      (selectedOrder.billingType !== 'OFFICIAL' || Boolean(selectedOrder.cae)),
+  );
   return (
     <>
       {selectedOrder && (
@@ -77,7 +88,17 @@ export const ResumenCuentaDetailModals: React.FC<ResumenCuentaDetailModalsProps>
             )}
             <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>Total: ${Math.round(Number(selectedOrder.totalAmount)).toLocaleString('es-AR')}</div>
           </div>
-          <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            {canEmitCreditNote && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={startingCreditNote}
+                onClick={() => onStartCreditNote?.(selectedOrder)}
+              >
+                {startingCreditNote ? 'Preparando...' : 'Emitir NC'}
+              </button>
+            )}
             <button type="button" className="btn btn-secondary" onClick={() => setSelectedOrder(null)}>Cerrar</button>
           </div>
         </NativeModalDialog>

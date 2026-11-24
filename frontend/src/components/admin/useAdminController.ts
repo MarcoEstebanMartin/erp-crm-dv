@@ -100,7 +100,7 @@ export function useAdminController(activeTab: string) {
   const [summaryCardModal, setSummaryCardModal] = useState<{ open: boolean; cardKey: string; cardLabel: string } | null>(null);
 
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL');
-  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'field-receipts' | 'gastos' | 'reportes'>(() =>
+  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'field-receipts' | 'transferencias' | 'gastos' | 'reportes'>(() =>
     api.getCurrentUser()?.role === 'ADMIN' ? 'general' : 'rendiciones',
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

@@ -6,22 +6,34 @@ export const creditNoteIdParamSchema = z.object({
   }),
 });
 
-export const createCreditNoteSchema = z.object({
-  body: z.object({
-    personaId: z.coerce.number().int().positive('El cliente es obligatorio.'),
-    orderId: z.coerce.number().int().positive().optional().nullable(),
-    billingType: z.enum(['OFFICIAL', 'INTERNAL']).optional(),
-    reason: z.string().trim().min(1, 'El motivo es obligatorio.').max(80),
-    comments: z.string().max(1000).optional().nullable(),
-    items: z
-      .array(
-        z.object({
-          productId: z.coerce.number().int().positive('productId inválido.'),
-          quantity: z.coerce.number().positive('La cantidad debe ser mayor a cero.'),
-          weight: z.coerce.number().min(0).optional().nullable(),
-          unitPrice: z.coerce.number().min(0, 'El precio unitario no puede ser negativo.'),
-        }),
-      )
-      .min(1, 'Debe incluir al menos un ítem en la Nota de Crédito.'),
+export const eligibleOrdersParamSchema = z.object({
+  params: z.object({
+    personaId: z.coerce.number().int().positive('ID de cliente inválido.'),
   }),
+});
+
+export const createCreditNoteSchema = z.object({
+  body: z
+    .object({
+      personaId: z.coerce.number().int().positive('El cliente es obligatorio.'),
+      orderId: z.coerce.number().int().positive().optional().nullable(),
+      billingType: z.enum(['OFFICIAL', 'INTERNAL']).optional(),
+      reason: z.string().trim().min(1, 'El motivo es obligatorio.').max(80),
+      comments: z.string().max(1000).optional().nullable(),
+      items: z
+        .array(
+          z.object({
+            productId: z.coerce.number().int().positive('productId inválido.'),
+            quantity: z.coerce.number().positive('La cantidad debe ser mayor a cero.'),
+            weight: z.coerce.number().min(0).optional().nullable(),
+            unitPrice: z.coerce.number().min(0, 'El precio unitario no puede ser negativo.'),
+          }),
+        )
+        .min(1, 'Debe incluir al menos un ítem en la Nota de Crédito.'),
+    })
+    .refine((data) => data.billingType !== 'OFFICIAL' || Boolean(data.orderId), {
+      message:
+        'Para emitir una Nota de Crédito Oficial (ARCA/AFIP) es obligatorio seleccionar una factura asociada.',
+      path: ['orderId'],
+    }),
 });

@@ -190,7 +190,7 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
         isOpen={showCreditNoteModal}
         onClose={() => setShowCreditNoteModal(false)}
         onSubmit={ctrl.handleCreateCreditNoteSubmit}
-        loading={loading}
+        loading={loading || ctrl.submitting}
         creditNoteForm={creditNoteForm}
         setCreditNoteForm={setCreditNoteForm}
         creditNoteCart={creditNoteCart}
@@ -204,6 +204,10 @@ export default function CreditNotesTab(props: CreditNotesTabProps) {
         activeCNClientSuggestionIdx={ctrl.activeCNClientSuggestionIdx}
         setActiveCNClientSuggestionIdx={ctrl.setActiveCNClientSuggestionIdx}
         onSelectCNClient={ctrl.handleSelectCNClient}
+        eligibleOrders={ctrl.eligibleOrders}
+        loadingEligibleOrders={ctrl.loadingEligibleOrders}
+        selectedEligibleOrder={ctrl.selectedEligibleOrder}
+        onSelectEligibleOrder={ctrl.handleSelectEligibleOrder}
         cnProductSearchQuery={ctrl.cnProductSearchQuery}
         setCnProductSearchQuery={ctrl.setCnProductSearchQuery}
         filteredCNProducts={ctrl.filteredCNProducts}

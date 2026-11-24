@@ -220,6 +220,7 @@ export default function ClientsTab({
             availableSellers={availableSellers} selectedSellerFilter={selectedSellerFilter} setSelectedSellerFilter={setSelectedSellerFilter}
             selectedBranchFilter={selectedBranchFilter} setSelectedBranchFilter={setSelectedBranchFilter}
             setShowResumenModal={setShowResumenModal} setPaymentModal={setPaymentModal}
+            canViewTotals={isAdmin}
           />
         ) : personaRoleFilter === 'sale_routes' ? (
           <SaleRoutesDashboard />

@@ -137,8 +137,11 @@ export async function closeCentralDrawer(req: AuthenticatedRequest, res: Respons
 
 export async function getTransactions(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
+    const isAdmin = req.user?.role === 'ADMIN';
+    const onlyBankReconcilable = !isAdmin && !req.query.cashDrawerId;
     const transactions = await transactionAdminService.getTransactions(
       req.query as Record<string, string>,
+      { onlyBankReconcilable, maskBankBalance: !isAdmin },
     );
     res.status(200).json({ status: 'success', data: { transactions } });
   } catch (error) {
@@ -167,8 +170,8 @@ export async function getTransactionById(req: AuthenticatedRequest, res: Respons
 export async function getBankAccounts(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const accounts = await bankAccountService.getBankAccounts();
-    const isAdminOrBilling = req.user?.role === 'ADMIN' || req.user?.role === 'FACTURACION';
-    const safeAccounts = isAdminOrBilling
+    const isAdmin = req.user?.role === 'ADMIN';
+    const safeAccounts = isAdmin
       ? accounts
       : accounts.map((acc: any) => ({ ...acc, balance: 0 }));
     res.status(200).json({ status: 'success', data: { accounts: safeAccounts } });
@@ -238,6 +241,7 @@ export async function verifyTransaction(req: AuthenticatedRequest, res: Response
   try {
     const transaction = await transactionAdminService.verifyTransaction({
       userId,
+      actorRole: req.user?.role,
       txId: Number(req.params.id),
       verified: Boolean(req.body.verified),
       adjustedAmount:

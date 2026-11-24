@@ -244,11 +244,6 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
               </button>
             )}
           </div>
-          <div className="sidebar-status" style={{ marginTop: '8px' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-              {roleLabel}
-            </span>
-          </div>
         </div>
 
         <nav aria-label="Menú principal" className="sidebar-menu">
@@ -270,6 +265,22 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
         </nav>
 
         <div className="sidebar-user">
+          {username && (
+            <div
+              style={{
+                padding: '0 12px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+              title={username}
+            >
+              {username}
+            </div>
+          )}
           <button
             type="button"
             className="btn btn-ghost"

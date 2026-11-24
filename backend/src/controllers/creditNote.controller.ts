@@ -15,6 +15,20 @@ function handleCreditNoteError(res: Response, error: unknown, fallbackMessage: s
   res.status(500).json({ status: 'error', message: fallbackMessage });
 }
 
+export async function getEligibleOrdersForCreditNote(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const personaId = Number(req.params.personaId);
+    const query = typeof req.query.query === 'string' ? req.query.query : undefined;
+    const orders = await creditNoteService.getEligibleOrdersForCreditNote(personaId, query);
+    res.status(200).json({ status: 'success', data: { orders } });
+  } catch (error) {
+    handleCreditNoteError(res, error, 'Error al obtener las facturas acreditables del cliente.');
+  }
+}
+
 export async function getCreditNotes(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const creditNotes = await creditNoteService.getCreditNotes(

@@ -95,7 +95,7 @@ router.post(
 router.put(
   '/transactions/:id/verify',
   authenticateJWT,
-  requireRole([Role.ADMIN]),
+  requireRole([Role.ADMIN, Role.FACTURACION]),
   validateRequest(verifyTransactionSchema),
   verifyTransaction,
 );

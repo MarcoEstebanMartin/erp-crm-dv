@@ -1,7 +1,6 @@
 import {
   PRINT_FONT_STACK,
   escapePrintHtml,
-  getPrintCompanyContext,
   getZoneDisplayTitle,
   openPrintDocument,
   resolvePrintClientMeta,
@@ -28,7 +27,6 @@ export const printConsolidatedPickingA4 = ({
   zone?: string;
   filterLabel?: string;
 }) => {
-  const { company } = getPrintCompanyContext();
   const getItemZone = (item: any) =>
     item.product?.pickingZone || item.product?.rubro?.pickingZone || 'CAJAS';
   const getItemLocation = (item: any) => item.product?.defaultLocation || item.location || 'S/U';
@@ -84,33 +82,54 @@ export const printConsolidatedPickingA4 = ({
   const zoneTitle = getZoneDisplayTitle(zone);
   const showPesoColumn =
     (zone === 'FRIO' || zone === 'ALL') && consolidatedList.some((item) => item.isPesable);
+  const colCount = showPesoColumn ? 6 : 5;
 
+  const normalizedFilter = (filterLabel || '').trim();
+  const hasSpecificFilter =
+    normalizedFilter.length > 0 &&
+    normalizedFilter.toLowerCase() !== 'general' &&
+    normalizedFilter.toLowerCase() !== 'todos los pedidos';
+
+  const metaParts: string[] = [];
+  if (zone !== 'ALL') metaParts.push(zoneTitle);
+  if (hasSpecificFilter) metaParts.push(escapePrintHtml(normalizedFilter));
+  metaParts.push(`${orders.length} ${orders.length === 1 ? 'pedido' : 'pedidos'}`);
+  metaParts.push(`${consolidatedList.length} ${consolidatedList.length === 1 ? 'producto' : 'productos'}`);
+  metaParts.push(
+    `${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`,
+  );
+
+  let currentZone = '';
   const rowsHtml = consolidatedList
     .map((item) => {
+      const zoneHeaderHtml =
+        item.pickingZone !== currentZone
+          ? `<tr class="zone-row${currentZone === '' ? ' zone-row-first' : ''}"><td colspan="${colCount}">${escapePrintHtml(item.pickingZone)}</td></tr>`
+          : '';
+      currentZone = item.pickingZone;
+
       const breakdownText = item.orderBreakdown
         .map(
           (b) =>
-            `<strong>#${b.orderId}</strong> ${escapePrintHtml(b.clientName.split(' ')[0])} (${b.quantity}u)`,
+            `<strong>#${b.orderId}</strong> ${escapePrintHtml(b.clientName.split(' ')[0])} (${b.quantity})`,
         )
-        .join(' &bull; ');
+        .join(' &middot; ');
       const approxKgStr = (Number(item.approxWeightScaled) / Number(SCALE)).toFixed(1);
+      const isMissingLoc = item.location.trim().toUpperCase() === 'S/U';
 
-      return `<tr>
-        <td style="text-align: center;"><div class="chk-box"></div></td>
-        <td>
-          <span class="zone-tag">${escapePrintHtml(item.pickingZone)}</span>
-          <span class="loc-tag">${escapePrintHtml(item.location)}</span>
+      return `${zoneHeaderHtml}<tr class="item-row">
+        <td class="col-loc"><span class="${isMissingLoc ? 'loc-missing' : 'loc-code'}">${escapePrintHtml(item.location)}</span></td>
+        <td class="col-ok"><div class="chk-box"></div></td>
+        <td class="col-product">${escapePrintHtml(item.productName)}</td>
+        <td class="col-qty">
+          <div class="qty-val">${item.totalQuantity}</div>
+          ${item.isPesable ? `<div class="qty-approx">~${approxKgStr} kg</div>` : ''}
         </td>
-        <td>
-          <strong style="font-size: 13px;">${escapePrintHtml(item.productName)}</strong>
-          ${item.isPesable ? ' <span class="pesable-tag">Pesable</span>' : ''}
-        </td>
-        <td style="text-align: center;">
-          <span class="qty-badge">${item.totalQuantity} u</span>
-          ${item.isPesable ? `<div style="font-size: 9.5px; color: #4b5563; margin-top: 2px;">(aprox ${approxKgStr} kg)</div>` : ''}
-        </td>
-        <td class="breakdown-list">${breakdownText}</td>
-        ${showPesoColumn ? `<td style="text-align: center;">${item.isPesable ? '<div class="weight-box"></div>' : '<span style="color:#9ca3af;">-</span>'}</td>` : ''}
+        <td class="col-breakdown">${breakdownText}</td>
+        ${showPesoColumn ? `<td class="col-weight">${item.isPesable ? '<div class="weight-line"></div>' : ''}</td>` : ''}
       </tr>`;
     })
     .join('');
@@ -122,49 +141,51 @@ export const printConsolidatedPickingA4 = ({
     `<!DOCTYPE html>
     <html>
       <head>
-        <title>Consolidado de Armado - ${escapePrintHtml(filterLabel)}</title>
+        <title>Armado - ${escapePrintHtml(filterLabel)}</title>
         <style>
-          @page { size: A4 portrait; margin: 10mm; }
+          @page { size: A4 portrait; margin: 8mm 10mm; }
           * { box-sizing: border-box; }
-          body { font-family: ${PRINT_FONT_STACK}; margin: 0; padding: 0; color: #111827; font-size: 12px; line-height: 1.35; background: #fff; }
-          .header-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #111827; padding-bottom: 8px; margin-bottom: 12px; }
-          .title { font-size: 16px; font-weight: 800; text-transform: uppercase; }
-          .subtitle { font-size: 12px; font-weight: 700; color: #374151; }
-          .meta-info { font-size: 11px; text-align: right; color: #374151; }
-          table.consolidated-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-          table.consolidated-table th { background: #f3f4f6; border: 1.5px solid #374151; padding: 7px 8px; font-size: 11px; text-transform: uppercase; font-weight: 800; text-align: left; color: #111827; }
-          table.consolidated-table td { border: 1px solid #d1d5db; padding: 6px 8px; font-size: 12px; vertical-align: middle; }
-          .chk-box { width: 18px; height: 18px; border: 2px solid #111827; border-radius: 3px; display: block; margin: 0 auto; }
-          .loc-tag { font-size: 10px; font-weight: 800; background: #f3f4f6; border: 1px solid #9ca3af; color: #111827; padding: 2px 5px; border-radius: 3px; display: inline-block; }
-          .zone-tag { font-size: 9.5px; font-weight: 800; background: #111827; color: #ffffff; padding: 2px 5px; border-radius: 3px; display: inline-block; margin-right: 4px; }
-          .pesable-tag { font-size: 10px; background: #f3f4f6; border: 1px solid #9ca3af; color: #111827; padding: 1px 5px; border-radius: 3px; font-weight: 700; }
-          .qty-badge { font-size: 14px; font-weight: 900; color: #111827; background: #f9fafb; padding: 2px 8px; border-radius: 4px; border: 1.5px solid #111827; display: inline-block; }
-          .breakdown-list { font-size: 11px; color: #374151; line-height: 1.3; }
-          .weight-box { width: 65px; height: 28px; border: 2px dashed #111827; border-radius: 3px; display: block; margin: 0 auto; background: #fff; }
+          body { font-family: ${PRINT_FONT_STACK}; margin: 0; padding: 0; color: #111827; font-size: 11.5px; line-height: 1.3; background: #fff; }
+          .meta-bar { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 10px; color: #4b5563; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+          .responsible-field { display: inline-flex; align-items: baseline; gap: 6px; color: #374151; font-weight: 600; }
+          .responsible-line { display: inline-block; width: 140px; border-bottom: 1px solid #6b7280; height: 10px; }
+          table.consolidated-table { width: 100%; border-collapse: collapse; }
+          thead { display: table-header-group; }
+          table.consolidated-table th { border-bottom: 1.5px solid #111827; padding: 4px 6px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; text-align: left; color: #4b5563; }
+          table.consolidated-table td { border-bottom: 1px solid #e5e7eb; padding: 4px 6px; vertical-align: middle; }
+          tr.item-row { break-inside: avoid; page-break-inside: avoid; }
+          tr.zone-row { break-after: avoid; page-break-after: avoid; }
+          tr.zone-row td { padding: 10px 6px 3px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #111827; border-bottom: 1.5px solid #111827; }
+          tr.zone-row-first td { padding-top: 6px; }
+          .col-loc { width: 1%; white-space: nowrap; padding-right: 8px; }
+          .col-ok { width: 28px; text-align: center; }
+          .col-product { font-size: 12px; font-weight: 700; color: #111827; }
+          .col-qty { width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
+          .col-breakdown { font-size: 10.5px; color: #374151; line-height: 1.28; }
+          .col-weight { width: 72px; text-align: center; }
+          .chk-box { width: 15px; height: 15px; border: 1.5px solid #374151; border-radius: 2px; display: block; margin: 0 auto; }
+          .loc-code { font-size: 10.5px; font-weight: 600; color: #4b5563; font-variant-numeric: tabular-nums; }
+          .loc-missing { font-size: 10px; font-weight: 600; color: #9ca3af; }
+          .qty-val { font-size: 13.5px; font-weight: 800; color: #111827; line-height: 1.1; }
+          .qty-approx { font-size: 9px; color: #6b7280; margin-top: 1px; }
+          .weight-line { width: 54px; height: 16px; border-bottom: 1px solid #374151; margin: 0 auto; }
           @media print { body { -webkit-print-color-adjust: exact; } }
         </style>
       </head>
       <body>
-        <div class="header-bar">
-          <div>
-            <div class="title">${escapePrintHtml(company.nombreFantasia)} — CONSOLIDADO DE ARMADO</div>
-            <div class="subtitle">Responsable: ________________________ | ORDENADO POR DEPÓSITO Y UBICACIÓN | ${zoneTitle}</div>
-          </div>
-          <div class="meta-info">
-            <div><strong>Filtros:</strong> ${escapePrintHtml(filterLabel)}</div>
-            <div><strong>Lote:</strong> ${orders.length} pedidos | <strong>Productos Distintos:</strong> ${consolidatedList.length}</div>
-            <div><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
-          </div>
+        <div class="meta-bar">
+          <div class="responsible-field">Responsable:<span class="responsible-line"></span></div>
+          <div>${metaParts.join(' &middot; ')}</div>
         </div>
         <table class="consolidated-table">
           <thead>
             <tr>
-              <th style="width: 32px; text-align: center;">OK</th>
-              <th style="width: 140px;">Ubicación / Sector</th>
+              <th class="col-loc">Ubic.</th>
+              <th class="col-ok">OK</th>
               <th>Producto</th>
-              <th style="width: 100px; text-align: center;">CANT. TOTAL</th>
-              <th>Desglose por Pedido</th>
-              ${showPesoColumn ? '<th style="width: 85px; text-align: center;">Peso Real</th>' : ''}
+              <th class="col-qty">Cant.</th>
+              <th>Pedidos</th>
+              ${showPesoColumn ? '<th class="col-weight">Peso</th>' : ''}
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>

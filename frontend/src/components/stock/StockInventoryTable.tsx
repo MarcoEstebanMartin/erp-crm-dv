@@ -15,6 +15,7 @@ interface StockInventoryTableProps {
   onOpenAdjustModal: (product: any) => void;
   onJumpToMapLocation?: (locationCode: string) => void;
   canViewCosts?: boolean;
+  canViewValuation?: boolean;
   canMutateStock?: boolean;
 }
 
@@ -39,9 +40,10 @@ export default function StockInventoryTable({
   onOpenAdjustModal,
   onJumpToMapLocation,
   canViewCosts = true,
+  canViewValuation = true,
   canMutateStock = true
 }: StockInventoryTableProps) {
-  const columnCount = canViewCosts ? 8 : 6;
+  const columnCount = 5 + (canViewCosts ? 1 : 0) + (canViewCosts && canViewValuation ? 1 : 0) + (canViewValuation ? 1 : 0);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ROWS);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -89,8 +91,8 @@ export default function StockInventoryTable({
             <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>UBICACIÓN WMS / LOTES</th>
             <th style={{ ...TH_BASE_STYLE, textAlign: 'center' }}>FÍSICO</th>
             {canViewCosts && <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>COSTO UNIT.</th>}
-            {canViewCosts && <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR COSTO</th>}
-            <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR VENTA</th>
+            {canViewCosts && canViewValuation && <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR COSTO</th>}
+            {canViewValuation && <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR VENTA</th>}
             <th style={{ ...TH_BASE_STYLE, textAlign: 'center' }}>ACCIONES</th>
           </tr>
         </thead>
@@ -115,6 +117,7 @@ export default function StockInventoryTable({
                 onOpenAdjustModal={onOpenAdjustModal}
                 onJumpToMapLocation={onJumpToMapLocation}
                 canViewCosts={canViewCosts}
+                canViewValuation={canViewValuation}
                 canMutateStock={canMutateStock}
               />
             ))
