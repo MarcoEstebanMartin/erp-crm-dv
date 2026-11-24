@@ -8,6 +8,7 @@ import {
 import { uploadExcelFile } from '../middlewares/upload';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
+import { heavyOperationRateLimiter } from '../middlewares/rateLimiter.middleware';
 
 const router = Router();
 
@@ -18,9 +19,9 @@ router.use(requireRole([Role.ADMIN]));
 router.get('/template/stock-inicial', downloadStockInicialTemplate);
 
 // Endpoint de pre-inspección ("Dry-Run") de Excel
-router.post('/preview', uploadExcelFile, previewExcel);
+router.post('/preview', heavyOperationRateLimiter, uploadExcelFile, previewExcel);
 
 // Endpoint de confirmación e importación transaccional
-router.post('/commit', idempotencyGuard, commitExcel);
+router.post('/commit', heavyOperationRateLimiter, idempotencyGuard, commitExcel);
 
 export default router;

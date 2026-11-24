@@ -60,6 +60,17 @@ export interface RateLimiterOptions {
   windowMs: number;
   max: number;
   message?: string;
+  /** 'ip' (default) agrupa por IP; 'actor' agrupa por usuario autenticado para no penalizar oficinas con NAT compartido. */
+  keyScope?: 'ip' | 'actor';
+}
+
+function resolveRateLimitSubject(req: Request, keyScope: 'ip' | 'actor'): string {
+  if (keyScope === 'actor') {
+    const actorReq = req as any;
+    if (actorReq.user?.id) return `staff_${actorReq.user.id}`;
+    if (actorReq.storeClient?.personaId) return `store_${actorReq.storeClient.personaId}`;
+  }
+  return resolveClientIp(req);
 }
 
 export function createRateLimiter(options: RateLimiterOptions) {
@@ -67,11 +78,12 @@ export function createRateLimiter(options: RateLimiterOptions) {
     windowMs,
     max,
     message = 'Demasiadas peticiones desde esta dirección IP. Por favor intentá más tarde.',
+    keyScope = 'ip',
   } = options;
 
   return (req: Request, res: Response, next: NextFunction): void => {
-    const clientIp = resolveClientIp(req);
-    const key = `${req.baseUrl || ''}${req.path}_${clientIp}`;
+    const subject = resolveRateLimitSubject(req, keyScope);
+    const key = `${req.baseUrl || ''}${req.path}_${subject}`;
     const now = Date.now();
 
     const record = rateLimitMap.get(key);
@@ -118,4 +130,18 @@ export const publicApiRateLimiter = createRateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minuto
   max: 30, // máximo 30 peticiones por minuto
   message: 'Límite de peticiones excedido para la API pública.',
+});
+
+export const heavyOperationRateLimiter = createRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 15, // máximo 15 operaciones pesadas por minuto por usuario
+  keyScope: 'actor',
+  message: 'Demasiadas operaciones pesadas en poco tiempo. Aguardá unos segundos y volvé a intentar.',
+});
+
+export const aiEndpointRateLimiter = createRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 20, // máximo 20 consultas IA por minuto por usuario
+  keyScope: 'actor',
+  message: 'Alcanzaste el límite momentáneo de consultas de IA. Intentá nuevamente en un minuto.',
 });

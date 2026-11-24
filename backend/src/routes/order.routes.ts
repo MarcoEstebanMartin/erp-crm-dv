@@ -23,6 +23,10 @@ import {
 import { parseAiOrderHandler } from '../controllers/order-ai.controller';
 import { authenticateJWT, requireRole, requireRoleOrPermission } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
+import {
+  aiEndpointRateLimiter,
+  heavyOperationRateLimiter,
+} from '../middlewares/rateLimiter.middleware';
 import { Role } from '@prisma/client';
 import { validateRequest } from '../middlewares/validateRequest';
 import { parseAiOrderBodySchema } from '../validators/order-ai.validator';
@@ -70,6 +74,7 @@ router.post(
   '/ai-parse',
   authenticateJWT,
   requireRole([Role.ADMIN, Role.FACTURACION, Role.VENDEDOR]),
+  aiEndpointRateLimiter,
   validateRequest(parseAiOrderBodySchema),
   parseAiOrderHandler,
 );
@@ -108,7 +113,7 @@ router.patch(
 router.post('/:id/invoice', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), validateRequest(invoiceOrderSchema), idempotencyGuard, invoiceOrder);
 
 // Solicitar CAE a AFIP para pre-factura oficial
-router.post('/:id/request-cae', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), idempotencyGuard, requestCaeForOrder);
+router.post('/:id/request-cae', authenticateJWT, requireRole([Role.ADMIN, Role.FACTURACION]), heavyOperationRateLimiter, idempotencyGuard, requestCaeForOrder);
 
 // Actualizar pesos de productos pesables (ADMIN, FACTURACION, DEPOSITO o permiso canPick)
 router.put('/:id/weights', authenticateJWT, canPickOrders, validateRequest(updateOrderWeightsSchema), updateOrderWeights);

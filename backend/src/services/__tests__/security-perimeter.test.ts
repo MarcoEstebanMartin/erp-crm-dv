@@ -161,4 +161,60 @@ describe('Paso 1 — Blindaje de Perímetro HTTP, Anti-Spoofing y Caché de Sesi
     expect(headers['Content-Security-Policy']).toContain("default-src 'none'");
     expect(headers['Permissions-Policy']).toContain('geolocation=(self)');
   });
+
+  it('Aplica Content-Security-Policy completa en rutas del Frontend preservando Google Maps, fuentes y PWA', () => {
+    const headers: Record<string, string> = {};
+    const req: any = { path: '/admin/dashboard' };
+    const res: any = {
+      setHeader: (k: string, v: string) => {
+        headers[k] = v;
+      },
+    };
+    const next = vi.fn();
+
+    securityHeadersMiddleware(req, res, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    const csp = headers['Content-Security-Policy'];
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain('https://maps.googleapis.com');
+    expect(csp).toContain("worker-src 'self' blob:");
+  });
+
+  it('Aísla el Rate Limiter por actor autenticado (keyScope="actor") aunque compartan la misma IP de oficina', () => {
+    const limiter = createRateLimiter({
+      windowMs: 60_000,
+      max: 2,
+      keyScope: 'actor',
+    });
+
+    const invokeAsUser = (userId: number) => {
+      const req: any = {
+        baseUrl: '/api/orders',
+        path: '/ai-parse',
+        ip: '190.12.34.56', // Misma IP pública de la oficina
+        user: { id: userId },
+      };
+      const res: any = {
+        setHeader: vi.fn(),
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn(),
+      };
+      const next = vi.fn();
+      limiter(req, res, next);
+      return { res, next };
+    };
+
+    expect(invokeAsUser(1).next).toHaveBeenCalledOnce();
+    expect(invokeAsUser(1).next).toHaveBeenCalledOnce();
+    // 3er intento del usuario 1 -> bloqueado (429)
+    const blocked = invokeAsUser(1);
+    expect(blocked.next).not.toHaveBeenCalled();
+    expect(blocked.res.status).toHaveBeenCalledWith(429);
+
+    // Usuario 2 desde la misma IP de oficina -> sigue habilitado
+    expect(invokeAsUser(2).next).toHaveBeenCalledOnce();
+  });
 });
