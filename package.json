@@ -12,7 +12,8 @@
     "start": "npm run start --prefix backend",
     "test:backend": "npm run test --prefix backend",
     "test:frontend": "npm run test --prefix frontend",
-    "test": "npm run test:backend && npm run test:frontend"
+    "test": "npm run test:backend && npm run test:frontend",
+    "guard:arch": "node scripts/check_architecture_guard.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

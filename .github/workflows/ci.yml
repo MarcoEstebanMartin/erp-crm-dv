@@ -1,6 +1,10 @@
 name: ERP-CRM DV Quality Gate (CI)
 
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -51,6 +55,13 @@ jobs:
       - name: Backend Unit & Accounting Invariant Tests (Vitest)
         working-directory: backend
         run: npm test
+
+      - name: Architecture Guard (450-line ratchet)
+        run: node scripts/check_architecture_guard.js
+
+      - name: Frontend Lint (oxlint)
+        working-directory: frontend
+        run: npm run lint
 
       - name: Frontend TypeScript Strict Check (tsc --noEmit)
         working-directory: frontend
