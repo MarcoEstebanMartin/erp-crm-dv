@@ -9,6 +9,7 @@ import { OrderQueriesService } from '../services/orders/order-queries.service';
 import { OrderEditService } from '../services/orders/order-edit.service';
 import { OrderStatusService } from '../services/orders/order-status.service';
 import { OrderBillingService } from '../services/orders/order-billing.service';
+import { normalizeClientRequestId } from '../utils/client-request-id.util';
 
 interface OrderActor {
   userId: number;
@@ -141,6 +142,12 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
     return;
   }
 
+  const clientRequestId = normalizeClientRequestId(
+    req.headers?.['idempotency-key'],
+    req.body?.clientRequestId,
+    req.body?.idempotencyKey,
+  );
+
   try {
     const result = await OrderService.createOrder({
       sellerId: actor.userId,
@@ -152,6 +159,7 @@ export async function createOrder(req: AuthenticatedRequest, res: Response): Pro
       deliveryRouteId,
       notes,
       items,
+      idempotencyKey: clientRequestId,
     });
     await logAudit({
       userId: actor.userId,
@@ -288,11 +296,18 @@ export async function createDirectInvoice(req: AuthenticatedRequest, res: Respon
     return;
   }
 
+  const clientRequestId = normalizeClientRequestId(
+    req.headers?.['idempotency-key'],
+    req.body?.clientRequestId,
+    req.body?.idempotencyKey,
+  );
+
   try {
     const order = await DirectInvoiceService.createDirectInvoice({
       adminId: actor.userId,
       userRole: actor.userRole,
       ...req.body,
+      idempotencyKey: clientRequestId,
     });
     appCache.invalidateProductCatalogThrottled();
     res.status(200).json({ status: 'success', data: { order } });

@@ -282,6 +282,7 @@ model Order {
   bultosDetails       Json?
   notes               String?     @db.Text
   salesChannel        SalesChannel @default(MOSTRADOR)
+  clientRequestId     String?     @unique
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 

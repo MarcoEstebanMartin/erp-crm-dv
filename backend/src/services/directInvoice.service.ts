@@ -33,6 +33,10 @@ import {
   decrementStockByProductMapInTx,
   evaluateOrderCartWithWeeklyPromos,
 } from './orders/order-weekly-promos.helper';
+import {
+  isClientRequestIdUniqueConflict,
+  normalizeClientRequestId,
+} from '../utils/client-request-id.util';
 
 const personaService = new PersonaService();
 
@@ -56,6 +60,7 @@ export interface CreateDirectInvoiceDto {
     quantity: number;
     weight?: number | null;
   }[];
+  idempotencyKey?: string;
 }
 
 export class DirectInvoiceService {
@@ -79,6 +84,19 @@ export class DirectInvoiceService {
       checkAmount,
       items,
     } = data;
+
+    const clientRequestId = normalizeClientRequestId(data.idempotencyKey);
+
+    // Idempotencia persistente ANTES de consultar/emitir CAE en AFIP
+    if (clientRequestId && typeof (prisma as any)?.order?.findUnique === 'function') {
+      const existingByKey = await prisma.order.findUnique({
+        where: { clientRequestId },
+        include: { items: true },
+      });
+      if (existingByKey) {
+        return existingByKey;
+      }
+    }
 
     const persona = await prisma.persona.findUnique({ where: { id: personaId } });
     if (!persona) {
@@ -305,6 +323,7 @@ export class DirectInvoiceService {
         let order = await tx.order.create({
           data: {
             ...fiscalFields,
+            ...(clientRequestId ? { clientRequestId } : {}),
             deliveryRouteId: slot.deliveryRouteId,
             deliverySequence: slot.deliverySequence,
           },
@@ -423,6 +442,20 @@ export class DirectInvoiceService {
 
       return result;
     } catch (secondaryError: any) {
+      if (
+        clientRequestId &&
+        isClientRequestIdUniqueConflict(secondaryError) &&
+        typeof (prisma as any)?.order?.findUnique === 'function'
+      ) {
+        const concurrentOrder = await prisma.order.findUnique({
+          where: { clientRequestId },
+          include: { items: true },
+        });
+        if (concurrentOrder) {
+          return concurrentOrder;
+        }
+      }
+
       if (!finalCae) {
         throw secondaryError;
       }

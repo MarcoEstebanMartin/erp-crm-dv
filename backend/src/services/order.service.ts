@@ -20,6 +20,10 @@ import {
   evaluateOrderCartWithWeeklyPromos,
   isPromoBonusOrderItem,
 } from './orders/order-weekly-promos.helper';
+import {
+  isClientRequestIdUniqueConflict,
+  normalizeClientRequestId,
+} from '../utils/client-request-id.util';
 
 const personaService = new PersonaService();
 
@@ -44,6 +48,7 @@ export class OrderService {
    */
   static async createOrder(data: CreateOrderDto) {
     const { sellerId, userRole, personaId, billingType, salesChannel, notes, items } = data;
+    const clientRequestId = normalizeClientRequestId(data.idempotencyKey);
 
     const persona = await prisma.persona.findUnique({ where: { id: personaId } });
     if (!persona) {
@@ -52,6 +57,17 @@ export class OrderService {
 
     if (userRole === Role.VENDEDOR && persona.sellerId !== sellerId) {
       throw new Error('No podés cargar un pedido para un cliente asignado a otro vendedor.');
+    }
+
+    // Idempotencia persistente en PostgreSQL (sobrevive reinicios/deploys de Railway y colas offline)
+    if (clientRequestId && typeof (prisma as any)?.order?.findUnique === 'function') {
+      const existingByKey = await prisma.order.findUnique({
+        where: { clientRequestId },
+        include: { items: true },
+      });
+      if (existingByKey) {
+        return existingByKey;
+      }
     }
 
     // Detección proactiva de duplicados por idempotencia en preventa móvil (últimos 2 minutos)
@@ -85,7 +101,8 @@ export class OrderService {
       }
     }
 
-    return await prisma.$transaction(async (tx) => {
+    try {
+      return await prisma.$transaction(async (tx) => {
       const productIds = items.map((item) => item.productId);
       const dbProducts = await tx.product.findMany({
         where: { id: { in: productIds } },
@@ -198,6 +215,7 @@ export class OrderService {
           deliveryRouteId: slot.deliveryRouteId,
           deliverySequence: slot.deliverySequence,
           notes: notes ? notes.trim() : undefined,
+          ...(clientRequestId ? { clientRequestId } : {}),
           totalAmount: totalSum,
           status: OrderStatus.PENDING,
         },
@@ -240,6 +258,22 @@ export class OrderService {
 
       return order;
     });
+    } catch (error) {
+      if (
+        clientRequestId &&
+        isClientRequestIdUniqueConflict(error) &&
+        typeof (prisma as any)?.order?.findUnique === 'function'
+      ) {
+        const concurrentOrder = await prisma.order.findUnique({
+          where: { clientRequestId },
+          include: { items: true },
+        });
+        if (concurrentOrder) {
+          return concurrentOrder;
+        }
+      }
+      throw error;
+    }
   }
 
   static async updateOrderWeights(
