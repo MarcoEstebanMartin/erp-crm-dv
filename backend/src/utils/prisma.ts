@@ -3,6 +3,31 @@ import { Prisma, PrismaClient } from '@prisma/client';
 export const SLOW_QUERY_THRESHOLD_MS = 200;
 export const DEFAULT_PRISMA_CONNECTION_LIMIT = '15';
 export const DEFAULT_PRISMA_POOL_TIMEOUT = '20';
+export const DEFAULT_PRISMA_TX_MAX_WAIT_MS = 10_000;
+export const DEFAULT_PRISMA_TX_TIMEOUT_MS = 15_000;
+
+/**
+ * Configura maxWait y timeout para transacciones interactivas ($transaction),
+ * evitando errores P2028 ("Unable to start a transaction in the given time")
+ * bajo picos de concurrencia o latencia con el pooler de Supabase.
+ */
+export function resolvePrismaTransactionOptions(
+  rawMaxWait: string | undefined = process.env.PRISMA_TX_MAX_WAIT_MS,
+  rawTimeout: string | undefined = process.env.PRISMA_TX_TIMEOUT_MS,
+): { maxWait: number; timeout: number } {
+  const parsedMaxWait = Number(rawMaxWait);
+  const parsedTimeout = Number(rawTimeout);
+  return {
+    maxWait:
+      Number.isFinite(parsedMaxWait) && parsedMaxWait >= 1_000
+        ? Math.floor(parsedMaxWait)
+        : DEFAULT_PRISMA_TX_MAX_WAIT_MS,
+    timeout:
+      Number.isFinite(parsedTimeout) && parsedTimeout >= 2_000
+        ? Math.floor(parsedTimeout)
+        : DEFAULT_PRISMA_TX_TIMEOUT_MS,
+  };
+}
 
 /**
  * Ajusta DATABASE_URL para el pooler de Supabase (Supavisor :6543) evitando
@@ -59,6 +84,7 @@ const pooledUrl = resolvePooledDatabaseUrl();
 
 const prisma = new PrismaClient({
   log: resolvePrismaLogConfig(),
+  transactionOptions: resolvePrismaTransactionOptions(),
   ...(pooledUrl ? { datasources: { db: { url: pooledUrl } } } : {}),
 });
 

@@ -9,6 +9,7 @@ import {
 import {
   computeAdaptiveFulfillmentColumns,
   formatBigIntARS,
+  runInControlledBatches,
   selectPendingOrderIdsForAutoPicking,
   sumOrdersTotalInt,
 } from '../../utils/fulfillmentCardMeta.helper';
@@ -252,7 +253,7 @@ export function useFulfillmentDashboard() {
       type: 'warning',
       onConfirm: async () => {
         try {
-          await Promise.all(preparing.map((o) => api.updateOrderStatus(o.id, 'PENDING' as any)));
+          await runInControlledBatches(preparing, (o) => api.updateOrderStatus(o.id, 'PENDING' as any));
           void fetchOrders();
         } catch (err) {
           console.error('Error al devolver todos a pendientes:', err);
@@ -268,7 +269,7 @@ export function useFulfillmentDashboard() {
     const idsToMove = selectPendingOrderIdsForAutoPicking(ordersToMove);
     if (idsToMove.length === 0) return;
     try {
-      await Promise.all(idsToMove.map((id) => api.updateOrderStatus(id, 'PREPARING' as any)));
+      await runInControlledBatches(idsToMove, (id) => api.updateOrderStatus(id, 'PREPARING' as any));
       const movedSet = new Set(idsToMove);
       setSelectedOrderIds((prev) => prev.filter((id) => !movedSet.has(id)));
       await fetchOrders();

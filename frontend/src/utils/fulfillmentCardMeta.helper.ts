@@ -185,3 +185,20 @@ export function selectPendingOrderIdsForAutoPicking(
   }
   return ids;
 }
+
+/**
+ * Ejecuta una operación asíncrona sobre una lista con concurrencia acotada
+ * para evitar saturar el pool de transacciones de la base de datos en acciones por lote.
+ */
+export async function runInControlledBatches<T>(
+  items: T[],
+  worker: (item: T) => Promise<unknown>,
+  concurrency = 3,
+): Promise<void> {
+  if (!items || items.length === 0) return;
+  const batchSize = Math.max(1, Math.floor(concurrency));
+  for (let i = 0; i < items.length; i += batchSize) {
+    const chunk = items.slice(i, i + batchSize);
+    await Promise.all(chunk.map((item) => worker(item)));
+  }
+}

@@ -5,6 +5,7 @@ import {
   formatOrderRelativeAge,
   resolveOrderFiscalChannelBadge,
   resolveOrderOriginLabel,
+  runInControlledBatches,
   selectPendingOrderIdsForAutoPicking,
   sumOrdersTotalInt,
 } from '../fulfillmentCardMeta.helper';
@@ -117,6 +118,28 @@ describe('Paso 3: Minimalismo Operativo, Armado de Pedidos y Métricas AFIP', ()
         null,
       ]);
       expect(ids).toEqual([101, 102]);
+    });
+
+    it('runInControlledBatches procesa todos los elementos sin superar el límite de concurrencia', async () => {
+      let active = 0;
+      let maxActive = 0;
+      const processed: number[] = [];
+
+      await runInControlledBatches(
+        [1, 2, 3, 4, 5, 6, 7],
+        async (n) => {
+          active += 1;
+          maxActive = Math.max(maxActive, active);
+          await new Promise((r) => setTimeout(r, 5));
+          processed.push(n);
+          active -= 1;
+        },
+        3,
+      );
+
+      expect(processed).toHaveLength(7);
+      expect(processed.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+      expect(maxActive).toBeLessThanOrEqual(3);
     });
   });
 

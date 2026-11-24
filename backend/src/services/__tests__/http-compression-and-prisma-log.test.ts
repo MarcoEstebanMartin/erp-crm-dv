@@ -2,7 +2,13 @@ import http from 'http';
 import express from 'express';
 import { describe, expect, it } from 'vitest';
 import { createHttpCompressionMiddleware } from '../../middlewares/compression.middleware';
-import { resolvePooledDatabaseUrl, resolvePrismaLogConfig } from '../../utils/prisma';
+import {
+  DEFAULT_PRISMA_TX_MAX_WAIT_MS,
+  DEFAULT_PRISMA_TX_TIMEOUT_MS,
+  resolvePooledDatabaseUrl,
+  resolvePrismaLogConfig,
+  resolvePrismaTransactionOptions,
+} from '../../utils/prisma';
 
 function requestRaw(
   port: number,
@@ -104,5 +110,20 @@ describe('Paso 2 Velocidad — Compresión HTTP Turbo (gzip) y Logs SQL Limpios'
     expect(resolvePooledDatabaseUrl(customPooler, '15')).toBe(customPooler);
 
     expect(resolvePooledDatabaseUrl('')).toBeUndefined();
+  });
+
+  it('resolvePrismaTransactionOptions amplía maxWait/timeout por defecto y respeta overrides válidos', () => {
+    expect(resolvePrismaTransactionOptions(undefined, undefined)).toEqual({
+      maxWait: DEFAULT_PRISMA_TX_MAX_WAIT_MS,
+      timeout: DEFAULT_PRISMA_TX_TIMEOUT_MS,
+    });
+    expect(resolvePrismaTransactionOptions('12000', '20000')).toEqual({
+      maxWait: 12_000,
+      timeout: 20_000,
+    });
+    expect(resolvePrismaTransactionOptions('abc', '500')).toEqual({
+      maxWait: DEFAULT_PRISMA_TX_MAX_WAIT_MS,
+      timeout: DEFAULT_PRISMA_TX_TIMEOUT_MS,
+    });
   });
 });

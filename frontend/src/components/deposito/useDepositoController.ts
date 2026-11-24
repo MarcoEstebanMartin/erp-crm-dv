@@ -6,6 +6,7 @@ import { playBeep, sortItemsByOptimalRoute } from './depositoHelpers';
 import type { BultosData } from './BultosCloseModal';
 import type { StockAdjustModalState } from './DepositoStockAdjustModal';
 import { isSentinelExpiration } from '../stock/lotLabel';
+import { runInControlledBatches } from '../../utils/fulfillmentCardMeta.helper';
 
 function isLotExpiredForPicking(expirationDate?: string | null): boolean {
   if (!expirationDate || isSentinelExpiration(expirationDate)) return false;
@@ -343,7 +344,7 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
     if (!(await confirm(`¿Deseás pasar los ${pendingSelected.length} pedidos seleccionados a 'En Preparación'?`))) return;
     setLoading(true);
     try {
-      await Promise.all(pendingSelected.map((o) => api.updateOrderStatus(o.id, OrderStatus.PREPARING)));
+      await runInControlledBatches(pendingSelected, (o) => api.updateOrderStatus(o.id, OrderStatus.PREPARING));
       setSuccessMsg(`Se inició el picking para ${pendingSelected.length} pedidos.`);
       setSelectedOrderIds({});
       fetchData();
