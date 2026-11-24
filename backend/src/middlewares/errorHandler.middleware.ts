@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import AppError from '../utils/AppError';
 import { env } from '../config/env.config';
+import { reportUnhandledError } from '../utils/structured-logger.util';
 
 export function isInternalTechnicalError(err: any): boolean {
   if (!err) return true;
@@ -29,7 +30,7 @@ export function sanitizeServerErrorMessage(err: any, nodeEnv: string = env.NODE_
 
 export function errorHandler(
   err: Error | AppError | ZodError | any,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): Response {
@@ -68,11 +69,19 @@ export function errorHandler(
     });
   }
 
-  console.error('⚠️ [Unhandled Server Error]:', err);
+  const requestId = (req as any)?.requestId;
+  const userId = (req as any)?.user?.id;
+  reportUnhandledError(err, {
+    requestId,
+    method: req?.method,
+    path: (req?.originalUrl || req?.url || '').split('?')[0],
+    userId,
+  });
 
   return res.status(500).json({
     status: 'error',
     message: sanitizeServerErrorMessage(err, env.NODE_ENV),
+    ...(requestId ? { requestId } : {}),
     error: env.NODE_ENV === 'development' ? err : undefined,
   });
 }

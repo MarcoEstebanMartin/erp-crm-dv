@@ -4,6 +4,7 @@ import path from 'path';
 import { env } from './config/env.config';
 import { ensureDirectoriesExist } from './utils/fileSync.util';
 import { errorHandler } from './middlewares/errorHandler.middleware';
+import { createRequestObservabilityMiddleware } from './middlewares/request-observability.middleware';
 import { createHttpCompressionMiddleware } from './middlewares/compression.middleware';
 import { securityHeadersMiddleware } from './middlewares/securityHeaders.middleware';
 import { mountSpaFrontend } from './middlewares/spa-static.middleware';
@@ -72,19 +73,8 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true, limit: env.JSON_BODY_LIMIT }));
 
-// 2. Middleware de Rendimiento (X-Response-Time Seguro)
-app.use((_req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-  const originalWriteHead = res.writeHead;
-  res.writeHead = function (...args: any[]) {
-    if (!res.headersSent) {
-      const duration = Date.now() - start;
-      res.setHeader('X-Response-Time', `${duration}ms`);
-    }
-    return originalWriteHead.apply(this, args as any);
-  };
-  next();
-});
+// 2. Middleware de Observabilidad (X-Request-Id, X-Response-Time y alerta de requests lentos >= 1000ms)
+app.use(createRequestObservabilityMiddleware());
 
 // 3. Inicialización Asincrónica de Directorios de Uploads y Keep-Alive SQL
 const uploadsDir = path.join(__dirname, '../uploads');
