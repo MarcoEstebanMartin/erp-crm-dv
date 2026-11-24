@@ -1,6 +1,52 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../utils/api';
 
+export const MAX_ACCEPTED_GPS_ACCURACY_METERS = 150;
+
+export function shouldEmitRouteGps(params: {
+  userRole?: string | null;
+  routeStatus?: string | null;
+  custodyStatus?: string | null;
+}): boolean {
+  if (params.userRole !== 'REPARTO') return false;
+  return params.routeStatus === 'IN_TRANSIT' || params.custodyStatus === 'LOADED_IN_TRANSIT';
+}
+
+export function shouldAcceptGpsReading(params: {
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  lastCoords: { latitude: number; longitude: number } | null;
+  lastPingAt: number;
+  now: number;
+  intervalMs: number;
+}): boolean {
+  if (!Number.isFinite(params.latitude) || !Number.isFinite(params.longitude)) {
+    return false;
+  }
+  if (
+    params.accuracy !== null &&
+    params.accuracy !== undefined &&
+    Number.isFinite(params.accuracy) &&
+    params.accuracy > MAX_ACCEPTED_GPS_ACCURACY_METERS
+  ) {
+    return false;
+  }
+  if (params.lastCoords) {
+    const dLat = Math.abs(params.latitude - params.lastCoords.latitude);
+    const dLng = Math.abs(params.longitude - params.lastCoords.longitude);
+    if (
+      dLat < 0.00025 &&
+      dLng < 0.00025 &&
+      params.lastPingAt > 0 &&
+      params.now - params.lastPingAt < params.intervalMs * 3
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 interface UseGpsTrackerOptions {
   activeRouteId: number | null | undefined;
   isActive: boolean;
@@ -43,15 +89,20 @@ export function useGpsTracker({
     setGpsError(null);
 
     const sendGpsPing = (position: GeolocationPosition) => {
-      const { latitude, longitude, speed, heading } = position.coords;
+      const { latitude, longitude, speed, heading, accuracy } = position.coords;
 
-      // Desplazamiento mínimo (~30 m) para evitar pings redundantes si el vehículo está detenido
-      if (lastCoordsRef.current) {
-        const dLat = Math.abs(latitude - lastCoordsRef.current.latitude);
-        const dLng = Math.abs(longitude - lastCoordsRef.current.longitude);
-        if (dLat < 0.00025 && dLng < 0.00025 && lastPingAtRef.current > 0 && Date.now() - lastPingAtRef.current < intervalMs * 3) {
-          return;
-        }
+      if (
+        !shouldAcceptGpsReading({
+          latitude,
+          longitude,
+          accuracy,
+          lastCoords: lastCoordsRef.current,
+          lastPingAt: lastPingAtRef.current,
+          now: Date.now(),
+          intervalMs,
+        })
+      ) {
+        return;
       }
 
       const speedKmH = speed !== null && speed !== undefined ? Math.round(speed * 3.6) : null;
@@ -92,9 +143,9 @@ export function useGpsTracker({
     const pollOnce = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       navigator.geolocation.getCurrentPosition(sendGpsPing, handlePositionError, {
-        enableHighAccuracy: false,
+        enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 45000,
+        maximumAge: 30000,
       });
     };
 

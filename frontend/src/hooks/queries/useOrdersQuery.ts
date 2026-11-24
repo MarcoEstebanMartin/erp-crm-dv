@@ -38,7 +38,7 @@ export function useOrders(billingType?: BillingType, status?: OrderStatus) {
   return useQuery({
     queryKey: ['orders', billingType, status],
     queryFn: async () => {
-      const data = await api.getOrders(billingType, status);
+      const data = await api.getOrders(billingType, status, { page: 1, limit: 100 });
       return data || [];
     },
   });

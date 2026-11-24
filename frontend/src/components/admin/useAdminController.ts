@@ -224,16 +224,16 @@ export function useAdminController(activeTab: string) {
         (activeTab === 'rendiciones' && cajasSubTab === 'reportes')
       ) {
         if (api.getCurrentUser()?.role !== 'ADMIN') return;
-        const [stats, dataUsers, allOrders] = await Promise.all([
+        const [stats, dataUsers, ordersPage] = await Promise.all([
           api.getFinancialReports(),
           api.getUsers(),
-          api.getOrders(),
+          api.getOrdersPage({ page: 1, limit: 200 }),
           loadProductsIfNeeded(force),
           loadClientsIfNeeded(force),
         ]);
         setFinancialReport(stats);
         setUsers(dataUsers);
-        setOrders(allOrders);
+        setOrders(ordersPage.orders);
       } else if (activeTab === 'products' || activeTab === 'catalog' || activeTab === 'stock') {
         const needRubros = shouldFetchAdminResource({
           lastFetchedAt: freshnessRef.current.rubrosAt,

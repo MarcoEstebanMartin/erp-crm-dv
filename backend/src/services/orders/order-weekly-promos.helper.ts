@@ -8,6 +8,10 @@ import {
   evaluateCartWeeklyPromos,
 } from '../../engines/weekly-promos.engine';
 import { toDecimal } from '../../core/money';
+import { appCache } from '../../utils/cache';
+
+export const ACTIVE_WEEKLY_PROMOS_CACHE_KEY = 'weekly_promos_active';
+export const ACTIVE_WEEKLY_PROMOS_TTL_SECONDS = 60;
 
 /**
  * Determina si un renglón de pedido/factura corresponde a bonificación sin cargo de promo N+M ($0).
@@ -29,9 +33,20 @@ export function isPromoBonusOrderItem(
 export async function fetchActiveWeeklyPromosSafe(
   dbOrTx: any,
   now: Date = new Date(),
+  options?: { useCache?: boolean },
 ): Promise<WeeklyPromoSpec[]> {
   if (!dbOrTx?.weeklyPromo?.findMany) {
     return [];
+  }
+
+  const isTestEnv = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+  const shouldUseCache = options?.useCache ?? !isTestEnv;
+
+  if (shouldUseCache) {
+    const cached = appCache.get<WeeklyPromoSpec[]>(ACTIVE_WEEKLY_PROMOS_CACHE_KEY);
+    if (cached) {
+      return cached;
+    }
   }
 
   const rows = await dbOrTx.weeklyPromo.findMany({
@@ -50,7 +65,7 @@ export async function fetchActiveWeeklyPromosSafe(
 
   if (!Array.isArray(rows)) return [];
 
-  return rows.map((row: any) => ({
+  const mapped: WeeklyPromoSpec[] = rows.map((row: any) => ({
     id: Number(row.id),
     name: String(row.name || ''),
     type: row.type as WeeklyPromoTypeValue,
@@ -69,6 +84,12 @@ export async function fetchActiveWeeklyPromosSafe(
         }))
       : [],
   }));
+
+  if (shouldUseCache) {
+    appCache.set(ACTIVE_WEEKLY_PROMOS_CACHE_KEY, mapped, ACTIVE_WEEKLY_PROMOS_TTL_SECONDS);
+  }
+
+  return mapped;
 }
 
 /**

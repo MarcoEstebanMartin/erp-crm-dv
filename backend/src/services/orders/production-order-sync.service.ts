@@ -18,6 +18,7 @@ import {
   commitSingleWebOrderAtomically,
   fetchProductionOrderHeaders,
   fetchProductionOrdersBatch,
+  resolveWebOrderLookbackDate,
   type SyncWebOrdersOptions,
   type WebOrderPreviewEntry,
   type WebOrderSyncReport,
@@ -60,10 +61,18 @@ export class ProductionOrderSyncService {
         envIgnoreRaw: process.env.WEB_ORDER_SYNC_IGNORE_IDS,
       });
 
+      const effectiveSince = resolveWebOrderLookbackDate(options);
+      const erpLookupSince = effectiveSince
+        ? new Date(effectiveSince.getTime() - 2 * 24 * 60 * 60 * 1000)
+        : undefined;
+
       const [webHeaders, existingWebErpOrders] = await Promise.all([
-        fetchProductionOrderHeaders(prodDb),
+        fetchProductionOrderHeaders(prodDb, effectiveSince),
         prisma.order.findMany({
-          where: { salesChannel: SalesChannel.TIENDA_WEB },
+          where: {
+            salesChannel: SalesChannel.TIENDA_WEB,
+            ...(erpLookupSince ? { createdAt: { gte: erpLookupSince } } : {}),
+          },
           select: { id: true, status: true, bultosDetails: true, notes: true },
         }),
       ]);
@@ -89,10 +98,12 @@ export class ProductionOrderSyncService {
         return true;
       });
 
+      let preAlreadyImportedCount = 0;
+      let preSkippedCancelledCount = 0;
+      let upperIds: string[];
+
       if (!dryRun) {
-        let alreadyImportedCount = 0;
-        let skippedCancelledCount = 0;
-        let hasActionable = false;
+        const actionableIds: string[] = [];
 
         for (const wh of candidateHeaders) {
           const code = String(wh.id || '').trim().toUpperCase();
@@ -100,33 +111,36 @@ export class ProductionOrderSyncService {
           const existing = importedByWebCode.get(code);
           if (existing) {
             if (webSt === 'cancelado' && existing.status === OrderStatus.PENDING) {
-              hasActionable = true;
+              actionableIds.push(code);
             } else {
-              alreadyImportedCount++;
+              preAlreadyImportedCount++;
             }
           } else if (webSt === 'cancelado') {
-            skippedCancelledCount++;
+            preSkippedCancelledCount++;
           } else {
-            hasActionable = true;
+            actionableIds.push(code);
           }
         }
 
-        if (!hasActionable) {
+        if (actionableIds.length === 0) {
           return {
             dryRun: false,
             scannedWebOrders: candidateHeaders.length,
             importedCount: 0,
-            alreadyImportedCount,
-            skippedCancelledCount,
+            alreadyImportedCount: preAlreadyImportedCount,
+            skippedCancelledCount: preSkippedCancelledCount,
             cancelledInErpCount: 0,
             newClientsCreatedCount: 0,
             ignoredTestOrdersCount,
             previews: [],
           };
         }
+
+        upperIds = actionableIds;
+      } else {
+        upperIds = candidateHeaders.map((h) => String(h.id || '').trim().toUpperCase());
       }
 
-      const upperIds = candidateHeaders.map((h) => String(h.id || '').trim().toUpperCase());
       if (upperIds.length === 0) {
         return {
           dryRun,
@@ -166,8 +180,8 @@ export class ProductionOrderSyncService {
       const combosMap = parseCatalogCombosMap(rawCatalogState);
       const previews: WebOrderPreviewEntry[] = [];
       let importedCount = 0;
-      let alreadyImportedCount = 0;
-      let skippedCancelledCount = 0;
+      let alreadyImportedCount = preAlreadyImportedCount;
+      let skippedCancelledCount = preSkippedCancelledCount;
       let cancelledInErpCount = 0;
       let newClientsCreatedCount = 0;
 
@@ -272,7 +286,7 @@ export class ProductionOrderSyncService {
       }
 
       if (!dryRun && (importedCount > 0 || cancelledInErpCount > 0)) {
-        appCache.invalidateProductCatalog();
+        appCache.invalidateProductCatalogThrottled();
       }
 
       return {

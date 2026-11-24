@@ -95,8 +95,8 @@ export function useFulfillmentDashboard() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const data = await api.getOrders();
-      setOrders(data);
+      const pageRes = await api.getOrdersPage({ page: 1, limit: 200 });
+      setOrders(pageRes.orders);
     } catch (err) {
       console.error(err);
     } finally {

@@ -144,4 +144,41 @@ describe('Paso 3 Velocidad — Resumen Liviano de Inicio y Paginación Real de P
       expect.objectContaining({ skip: 0, take: 200 }),
     );
   });
+
+  it('aplica límite defensivo por defecto (100) si se omite page/limit y filtra pickingQueue en SQL para DEPOSITO/ADMIN', async () => {
+    (prisma.order.findMany as any).mockResolvedValue([]);
+    (prisma.order.count as any).mockResolvedValue(420);
+
+    const resDefault = await OrderQueriesService.getOrders({
+      userId: 1,
+      userRole: Role.ADMIN,
+    });
+
+    expect(prisma.order.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ skip: 0, take: 100 }),
+    );
+    expect(resDefault.pagination).toEqual({
+      total: 420,
+      page: 1,
+      limit: 100,
+      totalPages: 5,
+    });
+
+    await OrderQueriesService.getOrders({
+      userId: 3,
+      userRole: Role.DEPOSITO,
+      pickingQueue: 'true',
+      limit: '200',
+    });
+
+    expect(prisma.order.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [{ status: { in: [OrderStatus.PENDING, OrderStatus.PREPARING] } }],
+        },
+        skip: 0,
+        take: 200,
+      }),
+    );
+  });
 });

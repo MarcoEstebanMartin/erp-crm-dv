@@ -24,6 +24,7 @@ export interface OrdersSummaryResult {
   enRepartoCount: number;
 }
 
+const DEFAULT_PAGE_LIMIT = 100;
 const MAX_PAGE_LIMIT = 200;
 
 const NOT_IN_ACTIVE_OR_COMPLETED_ROUTE = {
@@ -189,6 +190,8 @@ export class OrderQueriesService {
       } else {
         andClauses.push({ sellerId: userId });
       }
+    } else if (pickingQueue === 'true') {
+      andClauses.push({ status: { in: [OrderStatus.PENDING, OrderStatus.PREPARING] } });
     }
     if (billingType) {
       andClauses.push({ billingType: billingType as BillingType });
@@ -230,12 +233,13 @@ export class OrderQueriesService {
 
     const whereClause = andClauses.length > 0 ? { AND: andClauses } : {};
 
-    const pageNum = page ? Math.max(1, parseInt(page, 10) || 1) : undefined;
-    const limitNum = limit
-      ? Math.min(MAX_PAGE_LIMIT, Math.max(1, parseInt(limit, 10) || 50))
-      : undefined;
-    const skip = pageNum && limitNum ? (pageNum - 1) * limitNum : undefined;
-    const take = limitNum || undefined;
+    const pageNum = Math.max(1, parseInt(page || '', 10) || 1);
+    const limitNum = Math.min(
+      MAX_PAGE_LIMIT,
+      Math.max(1, parseInt(limit || '', 10) || DEFAULT_PAGE_LIMIT),
+    );
+    const skip = (pageNum - 1) * limitNum;
+    const take = limitNum;
 
     const [orders, totalCount] = await Promise.all([
       prisma.order.findMany({
@@ -304,9 +308,9 @@ export class OrderQueriesService {
       orders,
       pagination: {
         total: totalCount,
-        page: pageNum || 1,
-        limit: limitNum || totalCount,
-        totalPages: limitNum ? Math.max(1, Math.ceil(totalCount / limitNum)) : 1,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.max(1, Math.ceil(totalCount / limitNum)),
       },
     };
   }

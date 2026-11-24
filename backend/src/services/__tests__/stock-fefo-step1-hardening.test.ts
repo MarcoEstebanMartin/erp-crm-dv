@@ -708,6 +708,7 @@ describe('Paso 1 — Blindaje Crítico de Stock, FEFO, Concurrencia, WMS y Cach�
 
   it('9. Todas las mutaciones de stock en controladores y sync web invalidan el caché de catálogo', async () => {
     const invalidateSpy = vi.spyOn(appCache, 'invalidateProductCatalog');
+    const invalidateThrottledSpy = vi.spyOn(appCache, 'invalidateProductCatalogThrottled');
 
     // A) purchase.controller
     vi.spyOn(purchaseOrderService, 'receivePurchaseOrder').mockResolvedValue({ id: 1 } as any);
@@ -763,7 +764,9 @@ describe('Paso 1 — Blindaje Crítico de Stock, FEFO, Concurrencia, WMS y Cach�
 
     await productionOrderSyncService.syncIncomingOrders({ dryRun: false, includeHistoricalTests: true });
 
-    // 2 purchase + 2 billing + 6 order + 2 creditNote + 1 store + 1 web-sync = 14 invalidaciones
-    expect(invalidateSpy).toHaveBeenCalledTimes(14);
+    // 2 purchase + 2 billing + 2 creditNote + 1 store = 7 invalidaciones inmediatas
+    expect(invalidateSpy).toHaveBeenCalledTimes(7);
+    // 5 order mutadores de stock (createOrder, confirmArmado, updateOrderStatus, updateOrder, createDirectInvoice) + 1 web-sync = 6 invalidaciones suavizadas
+    expect(invalidateThrottledSpy).toHaveBeenCalledTimes(6);
   });
 });

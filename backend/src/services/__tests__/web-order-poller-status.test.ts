@@ -11,6 +11,11 @@ import {
   getWebOrderPollerStatus,
   runWebOrderSyncExclusive,
 } from '../orders/web-order-poller.service';
+import {
+  DEFAULT_WEB_ORDER_LOOKBACK_DAYS,
+  fetchProductionOrderHeaders,
+  resolveWebOrderLookbackDate,
+} from '../orders/web-order-commit.helper';
 
 describe('Paso P2 — Poller Single-Flight, Corte Histórico y Retorno Bidireccional ERP -> Web', () => {
   it('ignora por defecto los pedidos históricos de prueba DV-1004 y DV-1005 salvo que se pida explícitamente', () => {
@@ -166,5 +171,37 @@ describe('Paso P2 — Poller Single-Flight, Corte Histórico y Retorno Bidirecci
     const afterStatus = getWebOrderPollerStatus();
     expect(afterStatus.totalImportedSinceBoot).toBe(beforeStatus.totalImportedSinceBoot + 1);
     expect(afterStatus.syncInFlight).toBe(false);
+  });
+
+  it('acota por defecto el poller web a los últimos 14 días y aplica WHERE created_at >= $1 en SQL', async () => {
+    const fixedNow = new Date('2026-11-24T12:00:00.000Z');
+    const defaultCutoff = resolveWebOrderLookbackDate({}, fixedNow, undefined);
+    expect(defaultCutoff?.getTime()).toBe(
+      fixedNow.getTime() - DEFAULT_WEB_ORDER_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
+    );
+
+    const customEnvCutoff = resolveWebOrderLookbackDate({}, fixedNow, '7');
+    expect(customEnvCutoff?.getTime()).toBe(fixedNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    expect(resolveWebOrderLookbackDate({ includeAllHistory: true }, fixedNow)).toBeUndefined();
+    expect(resolveWebOrderLookbackDate({ onlyOrderIds: ['DV-1009'] }, fixedNow)).toBeUndefined();
+
+    const capturedQueries: Array<{ sql: string; args: any[] }> = [];
+    const mockProdDb = {
+      $transaction: async (fn: (tx: any) => Promise<any>) => {
+        const tx = {
+          $executeRawUnsafe: vi.fn(async () => 0),
+          $queryRawUnsafe: vi.fn(async (sql: string, ...args: any[]) => {
+            capturedQueries.push({ sql, args });
+            return [];
+          }),
+        };
+        return await fn(tx);
+      },
+    };
+
+    await fetchProductionOrderHeaders(mockProdDb as any, defaultCutoff);
+    expect(capturedQueries[0].sql).toContain('WHERE created_at >= $1');
+    expect(capturedQueries[0].args).toEqual([defaultCutoff]);
   });
 });

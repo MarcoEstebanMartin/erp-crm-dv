@@ -1,5 +1,5 @@
-import type { FC, Dispatch, SetStateAction } from 'react';
-import { Navigation, CheckCircle, Play, Map, Printer, Pencil, ChevronUp, ChevronDown, Banknote } from 'lucide-react';
+import { useState, type FC, type Dispatch, type SetStateAction } from 'react';
+import { Navigation, CheckCircle, Play, Map, Printer, Pencil, ChevronUp, ChevronDown, Banknote, Route } from 'lucide-react';
 import { printDeliveryRouteCustodyGuide } from '../../utils/printHelpers';
 import { RouteMap } from './LeafletRouteMap';
 import { computeTripDisplayMetrics } from './repartoRouteHelpers';
@@ -26,6 +26,8 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
   handleChangeStatus, handleOpenSettleModal, handleOpenCollectForStop,
   handleUpdateClientCoords,
 }) => {
+  const [showGpsTrail, setShowGpsTrail] = useState(false);
+
   if (!selectedRoute) {
     return (
       <div className="card" style={{ padding: '40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
@@ -95,12 +97,35 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
             <Map size={14} aria-hidden="true" />
             <span>Recorrido</span>
           </div>
-          {liveGpsInfo?.lastGpsUpdate && (
-            <div className="tabular-nums" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#059669', fontSize: '0.75rem', fontWeight: 600 }}>
-              <span aria-hidden="true" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-              GPS: {liveGpsInfo.currentSpeed !== null && liveGpsInfo.currentSpeed !== undefined ? `${liveGpsInfo.currentSpeed} km/h` : 'En parada'} · {new Date(liveGpsInfo.lastGpsUpdate).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {gpsHistory.length > 1 && (
+              <button
+                type="button"
+                aria-pressed={showGpsTrail}
+                onClick={() => setShowGpsTrail((prev) => !prev)}
+                className="btn btn-secondary"
+                style={{
+                  fontSize: '0.74rem',
+                  padding: '3px 9px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  ...(showGpsTrail
+                    ? { backgroundColor: 'rgba(16, 185, 129, 0.12)', borderColor: '#10B981', color: '#059669' }
+                    : {}),
+                }}
+              >
+                <Route size={12} aria-hidden="true" />
+                Rastro GPS
+              </button>
+            )}
+            {liveGpsInfo?.lastGpsUpdate && (
+              <div className="tabular-nums" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#059669', fontSize: '0.75rem', fontWeight: 600 }}>
+                <span aria-hidden="true" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+                GPS: {liveGpsInfo.currentSpeed !== null && liveGpsInfo.currentSpeed !== undefined ? `${liveGpsInfo.currentSpeed} km/h` : 'En parada'} · {new Date(liveGpsInfo.lastGpsUpdate).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+          </div>
         </div>
         <RouteMap
           locations={activeRouteTspDetails.locations}
@@ -113,7 +138,7 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
             lastUpdate: liveGpsInfo.lastGpsUpdate,
             vehiclePlate: liveGpsInfo.vehiclePlate || selectedRoute?.vehiclePlate,
           } : null}
-          gpsTrail={gpsHistory}
+          gpsTrail={showGpsTrail ? gpsHistory : undefined}
         />
       </div>
 

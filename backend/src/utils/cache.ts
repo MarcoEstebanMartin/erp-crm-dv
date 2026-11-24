@@ -9,8 +9,11 @@ interface CacheItem<T> {
   expiresAt: number;
 }
 
+export const DEFAULT_CATALOG_INVALIDATION_THROTTLE_MS = 15_000;
+
 class InMemoryCache {
   private cache = new Map<string, CacheItem<any>>();
+  private lastThrottledCatalogInvalidationAt = 0;
 
   /**
    * Obtiene un valor de la memoria si existe y no ha expirado.
@@ -63,8 +66,43 @@ class InMemoryCache {
 
   /**
    * Invalida todo el catálogo de productos, precios y ofertas instantáneamente.
+   * Usar cuando cambian precios, datos de productos, lotes manuales o promos semanales.
    */
   invalidateProductCatalog(): void {
+    let count = 0;
+    for (const key of this.cache.keys()) {
+      if (
+        key.startsWith('products_') ||
+        key.startsWith('store_catalog_') ||
+        key.startsWith('weekly_promos_')
+      ) {
+        this.cache.delete(key);
+        count++;
+      }
+    }
+    this.lastThrottledCatalogInvalidationAt = Date.now();
+    if (count > 0) {
+      console.log(`⚡ [Caché System] Invalidadas ${count} entradas del catálogo de productos y precios.`);
+    }
+  }
+
+  /**
+   * Invalidación suavizada para movimientos de stock por pedidos de alta frecuencia (ej. 700/día).
+   * Evita vaciar el catálogo decenas de veces por minuto durante picos de preventa:
+   * invalida como máximo una vez cada `windowMs` (por defecto 15s) y preserva el caché de promos.
+   * El control real de stock al crear pedidos siempre consulta PostgreSQL dentro de la transacción.
+   */
+  invalidateProductCatalogThrottled(
+    windowMs: number = DEFAULT_CATALOG_INVALIDATION_THROTTLE_MS,
+    nowMs: number = Date.now(),
+  ): boolean {
+    if (
+      this.lastThrottledCatalogInvalidationAt > 0 &&
+      nowMs - this.lastThrottledCatalogInvalidationAt < windowMs
+    ) {
+      return false;
+    }
+
     let count = 0;
     for (const key of this.cache.keys()) {
       if (key.startsWith('products_') || key.startsWith('store_catalog_')) {
@@ -72,7 +110,11 @@ class InMemoryCache {
         count++;
       }
     }
-    console.log(`⚡ [Caché System] Invalidadas ${count} entradas del catálogo de productos y precios.`);
+    this.lastThrottledCatalogInvalidationAt = nowMs;
+    if (count > 0) {
+      console.log(`⚡ [Caché System] Invalidación suavizada de catálogo (${count} entradas).`);
+    }
+    return true;
   }
 
   /**
@@ -80,6 +122,7 @@ class InMemoryCache {
    */
   clear(): void {
     this.cache.clear();
+    this.lastThrottledCatalogInvalidationAt = 0;
   }
 }
 

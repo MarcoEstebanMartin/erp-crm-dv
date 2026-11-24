@@ -29,6 +29,8 @@ export interface RawWebOrderRow {
   items_json: WebIncomingOrderItem[] | string | null;
 }
 
+export const DEFAULT_WEB_ORDER_LOOKBACK_DAYS = 14;
+
 export interface SyncWebOrdersOptions {
   dryRun?: boolean;
   productionDbUrl?: string;
@@ -36,6 +38,31 @@ export interface SyncWebOrdersOptions {
   skipOrderIds?: string[];
   sinceCreatedAt?: Date;
   includeHistoricalTests?: boolean;
+  includeAllHistory?: boolean;
+}
+
+/**
+ * Resuelve la ventana temporal de lectura del poller web para evitar escanear
+ * toda la tabla histórica cada 30 segundos.
+ * - Si se pasa `sinceCreatedAt` explícito, se respeta.
+ * - Si se pide `onlyOrderIds` o `includeAllHistory`, no aplica corte de fecha.
+ * - Por defecto acota a los últimos 14 días (configurable con `WEB_ORDER_SYNC_LOOKBACK_DAYS`).
+ */
+export function resolveWebOrderLookbackDate(
+  options: SyncWebOrdersOptions = {},
+  now: Date = new Date(),
+  rawEnvDays: string | undefined = process.env.WEB_ORDER_SYNC_LOOKBACK_DAYS,
+): Date | undefined {
+  if (options.sinceCreatedAt) return options.sinceCreatedAt;
+  if (options.includeAllHistory || (options.onlyOrderIds && options.onlyOrderIds.length > 0)) {
+    return undefined;
+  }
+  const parsedDays = Number(rawEnvDays);
+  const lookbackDays =
+    Number.isFinite(parsedDays) && parsedDays >= 1
+      ? Math.floor(parsedDays)
+      : DEFAULT_WEB_ORDER_LOOKBACK_DAYS;
+  return new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
 }
 
 export interface WebOrderPreviewEntry {
@@ -258,9 +285,18 @@ export interface WebOrderHeaderRow {
   created_at: Date | string | null;
 }
 
-export async function fetchProductionOrderHeaders(prodDb: PrismaClient): Promise<WebOrderHeaderRow[]> {
+export async function fetchProductionOrderHeaders(
+  prodDb: PrismaClient,
+  sinceCreatedAt?: Date,
+): Promise<WebOrderHeaderRow[]> {
   return await prodDb.$transaction(async (tx) => {
     await tx.$executeRawUnsafe('SET LOCAL transaction_read_only = on');
+    if (sinceCreatedAt) {
+      return await tx.$queryRawUnsafe<WebOrderHeaderRow[]>(
+        `SELECT id, status, created_at FROM public.orders WHERE created_at >= $1 ORDER BY created_at ASC, id ASC`,
+        sinceCreatedAt,
+      );
+    }
     return await tx.$queryRawUnsafe<WebOrderHeaderRow[]>(
       `SELECT id, status, created_at FROM public.orders ORDER BY created_at ASC, id ASC`,
     );

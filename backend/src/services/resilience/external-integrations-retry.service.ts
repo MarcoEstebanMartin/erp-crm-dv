@@ -1,3 +1,4 @@
+import { BillingType, OrderStatus } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import {
   executeWithResilientRetry,
@@ -176,6 +177,90 @@ export function enqueueDeferredAfipCaeRetry(
     },
     20_000,
   );
+}
+
+export const DEFAULT_CAE_RECOVERY_LOOKBACK_DAYS = 10;
+export const DEFAULT_CAE_RECOVERY_INTERVAL_MS = 10 * 60 * 1000;
+const CAE_RECOVERY_BATCH_LIMIT = 100;
+
+let caeRecoveryBootTimer: NodeJS.Timeout | null = null;
+let caeRecoveryInterval: NodeJS.Timeout | null = null;
+
+/**
+ * Escanea en PostgreSQL comprobantes oficiales en contingencia (`PRE-...` sin CAE)
+ * y los reencola en `externalRetryQueue` de forma idempotente (deduplicado por orderId).
+ * Garantiza que un reinicio o deploy de Railway jamás deje facturas oficiales colgadas.
+ */
+export async function recoverPendingDeferredCaeOrders(
+  acquireCaeForOrder: (orderId: number) => Promise<unknown>,
+  options?: {
+    lookbackDays?: number;
+    now?: Date;
+    enqueueFn?: (orderId: number, run: () => Promise<unknown>) => boolean;
+  },
+): Promise<{ scanned: number; enqueued: number }> {
+  const lookbackDays = Math.max(1, Math.floor(options?.lookbackDays ?? DEFAULT_CAE_RECOVERY_LOOKBACK_DAYS));
+  const now = options?.now ?? new Date();
+  const cutoff = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
+  const enqueue = options?.enqueueFn ?? enqueueDeferredAfipCaeRetry;
+
+  const pendingOrders = await prisma.order.findMany({
+    where: {
+      billingType: BillingType.OFFICIAL,
+      cae: null,
+      status: { not: OrderStatus.CANCELLED },
+      invoiceNumber: { startsWith: 'PRE-' },
+      createdAt: { gte: cutoff },
+    },
+    select: { id: true, invoiceNumber: true },
+    orderBy: [{ invoicedAt: 'asc' }, { id: 'asc' }],
+    take: CAE_RECOVERY_BATCH_LIMIT,
+  });
+
+  let enqueued = 0;
+  for (const order of pendingOrders) {
+    const added = enqueue(order.id, () => acquireCaeForOrder(order.id));
+    if (added) enqueued++;
+  }
+
+  if (enqueued > 0) {
+    console.log(
+      `🔁 [AFIP Recovery] Reencolados ${enqueued} comprobante(s) PRE-... pendientes de CAE.`,
+    );
+  }
+
+  return { scanned: pendingOrders.length, enqueued };
+}
+
+export function startDeferredCaeRecoveryIfEnabled(
+  acquireCaeForOrder: (orderId: number) => Promise<unknown>,
+): void {
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST) return;
+  if (process.env.AFIP_CAE_RECOVERY_ENABLED === 'false') return;
+  if (caeRecoveryInterval) return;
+
+  const safeSweep = () => {
+    void recoverPendingDeferredCaeOrders(acquireCaeForOrder).catch((err) => {
+      console.warn(`⚠️ [AFIP Recovery] Error al escanear CAE diferidos: ${err?.message || err}`);
+    });
+  };
+
+  caeRecoveryBootTimer = setTimeout(safeSweep, 15_000);
+  caeRecoveryBootTimer.unref?.();
+
+  caeRecoveryInterval = setInterval(safeSweep, DEFAULT_CAE_RECOVERY_INTERVAL_MS);
+  caeRecoveryInterval.unref?.();
+}
+
+export function stopDeferredCaeRecovery(): void {
+  if (caeRecoveryBootTimer) {
+    clearTimeout(caeRecoveryBootTimer);
+    caeRecoveryBootTimer = null;
+  }
+  if (caeRecoveryInterval) {
+    clearInterval(caeRecoveryInterval);
+    caeRecoveryInterval = null;
+  }
 }
 
 export { executeWithResilientRetry };

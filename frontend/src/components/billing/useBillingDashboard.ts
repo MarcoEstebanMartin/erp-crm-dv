@@ -215,8 +215,7 @@ export function useBillingDashboard(activeTab: string) {
     try {
       let sourceItems = invoice.items;
       if (!sourceItems || sourceItems.length === 0) {
-        const orders = await api.getOrders(undefined, 'DELIVERED');
-        const matched = orders.find((o: any) => o.id === invoice.id);
+        const matched = await api.getOrderById(invoice.id);
         sourceItems = matched?.items || [];
       }
 

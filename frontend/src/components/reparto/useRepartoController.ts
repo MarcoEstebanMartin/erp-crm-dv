@@ -134,7 +134,7 @@ export function useRepartoController() {
   useEffect(() => { void fetchRoutesAndOrders(); void fetchLogisticsResources(); }, []);
 
   const gpsAndSettle = useRepartoGpsAndSettle({
-    selectedRoute, bankAccounts, setSelectedRoute, setLoading, setSuccessMsg, setErrorMsg,
+    selectedRoute, userRole: currentUser?.role, bankAccounts, setSelectedRoute, setLoading, setSuccessMsg, setErrorMsg,
     onSettled: async () => { await fetchRoutesAndOrders(); invalidateOrderQueries(); },
   });
 

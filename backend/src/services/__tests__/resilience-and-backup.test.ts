@@ -11,7 +11,11 @@ import {
   executeWithResilientRetry,
   ResilientAsyncQueue,
 } from '../../utils/resilient-retry-queue.util';
-import { isTransientExternalError } from '../resilience/external-integrations-retry.service';
+import {
+  isTransientExternalError,
+  recoverPendingDeferredCaeOrders,
+} from '../resilience/external-integrations-retry.service';
+import prisma from '../../utils/prisma';
 import * as afipService from '../afip.service';
 import { resolveAfipCaeOrContingency } from '../orders/order-cae-deferred.helper';
 
@@ -184,6 +188,54 @@ describe('Paso S6 — Cola Resiliente (AFIP / WhatsApp) y Backups Cifrados AES-2
       expect(fs.readdirSync(tmpDir).sort()).toEqual(['b3.dvbackup.enc', 'b4.dvbackup.enc']);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('recupera automáticamente comprobantes PRE-... oficiales sin CAE tras un reinicio', async () => {
+    const findManySpy = vi
+      .spyOn(prisma.order, 'findMany')
+      .mockResolvedValue([
+        { id: 701, invoiceNumber: 'PRE-A-000701' } as any,
+        { id: 702, invoiceNumber: 'PRE-B-000702' } as any,
+      ]);
+
+    const enqueuedIds: number[] = [];
+    const seen = new Set<number>();
+    const enqueueFn = vi.fn((orderId: number) => {
+      if (seen.has(orderId)) return false;
+      seen.add(orderId);
+      enqueuedIds.push(orderId);
+      return true;
+    });
+
+    try {
+      const fixedNow = new Date('2026-11-24T12:00:00.000Z');
+      const firstRun = await recoverPendingDeferredCaeOrders(async () => undefined, {
+        lookbackDays: 10,
+        now: fixedNow,
+        enqueueFn,
+      });
+      const secondRun = await recoverPendingDeferredCaeOrders(async () => undefined, {
+        lookbackDays: 10,
+        now: fixedNow,
+        enqueueFn,
+      });
+
+      expect(firstRun).toEqual({ scanned: 2, enqueued: 2 });
+      expect(secondRun).toEqual({ scanned: 2, enqueued: 0 });
+      expect(enqueuedIds).toEqual([701, 702]);
+      expect(findManySpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            billingType: 'OFFICIAL',
+            cae: null,
+            invoiceNumber: { startsWith: 'PRE-' },
+          }),
+          take: 100,
+        }),
+      );
+    } finally {
+      findManySpy.mockRestore();
     }
   });
 });

@@ -92,7 +92,7 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
         const data = await api.getOrders(
           undefined,
           undefined,
-          pickingOnly ? { pickingQueue: true } : undefined,
+          { pickingQueue: true, limit: 200 },
         );
         if (seq !== fetchSeqRef.current) return;
         setOrders(data.filter((o: any) => o.status === OrderStatus.PENDING || o.status === OrderStatus.PREPARING));

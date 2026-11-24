@@ -160,14 +160,14 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
       const addressLine = [client.address, client.city].filter(Boolean).join(' · ');
       const noteText = (o.notes || o.bultosDetails?.notes || '').trim();
       return `<tr>
-        <td class="col-check"><span class="check-box"></span></td>
-        <td class="col-check"><span class="check-box"></span></td>
-        <td class="col-transf"><span class="check-box"></span></td>
         <td class="col-id">#${o.id}</td>
         <td>
           <div class="client-name">${escapePrintHtml(client.name)}</div>
           ${addressLine ? `<div class="client-addr">${escapePrintHtml(addressLine)}</div>` : ''}
         </td>
+        <td class="col-check"><span class="check-box"></span></td>
+        <td class="col-check"><span class="check-box"></span></td>
+        <td class="col-transf"><span class="check-box"></span></td>
         <td class="col-bultos">${o.bultosCount || 1} u</td>
         <td class="col-notes">${noteText ? escapePrintHtml(noteText) : '<span class="muted">—</span>'}</td>
       </tr>`;
@@ -256,11 +256,11 @@ export const printDeliveryRouteCustodyGuide = (route: any) => {
           <table>
             <thead>
               <tr>
+                <th class="col-id">Pedido</th>
+                <th>Cliente</th>
                 <th class="col-check">Debe</th>
                 <th class="col-check">Pagó</th>
                 <th class="col-transf">Transferencia</th>
-                <th class="col-id">Pedido</th>
-                <th>Cliente</th>
                 <th class="col-bultos">Bultos</th>
                 <th>Notas</th>
               </tr>

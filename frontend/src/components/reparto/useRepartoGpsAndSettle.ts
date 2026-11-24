@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../../utils/api';
 import type { OfflineBundleClient } from '../../api/fieldReceipts.api';
-import { useGpsTracker } from '../../hooks/useGpsTracker';
+import { useGpsTracker, shouldEmitRouteGps } from '../../hooks/useGpsTracker';
 import {
   buildInitialRouteSettlements,
   computeRouteSettlementTotals,
@@ -16,6 +16,7 @@ export interface CollectStopTarget {
 
 export function useRepartoGpsAndSettle({
   selectedRoute,
+  userRole,
   bankAccounts,
   setSelectedRoute,
   setLoading,
@@ -24,6 +25,7 @@ export function useRepartoGpsAndSettle({
   onSettled,
 }: {
   selectedRoute: any | null;
+  userRole?: string | null;
   bankAccounts: any[];
   setSelectedRoute: (r: any | null) => void;
   setLoading: (v: boolean) => void;
@@ -40,7 +42,11 @@ export function useRepartoGpsAndSettle({
 
   useGpsTracker({
     activeRouteId: selectedRoute?.id,
-    isActive: selectedRoute?.status === 'IN_TRANSIT' || selectedRoute?.custodyStatus === 'LOADED_IN_TRANSIT',
+    isActive: shouldEmitRouteGps({
+      userRole,
+      routeStatus: selectedRoute?.status,
+      custodyStatus: selectedRoute?.custodyStatus,
+    }),
     intervalMs: 60000,
   });
 

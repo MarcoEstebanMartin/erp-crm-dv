@@ -626,13 +626,15 @@ export const api = {
   getOrders: async (
     billingType?: BillingType,
     status?: OrderStatus,
-    options?: { pickingQueue?: boolean },
+    options?: { pickingQueue?: boolean; page?: number; limit?: number },
   ) => {
     let path = '/orders';
     const params = [];
     if (billingType) params.push(`billingType=${billingType}`);
     if (status) params.push(`status=${status}`);
     if (options?.pickingQueue) params.push('pickingQueue=true');
+    params.push(`page=${options?.page ?? 1}`);
+    params.push(`limit=${options?.limit ?? 100}`);
     if (params.length > 0) path += `?${params.join('&')}`;
 
     const res = await request(path);
