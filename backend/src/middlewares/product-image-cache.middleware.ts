@@ -6,6 +6,32 @@ import { env } from '../config/env.config';
 
 const SAFE_IMAGE_FILENAME_RE = /^([a-zA-Z0-9_-]+)\.(jpg|jpeg|png|webp)$/i;
 const VERSIONED_IMAGE_FILENAME_RE = /^.+_[a-zA-Z0-9]{6,}\.(jpg|jpeg|png|webp)$/i;
+const MAX_CONCURRENT_IMAGE_FETCHES = 4;
+const IMAGE_FETCH_TX_OPTIONS = { maxWait: 15000, timeout: 15000 } as const;
+
+export function createConcurrencyLimiter(maxConcurrent: number) {
+  const limit = Math.max(1, Math.floor(maxConcurrent));
+  let active = 0;
+  const queue: Array<() => void> = [];
+
+  return async function runLimited<T>(task: () => Promise<T>): Promise<T> {
+    if (active >= limit) {
+      await new Promise<void>((resolve) => {
+        queue.push(resolve);
+      });
+    }
+    active += 1;
+    try {
+      return await task();
+    } finally {
+      active -= 1;
+      const next = queue.shift();
+      if (next) next();
+    }
+  };
+}
+
+const runImageDbFetch = createConcurrencyLimiter(MAX_CONCURRENT_IMAGE_FETCHES);
 
 /**
  * Política inteligente de caché HTTP para fotos de productos:
@@ -94,17 +120,31 @@ export function createProductImageCacheFallback(
     try {
       let pending = inFlightDownloads.get(rawName);
       if (!pending) {
-        pending = (async () => {
-          const rows = await client.$transaction(async (tx) => {
-            await tx.$executeRawUnsafe('SET LOCAL transaction_read_only = on');
-            return tx.$queryRawUnsafe<RawImageRow[]>(
-              `SELECT mime_type, ENCODE(image_data, 'base64') AS img_b64
-               FROM public.product_images
-               WHERE TRIM(sku) = $1 AND OCTET_LENGTH(image_data) > 0
-               LIMIT 1`,
-              skuCandidate,
-            );
-          });
+        pending = runImageDbFetch(async () => {
+          const targetPath = path.join(productsUploadsDir, rawName);
+          if (fs.existsSync(targetPath)) {
+            const cachedBuffer = fs.readFileSync(targetPath);
+            if (cachedBuffer.length > 0) {
+              return {
+                buffer: cachedBuffer,
+                mimeType: inferMimeFromExtension(rawName),
+              };
+            }
+          }
+
+          const rows = await client.$transaction(
+            async (tx) => {
+              await tx.$executeRawUnsafe('SET LOCAL transaction_read_only = on');
+              return tx.$queryRawUnsafe<RawImageRow[]>(
+                `SELECT mime_type, ENCODE(image_data, 'base64') AS img_b64
+                 FROM public.product_images
+                 WHERE TRIM(sku) = $1 AND OCTET_LENGTH(image_data) > 0
+                 LIMIT 1`,
+                skuCandidate,
+              );
+            },
+            IMAGE_FETCH_TX_OPTIONS,
+          );
           const row = rows[0];
           if (!row?.img_b64) return null;
 
@@ -114,7 +154,6 @@ export function createProductImageCacheFallback(
           if (!fs.existsSync(productsUploadsDir)) {
             fs.mkdirSync(productsUploadsDir, { recursive: true });
           }
-          const targetPath = path.join(productsUploadsDir, rawName);
           const tmpPath = `${targetPath}.tmp_${process.pid}_${Date.now()}`;
           fs.writeFileSync(tmpPath, buffer);
           fs.renameSync(tmpPath, targetPath);
@@ -123,13 +162,13 @@ export function createProductImageCacheFallback(
             buffer,
             mimeType: inferMimeFromExtension(rawName, row.mime_type),
           };
-        })();
+        }).finally(() => {
+          inFlightDownloads.delete(rawName);
+        });
         inFlightDownloads.set(rawName, pending);
       }
 
-      const resolved = await pending.finally(() => {
-        inFlightDownloads.delete(rawName);
-      });
+      const resolved = await pending;
 
       if (!resolved) {
         next();
@@ -140,7 +179,9 @@ export function createProductImageCacheFallback(
       res.setHeader('Content-Length', String(resolved.buffer.length));
       res.setHeader('Cache-Control', resolveProductImageCacheHeader(rawName));
       res.status(200).end(method === 'HEAD' ? undefined : resolved.buffer);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ProductImageCache] Error recuperando ${rawName} (SKU ${skuCandidate}): ${msg}`);
       next();
     }
   };
