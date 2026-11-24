@@ -84,3 +84,16 @@ export const getZoneReportsQuerySchema = z.object({
     endDate: isoDateOptional,
   }),
 });
+
+export const getOpportunitiesReportQuerySchema = z.object({
+  query: z.object({
+    stagnantDays: z
+      .enum(['30', '45', '60'])
+      .optional()
+      .or(z.literal('')),
+    expiringDays: z
+      .enum(['30', '60'])
+      .optional()
+      .or(z.literal('')),
+  }),
+});

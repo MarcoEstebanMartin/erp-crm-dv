@@ -18,6 +18,7 @@ import {
   checkBalancesReport,
   syncBalances,
 } from '../controllers/admin.controller';
+import { getCommercialOpportunities } from '../controllers/commercial-opportunities.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
@@ -37,6 +38,7 @@ import {
   getSellerMeetingQuerySchema,
   getEmployeeReportQuerySchema,
   getZoneReportsQuerySchema,
+  getOpportunitiesReportQuerySchema,
 } from '../validators/reports.validator';
 
 const router = Router();
@@ -59,6 +61,7 @@ router.get('/reports/pdf/executive', validateRequest(getExecutiveReportQuerySche
 router.get('/reports/pdf/employee/:userId', validateRequest(getEmployeeReportQuerySchema), getEmployeePdfReport);
 router.get('/reports/pdf/seller/:sellerId', validateRequest(getSellerMeetingQuerySchema), getSellerMeetingPdfReport);
 router.get('/reports/zones', validateRequest(getZoneReportsQuerySchema), getZoneReports);
+router.get('/reports/opportunities', validateRequest(getOpportunitiesReportQuerySchema), getCommercialOpportunities);
 
 router.get('/audit-logs', validateRequest(getAuditLogsQuerySchema), getAuditLogs);
 router.get('/users', getUsers);

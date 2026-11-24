@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { DollarSign, MapPin, TrendingUp } from 'lucide-react';
+import { DollarSign, MapPin, Target, TrendingUp } from 'lucide-react';
 import ProfitabilityTab from './ProfitabilityTab';
+import { CommercialOpportunitiesTab } from './reports/CommercialOpportunitiesTab';
 import { FinancialSummaryReportTab } from './reports/FinancialSummaryReportTab';
 import { ZoneAnalysisReportTab } from './reports/ZoneAnalysisReportTab';
 
@@ -12,7 +13,7 @@ interface UnifiedReportsDashboardProps {
   financialReport: any;
 }
 
-type ReportTabId = 'finanzas' | 'rentabilidad' | 'zonas';
+type ReportTabId = 'finanzas' | 'rentabilidad' | 'zonas' | 'oportunidades';
 
 const REPORT_TABS: Array<{
   id: ReportTabId;
@@ -22,6 +23,7 @@ const REPORT_TABS: Array<{
   { id: 'finanzas', label: 'Resumen', Icon: DollarSign },
   { id: 'rentabilidad', label: 'Rentabilidad', Icon: TrendingUp },
   { id: 'zonas', label: 'Zonas', Icon: MapPin },
+  { id: 'oportunidades', label: 'Oportunidades', Icon: Target },
 ];
 
 export default function UnifiedReportsDashboard({
@@ -85,6 +87,8 @@ export default function UnifiedReportsDashboard({
         {activeTab === 'rentabilidad' && <ProfitabilityTab />}
 
         {activeTab === 'zonas' && <ZoneAnalysisReportTab sellers={sellerUsers} />}
+
+        {activeTab === 'oportunidades' && <CommercialOpportunitiesTab />}
       </div>
     </div>
   );

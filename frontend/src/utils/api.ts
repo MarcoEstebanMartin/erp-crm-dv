@@ -905,6 +905,18 @@ export const api = {
     return await request(`/admin/reports/zones${query}`);
   },
 
+  getCommercialOpportunities: async (filters?: {
+    stagnantDays?: 30 | 45 | 60;
+    expiringDays?: 30 | 60;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.stagnantDays) params.set('stagnantDays', String(filters.stagnantDays));
+    if (filters?.expiringDays) params.set('expiringDays', String(filters.expiringDays));
+    const qs = params.toString();
+    const res = await request(`/admin/reports/opportunities${qs ? `?${qs}` : ''}`);
+    return res.data?.report;
+  },
+
   getAuditLogs: async (page = 1, limit = 50, filters?: AuditLogQueryFilters) => {
     const params = new URLSearchParams({
       page: String(page),
