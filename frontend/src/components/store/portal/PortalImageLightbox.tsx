@@ -60,7 +60,6 @@ export const PortalImageLightbox: React.FC<PortalImageLightboxProps> = ({ produc
       ref={dialogRef}
       className="store-lightbox"
       aria-labelledby="store-lightbox-title"
-      // @ts-expect-error closedby es estándar moderno HTML aún no tipado en todas las versiones de @types/react
       closedby="any"
       onClose={() => {
         if (dialogRef.current) dialogRef.current.returnValue = '';
