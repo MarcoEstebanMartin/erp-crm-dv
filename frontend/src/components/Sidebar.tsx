@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '../utils/api';
+import { prefetchTabChunk } from '../utils/tabPrefetcher';
 import { VendedorBottomNav } from './sidebar/VendedorBottomNav';
 
 interface SidebarProps {
@@ -145,12 +146,10 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
   };
 
   const menuItems = getMenuItems();
-
   const handleLogoutClick = () => {
     api.logout();
     onLogout();
   };
-
   const roleLabel = ROLE_LABELS[role] || 'Operativo';
   const currentItemLabel = menuItems.find((item) => item.id === currentTab)?.label || 'Don Venancio';
   const isVendedor = role === 'VENDEDOR';
@@ -255,6 +254,8 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
                 type="button"
                 aria-current={isActive ? 'page' : undefined}
                 className={`sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
+                onMouseEnter={() => prefetchTabChunk(role, item.id)}
+                onFocus={() => prefetchTabChunk(role, item.id)}
                 onClick={() => handleTabSelect(item.id)}
               >
                 <span style={{ display: 'flex', alignItems: 'center' }}>{item.icon}</span>

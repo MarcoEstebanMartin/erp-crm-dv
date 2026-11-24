@@ -2,7 +2,7 @@
    SISTEMA DE DISEÑO - ERP-CRM DISTRIBUIDORA MAYORISTA (ESTILO APPLE / PREMIUM)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* Fuentes Plus Jakarta Sans + Inter cargadas desde <link> en index.html (evita doble petición bloqueante) */
 
 :root {
   /* Color Corporativo */
@@ -2601,6 +2601,17 @@ button.resumen-desc-btn:hover {
     transition: block-size 0.2s ease-in-out, content-visibility 0.2s allow-discrete;
   }
 }
+
+/* Rendimiento nativo para tablas y listados largos (Modern Web Guidance: defer-rendering-heavy-content).
+   Solo aplica por debajo del fold (desde la fila 21 en adelante) para no retrasar el primer pintado. */
+@supports (content-visibility: auto) {
+  table tbody tr:nth-child(n + 21),
+  .deferred-list-row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto none auto 52px;
+  }
+}
+
 
 
 
