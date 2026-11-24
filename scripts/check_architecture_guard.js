@@ -23,7 +23,6 @@ const LEGACY_ALLOWLIST = new Set([
   'frontend/src/components/store/WebChatWidget.tsx',
   'frontend/src/components/crm/CrmWholesaleBoard.tsx',
   'backend/src/services/logistics/route-settlement.service.ts',
-  'backend/src/controllers/crm_whatsapp.controller.ts',
   'backend/src/services/fieldReceipts.service.ts',
   'frontend/src/components/billing/sales/OfficialInvoiceView.tsx',
   'frontend/src/components/field-receipts/UnifiedReceiptsList.tsx',
