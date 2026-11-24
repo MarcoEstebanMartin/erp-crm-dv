@@ -3,12 +3,12 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { api } from './utils/api';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
-import ReceiptView from './components/ReceiptView';
-import QuickPriceSearchModal from './components/modals/QuickPriceSearchModal';
-import AdminPages from './pages/admin/AdminPages';
-import VendedorPages from './pages/vendedor/VendedorPages';
-import DepositoPages from './pages/deposito/DepositoPages';
 
+const ReceiptView = lazy(() => import('./components/ReceiptView'));
+const QuickPriceSearchModal = lazy(() => import('./components/modals/QuickPriceSearchModal'));
+const AdminPages = lazy(() => import('./pages/admin/AdminPages'));
+const VendedorPages = lazy(() => import('./pages/vendedor/VendedorPages'));
+const DepositoPages = lazy(() => import('./pages/deposito/DepositoPages'));
 const ClientPortal = lazy(() => import('./components/store/ClientPortal'));
 const InstitutionalLanding = lazy(() => import('./components/landing/InstitutionalLanding'));
 
@@ -95,7 +95,11 @@ function App() {
   // Intercept route for shared receipts
   if (location.pathname.startsWith('/recibo/')) {
     const receiptId = location.pathname.split('/recibo/')[1];
-    return <ReceiptView receiptId={receiptId} />;
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <ReceiptView receiptId={receiptId} />
+      </Suspense>
+    );
   }
 
   // Intercept route or mode for Online B2B Store / Client Portal
@@ -192,10 +196,14 @@ function App() {
         }
       `}</style>
 
-      <QuickPriceSearchModal
-        isOpen={isQuickSearchModalOpen}
-        onClose={() => setIsQuickSearchModalOpen(false)}
-      />
+      {isQuickSearchModalOpen && (
+        <Suspense fallback={null}>
+          <QuickPriceSearchModal
+            isOpen={isQuickSearchModalOpen}
+            onClose={() => setIsQuickSearchModalOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

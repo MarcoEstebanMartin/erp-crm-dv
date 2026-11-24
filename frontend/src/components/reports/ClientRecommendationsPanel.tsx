@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { formatARS } from '../../utils/format';
+import { formatIntegerARS as formatARS } from '../../utils/currency';
 
 export interface StoppedBuyingSuggestion {
   productId: number;

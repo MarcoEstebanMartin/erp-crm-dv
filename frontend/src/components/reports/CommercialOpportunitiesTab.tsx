@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FC } from 'react';
 import { RefreshCw, Search } from 'lucide-react';
 import { api } from '../../utils/api';
-import { formatARS } from '../../utils/format';
+import { formatIntegerARS as formatARS } from '../../utils/currency';
 import {
   ClientRecommendationsPanel,
   type ClientRecommendationItem,

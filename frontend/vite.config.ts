@@ -23,11 +23,17 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('node_modules/exceljs')) {
+            return 'excel-lib';
+          }
           if (id.includes('node_modules/jspdf') || id.includes('node_modules/jspdf-autotable')) {
             return 'pdf-lib';
           }
           if (id.includes('node_modules/jszip')) {
             return 'zip-lib';
+          }
+          if (id.includes('node_modules/@tanstack/react-query')) {
+            return 'query-lib';
           }
           if (id.includes('node_modules/lucide-react')) {
             return 'icons-lib';

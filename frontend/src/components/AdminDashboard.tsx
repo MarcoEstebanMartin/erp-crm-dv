@@ -2,28 +2,16 @@ import { lazy, Suspense } from 'react';
 import { Check, ShoppingCart, FileText, Truck, Warehouse } from 'lucide-react';
 import { api } from '../utils/api';
 import HomeTab from './admin/HomeTab';
-import ClientsTab from './admin/ClientsTab';
-import OrdersTab from './admin/OrdersTab';
-import ProductsTab from './admin/ProductsTab';
-import ConfigTab from './admin/ConfigTab';
-import SellerProfileModal from './modals/SellerProfileModal';
-import EditOrderModal from './modals/EditOrderModal';
-import ProductModal from './modals/ProductModal';
-import ClientModal from './modals/ClientModal';
-import ImportZipModal from './modals/ImportZipModal';
-import ResumenCuentaModal from './modals/ResumenCuentaModal';
-import QuickPriceSearchModal from './modals/QuickPriceSearchModal';
-import OrderFulfillmentModal from './modals/OrderFulfillmentModal';
-import { AdminSummaryCardModal } from './admin/AdminSummaryCardModal';
-import { AdminOrderDetailsModal } from './admin/AdminOrderDetailsModal';
-import { AdminPaymentModal } from './admin/AdminPaymentModal';
-import { AdminQuickClientSearchModal } from './admin/AdminQuickModals';
-import { AdminCreateQuickOrderModal } from './admin/AdminCreateQuickOrderModal';
-import { AdminDirectInvoiceQuickModal } from './admin/AdminDirectInvoiceQuickModal';
 import { useAdminController } from './admin/useAdminController';
-import { CajaHubSection } from './admin/CajaHubSection';
+import { AdminModalsHost } from './admin/AdminModalsHost';
 
-const PriceListModal = lazy(() => import('./PriceListModal'));
+const ClientsTab = lazy(() => import('./admin/ClientsTab'));
+const OrdersTab = lazy(() => import('./admin/OrdersTab'));
+const ProductsTab = lazy(() => import('./admin/ProductsTab'));
+const ConfigTab = lazy(() => import('./admin/ConfigTab'));
+const CajaHubSection = lazy(() =>
+  import('./admin/CajaHubSection').then((m) => ({ default: m.CajaHubSection })),
+);
 const FulfillmentDashboard = lazy(() => import('./admin/FulfillmentDashboard'));
 const RepartoDashboard = lazy(() => import('./RepartoDashboard'));
 const LogisticaDashboard = lazy(() => import('./LogisticaDashboard'));
@@ -124,14 +112,16 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {(activeTab === 'products' || activeTab === 'catalog' || activeTab === 'stock') && (
-        <ProductsTab
-          products={c.products}
-          fetchData={c.fetchData}
-          setProductModal={c.setProductModal}
-          handleUpdateProductInline={c.handleUpdateProductInline}
-          onUploadImage={c.handleUploadImage}
-          initialCatalogTab={activeTab === 'stock' ? 'stock' : 'products'}
-        />
+        <Suspense fallback={<LoadingDashboard />}>
+          <ProductsTab
+            products={c.products}
+            fetchData={c.fetchData}
+            setProductModal={c.setProductModal}
+            handleUpdateProductInline={c.handleUpdateProductInline}
+            onUploadImage={c.handleUploadImage}
+            initialCatalogTab={activeTab === 'stock' ? 'stock' : 'products'}
+          />
+        </Suspense>
       )}
 
       {activeTab === 'deposito' && (
@@ -141,20 +131,22 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       )}
 
       {activeTab === 'clients' && (
-        <ClientsTab
-          setActiveTab={setActiveTab}
-          clients={c.clients}
-          setClients={c.setClients}
-          availableSellers={c.availableSellers}
-          availableSaleRoutes={c.availableSaleRoutes}
-          setClientModal={c.setClientModal}
-          setShowResumenModal={c.setShowResumenModal}
-          setPaymentModal={c.setPaymentModal}
-          handleViewClientProfile={c.handleViewClientProfile}
-          handleViewSellerProfile={(seller: any) => c.setSellerProfileModal({ open: true, sellerId: seller.id })}
-          clientsVersion={c.clientsVersion}
-          onProvidersChanged={c.fetchData}
-        />
+        <Suspense fallback={<LoadingDashboard />}>
+          <ClientsTab
+            setActiveTab={setActiveTab}
+            clients={c.clients}
+            setClients={c.setClients}
+            availableSellers={c.availableSellers}
+            availableSaleRoutes={c.availableSaleRoutes}
+            setClientModal={c.setClientModal}
+            setShowResumenModal={c.setShowResumenModal}
+            setPaymentModal={c.setPaymentModal}
+            handleViewClientProfile={c.handleViewClientProfile}
+            handleViewSellerProfile={(seller: any) => c.setSellerProfileModal({ open: true, sellerId: seller.id })}
+            clientsVersion={c.clientsVersion}
+            onProvidersChanged={c.fetchData}
+          />
+        </Suspense>
       )}
 
       {(activeTab === 'fulfillment' || activeTab === 'entregas' || activeTab === 'orders' || activeTab === 'billing') && (
@@ -182,15 +174,17 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
           {activeTab === 'fulfillment' && <Suspense fallback={<LoadingDashboard />}><FulfillmentDashboard /></Suspense>}
           {activeTab === 'entregas' && <Suspense fallback={<LoadingDashboard />}><RepartoDashboard /></Suspense>}
           {activeTab === 'orders' && (
-            <OrdersTab
-              initialStatusFilter={c.orderStatusFilter}
-              ordersVersion={c.ordersVersion}
-              fetchData={c.fetchData}
-              setOrderDetailsModal={c.setOrderDetailsModal}
-              handleOpenEditOrder={c.handleOpenEditOrder}
-              setErrorMsg={c.setErrorMsg}
-              setSuccessMsg={c.setSuccessMsg}
-            />
+            <Suspense fallback={<LoadingDashboard />}>
+              <OrdersTab
+                initialStatusFilter={c.orderStatusFilter}
+                ordersVersion={c.ordersVersion}
+                fetchData={c.fetchData}
+                setOrderDetailsModal={c.setOrderDetailsModal}
+                handleOpenEditOrder={c.handleOpenEditOrder}
+                setErrorMsg={c.setErrorMsg}
+                setSuccessMsg={c.setSuccessMsg}
+              />
+            </Suspense>
           )}
           {activeTab === 'billing' && <Suspense fallback={<LoadingDashboard />}><BillingDashboard activeTab={activeTab} setActiveTab={setActiveTab} /></Suspense>}
         </div>
@@ -201,94 +195,22 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
       {activeTab === 'compras' && <Suspense fallback={<LoadingDashboard />}><ComprasDashboard /></Suspense>}
 
       {(activeTab === 'rendiciones' || activeTab === 'reportes' || activeTab === 'reports') && (
-        <CajaHubSection
-          isAdmin={isAdmin} cajasSubTab={c.cajasSubTab} setCajasSubTab={c.setCajasSubTab}
-          orders={c.orders} users={c.users} clients={c.clients} products={c.products}
-          financialReport={c.financialReport} fallback={<LoadingDashboard />}
-        />
+        <Suspense fallback={<LoadingDashboard />}>
+          <CajaHubSection
+            isAdmin={isAdmin} cajasSubTab={c.cajasSubTab} setCajasSubTab={c.setCajasSubTab}
+            orders={c.orders} users={c.users} clients={c.clients} products={c.products}
+            financialReport={c.financialReport} fallback={<LoadingDashboard />}
+          />
+        </Suspense>
       )}
 
       {(activeTab === 'config' || activeTab === 'rrhh') && (
-        <ConfigTab setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg} initialTab={activeTab === 'rrhh' ? 'rrhh' : 'general'} />
+        <Suspense fallback={<LoadingDashboard />}>
+          <ConfigTab setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg} initialTab={activeTab === 'rrhh' ? 'rrhh' : 'general'} />
+        </Suspense>
       )}
 
-      <AdminSummaryCardModal
-        summaryCardModal={c.summaryCardModal} orders={c.orders} onClose={() => c.setSummaryCardModal(null)}
-        onSelectOrderDetails={c.setOrderDetailsModal}
-        onViewAllInOrdersTab={(cardKey) => { c.setOrderStatusFilter(cardKey); setActiveTab('orders'); c.setSummaryCardModal(null); }}
-        onNavigateOperationalTab={(tab) => { setActiveTab(tab); c.setSummaryCardModal(null); }}
-        onOrderDelivered={c.fetchData} setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg}
-      />
-
-      <AdminOrderDetailsModal
-        orderDetailsModal={c.orderDetailsModal} onClose={() => c.setOrderDetailsModal(null)}
-        onFastInvoice={(order) => c.setFastInvoiceOrder(order)} fetchData={c.fetchData}
-        onOrderUpdated={(updated) => c.setOrderDetailsModal((prev: any) => (prev ? { ...prev, ...updated } : null))}
-        setErrorMsg={c.setErrorMsg} setSuccessMsg={c.setSuccessMsg}
-      />
-
-      <EditOrderModal editOrderModal={c.editOrderModal} setEditOrderModal={c.setEditOrderModal} products={c.products} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />
-      <ProductModal productModal={c.productModal} setProductModal={c.setProductModal} rubrosList={c.rubrosList} providersList={c.providersList} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} />
-      {c.showResumenModal && <ResumenCuentaModal client={c.showResumenModal} onClose={() => c.setShowResumenModal(null)} />}
-      <ClientModal clientModal={c.clientModal} setClientModal={c.setClientModal} availableSellers={c.availableSellers} availableSaleRoutes={c.availableSaleRoutes} fetchData={c.fetchData} setSuccessMsg={c.setSuccessMsg} setErrorMsg={c.setErrorMsg} setClientsVersion={c.setClientsVersion} setPaymentModal={c.setPaymentModal} />
-      <ImportZipModal isOpen={c.importZipModalOpen} onClose={() => { c.setImportZipModalOpen(false); c.fetchData(); }} />
-      {c.sellerProfileModal?.open && <SellerProfileModal sellerId={c.sellerProfileModal.sellerId} onClose={() => c.setSellerProfileModal(null)} onOpenReport={() => setActiveTab('reports')} />}
-
-      <AdminPaymentModal
-        paymentModal={c.paymentModal}
-        clientProfileModal={c.clientModal?.open && c.clientModal?.mode === 'edit' && c.clientModal?.data?.id ? { open: true, client: c.clientModal.data, ledger: [] } : null}
-        onClose={() => c.setPaymentModal(null)}
-        onSuccess={async (clientId) => {
-          if (c.clientModal?.open && c.clientModal?.mode === 'edit' && c.clientModal?.data?.id === clientId) {
-            await c.handleRefreshClientProfile(clientId);
-          }
-          c.fetchData();
-          c.setClientsVersion((prev) => prev + 1);
-        }}
-        setErrorMsg={c.setErrorMsg}
-        setSuccessMsg={c.setSuccessMsg}
-      />
-
-      {c.fastInvoiceOrder && (
-        <OrderFulfillmentModal order={c.fastInvoiceOrder} onClose={() => c.setFastInvoiceOrder(null)} onSuccess={() => { c.setFastInvoiceOrder(null); c.fetchData(); }} />
-      )}
-
-      <Suspense fallback={null}>
-        <PriceListModal isOpen={c.isPriceListModalOpen} onClose={() => c.setIsPriceListModalOpen(false)} />
-      </Suspense>
-      <QuickPriceSearchModal isOpen={c.isQuickSearchModalOpen} onClose={() => c.setIsQuickSearchModalOpen(false)} />
-
-      <AdminQuickClientSearchModal
-        clientSearchModal={c.clientSearchModal}
-        clients={c.clients}
-        quickClientQuery={c.quickClientQuery}
-        setQuickClientQuery={c.setQuickClientQuery}
-        onClose={() => c.setClientSearchModal(null)}
-        onSelectClientAction={(action, client) => {
-          if (action === 'ledger') c.setShowResumenModal(client);
-          else if (action === 'payment') c.setPaymentModal({ open: true, clientId: client.id, clientName: client.name });
-          else if (action === 'order') c.setCreateOrderModal({ open: true, client, cart: [], notes: '' });
-        }}
-      />
-
-      <AdminCreateQuickOrderModal
-        createOrderModal={c.createOrderModal}
-        setCreateOrderModal={c.setCreateOrderModal}
-        products={c.products}
-        onSuccess={c.fetchData}
-        setErrorMsg={c.setErrorMsg}
-        setSuccessMsg={c.setSuccessMsg}
-      />
-
-      <AdminDirectInvoiceQuickModal
-        isOpen={c.isDirectInvoiceModalOpen}
-        onClose={() => c.setIsDirectInvoiceModalOpen(false)}
-        clients={c.clients}
-        products={c.products}
-        onSuccess={c.fetchData}
-        setErrorMsg={c.setErrorMsg}
-        setSuccessMsg={c.setSuccessMsg}
-      />
+      <AdminModalsHost c={c} setActiveTab={setActiveTab} />
     </div>
   );
 }
