@@ -6,6 +6,7 @@ import { appCache } from '../utils/cache';
 import {
   sanitizeProductForRole,
   sanitizeProductListForRole,
+  stripRestrictedCostFieldsForRole,
 } from '../utils/product-sanitizer.util';
 
 export async function getProducts(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -56,9 +57,13 @@ export async function getProductById(req: AuthenticatedRequest, res: Response): 
 
 export async function createProduct(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const product = await productService.createProduct(req.body, req.user?.id);
+    const safeBody = stripRestrictedCostFieldsForRole(req.body, req.user?.role);
+    const product = await productService.createProduct(safeBody, req.user?.id);
     appCache.invalidateProductCatalog();
-    res.status(201).json({ status: 'success', data: { product } });
+    res.status(201).json({
+      status: 'success',
+      data: { product: sanitizeProductForRole(product, req.user?.role) },
+    });
   } catch (error: any) {
     res.status(400).json({ status: 'error', message: error.message || 'Error al crear el producto.' });
   }
@@ -66,9 +71,13 @@ export async function createProduct(req: AuthenticatedRequest, res: Response): P
 
 export async function updateProduct(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const product = await productService.updateProduct(Number(req.params.id), req.body, req.user?.id);
+    const safeBody = stripRestrictedCostFieldsForRole(req.body, req.user?.role);
+    const product = await productService.updateProduct(Number(req.params.id), safeBody, req.user?.id);
     appCache.invalidateProductCatalog();
-    res.status(200).json({ status: 'success', data: { product } });
+    res.status(200).json({
+      status: 'success',
+      data: { product: sanitizeProductForRole(product, req.user?.role) },
+    });
   } catch (error: any) {
     res
       .status(400)
@@ -223,7 +232,10 @@ export async function uploadProductImage(req: AuthenticatedRequest, res: Respons
       req.user?.id,
     );
     appCache.invalidateProductCatalog();
-    res.status(200).json({ status: 'success', data: { product: updatedProduct } });
+    res.status(200).json({
+      status: 'success',
+      data: { product: sanitizeProductForRole(updatedProduct, req.user?.role) },
+    });
   } catch (error: any) {
     const status = error.message === 'Producto no encontrado.' ? 404 : 500;
     res

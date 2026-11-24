@@ -3,6 +3,7 @@ import { Box, DollarSign, Image as ImageIcon } from 'lucide-react';
 
 interface ProductPricingLogisticsSectionProps {
   data: any;
+  canViewCosts?: boolean;
   selectedImageFile: File | null;
   imagePreviewUrl: string;
   onDataChange: (patch: Record<string, any>) => void;
@@ -12,6 +13,7 @@ interface ProductPricingLogisticsSectionProps {
 
 export const ProductPricingLogisticsSection: React.FC<ProductPricingLogisticsSectionProps> = ({
   data,
+  canViewCosts = true,
   selectedImageFile,
   imagePreviewUrl,
   onDataChange,
@@ -31,7 +33,7 @@ export const ProductPricingLogisticsSection: React.FC<ProductPricingLogisticsSec
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
           <DollarSign size={15} color="var(--text-secondary)" aria-hidden="true" />
           <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-            Costos y Precios de Venta
+            {canViewCosts ? 'Costos y Precios de Venta' : 'Precios de Venta'}
           </span>
         </div>
 
@@ -46,44 +48,50 @@ export const ProductPricingLogisticsSection: React.FC<ProductPricingLogisticsSec
             gap: '10px',
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.85fr 1fr 1.15fr 1fr 1fr', gap: '12px' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="product-cost-price" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '3px' }}>
-                Costo ($)
-              </label>
-              <input
-                id="product-cost-price"
-                name="costPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                className="input tabular-nums"
-                value={data.costPrice !== undefined ? data.costPrice : ''}
-                onChange={(e) => onPriceChange('costPrice', e.target.value)}
-                required
-                style={{ padding: '5px 8px', fontWeight: 700 }}
-              />
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: canViewCosts ? '1fr 0.85fr 1fr 1.15fr 1fr 1fr' : '1fr 1.15fr 1fr 1fr', gap: '12px' }}>
+            {canViewCosts && (
+              <>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label htmlFor="product-cost-price" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '3px' }}>
+                    Costo ($)
+                  </label>
+                  <input
+                    id="product-cost-price"
+                    name="costPrice"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    className="input tabular-nums"
+                    value={data.costPrice !== undefined ? data.costPrice : ''}
+                    onChange={(e) => onPriceChange('costPrice', e.target.value)}
+                    required
+                    style={{ padding: '5px 8px', fontWeight: 700 }}
+                  />
+                </div>
 
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label htmlFor="product-profit-margin" style={fieldLabelStyle}>
-                Margen (%)
-              </label>
-              <input
-                id="product-profit-margin"
-                name="profitMargin"
-                type="number"
-                step="0.01"
-                className="input tabular-nums"
-                value={data.profitMargin !== undefined ? data.profitMargin : ''}
-                onChange={(e) => onPriceChange('profitMargin', e.target.value)}
-                style={{
-                  padding: '5px 8px',
-                  color: Number(data.profitMargin) < 0 ? '#E30613' : undefined,
-                  fontWeight: Number(data.profitMargin) < 0 ? 700 : undefined,
-                }}
-              />
-            </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label htmlFor="product-profit-margin" style={fieldLabelStyle}>
+                    Margen (%)
+                  </label>
+                  <input
+                    id="product-profit-margin"
+                    name="profitMargin"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    className="input tabular-nums"
+                    value={data.profitMargin !== undefined ? data.profitMargin : ''}
+                    onChange={(e) => onPriceChange('profitMargin', e.target.value)}
+                    style={{
+                      padding: '5px 8px',
+                      color: Number(data.profitMargin) < 0 ? '#E30613' : undefined,
+                      fontWeight: Number(data.profitMargin) < 0 ? 700 : undefined,
+                    }}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label htmlFor="product-price-sin-iva" style={fieldLabelStyle}>

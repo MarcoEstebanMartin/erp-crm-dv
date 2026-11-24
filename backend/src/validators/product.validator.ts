@@ -6,7 +6,7 @@ export const createProductSchema = z.object({
     name: z.string().min(1, 'El nombre es requerido'),
     description: z.string().optional(),
     barcode: z.string().optional().nullable(),
-    costPrice: z.number().min(0, 'El costo no puede ser negativo'),
+    costPrice: z.number().min(0, 'El costo no puede ser negativo').optional(),
     listPrice: z.number().min(0, 'El precio de lista no puede ser negativo'),
     listPriceB: z.number().min(0).optional().nullable(),
     listPriceC: z.number().min(0).optional().nullable(),

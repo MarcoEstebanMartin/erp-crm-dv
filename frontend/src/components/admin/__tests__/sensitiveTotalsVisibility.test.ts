@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import StockKpiCards from '../../stock/StockKpiCards';
 import StockInventoryTable from '../../stock/StockInventoryTable';
 import { DebtorsByCityReportView } from '../DebtorsByCityReportView';
+import { ProductPricingLogisticsSection } from '../../modals/product/ProductPricingLogisticsSection';
 
 const sampleStats = {
   totalUnits: 120,
@@ -106,14 +107,54 @@ describe('Visibilidad de totales sensibles (solo rol ADMIN)', () => {
         onViewHistory: noop,
         onOpenLotManager: noop,
         onOpenAdjustModal: noop,
-        canViewCosts: true,
+        canViewCosts: false,
         canViewValuation: false,
         canMutateStock: false,
       }),
     );
-    expect(facturacionHtml).toContain('COSTO UNIT.');
+    expect(facturacionHtml).not.toContain('COSTO UNIT.');
     expect(facturacionHtml).not.toContain('VALOR COSTO');
     expect(facturacionHtml).not.toContain('VALOR VENTA');
+  });
+
+  it('ProductPricingLogisticsSection muestra Costo y Margen solo a ADMIN', () => {
+    const noop = () => {};
+    const baseProps = {
+      data: {
+        costPrice: 8451.52,
+        profitMargin: 32,
+        listPrice: 11156,
+        listPriceB: 10821,
+        listPriceC: 10598,
+        minStock: 10,
+        unitsPerBox: 1,
+        minOrderQuantity: 1,
+        isActive: true,
+      },
+      selectedImageFile: null,
+      imagePreviewUrl: '',
+      onDataChange: noop,
+      onPriceChange: noop,
+      onImageSelected: noop,
+    };
+
+    const adminHtml = renderToStaticMarkup(
+      React.createElement(ProductPricingLogisticsSection, { ...baseProps, canViewCosts: true }),
+    );
+    expect(adminHtml).toContain('Costos y Precios de Venta');
+    expect(adminHtml).toContain('Costo ($)');
+    expect(adminHtml).toContain('Margen (%)');
+    expect(adminHtml).toContain('Lista 4 (Final C/IVA)');
+
+    const facturacionHtml = renderToStaticMarkup(
+      React.createElement(ProductPricingLogisticsSection, { ...baseProps, canViewCosts: false }),
+    );
+    expect(facturacionHtml).toContain('Precios de Venta');
+    expect(facturacionHtml).not.toContain('Costos y Precios de Venta');
+    expect(facturacionHtml).not.toContain('Costo ($)');
+    expect(facturacionHtml).not.toContain('Margen (%)');
+    expect(facturacionHtml).toContain('Venta Sin IVA ($)');
+    expect(facturacionHtml).toContain('Lista 4 (Final C/IVA)');
   });
 
   it('DebtorsByCityReportView oculta las 3 tarjetas de montos (Sucursal A, Sucursal X, Total) a no-ADMIN', () => {

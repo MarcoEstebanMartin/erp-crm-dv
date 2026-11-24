@@ -1,6 +1,6 @@
 import { Role } from '@prisma/client';
 
-const COST_PRIVILEGED_ROLES: readonly string[] = [Role.ADMIN, Role.FACTURACION];
+const COST_PRIVILEGED_ROLES: readonly string[] = [Role.ADMIN];
 
 export function canViewProductCosts(role?: string | null): boolean {
   if (!role) return false;
@@ -8,9 +8,26 @@ export function canViewProductCosts(role?: string | null): boolean {
 }
 
 /**
+ * Elimina campos restringidos de costo y margen de un payload entrante
+ * cuando el usuario no tiene permiso de visualización/edición de costos (solo ADMIN).
+ * Garantiza que un usuario operativo (ej. FACTURACION) pueda crear o editar
+ * precios de venta sin pisar ni alterar costos reales en base de datos.
+ */
+export function stripRestrictedCostFieldsForRole<T extends Record<string, any>>(
+  payload: T,
+  role?: string | null,
+): T {
+  if (!payload || canViewProductCosts(role)) {
+    return payload;
+  }
+  const { costPrice: _costPrice, profitMargin: _profitMargin, ...rest } = payload;
+  return rest as T;
+}
+
+/**
  * Oculta costos de compra, márgenes confidenciales y valuación financiera de stock
- * para roles operativos (VENDEDOR, DEPOSITO, CHOFER), preservando la forma del objeto
- * para mantener compatibilidad total con las pantallas operativas.
+ * para roles no administradores (FACTURACION, VENDEDOR, DEPOSITO, CHOFER),
+ * preservando la forma del objeto para mantener compatibilidad con pantallas operativas.
  */
 export function sanitizeProductForRole<T extends Record<string, any>>(
   product: T,

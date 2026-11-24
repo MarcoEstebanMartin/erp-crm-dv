@@ -46,7 +46,7 @@ describe('Paso 3 — Blindaje Contable Decimal.js, RBAC, Idempotencia e Inventar
       stockValuation: realValuation,
     };
 
-    for (const restrictedRole of [Role.VENDEDOR, Role.DEPOSITO, 'CHOFER']) {
+    for (const restrictedRole of [Role.FACTURACION, Role.VENDEDOR, Role.DEPOSITO, 'CHOFER']) {
       const safe = sanitizeProductForRole(rawProduct, restrictedRole);
       expect(safe.costPrice).toBe(0);
       expect(safe.profitMargin).toBeNull();
@@ -62,7 +62,7 @@ describe('Paso 3 — Blindaje Contable Decimal.js, RBAC, Idempotencia e Inventar
       });
     }
 
-    for (const privilegedRole of [Role.ADMIN, Role.FACTURACION]) {
+    for (const privilegedRole of [Role.ADMIN]) {
       const full = sanitizeProductForRole(rawProduct, privilegedRole);
       expect(full.costPrice).toBe(6680);
       expect(full.stockValuation.stockValueCost).toBe(2805600);

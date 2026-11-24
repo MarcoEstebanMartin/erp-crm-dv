@@ -30,6 +30,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 }) => {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string>('');
+  const canViewCosts = api.getCurrentUser()?.role === 'ADMIN';
 
   useEffect(() => {
     if (productModal.open) {
@@ -64,6 +65,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
   };
 
   const handleModalPriceChange = (field: string, valueStr: string) => {
+    if (!canViewCosts && (field === 'costPrice' || field === 'profitMargin')) return;
     const value = valueStr === '' ? '' : Number(valueStr);
     const updatedData = { ...productModal.data, [field]: value };
 
@@ -80,13 +82,13 @@ const ProductModal: React.FC<ProductModalProps> = ({
       applyBandRatios(updatedData, updatedData.listPrice);
     } else if (field === 'priceSinIva') {
       updatedData.listPrice = Math.max(0, Math.round((Number(value) || 0) * 1.21 * 100) / 100);
-      if (cost > 0) {
+      if (canViewCosts && cost > 0) {
         updatedData.profitMargin = Math.round(((updatedData.listPrice / cost - 1) * 100) * 100) / 100;
       }
       applyBandRatios(updatedData, updatedData.listPrice);
     } else if (field === 'listPrice') {
       const listPriceVal = Number(value) || 0;
-      if (cost > 0) {
+      if (canViewCosts && cost > 0) {
         updatedData.profitMargin = Math.round(((listPriceVal / cost - 1) * 100) * 100) / 100;
       }
       applyBandRatios(updatedData, listPriceVal);
@@ -99,7 +101,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
     const rubroId = rubroIdVal === '' ? '' : Number(rubroIdVal);
     const updatedData = { ...productModal.data, rubroId };
 
-    if (rubroId) {
+    if (rubroId && canViewCosts) {
       const selectedRubro = rubrosList.find((r) => Number(r.id) === rubroId);
       if (selectedRubro) {
         const marginFactor = Number(selectedRubro.profitMargin) || 1.25;
@@ -120,24 +122,19 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { mode, data } = productModal;
-    if (!data.sku || !data.name || data.costPrice === undefined || data.listPrice === undefined) {
-      setErrorMsg('Completar SKU, Nombre, Costo y Lista.');
+    if (!data.sku || !data.name || data.listPrice === undefined || (canViewCosts && data.costPrice === undefined)) {
+      setErrorMsg(canViewCosts ? 'Completar SKU, Nombre, Costo y Lista.' : 'Completar SKU, Nombre y Lista.');
       return;
     }
 
-    const payload = {
+    const payload: Record<string, any> = {
       sku: data.sku,
       name: data.name,
       description: data.description,
       barcode: data.barcode || null,
-      costPrice: Number(data.costPrice),
       listPrice: Number(data.listPrice),
       listPriceB: Number(data.listPriceB || 0),
       listPriceC: Number(data.listPriceC || 0),
-      profitMargin:
-        data.profitMargin !== undefined && data.profitMargin !== '' && data.profitMargin !== null
-          ? Number(data.profitMargin)
-          : null,
       rubroId: data.rubroId ? Number(data.rubroId) : null,
       providerId: data.providerId ? Number(data.providerId) : null,
       commercialCategory: data.commercialCategory || null,
@@ -149,6 +146,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
       approximateWeight: data.approximateWeight ? Number(data.approximateWeight) : 0,
       isActive: (data as any).isActive !== undefined ? Boolean((data as any).isActive) : undefined,
     };
+
+    if (canViewCosts) {
+      payload.costPrice = Number(data.costPrice);
+      payload.profitMargin =
+        data.profitMargin !== undefined && data.profitMargin !== '' && data.profitMargin !== null
+          ? Number(data.profitMargin)
+          : null;
+    }
 
     try {
       const savedProduct =
@@ -231,6 +236,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
           <ProductPricingLogisticsSection
             data={productModal.data}
+            canViewCosts={canViewCosts}
             selectedImageFile={selectedImageFile}
             imagePreviewUrl={imagePreviewUrl}
             onDataChange={handleDataChange}

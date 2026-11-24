@@ -39,7 +39,7 @@ export default function StockDashboard({
   const [auditRefreshTick, setAuditRefreshTick] = useState(0);
 
   const role = userRole ?? api.getCurrentUser()?.role ?? '';
-  const canViewCosts = role === 'ADMIN' || role === 'FACTURACION';
+  const canViewCosts = role === 'ADMIN';
   const canViewValuation = role === 'ADMIN';
   const canMutateStock = role === 'ADMIN' || role === 'DEPOSITO';
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Upload, RotateCcw } from 'lucide-react';
+import { api } from '../utils/api';
 import ProductPhotoLightboxModal from './modals/ProductPhotoLightboxModal';
 import {
   INITIAL_PRODUCTS_BATCH,
@@ -114,18 +115,30 @@ export default function ProductsList({
     const numValue = Number(editValue);
     if (isNaN(numValue)) return setEditingCell(null);
 
+    const canViewCosts = api.getCurrentUser()?.role === 'ADMIN';
     const updatedProduct = { ...p };
     const margin = marginPctToMultiplier(resolveProductMarginPct(p));
 
     if (field === 'costPrice') {
+      if (!canViewCosts) return setEditingCell(null);
       updatedProduct.costPrice = numValue;
       updatedProduct.listPrice = Math.max(0, Math.round(numValue * margin));
     } else if (field === 'listPrice') {
       updatedProduct.listPrice = Math.max(0, Math.round(numValue * 1.21));
-      updatedProduct.costPrice = Math.max(0, Math.round((updatedProduct.listPrice / margin) * 100) / 100);
+      if (canViewCosts) {
+        updatedProduct.costPrice = Math.max(0, Math.round((updatedProduct.listPrice / margin) * 100) / 100);
+      } else {
+        delete updatedProduct.costPrice;
+        delete updatedProduct.profitMargin;
+      }
     } else if (field === 'listPriceFinal') {
       updatedProduct.listPrice = Math.max(0, Math.round(numValue));
-      updatedProduct.costPrice = Math.max(0, Math.round((updatedProduct.listPrice / margin) * 100) / 100);
+      if (canViewCosts) {
+        updatedProduct.costPrice = Math.max(0, Math.round((updatedProduct.listPrice / margin) * 100) / 100);
+      } else {
+        delete updatedProduct.costPrice;
+        delete updatedProduct.profitMargin;
+      }
     }
 
     if (Number(p.listPriceB) > 0) {

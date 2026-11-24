@@ -375,20 +375,14 @@ export function useAdminController(activeTab: string) {
 
   const handleUpdateProductInline = async (updatedProduct: any) => {
     try {
-      await api.updateProduct(updatedProduct.id, {
+      const canViewCosts = api.getCurrentUser()?.role === 'ADMIN';
+      const payload: Record<string, any> = {
         name: updatedProduct.name,
         description: updatedProduct.description,
         barcode: updatedProduct.barcode || null,
-        costPrice: Number(updatedProduct.costPrice),
         listPrice: Number(updatedProduct.listPrice),
         listPriceB: Number(updatedProduct.listPriceB || 0),
         listPriceC: Number(updatedProduct.listPriceC || 0),
-        profitMargin:
-          updatedProduct.profitMargin !== undefined
-            ? updatedProduct.profitMargin !== null && updatedProduct.profitMargin !== ''
-              ? Number(updatedProduct.profitMargin)
-              : null
-            : undefined,
         rubroId: updatedProduct.rubroId !== undefined ? (updatedProduct.rubroId ? Number(updatedProduct.rubroId) : null) : undefined,
         providerId: updatedProduct.providerId !== undefined ? (updatedProduct.providerId ? Number(updatedProduct.providerId) : null) : undefined,
         minStock: Number(updatedProduct.minStock),
@@ -397,7 +391,19 @@ export function useAdminController(activeTab: string) {
         storeHighlight: updatedProduct.storeHighlight !== undefined ? updatedProduct.storeHighlight : undefined,
         unitsPerBox: Number(updatedProduct.unitsPerBox || 1),
         approximateWeight: updatedProduct.approximateWeight ? Number(updatedProduct.approximateWeight) : 0,
-      });
+      };
+      if (canViewCosts) {
+        if (updatedProduct.costPrice !== undefined) {
+          payload.costPrice = Number(updatedProduct.costPrice);
+        }
+        if (updatedProduct.profitMargin !== undefined) {
+          payload.profitMargin =
+            updatedProduct.profitMargin !== null && updatedProduct.profitMargin !== ''
+              ? Number(updatedProduct.profitMargin)
+              : null;
+        }
+      }
+      await api.updateProduct(updatedProduct.id, payload);
       setProducts((prev) => prev.map((item) => (item.id === updatedProduct.id ? { ...item, ...updatedProduct } : item)));
       await fetchData();
       setSuccessMsg('__CHECK__');
