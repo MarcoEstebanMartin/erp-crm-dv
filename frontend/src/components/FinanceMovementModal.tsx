@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Search, Download, Copy, Check, Landmark, DollarSign, CreditCard, Receipt, TrendingUp } from 'lucide-react';
+import { X, Search, Landmark, DollarSign, CreditCard, Receipt, TrendingUp } from 'lucide-react';
 import { NativeModalDialog } from './modals/NativeModalDialog';
 
 export interface FinanceMovementItem {
@@ -67,12 +67,10 @@ export default function FinanceMovementModal({
   isOpen, onClose, title, categoryKey, dateRangeText, movements,
 }: FinanceMovementModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       setSearchTerm('');
-      setCopied(false);
     }
   }, [isOpen]);
 
@@ -111,40 +109,6 @@ export default function FinanceMovementModal({
       case 'EXPENSE': return <CreditCard size={20} color="#dc2626" aria-hidden="true" />;
       default: return <TrendingUp size={20} color="#475569" aria-hidden="true" />;
     }
-  };
-
-  const handleCopySummary = () => {
-    const header = `${title}\nPeríodo: ${dateRangeText}\nTotal: $${totalAmount.toLocaleString('es-AR')}\nMovimientos: ${filteredMovements.length}\n\n`;
-    const lines = filteredMovements.map((m) => {
-      const d = new Date(m.date).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
-      return `${d} | ${m.origin} | ${m.description} | ${m.paymentMethod} | $${m.amount.toLocaleString('es-AR')}`;
-    }).join('\n');
-    navigator.clipboard.writeText(header + lines);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleExportCSV = () => {
-    const headers = ['Fecha/Hora', 'Tipo', 'Origen', 'Concepto', 'Medio de Pago', 'Referencia', 'Monto'];
-    const rows = filteredMovements.map((m) => [
-      `"${new Date(m.date).toLocaleString('es-AR')}"`,
-      `"${m.type}"`,
-      `"${(m.origin || '').replace(/"/g, '""')}"`,
-      `"${(m.description || '').replace(/"/g, '""')}"`,
-      `"${(m.paymentMethod || '').replace(/"/g, '""')}"`,
-      `"${(m.reference || '').replace(/"/g, '""')}"`,
-      m.type === 'EGRESO' ? -Math.abs(m.amount) : Math.abs(m.amount),
-    ]);
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `desglose_${categoryKey.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const showMethodColumn = categoryKey === 'NET' || categoryKey === 'EXPENSE';
@@ -204,16 +168,6 @@ export default function FinanceMovementModal({
             </button>
           )}
         </search>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="button" className="btn btn-secondary" onClick={handleCopySummary} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', backgroundColor: '#ffffff' }}>
-            {copied ? <Check size={14} color="#16a34a" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-            {copied ? 'Copiado' : 'Copiar'}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={handleExportCSV} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', backgroundColor: '#ffffff' }}>
-            <Download size={14} aria-hidden="true" /> CSV
-          </button>
-        </div>
       </div>
 
       <div className="table-container table-container--sticky" role="region" aria-label={title} tabIndex={0} style={{ flex: 1, margin: 0, border: 'none', borderRadius: 0, boxShadow: 'none' }}>

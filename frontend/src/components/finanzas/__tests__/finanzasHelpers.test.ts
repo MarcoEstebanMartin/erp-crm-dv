@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeCajaGrandeBalance, computeFilteredMetricsAndLedger, parseCsvAmount, parseMercadoPagoCsv } from '../finanzasHelpers';
+import { buildWeeklySalesTsv } from '../../reports/reportDateHelpers';
 
 describe('parseCsvAmount', () => {
   it('parses international decimal dot amounts without multiplying by 100', () => {
@@ -163,5 +164,26 @@ describe('computeFilteredMetricsAndLedger', () => {
     expect(res.cashIncome).toBe(0);
     expect(res.netIncome).toBe(0);
     expect(computeCajaGrandeBalance(drawers, [])).toBe(0);
+  });
+});
+
+describe('buildWeeklySalesTsv', () => {
+  it('genera TSV con encabezados, localidades, totales y enteros limpios para Google Sheets', () => {
+    const tsv = buildWeeklySalesTsv(
+      [
+        { cityLabel: 'Córdoba', official: 150000.4, internal: 200000.6, total: 350001, count: 12 },
+        { cityLabel: 'Villa\tMaría', official: 0, internal: 85000, total: 85000, count: 4 },
+      ],
+      { official: 150000.4, internal: 285000.6, total: 435001, orders: 16 },
+    );
+
+    expect(tsv).toBe(
+      [
+        'Localidad\tSucursal A\tSucursal X\tTotal\tPedidos',
+        'Córdoba\t150000\t200001\t350001\t12',
+        'Villa María\t0\t85000\t85000\t4',
+        'Total\t150000\t285001\t435001\t16',
+      ].join('\n'),
+    );
   });
 });

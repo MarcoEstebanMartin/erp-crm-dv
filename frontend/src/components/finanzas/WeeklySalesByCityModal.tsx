@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Copy, X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 import { useWeeklySalesQuery } from '../../hooks/queries';
 import {
+  buildWeeklySalesTsv,
   computeArDatePreset,
   formatCityLabel,
   formatShortArRange,
@@ -38,12 +39,26 @@ export function WeeklySalesByCityModal({
   initialReport,
 }: WeeklySalesByCityModalProps) {
   const [range, setRange] = useState({ startDate: initialStartDate, endDate: initialEndDate });
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [copyAnnouncement, setCopyAnnouncement] = useState('');
+  const copyTimerRef = useRef<number | null>(null);
+  const lastAnnouncementRef = useRef('');
 
   useEffect(() => {
     if (isOpen) {
       setRange({ startDate: initialStartDate, endDate: initialEndDate });
+      setCopyStatus('idle');
+      setCopyAnnouncement('');
     }
   }, [isOpen, initialStartDate, initialEndDate]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   const currentWeek = computeArDatePreset('this_week');
   const isCurrentWeek =
@@ -69,6 +84,45 @@ export function WeeklySalesByCityModal({
 
   const handleShiftWeek = (delta: number) => {
     setRange((prev) => shiftArWeekRange(prev.startDate, delta));
+  };
+
+  const handleCopyForSheets = async () => {
+    if (rows.length === 0) return;
+    const tsv = buildWeeklySalesTsv(
+      rows.map((row) => ({
+        cityLabel: formatCityLabel(row.city),
+        official: row.official,
+        internal: row.internal,
+        total: row.total,
+        count: row.count,
+      })),
+      {
+        official: officialSales,
+        internal: internalSales,
+        total: totalSales,
+        orders: totalOrders,
+      },
+    );
+    if (copyTimerRef.current !== null) {
+      window.clearTimeout(copyTimerRef.current);
+    }
+    try {
+      await navigator.clipboard.writeText(tsv);
+      setCopyStatus('copied');
+      const nextMsg = lastAnnouncementRef.current === 'Copiado' ? 'Copiado\u00A0' : 'Copiado';
+      lastAnnouncementRef.current = nextMsg;
+      setCopyAnnouncement(nextMsg);
+    } catch {
+      setCopyStatus('failed');
+      const nextMsg = lastAnnouncementRef.current === 'Error al copiar' ? 'Error al copiar\u00A0' : 'Error al copiar';
+      lastAnnouncementRef.current = nextMsg;
+      setCopyAnnouncement(nextMsg);
+    }
+    copyTimerRef.current = window.setTimeout(() => {
+      setCopyStatus('idle');
+      setCopyAnnouncement('');
+      copyTimerRef.current = null;
+    }, 2000);
   };
 
   return (
@@ -169,6 +223,33 @@ export function WeeklySalesByCityModal({
             <button
               type="button"
               className="btn btn-ghost"
+              aria-label="Copiar ventas por localidad para Google Sheets"
+              title={copyStatus === 'copied' ? 'Copiado' : copyStatus === 'failed' ? 'No se pudo copiar' : 'Copiar para Google Sheets'}
+              onClick={handleCopyForSheets}
+              disabled={rows.length === 0}
+              style={{
+                padding: '6px',
+                minInlineSize: '30px',
+                minBlockSize: '30px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: copyStatus === 'copied' ? '#16a34a' : copyStatus === 'failed' ? '#dc2626' : 'var(--text-secondary)',
+              }}
+            >
+              {copyStatus === 'copied' ? (
+                <Check size={16} aria-hidden="true" />
+              ) : (
+                <Copy size={16} aria-hidden="true" />
+              )}
+            </button>
+            <span role="status" className="visually-hidden">
+              {copyAnnouncement}
+            </span>
+
+            <button
+              type="button"
+              className="btn btn-ghost"
               aria-label="Cerrar"
               onClick={onClose}
               style={{ padding: '6px', minHeight: 'auto', color: 'var(--text-secondary)' }}
@@ -188,89 +269,40 @@ export function WeeklySalesByCityModal({
             backgroundColor: '#fafafa',
           }}
         >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid var(--border-color, #e5e7eb)',
-              borderRadius: '10px',
-              padding: '12px 14px',
-            }}
-          >
-            <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Total
-            </div>
+          {[
+            { label: 'Total', value: formatPeso(totalSales), meta: `${totalOrders} ${totalOrders === 1 ? 'pedido' : 'pedidos'}` },
+            { label: 'Sucursal A', value: formatPeso(officialSales), meta: `${officialPct}%` },
+            { label: 'Sucursal X', value: formatPeso(internalSales), meta: `${internalPct}%` },
+          ].map((card) => (
             <div
-              className="tabular-nums"
+              key={card.label}
               style={{
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                marginTop: '4px',
-                letterSpacing: '-0.02em',
+                backgroundColor: '#ffffff',
+                border: '1px solid var(--border-color, #e5e7eb)',
+                borderRadius: '10px',
+                padding: '12px 14px',
               }}
             >
-              {formatPeso(totalSales)}
+              <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                {card.label}
+              </div>
+              <div
+                className="tabular-nums"
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  marginTop: '4px',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {card.value}
+              </div>
+              <div className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                {card.meta}
+              </div>
             </div>
-            <div className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              {totalOrders} {totalOrders === 1 ? 'pedido' : 'pedidos'}
-            </div>
-          </div>
-
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid var(--border-color, #e5e7eb)',
-              borderRadius: '10px',
-              padding: '12px 14px',
-            }}
-          >
-            <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Sucursal A
-            </div>
-            <div
-              className="tabular-nums"
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                marginTop: '4px',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {formatPeso(officialSales)}
-            </div>
-            <div className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              {officialPct}%
-            </div>
-          </div>
-
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid var(--border-color, #e5e7eb)',
-              borderRadius: '10px',
-              padding: '12px 14px',
-            }}
-          >
-            <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Sucursal X
-            </div>
-            <div
-              className="tabular-nums"
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                marginTop: '4px',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {formatPeso(internalSales)}
-            </div>
-            <div className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              {internalPct}%
-            </div>
-          </div>
+          ))}
         </div>
 
         <div

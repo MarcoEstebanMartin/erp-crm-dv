@@ -114,3 +114,40 @@ export function formatCityLabel(raw: string): string {
     .map((word) => (word.length <= 2 && word.endsWith('.') ? word.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1)))
     .join(' ');
 }
+
+export interface WeeklySalesTsvRow {
+  cityLabel: string;
+  official: number;
+  internal: number;
+  total: number;
+  count: number;
+}
+
+export function buildWeeklySalesTsv(
+  rows: WeeklySalesTsvRow[],
+  totals: { official: number; internal: number; total: number; orders: number },
+): string {
+  const cleanCell = (value: string) => value.replace(/[\t\r\n]+/g, ' ').trim();
+  const lines = ['Localidad\tSucursal A\tSucursal X\tTotal\tPedidos'];
+  for (const row of rows) {
+    lines.push(
+      [
+        cleanCell(row.cityLabel),
+        Math.round(Number(row.official || 0)),
+        Math.round(Number(row.internal || 0)),
+        Math.round(Number(row.total || 0)),
+        Math.round(Number(row.count || 0)),
+      ].join('\t'),
+    );
+  }
+  lines.push(
+    [
+      'Total',
+      Math.round(Number(totals.official || 0)),
+      Math.round(Number(totals.internal || 0)),
+      Math.round(Number(totals.total || 0)),
+      Math.round(Number(totals.orders || 0)),
+    ].join('\t'),
+  );
+  return lines.join('\n');
+}
