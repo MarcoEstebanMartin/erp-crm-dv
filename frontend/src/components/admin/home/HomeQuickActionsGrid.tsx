@@ -45,7 +45,7 @@ export function HomeQuickActionsGrid({
     { label: 'Buscar precio', icon: <Search size={17} aria-hidden="true" />, onClick: onOpenQuickPriceSearch },
     { label: 'Cuentas corrientes', icon: <BookOpen size={17} aria-hidden="true" />, onClick: onOpenLedger },
     { label: 'Cobrar', icon: <DollarSign size={17} aria-hidden="true" />, onClick: onOpenPayment },
-    { label: 'Gasto', icon: <Wallet size={17} aria-hidden="true" />, onClick: onOpenFleetExpense },
+    { label: 'Gastos y Egresos', icon: <Wallet size={17} aria-hidden="true" />, onClick: onOpenFleetExpense },
   ];
 
   return (
