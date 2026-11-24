@@ -264,23 +264,24 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
           })}
         </nav>
 
+        {username && (
+          <div
+            style={{
+              padding: '0 12px 10px',
+              fontSize: '0.78rem',
+              fontWeight: 400,
+              color: 'var(--text-muted)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+            title={username}
+          >
+            {username}
+          </div>
+        )}
+
         <div className="sidebar-user">
-          {username && (
-            <div
-              style={{
-                padding: '0 12px',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                color: 'var(--text-secondary)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-              title={username}
-            >
-              {username}
-            </div>
-          )}
           <button
             type="button"
             className="btn btn-ghost"
