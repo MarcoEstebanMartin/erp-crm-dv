@@ -2,7 +2,7 @@ import { useState, type FC, type Dispatch, type SetStateAction } from 'react';
 import { Navigation, CheckCircle, Play, Map, Printer, Pencil, ChevronUp, ChevronDown, Banknote, Route } from 'lucide-react';
 import { printDeliveryRouteCustodyGuide } from '../../utils/printHelpers';
 import { RouteMap } from './LeafletRouteMap';
-import { computeTripDisplayMetrics } from './repartoRouteHelpers';
+import { computeTripDisplayMetrics, getStopOutstandingBalance } from './repartoRouteHelpers';
 
 interface RepartoActiveRoutePanelProps {
   selectedRoute: any | null;
@@ -149,6 +149,8 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
             const stopKey = `${selectedRoute.id}-${idx}`;
             const isExpanded = !!expandedStops[stopKey];
             const clientReceipt = receiptsByClientId[Number(stop.clientId)];
+            const outstandingBalance = getStopOutstandingBalance(stop);
+            const showCollectButton = isInTransitRoute && Boolean(handleOpenCollectForStop) && outstandingBalance > 0;
             return (
               <div key={stop.id ?? idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -170,6 +172,11 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
                           <span>{clientReceipt.codes.join(', ')} · ${clientReceipt.total.toLocaleString('es-AR')}</span>
                         </div>
                       )}
+                      {!clientReceipt && outstandingBalance <= 0 && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', padding: '2px 7px', borderRadius: '4px', backgroundColor: '#f1f5f9', color: '#475569', fontSize: '0.72rem', fontWeight: 700 }}>
+                          <span>Sin saldo</span>
+                        </div>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div className="tabular-nums" style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{stop.invoice}</div>
@@ -180,7 +187,7 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
                       )}
                     </div>
                   </button>
-                  {isInTransitRoute && handleOpenCollectForStop && (
+                  {showCollectButton && handleOpenCollectForStop && (
                     <button
                       type="button"
                       className={clientReceipt ? 'btn btn-secondary' : 'btn btn-primary'}

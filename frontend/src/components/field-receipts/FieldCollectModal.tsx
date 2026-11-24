@@ -86,11 +86,12 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
 
   useEffect(() => {
     if (!client) return;
+    const realBalance = Math.max(0, Math.round(client.outstandingBalance));
     const preferred =
       suggestedAmount !== null && suggestedAmount !== undefined && suggestedAmount > 0
-        ? suggestedAmount
-        : client.outstandingBalance;
-    const initialAmt = preferred > 0 ? String(Math.round(preferred)) : '';
+        ? Math.min(Math.round(suggestedAmount), realBalance)
+        : realBalance;
+    const initialAmt = preferred > 0 ? String(preferred) : '';
     setPayments([createEmptyPayment(initialAmt)]);
     setNotes('');
     setAllowCreditOnAccount(false);
@@ -107,9 +108,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   }, 0);
 
   const balanceAfter = Math.round(client.outstandingBalance) - totalAmount;
-  const effectiveLocalDebt = deliveryRouteId
-    ? Math.max(0, Math.round(client.outstandingBalance), Math.round(suggestedAmount ?? 0))
-    : Math.max(0, Math.round(client.outstandingBalance));
+  const effectiveLocalDebt = Math.max(0, Math.round(client.outstandingBalance));
   const excessAmount = totalAmount > effectiveLocalDebt ? totalAmount - effectiveLocalDebt : 0;
   const isOverpaying = totalAmount > 0 && excessAmount > 0;
   const showCreditToggle = isOverpaying || needsCreditOverride;

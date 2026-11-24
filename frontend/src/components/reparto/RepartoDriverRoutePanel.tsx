@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import { Banknote, CheckCircle, ExternalLink, MapPin, Navigation } from 'lucide-react';
 import { buildGoogleMapsMultiStopRouteUrl, buildGoogleMapsSingleUrl } from '../../utils/geoUtils';
+import { canCollectStop, getStopOutstandingBalance } from './repartoRouteHelpers';
 
 interface RepartoDriverRoutePanelProps {
   selectedRoute: any | null;
@@ -31,8 +32,6 @@ export const RepartoDriverRoutePanel: FC<RepartoDriverRoutePanelProps> = ({
       </div>
     );
   }
-
-  const canCollect = selectedRoute.status !== 'COMPLETED';
 
   let cashTotal = 0;
   let checkTotal = 0;
@@ -190,6 +189,8 @@ export const RepartoDriverRoutePanel: FC<RepartoDriverRoutePanelProps> = ({
         >
           {stops.map((stop, idx) => {
             const clientReceipt = receiptsByClientId[Number(stop.clientId)];
+            const outstandingBalance = getStopOutstandingBalance(stop);
+            const showCollectButton = canCollectStop(selectedRoute.status, stop);
             const hasCoords = Number.isFinite(Number(stop.lat)) && Number.isFinite(Number(stop.lng));
             const stopMapsUrl = hasCoords
               ? buildGoogleMapsSingleUrl(Number(stop.lat), Number(stop.lng))
@@ -276,13 +277,30 @@ export const RepartoDriverRoutePanel: FC<RepartoDriverRoutePanelProps> = ({
                           Cobrado · ${clientReceipt.total.toLocaleString('es-AR')}
                         </span>
                       )}
+                      {!clientReceipt && outstandingBalance <= 0 && (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            backgroundColor: '#f1f5f9',
+                            color: '#475569',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Sin saldo
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {(canCollect || stopMapsUrl) && (
+                {(showCollectButton || stopMapsUrl) && (
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {canCollect && (
+                    {showCollectButton && (
                       <button
                         type="button"
                         className={clientReceipt ? 'btn btn-secondary' : 'btn btn-primary'}

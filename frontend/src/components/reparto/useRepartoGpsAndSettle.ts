@@ -7,6 +7,7 @@ import {
   computeRouteSettlementTotals,
   type RouteSettlementRow,
 } from './repartoSettlementHelpers';
+import { computeStopSuggestedCollectAmount, getStopOutstandingBalance } from './repartoRouteHelpers';
 
 export interface CollectStopTarget {
   client: OfflineBundleClient;
@@ -106,6 +107,8 @@ export function useRepartoGpsAndSettle({
 
   const handleOpenCollectForStop = (stop: any) => {
     if (!selectedRoute?.id || !stop) return;
+    const outstandingBalance = getStopOutstandingBalance(stop);
+    if (outstandingBalance <= 0) return;
     const p = stop.persona || {};
     const client: OfflineBundleClient = {
       id: Number(stop.clientId || p.id),
@@ -117,14 +120,14 @@ export function useRepartoGpsAndSettle({
       route: p.route ?? null,
       saleRouteId: p.saleRouteId ?? null,
       routeSequence: p.routeSequence ?? null,
-      outstandingBalance: Number(p.outstandingBalance || 0),
+      outstandingBalance,
       sellerId: p.sellerId ?? null,
     };
     setErrorMsg(null);
     setCollectStopTarget({
       client,
       deliveryRouteId: Number(selectedRoute.id),
-      suggestedAmount: Math.round(Number(stop.totalAmount || 0)),
+      suggestedAmount: computeStopSuggestedCollectAmount(stop),
     });
   };
 

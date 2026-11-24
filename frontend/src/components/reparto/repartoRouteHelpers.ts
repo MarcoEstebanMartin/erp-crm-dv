@@ -168,3 +168,30 @@ export function computeRouteOrderFilters(
     filteredPendingOrders,
   };
 }
+
+/**
+ * Devuelve el saldo actual en pesos enteros del cliente asociado a una parada.
+ */
+export function getStopOutstandingBalance(stop: any): number {
+  const raw = stop?.persona?.outstandingBalance ?? stop?.outstandingBalance ?? 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? Math.round(parsed) : 0;
+}
+
+/**
+ * Determina si una parada de viaje debe ofrecer cobro (viaje activo y cliente con saldo > $0).
+ */
+export function canCollectStop(routeStatus: string | undefined, stop: any): boolean {
+  return routeStatus !== 'COMPLETED' && getStopOutstandingBalance(stop) > 0;
+}
+
+/**
+ * Calcula el importe sugerido de cobro para una parada sin superar nunca el saldo real del cliente.
+ */
+export function computeStopSuggestedCollectAmount(stop: any): number {
+  const balance = getStopOutstandingBalance(stop);
+  if (balance <= 0) return 0;
+  const orderTotal = Math.round(Number(stop?.totalAmount || 0));
+  if (orderTotal > 0) return Math.min(orderTotal, balance);
+  return balance;
+}
