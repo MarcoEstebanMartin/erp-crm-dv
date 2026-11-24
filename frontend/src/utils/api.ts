@@ -1888,12 +1888,14 @@ export const api = {
   },
 
   // --- RECURSOS HUMANOS Y NOMINA (RRHH) ---
-  getEmployees: async (filters?: { department?: string; position?: string; active?: boolean; search?: string }) => {
+  getEmployees: async (filters?: { department?: string; position?: string; active?: boolean; search?: string; month?: number; year?: number }) => {
     const params = new URLSearchParams();
     if (filters?.department) params.append('department', filters.department);
     if (filters?.position) params.append('position', filters.position);
     if (filters?.active !== undefined) params.append('active', String(filters.active));
     if (filters?.search) params.append('search', filters.search);
+    if (filters?.month) params.append('month', String(filters.month));
+    if (filters?.year) params.append('year', String(filters.year));
     return await request(`/hr/employees?${params.toString()}`);
   },
 
@@ -1928,10 +1930,16 @@ export const api = {
     return await request(`/hr/advances?${params.toString()}`);
   },
 
-  createAdvance: async (data: { employeeId: number; amount: number; reason?: string; paymentMethod: string; cashDrawerId?: number; bankAccountId?: number }) => {
+  createAdvance: async (data: { employeeId: number; amount: number; date?: string; reason?: string; paymentMethod: string; cashDrawerId?: number; bankAccountId?: number }) => {
     return await request('/hr/advances', {
       method: 'POST',
       body: JSON.stringify(data)
+    });
+  },
+
+  deleteAdvance: async (id: number) => {
+    return await request(`/hr/advances/${id}`, {
+      method: 'DELETE'
     });
   },
 
@@ -1973,6 +1981,12 @@ export const api = {
     return await request(`/hr/vacations/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status })
+    });
+  },
+
+  deleteVacation: async (id: number) => {
+    return await request(`/hr/vacations/${id}`, {
+      method: 'DELETE'
     });
   },
 

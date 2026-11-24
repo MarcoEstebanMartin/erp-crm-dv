@@ -10,6 +10,7 @@ export interface VacationFilters {
 export interface CreateVacationInput {
   employeeId: number | string;
   year?: number | string;
+  tramo?: number | string;
   type?: string | null;
   startDate: string | Date;
   endDate: string | Date;
@@ -55,6 +56,15 @@ export const hrLeaveDocService = {
       throw new AppError('Empleado, fecha de inicio y fecha de fin son requeridos', 400);
     }
 
+    const empId = Number(input.employeeId);
+    const employee = await prisma.employee.findUnique({ where: { id: empId } });
+    if (!employee) {
+      throw new AppError('Empleado no encontrado', 404);
+    }
+    if (employee.employmentType === 'MONOTRIBUTISTA') {
+      throw new AppError('Los empleados monotributistas no tienen vacaciones registradas.', 400);
+    }
+
     const start = new Date(input.startDate);
     const end = new Date(input.endDate);
     if (end.getTime() < start.getTime()) {
@@ -65,10 +75,13 @@ export const hrLeaveDocService = {
       ? Number(input.daysCount)
       : Math.ceil((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
 
+    const tramo = Number(input.tramo) === 2 ? 2 : 1;
+
     return prisma.employeeVacation.create({
       data: {
-        employeeId: Number(input.employeeId),
-        year: input.year ? Number(input.year) : start.getFullYear(),
+        employeeId: empId,
+        year: input.year ? Number(input.year) : start.getFullYear() - 1,
+        tramo,
         type: (input.type as any) || 'VACATION',
         startDate: start,
         endDate: end,
@@ -91,6 +104,18 @@ export const hrLeaveDocService = {
       where: { id },
       data: { status: status as any },
     });
+  },
+
+  async deleteVacation(id: number) {
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new AppError('ID de vacación inválido', 400);
+    }
+    const existing = await prisma.employeeVacation.findUnique({ where: { id } });
+    if (!existing) {
+      throw new AppError('Registro de vacaciones no encontrado', 404);
+    }
+    await prisma.employeeVacation.delete({ where: { id } });
+    return { id };
   },
 
   async getDocuments(employeeId?: string) {

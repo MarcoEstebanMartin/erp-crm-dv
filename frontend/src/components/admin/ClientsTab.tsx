@@ -12,6 +12,7 @@ import { ClientsPersonasTable } from './ClientsPersonasTable';
 import ClientsGpsMapModal from '../modals/ClientsGpsMapModal';
 
 const ComprasDashboard = lazy(() => import('../ComprasDashboard'));
+const EmployeesTab = lazy(() => import('./employees/EmployeesTab'));
 
 interface ClientsTabProps {
   setActiveTab: (tab: string) => void;
@@ -33,6 +34,8 @@ export default function ClientsTab({
   setClientModal, setShowResumenModal, setPaymentModal, handleViewClientProfile, handleViewSellerProfile,
   clientsVersion, onProvidersChanged,
 }: ClientsTabProps) {
+  const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
+  const visibleRoleTabs = useMemo(() => PERSONA_ROLE_TABS.filter((tab) => !('adminOnly' in tab && tab.adminOnly) || isAdmin), [isAdmin]);
   const [personaRoleFilter, setPersonaRoleFilter] = useState<string>('client');
   const [showInactive, setShowInactive] = useState<boolean>(false);
   const [rolePersonas, setRolePersonas] = useState<any[]>([]);
@@ -55,7 +58,7 @@ export default function ClientsTab({
   const confirm = useConfirm();
 
   useEffect(() => {
-    if (personaRoleFilter === 'client' || personaRoleFilter === 'sale_routes' || personaRoleFilter === 'providers') return;
+    if (personaRoleFilter === 'client' || personaRoleFilter === 'sale_routes' || personaRoleFilter === 'providers' || personaRoleFilter === 'employees') return;
     let isCurrent = true;
     const loadTabContent = async () => {
       try {
@@ -143,19 +146,10 @@ export default function ClientsTab({
     } catch { setErrorMsg('Error al actualizar límite de Cta Cte.'); } finally { setUpdatingClientId(null); }
   }, [updateActiveList]);
 
-  const handleLoadMore = useCallback(() => {
-    setVisibleCount((prev) => Math.min(prev + CLIENTS_BATCH_STEP, filteredClients.length));
-  }, [filteredClients.length]);
-
-  const handleShowAll = useCallback(() => {
-    setVisibleCount(filteredClients.length);
-  }, [filteredClients.length]);
-
+  const handleLoadMore = useCallback(() => setVisibleCount((prev) => Math.min(prev + CLIENTS_BATCH_STEP, filteredClients.length)), [filteredClients.length]);
+  const handleShowAll = useCallback(() => setVisibleCount(filteredClients.length), [filteredClients.length]);
   const handleResetFilters = useCallback(() => {
-    setSelectedCityFilter('ALL');
-    setSelectedRouteFilter('ALL');
-    setSelectedClientSellerFilter('ALL');
-    setSearchQuery('');
+    setSelectedCityFilter('ALL'); setSelectedRouteFilter('ALL'); setSelectedClientSellerFilter('ALL'); setSearchQuery('');
   }, []);
 
   const selectRoleTab = useCallback((tabId: string, idx?: number) => {
@@ -168,21 +162,21 @@ export default function ClientsTab({
 
   const handleTabKeyDown = useCallback((e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
     let nextIdx = idx;
-    if (e.key === 'ArrowRight') nextIdx = (idx + 1) % PERSONA_ROLE_TABS.length;
-    else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + PERSONA_ROLE_TABS.length) % PERSONA_ROLE_TABS.length;
+    if (e.key === 'ArrowRight') nextIdx = (idx + 1) % visibleRoleTabs.length;
+    else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + visibleRoleTabs.length) % visibleRoleTabs.length;
     else if (e.key === 'Home') nextIdx = 0;
-    else if (e.key === 'End') nextIdx = PERSONA_ROLE_TABS.length - 1;
+    else if (e.key === 'End') nextIdx = visibleRoleTabs.length - 1;
     else return;
     e.preventDefault();
-    selectRoleTab(PERSONA_ROLE_TABS[nextIdx].id, nextIdx);
+    selectRoleTab(visibleRoleTabs[nextIdx].id, nextIdx);
     tabRefs.current[nextIdx]?.focus();
-  }, [selectRoleTab]);
+  }, [selectRoleTab, visibleRoleTabs]);
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
         <div className="linear-tablist" role="tablist" aria-label="Vistas de personas" style={{ borderBottom: 'none' }}>
-          {PERSONA_ROLE_TABS.map((tab, idx) => {
+          {visibleRoleTabs.map((tab, idx) => {
             const isSelected = personaRoleFilter === tab.id;
             return (
               <button
@@ -215,6 +209,10 @@ export default function ClientsTab({
         {personaRoleFilter === 'providers' ? (
           <Suspense fallback={null}>
             <ComprasDashboard initialSubTab="proveedores" refreshKey={clientsVersion} onProvidersChanged={onProvidersChanged} />
+          </Suspense>
+        ) : personaRoleFilter === 'employees' && isAdmin ? (
+          <Suspense fallback={null}>
+            <EmployeesTab />
           </Suspense>
         ) : personaRoleFilter === 'debtors_by_city' ? (
           <DebtorsByCityReportView

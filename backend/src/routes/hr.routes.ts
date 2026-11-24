@@ -8,12 +8,14 @@ import {
   deleteEmployee,
   getAdvances,
   createAdvance,
+  deleteAdvance,
   calculatePayroll,
   createPayroll,
   getPayrolls,
   getVacations,
   createVacation,
   updateVacationStatus,
+  deleteVacation,
   getDocuments,
   createDocument,
 } from '../controllers/hr.controller';
@@ -33,31 +35,33 @@ import {
 } from '../validators/hr.validator';
 
 const router = Router();
-const canManageHr = requireRole([Role.ADMIN, Role.FACTURACION]);
+const onlyAdmin = requireRole([Role.ADMIN]);
 
-// Empleados
-router.get('/employees', authenticateJWT, canManageHr, getEmployees);
-router.get('/employees/:id', authenticateJWT, canManageHr, validateRequest(employeeIdParamSchema), getEmployeeById);
-router.post('/employees', authenticateJWT, canManageHr, validateRequest(createEmployeeSchema), createEmployee);
-router.put('/employees/:id', authenticateJWT, canManageHr, validateRequest(updateEmployeeSchema), updateEmployee);
-router.delete('/employees/:id', authenticateJWT, requireRole([Role.ADMIN]), validateRequest(employeeIdParamSchema), deleteEmployee);
+// Empleados (exclusivo ADMIN)
+router.get('/employees', authenticateJWT, onlyAdmin, getEmployees);
+router.get('/employees/:id', authenticateJWT, onlyAdmin, validateRequest(employeeIdParamSchema), getEmployeeById);
+router.post('/employees', authenticateJWT, onlyAdmin, validateRequest(createEmployeeSchema), createEmployee);
+router.put('/employees/:id', authenticateJWT, onlyAdmin, validateRequest(updateEmployeeSchema), updateEmployee);
+router.delete('/employees/:id', authenticateJWT, onlyAdmin, validateRequest(employeeIdParamSchema), deleteEmployee);
 
-// Adelantos
-router.get('/advances', authenticateJWT, canManageHr, getAdvances);
-router.post('/advances', authenticateJWT, canManageHr, validateRequest(createAdvanceSchema), idempotencyGuard, createAdvance);
+// Retiros / Adelantos (exclusivo ADMIN)
+router.get('/advances', authenticateJWT, onlyAdmin, getAdvances);
+router.post('/advances', authenticateJWT, onlyAdmin, validateRequest(createAdvanceSchema), idempotencyGuard, createAdvance);
+router.delete('/advances/:id', authenticateJWT, onlyAdmin, validateRequest(employeeIdParamSchema), deleteAdvance);
 
-// Liquidaciones de Sueldo (Payroll)
-router.get('/payrolls', authenticateJWT, canManageHr, getPayrolls);
-router.get('/payrolls/calculate', authenticateJWT, canManageHr, validateRequest(calculatePayrollQuerySchema), calculatePayroll);
-router.post('/payrolls', authenticateJWT, canManageHr, validateRequest(createPayrollSchema), idempotencyGuard, createPayroll);
+// Liquidaciones de Sueldo (Payroll - exclusivo ADMIN)
+router.get('/payrolls', authenticateJWT, onlyAdmin, getPayrolls);
+router.get('/payrolls/calculate', authenticateJWT, onlyAdmin, validateRequest(calculatePayrollQuerySchema), calculatePayroll);
+router.post('/payrolls', authenticateJWT, onlyAdmin, validateRequest(createPayrollSchema), idempotencyGuard, createPayroll);
 
-// Vacaciones y Licencias
-router.get('/vacations', authenticateJWT, canManageHr, getVacations);
-router.post('/vacations', authenticateJWT, canManageHr, validateRequest(createVacationSchema), createVacation);
-router.put('/vacations/:id/status', authenticateJWT, canManageHr, validateRequest(updateVacationStatusSchema), updateVacationStatus);
+// Vacaciones y Licencias (exclusivo ADMIN)
+router.get('/vacations', authenticateJWT, onlyAdmin, getVacations);
+router.post('/vacations', authenticateJWT, onlyAdmin, validateRequest(createVacationSchema), createVacation);
+router.put('/vacations/:id/status', authenticateJWT, onlyAdmin, validateRequest(updateVacationStatusSchema), updateVacationStatus);
+router.delete('/vacations/:id', authenticateJWT, onlyAdmin, validateRequest(employeeIdParamSchema), deleteVacation);
 
-// Documentos y Vencimientos
-router.get('/documents', authenticateJWT, canManageHr, getDocuments);
-router.post('/documents', authenticateJWT, canManageHr, validateRequest(createDocumentSchema), createDocument);
+// Documentos y Vencimientos (exclusivo ADMIN)
+router.get('/documents', authenticateJWT, onlyAdmin, getDocuments);
+router.post('/documents', authenticateJWT, onlyAdmin, validateRequest(createDocumentSchema), createDocument);
 
 export default router;

@@ -24,6 +24,8 @@ export async function getEmployees(req: AuthenticatedRequest, res: Response): Pr
       position: strParam(req.query.position),
       active: strParam(req.query.active),
       search: strParam(req.query.search),
+      month: strParam(req.query.month),
+      year: strParam(req.query.year),
     });
     res.json({ status: 'success', data });
   } catch (error) {
@@ -72,10 +74,12 @@ export async function getAdvances(req: AuthenticatedRequest, res: Response): Pro
     const data = await salaryAdvanceService.getAdvances({
       employeeId: strParam(req.query.employeeId),
       status: strParam(req.query.status),
+      month: strParam(req.query.month),
+      year: strParam(req.query.year),
     });
     res.json({ status: 'success', data });
   } catch (error) {
-    handleHrError(res, error, 'Error al obtener adelantos de sueldo');
+    handleHrError(res, error, 'Error al obtener retiros');
   }
 }
 
@@ -84,7 +88,16 @@ export async function createAdvance(req: AuthenticatedRequest, res: Response): P
     const data = await salaryAdvanceService.createAdvance({ ...req.body, actorUserId: req.user?.id });
     res.status(201).json({ status: 'success', data });
   } catch (error) {
-    handleHrError(res, error, 'Error al registrar el adelanto de sueldo');
+    handleHrError(res, error, 'Error al registrar el retiro');
+  }
+}
+
+export async function deleteAdvance(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const data = await salaryAdvanceService.deleteAdvance(Number(req.params.id));
+    res.json({ status: 'success', data });
+  } catch (error) {
+    handleHrError(res, error, 'Error al eliminar el retiro');
   }
 }
 
@@ -151,6 +164,15 @@ export async function updateVacationStatus(req: AuthenticatedRequest, res: Respo
     res.json({ status: 'success', data });
   } catch (error) {
     handleHrError(res, error, 'Error al actualizar el estado de la vacación');
+  }
+}
+
+export async function deleteVacation(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const data = await hrLeaveDocService.deleteVacation(Number(req.params.id));
+    res.json({ status: 'success', data });
+  } catch (error) {
+    handleHrError(res, error, 'Error al eliminar el registro de vacaciones');
   }
 }
 

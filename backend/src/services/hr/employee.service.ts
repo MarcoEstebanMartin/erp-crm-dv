@@ -2,7 +2,7 @@ import { PaymentMethod } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
-import { NumericInput, roundToTwoDecimals } from '../../core/money';
+import { NumericInput, roundToIntegerPeso, roundToTwoDecimals, toDecimal } from '../../core/money';
 
 export const SAFE_EMPLOYEE_USER_SELECT = {
   id: true,
@@ -16,6 +16,8 @@ export interface EmployeeFilters {
   position?: string;
   active?: string;
   search?: string;
+  month?: string;
+  year?: string;
 }
 
 export interface CreateEmployeeInput {
@@ -26,10 +28,12 @@ export interface CreateEmployeeInput {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
-  position: string;
+  position?: string;
   department?: string | null;
-  hireDate: string | Date;
-  baseSalary: NumericInput;
+  employmentType?: string;
+  vacationDaysPerYear?: number | string;
+  hireDate?: string | Date | null;
+  baseSalary?: NumericInput;
   paymentMethod?: PaymentMethod | string | null;
   cbuAlias?: string | null;
   bankName?: string | null;
@@ -57,27 +61,52 @@ export const employeeService = {
         { firstName: { contains: filters.search, mode: 'insensitive' } },
         { lastName: { contains: filters.search, mode: 'insensitive' } },
         { dni: { contains: filters.search, mode: 'insensitive' } },
+        { cuil: { contains: filters.search, mode: 'insensitive' } },
         { position: { contains: filters.search, mode: 'insensitive' } },
       ];
     }
 
-    return prisma.employee.findMany({
+    const now = new Date();
+    const targetMonth = filters.month ? Number(filters.month) : now.getMonth() + 1;
+    const targetYear = filters.year ? Number(filters.year) : now.getFullYear();
+    const monthStart = new Date(targetYear, targetMonth - 1, 1, 0, 0, 0, 0);
+    const monthEnd = new Date(targetYear, targetMonth, 1, 0, 0, 0, 0);
+
+    const employees = await prisma.employee.findMany({
       where,
       include: {
         user: { select: SAFE_EMPLOYEE_USER_SELECT },
         advances: {
-          where: { status: 'PENDING' },
+          where: {
+            status: { not: 'CANCELLED' },
+            date: { gte: monthStart, lt: monthEnd },
+          },
+          include: {
+            cashDrawer: { select: { id: true, branch: true, status: true } },
+            bankAccount: { select: { id: true, name: true } },
+          },
           orderBy: { date: 'desc' },
         },
         vacations: {
-          orderBy: { startDate: 'desc' },
-          take: 5,
+          where: { type: 'VACATION' },
+          orderBy: [{ year: 'desc' }, { tramo: 'asc' }, { startDate: 'asc' }],
         },
         documents: {
           orderBy: { expirationDate: 'asc' },
         },
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    });
+
+    return employees.map((emp) => {
+      const totalDec = emp.advances.reduce(
+        (acc, adv) => acc.plus(roundToIntegerPeso(adv.amount)),
+        toDecimal(0),
+      );
+      return {
+        ...emp,
+        monthlyAdvancesTotal: roundToIntegerPeso(totalDec).toNumber(),
+      };
     });
   },
 
@@ -105,31 +134,28 @@ export const employeeService = {
   },
 
   async createEmployee(input: CreateEmployeeInput, actorUserId?: number) {
-    const {
-      firstName,
-      lastName,
-      dni,
-      position,
-      hireDate,
-      baseSalary,
-    } = input;
+    const { firstName, lastName, dni } = input;
 
-    if (!firstName || !lastName || !dni || !position || !hireDate || baseSalary === undefined) {
-      throw new AppError(
-        'Nombre, Apellido, DNI, Puesto, Fecha de ingreso y Sueldo básico son requeridos',
-        400,
-      );
+    if (!firstName || !lastName || !dni) {
+      throw new AppError('Nombre, Apellido y DNI/CUIT son requeridos', 400);
     }
 
-    const existing = await prisma.employee.findUnique({ where: { dni } });
+    const cleanDni = dni.trim();
+    const existing = await prisma.employee.findUnique({ where: { dni: cleanDni } });
     if (existing) {
       throw new AppError('Ya existe un empleado registrado con ese DNI', 400);
     }
 
-    const normalizedBaseSalary = roundToTwoDecimals(baseSalary);
+    const normalizedBaseSalary = roundToTwoDecimals(input.baseSalary ?? 0);
     if (normalizedBaseSalary.lt(0)) {
       throw new AppError('El sueldo básico no puede ser negativo', 400);
     }
+
+    const employmentType = input.employmentType === 'MONOTRIBUTISTA' ? 'MONOTRIBUTISTA' : 'DEPENDENCIA';
+    const vacationDaysPerYear =
+      employmentType === 'MONOTRIBUTISTA'
+        ? 0
+        : Math.max(0, Math.min(90, Number(input.vacationDaysPerYear ?? 0) || 0));
 
     const parsedUserId =
       input.userId !== undefined && input.userId !== null && input.userId !== ''
@@ -140,14 +166,16 @@ export const employeeService = {
       data: {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        dni: dni.trim(),
-        cuil: input.cuil || null,
+        dni: cleanDni,
+        cuil: input.cuil ? input.cuil.trim() : null,
         email: input.email || null,
         phone: input.phone || null,
         address: input.address || null,
-        position: position.trim(),
+        position: (input.position || 'Empleado').trim(),
         department: input.department || 'OPERACIONES',
-        hireDate: new Date(hireDate),
+        employmentType,
+        vacationDaysPerYear,
+        hireDate: input.hireDate ? new Date(input.hireDate) : new Date(),
         baseSalary: normalizedBaseSalary.toNumber(),
         paymentMethod: (input.paymentMethod as PaymentMethod) || PaymentMethod.BANK_TRANSFER,
         cbuAlias: input.cbuAlias || null,
@@ -188,8 +216,15 @@ export const employeeService = {
 
     const data: Record<string, any> = { ...rawData };
     if (data.hireDate) data.hireDate = new Date(data.hireDate);
+    else if (data.hireDate === '' || data.hireDate === null) delete data.hireDate;
     if (data.birthDate) data.birthDate = new Date(data.birthDate);
     else if (data.birthDate === '') data.birthDate = null;
+
+    if (data.employmentType === 'MONOTRIBUTISTA') {
+      data.vacationDaysPerYear = 0;
+    } else if (data.vacationDaysPerYear !== undefined) {
+      data.vacationDaysPerYear = Math.max(0, Math.min(90, Number(data.vacationDaysPerYear) || 0));
+    }
 
     if (data.baseSalary !== undefined) {
       const salaryDec = roundToTwoDecimals(data.baseSalary);

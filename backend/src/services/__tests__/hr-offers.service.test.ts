@@ -4,10 +4,10 @@ const { mockTx, mockPrisma } = vi.hoisted(() => {
   const tx = {
     cashDrawer: { findUnique: vi.fn() },
     expenseCategory: { findUnique: vi.fn(), create: vi.fn() },
-    transaction: { create: vi.fn() },
-    bankAccount: { update: vi.fn() },
-    expense: { create: vi.fn() },
-    salaryAdvance: { create: vi.fn(), findMany: vi.fn(), update: vi.fn() },
+    transaction: { create: vi.fn(), delete: vi.fn() },
+    bankAccount: { findUnique: vi.fn(), update: vi.fn() },
+    expense: { create: vi.fn(), deleteMany: vi.fn() },
+    salaryAdvance: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     payroll: { create: vi.fn() },
     offerCampaignItem: { upsert: vi.fn() },
   };
@@ -92,8 +92,9 @@ describe('HR & Offers Services (Decimal.js, Atomic Tx & Sanitized User Selects)'
     expect(created.baseSalary).toBe(850000.56);
   });
 
-  it('executes createAdvance atomically inside prisma.$transaction and decrements bank balance', async () => {
+  it('executes createAdvance atomically inside prisma.$transaction and decrements bank balance in integer pesos', async () => {
     mockPrisma.employee.findUnique.mockResolvedValue({ id: 5, firstName: 'Luis', lastName: 'Gomez' });
+    mockTx.bankAccount.findUnique.mockResolvedValue({ id: 3 });
     mockTx.expenseCategory.findUnique.mockResolvedValue({ id: 10, name: 'Sueldos' });
     mockTx.transaction.create.mockResolvedValue({ id: 99 });
     mockTx.salaryAdvance.create.mockImplementation(async ({ data }: any) => ({ id: 44, ...data }));
@@ -109,11 +110,32 @@ describe('HR & Offers Services (Decimal.js, Atomic Tx & Sanitized User Selects)'
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
     expect(mockTx.bankAccount.update).toHaveBeenCalledWith({
       where: { id: 3 },
-      data: { balance: { decrement: 25000.46 } },
+      data: { balance: { decrement: 25000 } },
     });
     expect(mockTx.expense.create).toHaveBeenCalledTimes(1);
-    expect(result.amount).toBe(25000.46);
+    expect(result.amount).toBe(25000);
     expect(result.transactionId).toBe(99);
+  });
+
+  it('reverses bank balance and removes linked records on deleteAdvance', async () => {
+    mockTx.salaryAdvance.findUnique.mockResolvedValue({
+      id: 44,
+      amount: 15000,
+      bankAccountId: 3,
+      cashDrawerId: null,
+      cashDrawer: null,
+      transactionId: 99,
+    });
+
+    const deleted = await salaryAdvanceService.deleteAdvance(44);
+    expect(deleted).toEqual({ id: 44 });
+    expect(mockTx.bankAccount.update).toHaveBeenCalledWith({
+      where: { id: 3 },
+      data: { balance: { increment: 15000 } },
+    });
+    expect(mockTx.expense.deleteMany).toHaveBeenCalledWith({ where: { transactionId: 99 } });
+    expect(mockTx.salaryAdvance.delete).toHaveBeenCalledWith({ where: { id: 44 } });
+    expect(mockTx.transaction.delete).toHaveBeenCalledWith({ where: { id: 99 } });
   });
 
   it('calculates seller 1.5% commission in integer pesos and sanitizes user select in calculatePayroll', async () => {

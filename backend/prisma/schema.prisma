@@ -1086,9 +1086,11 @@ model Employee {
   email            String?
   phone            String?
   address          String?
-  position         String    // Ej: "Chofer / Repartidor", "Vendedor Preventista", "Operario Depósito", "Administrativo"
-  department       String    @default("OPERACIONES") // "LOGISTICA", "VENTAS", "DEPOSITO", "ADMINISTRACION"
-  hireDate         DateTime
+  position            String    // Ej: "Chofer / Repartidor", "Vendedor Preventista", "Operario Depósito", "Administrativo"
+  department          String    @default("OPERACIONES") // "LOGISTICA", "VENTAS", "DEPOSITO", "ADMINISTRACION"
+  employmentType      String    @default("DEPENDENCIA") // "DEPENDENCIA" | "MONOTRIBUTISTA"
+  vacationDaysPerYear Int       @default(0)
+  hireDate            DateTime
   baseSalary       Decimal   @db.Decimal(12, 2)
   paymentMethod    PaymentMethod @default(BANK_TRANSFER)
   cbuAlias         String?
@@ -1181,7 +1183,8 @@ model EmployeeVacation {
   id          Int      @id @default(autoincrement())
   employeeId  Int
   employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  year        Int      // Año lectivo (ej. 2026)
+  year        Int      // Año trabajado (ej. 2025 -> goce 2026)
+  tramo       Int      @default(1) // 1 = Tramo 1, 2 = Tramo 2
   type        String   @default("VACATION") // "VACATION", "SICK_LEAVE", "STUDY", "PERSONAL", "PATERNITY_MATERNITY", "OTHER"
   startDate   DateTime
   endDate     DateTime

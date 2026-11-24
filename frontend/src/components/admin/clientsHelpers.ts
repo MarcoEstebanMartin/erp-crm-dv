@@ -4,6 +4,7 @@ export const CLIENTS_BATCH_STEP = 80;
 export const PERSONA_ROLE_TABS = [
   { id: 'client', label: 'Clientes' },
   { id: 'providers', label: 'Proveedores' },
+  { id: 'employees', label: 'Empleados', adminOnly: true },
   { id: 'seller', label: 'Vendedores' },
   { id: 'commission_agent', label: 'Comisionistas' },
   { id: 'debtors_by_city', label: 'Deudores' },
