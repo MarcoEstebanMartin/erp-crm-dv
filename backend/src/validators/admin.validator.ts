@@ -68,6 +68,7 @@ export const AUDIT_MODULE_KEYS = [
   'SALES',
   'CLIENTS',
   'STOCK_CATALOG',
+  'PRICES',
   'FINANCE',
   'LOGISTICS',
   'SYSTEM',

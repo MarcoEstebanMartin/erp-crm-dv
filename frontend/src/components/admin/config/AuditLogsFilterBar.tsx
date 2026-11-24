@@ -55,6 +55,27 @@ export default function AuditLogsFilterBar({
     });
   };
 
+  const isPriceChangesActive = draftFilters.module === 'PRICES';
+
+  const togglePriceChangesPreset = () => {
+    if (isPriceChangesActive) {
+      applyPatch({ module: '' });
+      return;
+    }
+    if (!draftFilters.startDate && !draftFilters.endDate) {
+      const today = new Date();
+      const start = new Date(today);
+      start.setDate(today.getDate() - 6);
+      applyPatch({
+        module: 'PRICES',
+        startDate: toLocalIsoDate(start),
+        endDate: toLocalIsoDate(today),
+      });
+      return;
+    }
+    applyPatch({ module: 'PRICES' });
+  };
+
   return (
     <search
       aria-label="Filtrar registros de auditoría"
@@ -205,6 +226,22 @@ export default function AuditLogsFilterBar({
             </button>
             <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.78rem' }} onClick={() => applyDatePreset(29)}>
               30 días
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              aria-pressed={isPriceChangesActive}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                ...(isPriceChangesActive
+                  ? { backgroundColor: '#111827', color: '#FFFFFF', borderColor: '#111827' }
+                  : {}),
+              }}
+              onClick={togglePriceChangesPreset}
+            >
+              Cambios de precios
             </button>
           </div>
 

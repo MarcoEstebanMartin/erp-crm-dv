@@ -319,7 +319,7 @@ export function translatePaymentMethod(methodRaw?: string | null): string {
 }
 
 export interface AuditModuleOption {
-  value: 'SALES' | 'CLIENTS' | 'STOCK_CATALOG' | 'FINANCE' | 'LOGISTICS' | 'SYSTEM';
+  value: 'SALES' | 'CLIENTS' | 'STOCK_CATALOG' | 'PRICES' | 'FINANCE' | 'LOGISTICS' | 'SYSTEM';
   label: string;
 }
 
@@ -327,6 +327,7 @@ export const AUDIT_MODULES: AuditModuleOption[] = [
   { value: 'SALES', label: 'Ventas' },
   { value: 'CLIENTS', label: 'Clientes' },
   { value: 'STOCK_CATALOG', label: 'Stock y Catálogo' },
+  { value: 'PRICES', label: 'Cambios de precios' },
   { value: 'FINANCE', label: 'Finanzas' },
   { value: 'LOGISTICS', label: 'Logística' },
   { value: 'SYSTEM', label: 'Sistema' },

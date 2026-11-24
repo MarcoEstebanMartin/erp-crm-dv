@@ -1,11 +1,15 @@
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
 import {
+  AUDIT_MODULES,
   getAllKnownAuditActionCodes,
   getAllKnownEntityTypeCodes,
   resolveAuditBadge,
   translateEntityType,
 } from '../auditLogDictionary';
 import { formatAuditMessage, formatAuditPesos } from '../auditLogFormatter';
+import AuditLogsFilterBar from '../AuditLogsFilterBar';
 
 const BACKEND_ACTION_CODES = [
   'LOGIN', 'LOGIN_FAILED', 'CHANGE_OWN_PASSWORD',
@@ -153,5 +157,35 @@ describe('Auditoría en Español y Contexto Real (Paso 1)', () => {
     expect(formatAuditPesos('48199.80')).toBe('$48.200');
     expect(formatAuditPesos('48199.49')).toBe('$48.199');
     expect(formatAuditPesos('-1500.50')).toBe('-$1.501');
+  });
+
+  it('incluye módulo Cambios de precios, botón rápido en AuditLogsFilterBar y diff completo de Lista A/B/C', () => {
+    expect(AUDIT_MODULES.some((m) => m.value === 'PRICES' && m.label === 'Cambios de precios')).toBe(true);
+
+    const msg = formatAuditMessage({
+      action: 'UPDATE_PRODUCT',
+      entityType: 'Product',
+      entityId: 1626,
+      oldValues: { listPrice: 10000, listPriceB: 9500, listPriceC: 9000 },
+      newValues: { listPrice: 11000, listPriceB: 10450, listPriceC: 9900 },
+      resolvedContext: { entityLabel: 'Queso Cremoso (SKU 0001)' },
+    });
+    expect(msg).toBe(
+      'Modificó Queso Cremoso (SKU 0001): Lista A: $10.000 → $11.000 · Lista B: $9.500 → $10.450 · Lista C: $9.000 → $9.900',
+    );
+
+    const noop = () => {};
+    const html = renderToStaticMarkup(
+      React.createElement(AuditLogsFilterBar, {
+        draftFilters: { module: 'PRICES' },
+        users: [],
+        hasActiveFilters: true,
+        onDraftChange: noop,
+        onApply: noop,
+        onReset: noop,
+      }),
+    );
+    expect(html).toContain('Cambios de precios');
+    expect(html).toContain('aria-pressed="true"');
   });
 });

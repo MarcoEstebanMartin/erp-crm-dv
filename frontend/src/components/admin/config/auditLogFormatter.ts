@@ -255,13 +255,16 @@ function formatCatalogAndPrices(action: string, log: any, oldV: Record<string, a
     if (oldV.listPriceB !== undefined && newV.listPriceB !== undefined && String(oldV.listPriceB) !== String(newV.listPriceB)) {
       diffs.push(`Lista B: ${formatAuditPesos(oldV.listPriceB)} → ${formatAuditPesos(newV.listPriceB)}`);
     }
+    if (oldV.listPriceC !== undefined && newV.listPriceC !== undefined && String(oldV.listPriceC) !== String(newV.listPriceC)) {
+      diffs.push(`Lista C: ${formatAuditPesos(oldV.listPriceC)} → ${formatAuditPesos(newV.listPriceC)}`);
+    }
     if (oldV.costPrice !== undefined && newV.costPrice !== undefined && String(oldV.costPrice) !== String(newV.costPrice)) {
       diffs.push(`Costo: ${formatAuditPesos(oldV.costPrice)} → ${formatAuditPesos(newV.costPrice)}`);
     }
     if (oldV.isActive !== undefined && newV.isActive !== undefined && oldV.isActive !== newV.isActive) {
       diffs.push(newV.isActive ? 'Activado' : 'Pausado');
     }
-    return diffs.length > 0 ? `Modificó ${target}: ${diffs.slice(0, 3).join(' · ')}` : `Modificó ${target}`;
+    return diffs.length > 0 ? `Modificó ${target}: ${diffs.slice(0, 4).join(' · ')}` : `Modificó ${target}`;
   }
 
   if (action === 'BULK_UPDATE_PRICES') {

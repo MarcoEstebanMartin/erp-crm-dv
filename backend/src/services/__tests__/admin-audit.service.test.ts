@@ -173,6 +173,28 @@ describe('AdminAuditSubService — Búsqueda, Filtros y Esquema (Paso 2)', () =>
     expect(serialized).toContain('Employee');
   });
 
+  it('filtra módulo PRICES incluyendo acciones masivas y solo UPDATE_PRODUCT con cambio real de precio', async () => {
+    const parsed = getAuditLogsQuerySchema.safeParse({
+      query: { module: 'PRICES', startDate: '2026-11-18', endDate: '2026-11-24' },
+    });
+    expect(parsed.success).toBe(true);
+
+    const rawSpy = vi.spyOn(prisma, '$queryRaw').mockResolvedValue([{ id: 501 }, { id: 502 }] as any);
+    const where = (await buildAuditLogWhere({
+      module: 'PRICES',
+      startDate: '2026-11-18',
+      endDate: '2026-11-24',
+    })) as any;
+
+    expect(rawSpy).toHaveBeenCalledTimes(1);
+    const serialized = JSON.stringify(where);
+    expect(serialized).toContain('BULK_UPDATE_PRICES');
+    expect(serialized).toContain('IMPORT_PRODUCTS_CSV');
+    expect(serialized).toContain('REVERT_PRICES_UNDO');
+    expect(serialized).toContain('501');
+    expect(serialized).toContain('502');
+  });
+
   it('resuelve búsqueda de texto por producto, JSONB parametrizado y palabras clave en español (ubicación)', async () => {
     const productFindSpy = vi.spyOn(prisma.product, 'findMany').mockResolvedValue([{ id: 1626 }] as any);
     const rawSpy = vi.spyOn(prisma, '$queryRaw').mockResolvedValue([{ id: 901 }] as any);

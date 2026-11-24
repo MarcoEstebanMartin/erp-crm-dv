@@ -127,6 +127,6 @@ describe('Inspección Detallada y Módulos de Auditoría (Paso 2)', () => {
       { key: 'isActive', label: 'Estado activo', before: 'Activo', after: 'Inactivo' },
     ]);
     expect(resolveAuditModuleLabel('TOGGLE_USER_STATUS', 'User')).toBe('Sistema');
-    expect(AUDIT_MODULES).toHaveLength(6);
+    expect(AUDIT_MODULES).toHaveLength(7);
   });
 });

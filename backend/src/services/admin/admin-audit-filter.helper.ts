@@ -51,6 +51,12 @@ const MODULE_WHERE_MAP: Record<AuditModuleKey, Prisma.AuditLogWhereInput> = {
       { entityType: { in: ['Product', 'ProductLot', 'WarehouseCell', 'Rubro', 'WeeklyPromo', 'PRODUCTS', 'PRICES'] } },
     ],
   },
+  PRICES: {
+    OR: [
+      { action: { in: ['BULK_UPDATE_PRICES', 'IMPORT_PRODUCTS_CSV', 'REVERT_PRICES_UNDO'] } },
+      { action: 'EXCEL_IMPORT', entityType: { in: ['PRICES', 'PRODUCTS'] } },
+    ],
+  },
   FINANCE: {
     OR: [
       {
@@ -303,10 +309,58 @@ async function buildSearchOrConditions(rawSearch: string): Promise<Prisma.AuditL
   return conditions;
 }
 
+async function findPriceChangeAuditIds(
+  dateRange: { gte?: Date; lte?: Date },
+  userId?: number,
+): Promise<number[]> {
+  const rawFn = (prisma as any)?.$queryRaw;
+  if (typeof rawFn !== 'function') return [];
+
+  try {
+    const extraFilters: Prisma.Sql[] = [];
+    if (dateRange.gte) extraFilters.push(Prisma.sql`AND "createdAt" >= ${dateRange.gte}`);
+    if (dateRange.lte) extraFilters.push(Prisma.sql`AND "createdAt" <= ${dateRange.lte}`);
+    if (userId && Number.isInteger(userId) && userId > 0) {
+      extraFilters.push(Prisma.sql`AND "userId" = ${userId}`);
+    }
+    const extraSql = extraFilters.length > 0 ? Prisma.join(extraFilters, ' ') : Prisma.empty;
+
+    const query = Prisma.sql`
+      SELECT id FROM "AuditLog"
+      WHERE (
+        (
+          "action" = 'UPDATE_PRODUCT'
+          AND (
+            COALESCE("oldValues"->>'listPrice', '') IS DISTINCT FROM COALESCE("newValues"->>'listPrice', '')
+            OR COALESCE("oldValues"->>'listPriceB', '') IS DISTINCT FROM COALESCE("newValues"->>'listPriceB', '')
+            OR COALESCE("oldValues"->>'listPriceC', '') IS DISTINCT FROM COALESCE("newValues"->>'listPriceC', '')
+            OR COALESCE("oldValues"->>'costPrice', '') IS DISTINCT FROM COALESCE("newValues"->>'costPrice', '')
+            OR COALESCE("oldValues"->>'profitMargin', '') IS DISTINCT FROM COALESCE("newValues"->>'profitMargin', '')
+          )
+        )
+        OR (
+          "action" = 'UPDATE_RUBRO'
+          AND COALESCE("oldValues"->>'profitMargin', '') IS DISTINCT FROM COALESCE("newValues"->>'profitMargin', '')
+        )
+      )
+      ${extraSql}
+      ORDER BY "createdAt" DESC
+      LIMIT 2000
+    `;
+    const rows = await prisma.$queryRaw<Array<{ id: number }>>(query);
+    return Array.isArray(rows)
+      ? rows.map((r) => Number(r?.id)).filter((id) => Number.isInteger(id) && id > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Construye la cláusula Prisma where para GET /api/admin/audit-logs (undefined si no hay filtros). */
 export async function buildAuditLogWhere(filters?: AuditLogFilters): Promise<Prisma.AuditLogWhereInput | undefined> {
   if (!filters) return undefined;
   const andConditions: Prisma.AuditLogWhereInput[] = [];
+  const { gte, lte } = parseArgentinaDayRange(filters.startDate, filters.endDate);
 
   if (filters.userId && Number.isInteger(filters.userId) && filters.userId > 0) {
     andConditions.push({ userId: filters.userId });
@@ -314,11 +368,17 @@ export async function buildAuditLogWhere(filters?: AuditLogFilters): Promise<Pri
   if (filters.status) {
     andConditions.push({ status: filters.status });
   }
-  if (filters.module && MODULE_WHERE_MAP[filters.module]) {
+  if (filters.module === 'PRICES') {
+    const priceChangeIds = await findPriceChangeAuditIds({ gte, lte }, filters.userId);
+    const priceOr: Prisma.AuditLogWhereInput[] = [
+      ...(MODULE_WHERE_MAP.PRICES.OR ?? []),
+      ...(priceChangeIds.length > 0 ? [{ id: { in: priceChangeIds } }] : []),
+    ];
+    andConditions.push({ OR: priceOr });
+  } else if (filters.module && MODULE_WHERE_MAP[filters.module]) {
     andConditions.push(MODULE_WHERE_MAP[filters.module]);
   }
 
-  const { gte, lte } = parseArgentinaDayRange(filters.startDate, filters.endDate);
   if (gte || lte) {
     andConditions.push({ createdAt: { ...(gte ? { gte } : {}), ...(lte ? { lte } : {}) } });
   }
