@@ -5,6 +5,7 @@ import { useConfirm } from '../../context/ConfirmContext';
 import { isBankReconcilableTx, parseMercadoPagoCsv, resolveMpRowMatchStatus } from './finanzasHelpers';
 import { FinanzasReconErpPanel } from './FinanzasReconErpPanel';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
+import { runInControlledBatches } from '../../utils/fulfillmentCardMeta.helper';
 
 interface FinanzasBankReconciliationModalProps {
   isOpen: boolean;
@@ -116,7 +117,7 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
     if (exacts.length === 0 || !(await confirm(`¿Conciliar las ${exacts.length} transferencias exactas en lote?`))) return;
     await runReconAction(async () => {
       const bankIdNum = Number(reconBankId) || undefined;
-      await Promise.all(exacts.map((x) => api.verifyTransaction(x.m.tx.id, true, undefined, bankIdNum)));
+      await runInControlledBatches(exacts, (x) => api.verifyTransaction(x.m.tx.id, true, undefined, bankIdNum));
       setReconciledRows((prev) => { const next = new Set(prev); exacts.forEach((x) => next.add(x.row.id)); return next; });
     }, 'Error al conciliar en lote.');
   };
@@ -126,7 +127,7 @@ export const FinanzasBankReconciliationModal: React.FC<FinanzasBankReconciliatio
     if (ids.length === 0 || !(await confirm(`¿Verificar las ${ids.length} transferencias seleccionadas?`))) return;
     await runReconAction(async () => {
       const bankIdNum = Number(reconBankId) || undefined;
-      await Promise.all(ids.map((id) => api.verifyTransaction(id, true, undefined, bankIdNum)));
+      await runInControlledBatches(ids, (id) => api.verifyTransaction(id, true, undefined, bankIdNum));
       setSelectedTxs(new Set());
     }, 'Error al verificar transferencias seleccionadas.');
   };

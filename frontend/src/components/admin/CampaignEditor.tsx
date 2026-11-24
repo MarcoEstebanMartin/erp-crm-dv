@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Plus, Trash2, Tag, Wand2, AlertTriangle, TrendingDown, ArrowUp, ArrowDown, RefreshCw, Edit2 } from 'lucide-react';
 import { api, API_BASE_URL } from '../../utils/api';
+import { runInControlledBatches } from '../../utils/fulfillmentCardMeta.helper';
 import ConfirmModal from '../modals/ConfirmModal';
 import PromptModal from '../modals/PromptModal';
 
@@ -598,12 +599,12 @@ export default function CampaignEditor({ campaignId, onBack }: CampaignEditorPro
                                   onConfirm: async () => {
                                     setConfirmModal(prev => ({ ...prev, isOpen: false }));
                                     try {
-                                      await Promise.all(campaign.items.map(item => 
+                                      await runInControlledBatches(campaign.items, (item) =>
                                         fetch(`${API_BASE_URL}/offers/${campaignId}/items/${item.id}`, {
                                           method: 'DELETE',
                                           credentials: 'include',
-                                        })
-                                      ));
+                                        }),
+                                      );
                                       fetchCampaign();
                                     } catch (error) {
                                       console.error('Error emptying campaign:', error);
