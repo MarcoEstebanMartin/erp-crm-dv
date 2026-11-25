@@ -97,3 +97,20 @@ export const getOpportunitiesReportQuerySchema = z.object({
       .or(z.literal('')),
   }),
 });
+
+export const getTripProfitabilityQuerySchema = z.object({
+  query: z.object({
+    startDate: isoDateOptional,
+    endDate: isoDateOptional,
+  }),
+});
+
+export const updateRouteTripCostsSchema = z.object({
+  params: z.object({
+    routeId: z.string().trim().regex(/^\d+$/, 'ID de hoja de ruta inválido'),
+  }),
+  body: z.object({
+    tripKm: z.union([z.number().min(0).max(50000), z.null()]).optional(),
+    tripExpenses: z.number().min(0).max(100000000).optional(),
+  }),
+});

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type FC, type KeyboardEvent } from 'react';
-import { MapPin, Package, Users } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type FC, type KeyboardEvent } from 'react';
+import { MapPin, Package, Truck, Users } from 'lucide-react';
 import { api } from '../utils/api';
 import { ProfitabilityFiltersAndKpis } from './reports/profitability/ProfitabilityFiltersAndKpis';
 import { ProfitabilityTablesAndMatrix } from './reports/profitability/ProfitabilityTablesAndMatrix';
+import { ProfitabilityTripsTable } from './reports/profitability/ProfitabilityTripsTable';
 import { computeArDatePreset } from './reports/reportDateHelpers';
 
 interface ProfitabilityTabProps {
@@ -10,7 +11,7 @@ interface ProfitabilityTabProps {
   rubros?: Array<{ id: number; name: string }>;
 }
 
-type SubViewId = 'clients' | 'products' | 'cities';
+type SubViewId = 'clients' | 'products' | 'cities' | 'trips';
 type ClassificationFilter = 'ALL' | 'LOW_MARGIN' | 'STAR' | 'VOLUME' | 'OPPORTUNITY';
 
 export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubros = [] }) => {
@@ -27,6 +28,8 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const [reportData, setReportData] = useState<any>(null);
+  const [tripData, setTripData] = useState<any>(null);
+  const [tripsLoading, setTripsLoading] = useState<boolean>(false);
   const [sellerOptions, setSellerOptions] = useState<Array<{ id: number; username: string }>>(sellers);
   const [rubroOptions, setRubroOptions] = useState<Array<{ id: number; name: string }>>(rubros);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -100,6 +103,33 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
     };
   }, [startDate, endDate, selectedSeller, selectedRubro, selectedBillingType]);
 
+  const loadTripReport = useCallback(async () => {
+    setTripsLoading(true);
+    try {
+      const data = await api.getTripProfitabilityReport({
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      });
+      setTripData(data);
+    } catch (error) {
+      console.error('Error al cargar rentabilidad por viaje:', error);
+    } finally {
+      setTripsLoading(false);
+    }
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    loadTripReport();
+  }, [loadTripReport]);
+
+  const handleSaveTripCosts = async (
+    routeId: number,
+    payload: { tripKm: number | null; tripExpenses: number },
+  ) => {
+    await api.updateRouteTripCosts(routeId, payload);
+    await loadTripReport();
+  };
+
   const formatCurrency = (val: number): string =>
     new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -125,10 +155,22 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
     ct.city.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  const filteredTrips = (tripData?.trips || []).filter((t: any) => {
+    const q = searchTerm.toLowerCase();
+    if (!q) return true;
+    return (
+      t.routeName.toLowerCase().includes(q) ||
+      t.driverName.toLowerCase().includes(q) ||
+      t.vehiclePlate.toLowerCase().includes(q) ||
+      (t.cities || []).some((c: string) => c.toLowerCase().includes(q))
+    );
+  });
+
   const subTabs: Array<{ id: SubViewId; label: string; Icon: typeof Users }> = [
     { id: 'clients', label: `Clientes (${reportData?.clients?.length || 0})`, Icon: Users },
     { id: 'products', label: `Productos (${reportData?.products?.length || 0})`, Icon: Package },
     { id: 'cities', label: `Localidades (${reportData?.cities?.length || 0})`, Icon: MapPin },
+    { id: 'trips', label: `Viajes (${tripData?.trips?.length || 0})`, Icon: Truck },
   ];
 
   const handleSubTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
@@ -220,7 +262,9 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
                   ? 'Buscar cliente o localidad...'
                   : subView === 'cities'
                     ? 'Buscar localidad...'
-                    : 'Buscar SKU o producto...'
+                    : subView === 'trips'
+                      ? 'Buscar ruta, chofer o patente...'
+                      : 'Buscar SKU o producto...'
               }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -234,13 +278,23 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
       </div>
 
       <div role="tabpanel" aria-labelledby={`prof-tab-${subView}`}>
-        <ProfitabilityTablesAndMatrix
-          subView={subView}
-          filteredClients={filteredClients}
-          filteredProducts={filteredProducts}
-          filteredCities={filteredCities}
-          formatCurrency={formatCurrency}
-        />
+        {subView === 'trips' ? (
+          <ProfitabilityTripsTable
+            trips={filteredTrips}
+            kpis={tripData?.kpis}
+            loading={tripsLoading}
+            formatCurrency={formatCurrency}
+            onSaveTripCosts={handleSaveTripCosts}
+          />
+        ) : (
+          <ProfitabilityTablesAndMatrix
+            subView={subView}
+            filteredClients={filteredClients}
+            filteredProducts={filteredProducts}
+            filteredCities={filteredCities}
+            formatCurrency={formatCurrency}
+          />
+        )}
       </div>
     </div>
   );

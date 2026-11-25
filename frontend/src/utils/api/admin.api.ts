@@ -28,6 +28,24 @@ export const adminApi = {
     return await request(url);
   },
 
+  getTripProfitabilityReport: async (params?: { startDate?: string; endDate?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    const queryString = query.toString();
+    return await request(`/admin/reports/trips${queryString ? `?${queryString}` : ''}`);
+  },
+
+  updateRouteTripCosts: async (
+    routeId: number,
+    payload: { tripKm: number | null; tripExpenses: number },
+  ) => {
+    return await request(`/admin/reports/trips/${routeId}/costs`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  },
+
   getExecutivePdfReport: async (startDate?: string, endDate?: string) => {
     const query = new URLSearchParams();
     if (startDate) query.append('startDate', startDate);
