@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import { api } from '../../utils/api';
 import {
   type FieldReceiptDTO,
   type OfficeReceiptDTO,
@@ -143,7 +144,7 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
     }
   };
 
-  const userRole = typeof window !== 'undefined' ? localStorage.getItem('user_role') || '' : '';
+  const userRole = api.getCurrentUser()?.role || '';
 
   const unifiedRows = useMemo<UnifiedReceiptRow[]>(() => {
     const officeRows: UnifiedReceiptRow[] = officeReceipts.map((r) => ({

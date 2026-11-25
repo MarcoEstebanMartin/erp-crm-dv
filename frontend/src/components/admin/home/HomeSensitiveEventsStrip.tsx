@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { apiClient } from '../../../api/apiClient';
+import { api } from '../../../utils/api';
 
 interface SensitiveEventItem {
   id: string;
@@ -44,8 +45,7 @@ function formatAmount(amount: number, signed = false): string {
 }
 
 export const HomeSensitiveEventsStrip: React.FC = () => {
-  const isAdmin =
-    typeof window !== 'undefined' && localStorage.getItem('user_role') === 'ADMIN';
+  const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
   const [days, setDays] = useState<1 | 7>(7);
   const [data, setData] = useState<SensitiveEventsPayload | null>(null);
   const [hasAnyInWeek, setHasAnyInWeek] = useState(false);

@@ -33,7 +33,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
 
-  const userRole = localStorage.getItem('user_role') || '';
+  const userRole = api.getCurrentUser()?.role || '';
   const isAdmin = userRole === 'ADMIN';
   const isAdminOrFacturacion = isAdmin || userRole === 'FACTURACION';
 
