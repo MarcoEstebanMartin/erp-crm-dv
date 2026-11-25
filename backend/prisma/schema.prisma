@@ -231,6 +231,12 @@ model Product {
   imageUrl          String?
   commercialCategory String?
   storeHighlight     String?
+  catalogVarieties   String?
+  catalogMinQtyLabel String?
+  catalogBadge       String?
+  catalogShowOldPrice Boolean  @default(false)
+  catalogOldPrice    Decimal?  @db.Decimal(12, 2)
+  catalogVisible     Boolean   @default(true)
   pickingZone        String?
   defaultLocation    String?
   previousCostPrice  Decimal? @db.Decimal(12, 2)
@@ -1619,6 +1625,24 @@ model PersonaNote {
 
   @@index([personaId, isPinned, createdAt])
   @@index([authorId])
+}
+
+// ==========================================
+// CATALOG STUDIO (FOLLETO & CATÁLOGO PDF)
+// ==========================================
+
+model CatalogStudioState {
+  id             Int      @id @default(autoincrement())
+  key            String   @unique @default("default")
+  title          String   @default("OFERTAS SEMANALES")
+  subtitle       String?
+  hideOutOfStock Boolean  @default(false)
+  categoryOrder  Json?
+  itemOrder      Json?
+  combos         Json?
+  updatedById    Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 
