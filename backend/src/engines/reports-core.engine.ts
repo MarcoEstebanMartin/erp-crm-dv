@@ -71,6 +71,34 @@ export function resolveItemHistoricalMetrics(item: ReportLineItemInput) {
   };
 }
 
+export function resolveOrderCommercialRevenueDec(order: {
+  totalAmount: NumericInput;
+  items?: ReportLineItemInput[] | null;
+}): Decimal {
+  if (order.items && order.items.length > 0) {
+    let sum = new Decimal(0);
+    for (const item of order.items) {
+      sum = sum.plus(resolveItemHistoricalMetrics(item).itemRevenueDec);
+    }
+    return sum;
+  }
+  return roundToIntegerPeso(order.totalAmount || 0);
+}
+
+export function resolveCreditNoteCommercialRevenueDec(cn: {
+  totalAmount: NumericInput;
+  items?: ReportLineItemInput[] | null;
+}): Decimal {
+  if (cn.items && cn.items.length > 0) {
+    let sum = new Decimal(0);
+    for (const item of cn.items) {
+      sum = sum.plus(resolveItemHistoricalMetrics(item).itemRevenueDec);
+    }
+    return sum;
+  }
+  return roundToIntegerPeso(cn.totalAmount || 0);
+}
+
 export function classifyOrderModality(order: {
   deliveryMethod?: string | null;
   salesChannel?: string | null;
@@ -162,7 +190,7 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
   };
 
   for (const order of input.orders) {
-    const amountDec = roundToIntegerPeso(order.totalAmount || 0);
+    const amountDec = resolveOrderCommercialRevenueDec(order);
     let costDec = new Decimal(0);
     for (const item of order.items) costDec = costDec.plus(resolveItemHistoricalMetrics(item).itemCostDec);
     const cityBucket = getOrCreateCityBucket(order.persona?.city);
@@ -194,7 +222,7 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
 
   let creditNotesTotalDec = new Decimal(0);
   for (const cn of input.creditNotes) {
-    const cnAmountDec = roundToIntegerPeso(cn.totalAmount || 0);
+    const cnAmountDec = resolveCreditNoteCommercialRevenueDec(cn);
     creditNotesTotalDec = creditNotesTotalDec.plus(cnAmountDec);
 
     let cnCostDec = new Decimal(0);
@@ -278,7 +306,7 @@ export function computeFinancialSummaryMetrics(input: FinancialSummaryInput) {
       netSales: roundToIntegerPeso(netSalesDec).toNumber(),
       totalCost: roundToIntegerPeso(totalCostDec).toNumber(),
       grossProfit: roundToIntegerPeso(grossProfitDec).toNumber(),
-      grossMarginPct: computeMarginPercent(grossProfitDec, netSalesDec, 0),
+      grossMarginPct: computeMarginPercent(grossProfitDec, netSalesDec, 2),
       totalExpenses: totalExpensesIntDec.toNumber(),
       netProfit: roundToIntegerPeso(netProfitDec).toNumber(),
       netMarginPct: computeMarginPercent(netProfitDec, netSalesDec, 0),

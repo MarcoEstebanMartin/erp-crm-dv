@@ -163,7 +163,7 @@ export const ProfitabilityFiltersAndKpis: FC<ProfitabilityFiltersAndKpisProps> =
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px' }}>
           <div className="card" style={{ padding: '16px', backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Margen bruto</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Utilidad bruta</span>
               <TrendingUp size={15} color="#475569" aria-hidden="true" />
             </div>
             <div className="tabular-nums" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

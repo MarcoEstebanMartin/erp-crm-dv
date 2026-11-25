@@ -74,7 +74,7 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({
   const totalMargenBruto = currentReport?.summary?.grossProfit ?? Math.round(totalFacturado - totalCostoReal);
   const pctMargenBruto =
     currentReport?.summary?.grossMarginPct ??
-    (totalFacturado > 0 ? Math.round((totalMargenBruto / totalFacturado) * 100) : 0);
+    (totalFacturado > 0 ? Number(((totalMargenBruto / totalFacturado) * 100).toFixed(2)) : 0);
   const totalGastosReal = currentReport?.expenses?.total || 0;
   const totalMargenNeto = currentReport?.summary?.netProfit ?? Math.round(totalMargenBruto - totalGastosReal);
   const pctMargenConsolidado =
@@ -230,7 +230,7 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({
                   <th scope="col" style={{ padding: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Sucursal</th>
                   <th scope="col" style={{ padding: '10px', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'right' }}>Vendido</th>
                   <th scope="col" style={{ padding: '10px', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'right' }}>Costo (CMV)</th>
-                  <th scope="col" style={{ padding: '10px', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'right' }}>Margen bruto</th>
+                  <th scope="col" style={{ padding: '10px', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'right' }}>Utilidad bruta</th>
                   <th scope="col" style={{ padding: '10px', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'center' }}>Margen %</th>
                 </tr>
               </thead>

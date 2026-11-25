@@ -357,6 +357,49 @@ describe('Reportes Minimalistas — Motores Decimal.js, Fechas AR (-03:00), Nota
     expect(sumTotal).toBe(result.summary.netSales);
   });
 
+  it('computeFinancialSummaryMetrics y computeProfitabilityMetrics coinciden al peso y 2 decimales aunque haya percepciones', () => {
+    const sharedOrders = [
+      {
+        personaId: 1,
+        sellerId: 7,
+        billingType: 'OFFICIAL',
+        // totalAmount incluye $61.325 de percepciones IIBB/IVA sobre $9.923.694 de mercadería
+        totalAmount: 9985019,
+        persona: { id: 1, name: 'Cliente A', city: 'GENERAL VILLEGAS', sellerId: 7, seller: { username: 'diego' } },
+        items: [
+          {
+            productId: 100,
+            quantity: 100,
+            subtotal: 9923694,
+            unitCostSnapshot: '76968.17',
+            product: { id: 100, sku: 'S100', name: 'Producto A', isPesable: false, rubroId: 1, rubro: { id: 1, name: 'Lácteos' } },
+          },
+        ],
+      },
+    ];
+
+    const summary = computeFinancialSummaryMetrics({
+      orders: sharedOrders,
+      creditNotes: [],
+      expenses: [],
+      transactionsGrouped: [],
+      paymentMethodsGrouped: [],
+    });
+
+    const prof = computeProfitabilityMetrics({
+      orders: sharedOrders,
+      creditNotes: [],
+      filters: {},
+    });
+
+    expect(summary.summary.netSales).toBe(prof.kpis.totalRevenue);
+    expect(summary.summary.totalCost).toBe(prof.kpis.totalCost);
+    expect(summary.summary.grossProfit).toBe(prof.kpis.totalGrossProfit);
+    expect(summary.summary.grossMarginPct).toBe(prof.kpis.overallMarginPercent);
+    expect(summary.summary.grossProfit).toBe(2226877);
+    expect(summary.summary.grossMarginPct).toBe(22.44);
+  });
+
   it('crm.controller.ts no tiene mocks Coca Cola/Quilmes y admin.routes.ts expone /reports/pdf/employee/:userId sin rutas muertas', () => {
     const crmContent = fs.readFileSync(path.resolve(__dirname, '../controllers/crm.controller.ts'), 'utf8');
     expect(crmContent).not.toMatch(/Coca Cola|Quilmes/i);

@@ -31,7 +31,7 @@ export const ProfitabilityTablesAndMatrix: FC<ProfitabilityTablesAndMatrixProps>
               <th scope="col" style={{ padding: '10px 12px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Vendedor</th>
               <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Facturación ($)</th>
               <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Costo ($)</th>
-              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 700 }}>Margen bruto ($)</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 700 }}>Utilidad bruta ($)</th>
               <th scope="col" style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 700 }}>Margen (%)</th>
               <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Ticket prom.</th>
             </tr>
