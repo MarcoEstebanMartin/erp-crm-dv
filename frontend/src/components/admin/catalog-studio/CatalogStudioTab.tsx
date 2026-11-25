@@ -17,7 +17,7 @@ type FilterMode = 'all' | 'highlighted' | 'no_photo' | 'hidden';
 const CATALOG_STUDIO_QUERY_KEY = ['catalog-studio'] as const;
 
 const EMPTY_STATE: CatalogStudioState = {
-  title: 'OFERTAS SEMANALES', subtitle: '', hideOutOfStock: false,
+  title: 'OFERTAS SEMANALES', subtitle: '', hideOutOfStock: true,
   categoryOrder: [], itemOrder: [], combos: [], updatedAt: null,
 };
 
@@ -239,14 +239,14 @@ export default function CatalogStudioTab() {
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#52525b', marginLeft: 6, cursor: 'pointer' }}>
             <input
               type="checkbox"
-              checked={state.hideOutOfStock}
+              checked={!state.hideOutOfStock}
               onChange={(e) => {
-                const next = { ...state, hideOutOfStock: e.target.checked };
+                const next = { ...state, hideOutOfStock: !e.target.checked };
                 setState(next);
                 persistState(next);
               }}
             />
-            <span>Ocultar sin stock</span>
+            <span>Ver sin stock</span>
           </label>
         </div>
 

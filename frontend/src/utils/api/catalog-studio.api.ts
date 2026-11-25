@@ -64,13 +64,22 @@ export interface CatalogStudioResponse {
 }
 
 async function downloadPdfEndpoint(endpoint: string, fallbackName: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const url = `${API_BASE_URL}${endpoint}`;
+  let res = await fetch(url, {
     method: 'GET',
     credentials: 'include',
   });
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    res = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    throw new Error(errText || 'No se pudo generar el PDF.');
+    const cleanErr = errText.trim().startsWith('<') ? '' : errText.trim();
+    throw new Error(cleanErr || `Error HTTP ${res.status} al generar el PDF.`);
   }
   const blob = await res.blob();
   const disposition = res.headers.get('Content-Disposition') || '';

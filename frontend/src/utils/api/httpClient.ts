@@ -57,7 +57,7 @@ export async function request(path: string, options: RequestInit = {}) {
     );
   }
 
-  const response = await fetch(url, {
+  const fetchInit: RequestInit = {
     credentials: 'include',
     ...options,
     headers: {
@@ -65,7 +65,15 @@ export async function request(path: string, options: RequestInit = {}) {
       ...extraHeaders,
       ...incomingHeaders
     }
-  });
+  };
+
+  let response = await fetch(url, fetchInit);
+  const isTransientGatewayError =
+    response.status === 502 || response.status === 503 || response.status === 504;
+  if (isTransientGatewayError && (method === 'GET' || !skipIdempotency)) {
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    response = await fetch(url, fetchInit);
+  }
 
   if (
     !response.ok &&

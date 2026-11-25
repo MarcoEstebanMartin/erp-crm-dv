@@ -32,6 +32,10 @@ const server = app.listen(PORT, () => {
   startDeferredCaeRecoveryIfEnabled((orderId) => OrderBillingService.requestCaeForOrder(orderId));
 });
 
+// Evita 502 Bad Gateway por cierre prematuro de keep-alive frente al proxy de Railway (default Node: 5s)
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 66_000;
+
 const gracefulShutdown = createGracefulShutdown({
   server,
   disconnectDb: () => prisma.$disconnect(),

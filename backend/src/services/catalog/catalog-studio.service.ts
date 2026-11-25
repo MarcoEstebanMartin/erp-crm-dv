@@ -83,7 +83,7 @@ export class CatalogStudioService {
     return {
       title: row?.title || 'OFERTAS SEMANALES',
       subtitle: row?.subtitle || formatCurrentEditionSubtitle(),
-      hideOutOfStock: Boolean(row?.hideOutOfStock),
+      hideOutOfStock: row ? Boolean(row.hideOutOfStock) : true,
       categoryOrder: toStringArray(row?.categoryOrder),
       itemOrder: toStringArray(row?.itemOrder),
       combos: toCombosArray(row?.combos),
