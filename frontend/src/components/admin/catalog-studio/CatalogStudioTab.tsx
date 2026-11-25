@@ -1,4 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, FileText, Plus, Save, Search, Trash2, Edit3 } from 'lucide-react';
 import {
   catalogStudioApi,
@@ -13,51 +14,40 @@ import { CatalogComboDialog } from './CatalogComboDialog';
 import './catalogStudio.css';
 
 type FilterMode = 'all' | 'highlighted' | 'no_photo' | 'hidden';
+const CATALOG_STUDIO_QUERY_KEY = ['catalog-studio'] as const;
+
+const EMPTY_STATE: CatalogStudioState = {
+  title: 'OFERTAS SEMANALES', subtitle: '', hideOutOfStock: false,
+  categoryOrder: [], itemOrder: [], combos: [], updatedAt: null,
+};
 
 export default function CatalogStudioTab() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [state, setState] = useState<CatalogStudioState>({
-    title: 'OFERTAS SEMANALES',
-    subtitle: '',
-    hideOutOfStock: false,
-    categoryOrder: [],
-    itemOrder: [],
-    combos: [],
-    updatedAt: null,
+  const queryClient = useQueryClient();
+  const { data: studioData, isLoading: loading, error: queryError } = useQuery({
+    queryKey: CATALOG_STUDIO_QUERY_KEY,
+    queryFn: () => catalogStudioApi.getStudio(),
+    staleTime: 60_000,
   });
-  const [products, setProducts] = useState<CatalogStudioProduct[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+
+  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<CatalogStudioState>(() => studioData?.state ?? EMPTY_STATE);
+  const [products, setProducts] = useState<CatalogStudioProduct[]>(() => studioData?.products ?? []);
+  const categories = studioData?.canonicalCategories ?? [];
+
+  useEffect(() => {
+    if (studioData) { setState(studioData.state); setProducts(studioData.products); }
+    if (queryError) setError((queryError as Error)?.message || 'Error al cargar el catálogo.');
+  }, [studioData, queryError]);
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
 
   const [savingState, setSavingState] = useState(false);
-  const [savingProductId, setSavingProductId] = useState<number | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<'magazine' | 'resumen' | null>(null);
   const [editingProduct, setEditingProduct] = useState<CatalogStudioProduct | null>(null);
   const [comboDialogOpen, setComboDialogOpen] = useState(false);
   const [editingCombo, setEditingCombo] = useState<CatalogCombo | null>(null);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await catalogStudioApi.getStudio();
-      setState(data.state);
-      setProducts(data.products);
-      setCategories(data.canonicalCategories);
-    } catch (err: any) {
-      setError(err?.message || 'Error al cargar el catálogo.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const persistState = async (next: CatalogStudioState) => {
     setSavingState(true);
@@ -72,6 +62,9 @@ export default function CatalogStudioTab() {
         combos: next.combos,
       });
       setState(saved);
+      queryClient.setQueryData(CATALOG_STUDIO_QUERY_KEY, (prev: typeof studioData) =>
+        prev ? { ...prev, state: saved } : prev,
+      );
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el estado.');
     } finally {
@@ -81,32 +74,45 @@ export default function CatalogStudioTab() {
 
   const handlePatchProduct = useCallback(
     async (productId: number, payload: Parameters<typeof catalogStudioApi.patchProduct>[1]) => {
-      setSavingProductId(productId);
       setError(null);
+      let snapshot: CatalogStudioProduct[] = [];
+      const applyPatch = (list: CatalogStudioProduct[]) =>
+        list.map((p) => {
+          if (p.id !== productId) return p;
+          return {
+            ...p,
+            badge: payload.catalogBadge !== undefined ? payload.catalogBadge : p.badge,
+            varieties: payload.catalogVarieties !== undefined ? payload.catalogVarieties : p.varieties,
+            minQty: payload.catalogMinQtyLabel !== undefined ? payload.catalogMinQtyLabel : p.minQty,
+            showOldPrice: payload.catalogShowOldPrice ?? p.showOldPrice,
+            oldPrice:
+              payload.catalogOldPrice !== undefined
+                ? (payload.catalogOldPrice ?? p.previousListPrice)
+                : p.oldPrice,
+            catalogVisible: payload.catalogVisible ?? p.catalogVisible,
+            category: payload.commercialCategory || p.category,
+          };
+        });
+
+      setProducts((prev) => {
+        snapshot = prev;
+        return applyPatch(prev);
+      });
+      queryClient.setQueryData(CATALOG_STUDIO_QUERY_KEY, (prev: typeof studioData) =>
+        prev ? { ...prev, products: applyPatch(prev.products) } : prev,
+      );
+
       try {
         await catalogStudioApi.patchProduct(productId, payload);
-        setProducts((prev) =>
-          prev.map((p) => {
-            if (p.id !== productId) return p;
-            return {
-              ...p,
-              badge: payload.catalogBadge !== undefined ? payload.catalogBadge : p.badge,
-              varieties: payload.catalogVarieties !== undefined ? payload.catalogVarieties : p.varieties,
-              minQty: payload.catalogMinQtyLabel !== undefined ? payload.catalogMinQtyLabel : p.minQty,
-              showOldPrice: payload.catalogShowOldPrice ?? p.showOldPrice,
-              oldPrice: payload.catalogOldPrice !== undefined ? (payload.catalogOldPrice ?? p.previousListPrice) : p.oldPrice,
-              catalogVisible: payload.catalogVisible ?? p.catalogVisible,
-              category: payload.commercialCategory || p.category,
-            };
-          }),
-        );
       } catch (err: any) {
+        setProducts(snapshot);
+        queryClient.setQueryData(CATALOG_STUDIO_QUERY_KEY, (prev: typeof studioData) =>
+          prev ? { ...prev, products: snapshot } : prev,
+        );
         setError(err?.message || 'No se pudo actualizar el producto.');
-      } finally {
-        setSavingProductId(null);
       }
     },
-    [],
+    [queryClient],
   );
 
   const handleToggleBadge = useCallback(
@@ -408,7 +414,7 @@ export default function CatalogStudioTab() {
                 <CatalogProductCard
                   key={p.id}
                   product={p}
-                  saving={savingProductId === p.id}
+                  saving={false}
                   onToggleBadge={handleToggleBadge}
                   onToggleVisible={handleToggleVisible}
                   onOpenEdit={setEditingProduct}

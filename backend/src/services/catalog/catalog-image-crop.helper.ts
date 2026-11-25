@@ -14,7 +14,14 @@ export interface CroppedImageResult {
 }
 
 const UPLOADS_PRODUCTS_DIR = path.resolve(__dirname, '../../../uploads/products');
-const LOGO_ASSET_PATH = path.resolve(__dirname, '../../../assets/logo_dv_clean.png');
+const LOGO_CANDIDATE_PATHS = [
+  path.resolve(__dirname, '../../../assets/logo_dv_clean.png'),
+  path.resolve(__dirname, '../../../../backend/assets/logo_dv_clean.png'),
+  path.resolve(process.cwd(), 'assets/logo_dv_clean.png'),
+  path.resolve(process.cwd(), 'backend/assets/logo_dv_clean.png'),
+  path.resolve(__dirname, '../../../../frontend/public/logo.png'),
+  path.resolve(process.cwd(), 'frontend/public/logo.png'),
+];
 
 interface CacheEntry {
   mtimeMs: number;
@@ -37,7 +44,10 @@ export function getCatalogImageCacheStats(): { entries: number; bytes: number; m
 }
 
 export function resolveLogoAssetPath(): string | null {
-  return fs.existsSync(LOGO_ASSET_PATH) ? LOGO_ASSET_PATH : null;
+  for (const candidate of LOGO_CANDIDATE_PATHS) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
 }
 
 export function resolveSafeProductPhotoPath(imageUrl?: string | null): string | null {

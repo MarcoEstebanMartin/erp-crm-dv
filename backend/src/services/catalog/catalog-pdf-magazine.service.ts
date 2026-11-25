@@ -55,7 +55,7 @@ async function drawProductCell(
   const isHighlighted = badge !== null;
   const isOferton = badge === 'OFERTON';
   let ribH = 0;
-  let topPhotoPad = 5;
+  let topPhotoPad = 8;
 
   if (isHighlighted) {
     const ribbonText = isOferton ? 'OFERTÓN!' : 'DESTACADO';
@@ -94,20 +94,25 @@ async function drawProductCell(
     doc.roundedRect(ribX, ribY, ribW, ribH, 3.5).fill(ribBg);
     doc.lineWidth(0.8).strokeColor(ribBorder).roundedRect(ribX, ribY, ribW, ribH, 3.5).stroke();
 
-    doc.font(fonts.price).fontSize(9.2);
-    const txtW = doc.widthOfString(ribbonText);
+    doc.font(fonts.bold).fontSize(9.2);
+    const txtW = doc.widthOfString(ribbonText, { characterSpacing: 0.45 });
     const midY = ribY + ribH / 2;
     drawTinyStar(doc, x + w / 2 - txtW / 2 - 7, midY, 2.7, ribTextColor);
     drawTinyStar(doc, x + w / 2 + txtW / 2 + 7, midY, 2.7, ribTextColor);
 
     doc
-      .font(fonts.price)
+      .font(fonts.bold)
       .fontSize(9.2)
       .fillColor(ribTextColor)
-      .text(ribbonText, ribX, ribY + 4.2, { width: ribW, align: 'center', lineBreak: false });
+      .text(ribbonText, ribX, ribY + 4.4, {
+        width: ribW,
+        align: 'center',
+        characterSpacing: 0.45,
+        lineBreak: false,
+      });
     doc.restore();
 
-    topPhotoPad = ribH + 5;
+    topPhotoPad = ribH + 10;
   }
 
   // Typography layout from bottom-up inside [y, y + h]
@@ -203,18 +208,18 @@ async function drawProductCell(
 
   // 5. Starburst Price Badge (Top-Right)
   const priceStr = formatCatalogPrice(item.price);
-  const pFontSize = priceStr.length >= 8 ? 18.5 : 20;
+  const pFontSize = priceStr.length >= 8 ? 17.5 : 19;
   doc.font(fonts.price).fontSize(pFontSize);
   const priceTextW = doc.widthOfString(priceStr);
-  const badgeRx = Math.max(35, (priceTextW + 18) / 2);
-  const badgeRy = 18.5;
+  const badgeRx = Math.max(38, (priceTextW + 24) / 2);
+  const badgeRy = 18;
   const badgeCx = x + w - badgeRx - 2;
-  const badgeCy = y + ribH + badgeRy + (isHighlighted ? 5 : 3);
+  const badgeCy = y + ribH + badgeRy + (isHighlighted ? 4 : 2);
 
   // Optional crossed-out old price pill
   if (item.showOldPrice && item.oldPrice && Number(item.oldPrice) > Number(item.price)) {
     const oldStr = formatCatalogPrice(item.oldPrice);
-    doc.font(fonts.price).fontSize(11);
+    doc.font(fonts.bold).fontSize(10.5);
     const oldW = doc.widthOfString(oldStr) + 10;
     const oldH = 15;
     const oldX = Math.max(x + 4, badgeCx - badgeRx - oldW + 3);
@@ -224,10 +229,10 @@ async function drawProductCell(
     doc.roundedRect(oldX, oldY, oldW, oldH, 2.5).fill('#FEF08A');
     doc.lineWidth(0.5).strokeColor('#EAB308').roundedRect(oldX, oldY, oldW, oldH, 2.5).stroke();
     doc
-      .font(fonts.price)
-      .fontSize(11)
+      .font(fonts.bold)
+      .fontSize(10.5)
       .fillColor('#0F172A')
-      .text(oldStr, oldX, oldY + 2, { width: oldW, align: 'center', lineBreak: false });
+      .text(oldStr, oldX, oldY + 2.2, { width: oldW, align: 'center', lineBreak: false });
     doc
       .strokeColor('#D0021B')
       .lineWidth(1.1)
@@ -237,7 +242,7 @@ async function drawProductCell(
     doc.restore();
   }
 
-  drawStarburstBadge(doc, badgeCx, badgeCy, badgeRx, badgeRy, 18, 4.2, '#D0021B');
+  drawStarburstBadge(doc, badgeCx, badgeCy, badgeRx, badgeRy, 22, 3.0, '#D0021B');
   doc
     .font(fonts.price)
     .fontSize(pFontSize)
@@ -301,6 +306,24 @@ async function drawProductCell(
   }
 }
 
+async function preloadSectionImages(
+  items: CatalogProductInput[],
+  combos: CatalogComboInput[],
+  batchSize = 4,
+): Promise<void> {
+  const urls = Array.from(
+    new Set(
+      [
+        ...items.map((p) => p.imageUrl),
+        ...combos.flatMap((c) => [c.product1?.imageUrl, c.product2?.imageUrl]),
+      ].filter((u): u is string => Boolean(u)),
+    ),
+  );
+  for (let i = 0; i < urls.length; i += batchSize) {
+    await Promise.all(urls.slice(i, i + batchSize).map((url) => getAutocroppedProductImage(url)));
+  }
+}
+
 export async function renderCatalogMagazinePdf(
   products: CatalogProductInput[],
   combos: CatalogComboInput[] = [],
@@ -333,6 +356,7 @@ export async function renderCatalogMagazinePdf(
 
   for (let secIdx = 0; secIdx < sections.length; secIdx++) {
     const sec = sections[secIdx];
+    await preloadSectionImages(sec.products, sec.combos, 4);
     const isFirstPage = secIdx === 0;
     const topSpace = isFirstPage ? HEADER_H + 14 : TOP_MARGIN_SUBSEQUENT;
 

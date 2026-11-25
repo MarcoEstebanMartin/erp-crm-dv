@@ -14,29 +14,29 @@ export function registerCatalogFonts(doc: PDFKit.PDFDocument): PdfFontSet {
     {
       reg: 'C:/Windows/Fonts/GOTHIC.TTF',
       bold: 'C:/Windows/Fonts/GOTHICB.TTF',
-      price: 'C:/Windows/Fonts/seguibli.ttf',
+      price: 'C:/Windows/Fonts/ariblk.ttf',
     },
     {
       reg: 'C:/Windows/Fonts/segoeui.ttf',
       bold: 'C:/Windows/Fonts/segoeuib.ttf',
-      price: 'C:/Windows/Fonts/ariblk.ttf',
+      price: 'C:/Windows/Fonts/seguibl.ttf',
     },
     {
       reg: '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
       bold: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-      price: '/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf',
+      price: '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
     },
     {
       reg: '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
       bold: '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-      price: '/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf',
+      price: '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
     },
   ];
 
   const fonts: PdfFontSet = {
     regular: 'Helvetica',
     bold: 'Helvetica-Bold',
-    price: 'Helvetica-BoldOblique',
+    price: 'Helvetica-Bold',
   };
 
   for (const c of candidates) {
@@ -84,11 +84,13 @@ export function drawEditionHeader(
   const logoPath = resolveLogoAssetPath();
   if (logoPath) {
     try {
-      doc.image(logoPath, marginX, (headerH - 56) / 2, {
-        fit: [92, 56],
+      doc.save();
+      doc.image(logoPath, marginX + 4, (headerH - 62) / 2, {
+        fit: [106, 62],
         align: 'center',
         valign: 'center',
       });
+      doc.restore();
     } catch {
       // ignore missing/corrupt logo
     }
@@ -192,8 +194,8 @@ export function drawStarburstBadge(
   cy: number,
   rx: number,
   ry: number,
-  points = 18,
-  depth = 4.2,
+  points = 22,
+  depth = 3.0,
   fillColor = '#D0021B',
 ): void {
   const step = (2 * Math.PI) / (points * 2);
