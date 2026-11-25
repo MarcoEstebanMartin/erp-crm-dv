@@ -2,6 +2,7 @@ import prisma from '../../utils/prisma';
 import { CreditNoteStatus, OrderStatus, TransactionType } from '@prisma/client';
 import { computeFinancialSummaryMetrics } from '../../engines/reports-core.engine';
 import { resolveReportDateRange } from './admin-report.helpers';
+import { REPORT_FINANCE_TTL_SECONDS, withReportCache } from './admin-report-cache.helper';
 
 export class AdminFinanceSubService {
   /**
@@ -17,69 +18,77 @@ export class AdminFinanceSubService {
         ? paramsOrYear
         : { year: paramsOrYear, month };
 
-    const { range } = resolveReportDateRange({
+    const { range, startDateIso, endDateIso } = resolveReportDateRange({
       startDate: params.startDate,
       endDate: params.endDate,
       year: params.year,
       month: params.month,
+      defaultCurrentMonth: true,
     });
 
-    const [deliveredOrders, creditNotes, transactionsGrouped, paymentMethodsGrouped, expenses] =
-      await Promise.all([
-        prisma.order.findMany({
-          where: { status: OrderStatus.DELIVERED, ...(range ? { createdAt: range } : {}) },
-          include: {
-            persona: { select: { city: true } },
-            items: {
+    return withReportCache(
+      'finance',
+      { startDate: startDateIso, endDate: endDateIso },
+      REPORT_FINANCE_TTL_SECONDS,
+      async () => {
+        const [deliveredOrders, creditNotes, transactionsGrouped, paymentMethodsGrouped, expenses] =
+          await Promise.all([
+            prisma.order.findMany({
+              where: { status: OrderStatus.DELIVERED, ...(range ? { createdAt: range } : {}) },
               include: {
-                product: { select: { isPesable: true, costPrice: true } },
-              },
-            },
-          },
-        }),
-        prisma.creditNote.findMany({
-          where: { status: CreditNoteStatus.APPROVED, ...(range ? { createdAt: range } : {}) },
-          include: {
-            persona: { select: { city: true } },
-            order: {
-              select: {
-                deliveryMethod: true,
-                salesChannel: true,
-                deliveryRouteId: true,
                 persona: { select: { city: true } },
-                items: { select: { productId: true, unitCostSnapshot: true } },
+                items: {
+                  include: {
+                    product: { select: { isPesable: true, costPrice: true } },
+                  },
+                },
               },
-            },
-            items: {
+            }),
+            prisma.creditNote.findMany({
+              where: { status: CreditNoteStatus.APPROVED, ...(range ? { createdAt: range } : {}) },
               include: {
-                product: { select: { isPesable: true, costPrice: true } },
+                persona: { select: { city: true } },
+                order: {
+                  select: {
+                    deliveryMethod: true,
+                    salesChannel: true,
+                    deliveryRouteId: true,
+                    persona: { select: { city: true } },
+                    items: { select: { productId: true, unitCostSnapshot: true } },
+                  },
+                },
+                items: {
+                  include: {
+                    product: { select: { isPesable: true, costPrice: true } },
+                  },
+                },
               },
-            },
-          },
-        }),
-        prisma.transaction.groupBy({
-          by: ['billingType', 'type'],
-          where: { ...(range ? { createdAt: range } : {}), voidedAt: null },
-          _sum: { amount: true },
-        }),
-        prisma.transaction.groupBy({
-          by: ['billingType', 'paymentMethod'],
-          where: { ...(range ? { createdAt: range } : {}), type: TransactionType.INCOME, voidedAt: null },
-          _sum: { amount: true },
-        }),
-        prisma.expense.findMany({
-          where: range ? { date: range } : {},
-          include: { category: true },
-        }),
-      ]);
+            }),
+            prisma.transaction.groupBy({
+              by: ['billingType', 'type'],
+              where: { ...(range ? { createdAt: range } : {}), voidedAt: null },
+              _sum: { amount: true },
+            }),
+            prisma.transaction.groupBy({
+              by: ['billingType', 'paymentMethod'],
+              where: { ...(range ? { createdAt: range } : {}), type: TransactionType.INCOME, voidedAt: null },
+              _sum: { amount: true },
+            }),
+            prisma.expense.findMany({
+              where: range ? { date: range } : {},
+              include: { category: true },
+            }),
+          ]);
 
-    return computeFinancialSummaryMetrics({
-      orders: deliveredOrders,
-      creditNotes,
-      expenses,
-      transactionsGrouped,
-      paymentMethodsGrouped,
-    });
+        return computeFinancialSummaryMetrics({
+          orders: deliveredOrders,
+          creditNotes,
+          expenses,
+          transactionsGrouped,
+          paymentMethodsGrouped,
+        });
+      },
+    );
   }
 }
 

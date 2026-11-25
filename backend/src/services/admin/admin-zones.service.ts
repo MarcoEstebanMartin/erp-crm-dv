@@ -11,6 +11,7 @@ import {
   resolveOrderCommercialRevenueDec,
 } from '../../engines/reports-core.engine';
 import { getArgentinaWeekMondayIso, resolveReportDateRange } from './admin-report.helpers';
+import { REPORT_ZONES_TTL_SECONDS, withReportCache } from './admin-report-cache.helper';
 
 export class AdminZonesSubService {
   /**
@@ -24,6 +25,36 @@ export class AdminZonesSubService {
     startDate?: string;
     endDate?: string;
   }) {
+    const resolvedRange = resolveReportDateRange({
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      defaultCurrentMonth: true,
+    });
+
+    return withReportCache(
+      'zones',
+      {
+        sellerId: filters.sellerId,
+        city: filters.city,
+        cities: filters.cities,
+        startDate: resolvedRange.startDateIso,
+        endDate: resolvedRange.endDateIso,
+      },
+      REPORT_ZONES_TTL_SECONDS,
+      () => this.computeZoneReports(filters, resolvedRange.range),
+    );
+  }
+
+  private async computeZoneReports(
+    filters: {
+      sellerId?: number;
+      city?: string;
+      cities?: string[];
+      startDate?: string;
+      endDate?: string;
+    },
+    createdAtRange?: { gte?: Date; lte?: Date },
+  ) {
     const whereClause: any = { isClient: true };
     const personaFilter: any = {};
 
@@ -38,11 +69,6 @@ export class AdminZonesSubService {
       whereClause.city = { contains: filters.city, mode: 'insensitive' };
       personaFilter.city = { contains: filters.city, mode: 'insensitive' };
     }
-
-    const createdAtRange =
-      filters.startDate || filters.endDate
-        ? resolveReportDateRange({ startDate: filters.startDate, endDate: filters.endDate }).range
-        : undefined;
 
     const commonWhere: any = {
       ...(Object.keys(personaFilter).length > 0 ? { persona: personaFilter } : {}),

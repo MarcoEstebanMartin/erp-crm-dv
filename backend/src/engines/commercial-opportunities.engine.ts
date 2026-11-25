@@ -194,7 +194,9 @@ export function computeClientRecommendations(
   maxClients = 50,
 ): ClientRecommendationItem[] {
   const inStockMap = new Map<number, OpportunityProductInput>();
+  const productNameById = new Map<number, string>();
   for (const p of products) {
+    productNameById.set(p.id, p.name);
     if (toDecimal(p.stock).gt(0)) {
       inStockMap.set(p.id, p);
     }
@@ -292,7 +294,7 @@ export function computeClientRecommendations(
       if (!baseBuyers || baseBuyers.size < 2) continue;
       const baseProductName =
         inStockMap.get(baseProductId)?.name ||
-        products.find((p) => p.id === baseProductId)?.name ||
+        productNameById.get(baseProductId) ||
         `#${baseProductId}`;
 
       for (const [candidateId, candidateBuyers] of productBuyers.entries()) {
