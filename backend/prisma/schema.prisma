@@ -614,6 +614,10 @@ model DeliveryRoute {
   vehicleId Int?
   vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 
+  // Costos directos del viaje (para rentabilidad neta del reparto)
+  tripKm       Decimal? @db.Decimal(10, 2)
+  tripExpenses Decimal  @default(0.00) @db.Decimal(12, 2)
+
   // Telemetría GPS en tiempo real
   currentLat       Float?
   currentLng       Float?
