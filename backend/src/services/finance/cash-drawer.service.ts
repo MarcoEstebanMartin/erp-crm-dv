@@ -160,7 +160,7 @@ export const cashDrawerService = {
         }
       }
 
-      const transactions = await tx.transaction.findMany({ where: { cashDrawerId: drawer.id } });
+      const transactions = await tx.transaction.findMany({ where: { cashDrawerId: drawer.id, voidedAt: null } });
       const calculatedClosingBalance = calculateDrawerClosingBalance(
         drawer.openingBalance.toString(),
         transactions.map((t) => ({

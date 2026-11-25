@@ -60,7 +60,7 @@ export class PersonaDebtorsSubService {
       }),
       dbClient.transaction.groupBy({
         by: ['personaId', 'billingType'],
-        where: { personaId: { in: debtorIds }, orderId: null, type: TransactionType.INCOME },
+        where: { personaId: { in: debtorIds }, orderId: null, type: TransactionType.INCOME, voidedAt: null },
         _sum: { amount: true },
       }),
       dbClient.creditNote.groupBy({
@@ -80,7 +80,7 @@ export class PersonaDebtorsSubService {
         ? await Promise.all([
             dbClient.transaction.groupBy({
               by: ['orderId'],
-              where: { orderId: { in: orderIds }, type: TransactionType.INCOME },
+              where: { orderId: { in: orderIds }, type: TransactionType.INCOME, voidedAt: null },
               _sum: { amount: true },
             }),
             dbClient.creditNote.groupBy({

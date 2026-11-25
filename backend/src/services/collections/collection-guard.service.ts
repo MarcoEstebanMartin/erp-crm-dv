@@ -44,6 +44,7 @@ export async function assertCollectionAllowed(
     where: {
       personaId: persona.id,
       type: TransactionType.INCOME,
+      voidedAt: null,
       amount: normalizedAmount,
       createdAt: { gte: windowStart },
       ...(params.excludeTransactionId ? { id: { not: params.excludeTransactionId } } : {}),
@@ -122,6 +123,7 @@ export async function assertCollectionAllowed(
         where: {
           orderId: order.id,
           type: TransactionType.INCOME,
+          voidedAt: null,
         },
         _sum: { amount: true },
       });

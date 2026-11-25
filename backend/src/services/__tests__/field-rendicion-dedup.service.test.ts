@@ -22,6 +22,7 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
         where: {
           type: TransactionType.INCOME,
           verified: false,
+          voidedAt: null,
           fieldReceipt: { is: null },
         },
       }),
@@ -807,7 +808,12 @@ describe('Deduplicación y sincronización de Recibos en Calle vs Rendiciones', 
     } as any);
 
     await expect(
-      receiptService.deleteReceipt({ adminId: 73, userRole: Role.ADMIN, receiptId: 62 }),
+      receiptService.deleteReceipt({
+        adminId: 73,
+        userRole: Role.ADMIN,
+        receiptId: 62,
+        reason: 'Intento de anulación directa sobre recibo de calle',
+      }),
     ).rejects.toMatchObject({ statusCode: 409 });
   });
 });

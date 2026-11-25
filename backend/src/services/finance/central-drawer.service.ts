@@ -25,7 +25,7 @@ export const centralDrawerService = {
 
       const results: Array<{ oldDrawer: any; closedDrawer: any }> = [];
       for (const drawer of activeDrawers) {
-        const transactions = await tx.transaction.findMany({ where: { cashDrawerId: drawer.id } });
+        const transactions = await tx.transaction.findMany({ where: { cashDrawerId: drawer.id, voidedAt: null } });
         const theoretical = calculateDrawerClosingBalance(
           drawer.openingBalance.toString(),
           transactions.map((t) => ({
@@ -106,6 +106,7 @@ export const centralDrawerService = {
           },
         },
         transactions: {
+          where: { voidedAt: null },
           select: {
             id: true,
             type: true,
@@ -148,6 +149,7 @@ export const centralDrawerService = {
       prisma.transaction.findMany({
         where: {
           type: TransactionType.OUTCOME,
+          voidedAt: null,
           cashDrawerId: null,
           bankAccountId: null,
           ...(cutoffDate ? { createdAt: { gt: cutoffDate } } : {}),

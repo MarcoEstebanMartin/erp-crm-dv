@@ -118,22 +118,28 @@ export const verifyRendicion = async (req: AuthenticatedRequest, res: Response) 
   }
 };
 
-export const deleteReceipt = async (req: AuthenticatedRequest, res: Response) => {
+export const voidReceipt = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
   if (req.user.role !== Role.ADMIN && req.user.role !== Role.FACTURACION) {
-    return res.status(403).json({ error: 'No tienes permisos para eliminar o anular recibos' });
+    return res.status(403).json({ error: 'No tienes permisos para anular recibos' });
   }
   try {
-    const { receiptLabel, amountToRestore } = await receiptService.deleteReceipt({
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason : '';
+    const { receiptLabel, amountToRestore, voidedAt, voidReason } = await receiptService.voidReceipt({
       adminId: req.user.id,
       userRole: req.user.role,
       receiptId: Number(req.params.id),
+      reason,
     });
     return res.json({
       status: 'success',
-      message: `Recibo ${receiptLabel} eliminado correctamente. Se restableció $${amountToRestore.toLocaleString()} al saldo pendiente del cliente.`,
+      message: `Recibo ${receiptLabel} anulado correctamente. Se restableció $${amountToRestore.toLocaleString('es-AR')} al saldo pendiente del cliente.`,
+      voidedAt,
+      voidReason,
     });
   } catch (error) {
-    return handleCollectionError(res, error, 'Error interno del servidor al eliminar el recibo');
+    return handleCollectionError(res, error, 'Error interno del servidor al anular el recibo');
   }
 };
+
+export const deleteReceipt = voidReceipt;

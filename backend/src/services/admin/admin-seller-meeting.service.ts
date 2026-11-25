@@ -130,6 +130,7 @@ export class AdminSellerMeetingSubService {
       prisma.transaction.aggregate({
         where: {
           type: TransactionType.INCOME,
+          voidedAt: null,
           createdAt: { gte: start, lte: end },
           OR:
             clientIds.length > 0

@@ -146,6 +146,12 @@ describe('Servicios Financieros, Cobranzas y Gastos (Integridad Atómica y Segur
               username: true,
             },
           },
+          voidedBy: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
         },
       }),
     );

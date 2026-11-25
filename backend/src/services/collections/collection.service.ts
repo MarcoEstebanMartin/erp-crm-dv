@@ -48,7 +48,7 @@ export const collectionService = {
         _count: { id: true },
       }),
       prisma.transaction.findMany({
-        where: { type: TransactionType.INCOME, verified: false },
+        where: { type: TransactionType.INCOME, verified: false, voidedAt: null },
         select: {
           amount: true,
           userId: true,

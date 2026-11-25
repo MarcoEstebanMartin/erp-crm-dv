@@ -59,12 +59,12 @@ export class AdminFinanceSubService {
         }),
         prisma.transaction.groupBy({
           by: ['billingType', 'type'],
-          where: range ? { createdAt: range } : {},
+          where: { ...(range ? { createdAt: range } : {}), voidedAt: null },
           _sum: { amount: true },
         }),
         prisma.transaction.groupBy({
           by: ['billingType', 'paymentMethod'],
-          where: { ...(range ? { createdAt: range } : {}), type: TransactionType.INCOME },
+          where: { ...(range ? { createdAt: range } : {}), type: TransactionType.INCOME, voidedAt: null },
           _sum: { amount: true },
         }),
         prisma.expense.findMany({

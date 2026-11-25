@@ -98,6 +98,7 @@ export class AdminEmployeeReportSubService {
         by: ['paymentMethod'],
         where: {
           type: TransactionType.INCOME,
+          voidedAt: null,
           createdAt: { gte: start, lte: end },
           ...(assignedIds.length > 0
             ? { OR: [{ userId }, { personaId: { in: assignedIds } }] }

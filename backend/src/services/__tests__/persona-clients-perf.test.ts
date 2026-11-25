@@ -103,7 +103,7 @@ describe('Paso 1 Performance Clientes — Consultas SQL Paralelas y Filtro Comis
       2,
       expect.objectContaining({
         by: ['orderId'],
-        where: { orderId: { in: [101, 102] }, type: TransactionType.INCOME },
+        where: { orderId: { in: [101, 102] }, type: TransactionType.INCOME, voidedAt: null },
       }),
     );
     expect(prisma.creditNote.groupBy).toHaveBeenCalledWith(

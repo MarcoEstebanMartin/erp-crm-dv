@@ -134,7 +134,7 @@ export class PaymentAllocationService {
     }
 
     const incomeTxs = await db.transaction.findMany({
-      where: { personaId: params.personaId, type: TransactionType.INCOME },
+      where: { personaId: params.personaId, type: TransactionType.INCOME, voidedAt: null },
       include: { paymentAllocations: { select: { amount: true } } },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
@@ -220,7 +220,7 @@ export class PaymentAllocationService {
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       }),
       db.transaction.findMany({
-        where: { personaId, type: TransactionType.INCOME },
+        where: { personaId, type: TransactionType.INCOME, voidedAt: null },
         include: { paymentAllocations: { select: { amount: true } } },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       }),
@@ -288,7 +288,7 @@ export class PaymentAllocationService {
           orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         }),
         tx.transaction.findMany({
-          where: { personaId, type: TransactionType.INCOME },
+          where: { personaId, type: TransactionType.INCOME, voidedAt: null },
           orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         }),
       ]);

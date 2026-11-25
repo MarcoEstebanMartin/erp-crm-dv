@@ -41,7 +41,7 @@ export const transactionAdminService = {
       maskBankBalance?: boolean;
     },
   ) {
-    const whereClause: Record<string, any> = {};
+    const whereClause: Record<string, any> = { voidedAt: null };
 
     if (query.branch) {
       whereClause.billingType = query.branch === 'A' ? BillingType.OFFICIAL : BillingType.INTERNAL;
@@ -134,6 +134,9 @@ export const transactionAdminService = {
       include: { fieldReceipt: { select: { id: true, receiptNumber: true } } },
     });
     if (!preCheck) throw new AppError('Transacción no encontrada.', 404);
+    if (preCheck.voidedAt) {
+      throw new AppError('No se puede verificar ni conciliar un recibo que fue anulado.', 409);
+    }
     if (params.actorRole && params.actorRole !== 'ADMIN' && !isBankReconcilableTransaction(preCheck)) {
       throw new AppError('Solo podés conciliar transferencias bancarias o eCheqs.', 403);
     }
@@ -159,6 +162,9 @@ export const transactionAdminService = {
             })
           : preCheck;
       if (!transaction) throw new AppError('Transacción no encontrada.', 404);
+      if (transaction.voidedAt) {
+        throw new AppError('No se puede verificar ni conciliar un recibo que fue anulado.', 409);
+      }
       if (transaction.fieldReceipt) {
         const receiptLabel =
           transaction.fieldReceipt.receiptNumber || `#${transaction.fieldReceipt.id}`;

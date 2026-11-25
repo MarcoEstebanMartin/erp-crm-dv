@@ -45,7 +45,7 @@ function serializeBucket(bucket: RendicionBucket) {
 export const rendicionService = {
   async getPendingRendiciones() {
     const pendingTransactions = await prisma.transaction.findMany({
-      where: { type: TransactionType.INCOME, verified: false, fieldReceipt: { is: null } },
+      where: { type: TransactionType.INCOME, verified: false, voidedAt: null, fieldReceipt: { is: null } },
       include: {
         user: { select: { id: true, username: true, role: true } },
         persona: {
@@ -153,6 +153,7 @@ export const rendicionService = {
           userId: Number(params.sellerId),
           type: TransactionType.INCOME,
           verified: false,
+          voidedAt: null,
           fieldReceipt: { is: null },
         },
         include: {
@@ -172,6 +173,7 @@ export const rendicionService = {
         where: {
           type: TransactionType.INCOME,
           verified: false,
+          voidedAt: null,
           fieldReceipt: { is: null },
           order: { deliveryRouteId: Number(params.routeId) },
         },

@@ -30,3 +30,13 @@ export const verifyRendicionSchema = z.object({
       message: 'Debe especificar sellerId o routeId',
     }),
 });
+
+export const voidReceiptSchema = z.object({
+  body: z.object({
+    reason: z
+      .string({ message: 'El motivo de anulación es obligatorio' })
+      .trim()
+      .min(5, 'Ingresá un motivo de al menos 5 caracteres')
+      .max(300, 'El motivo no puede superar los 300 caracteres'),
+  }),
+});

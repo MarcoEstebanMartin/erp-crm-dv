@@ -52,7 +52,7 @@ export class AdminExecutiveSubService {
         }),
         prisma.transaction.groupBy({
           by: ['paymentMethod'],
-          where: { type: TransactionType.INCOME, createdAt: { gte: start, lte: end } },
+          where: { type: TransactionType.INCOME, voidedAt: null, createdAt: { gte: start, lte: end } },
           _sum: { amount: true },
         }),
         prisma.persona.aggregate({ where: { outstandingBalance: { gt: 0 } }, _sum: { outstandingBalance: true } }),

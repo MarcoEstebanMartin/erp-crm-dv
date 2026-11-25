@@ -67,6 +67,7 @@ export class OrderStatusService {
         where: {
           orderId: order.id,
           type: TransactionType.INCOME,
+          voidedAt: null,
         },
       });
 
@@ -116,7 +117,7 @@ export class OrderStatusService {
 
         if (typeof tx.transaction?.findFirst === 'function') {
           const txPayment = await tx.transaction.findFirst({
-            where: { orderId: freshOrder.id, type: TransactionType.INCOME },
+            where: { orderId: freshOrder.id, type: TransactionType.INCOME, voidedAt: null },
           });
           if (txPayment) {
             throw new Error(

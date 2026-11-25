@@ -85,6 +85,7 @@ model User {
   orders         Order[]
   transactions   Transaction[] @relation("TransactionCreator")
   verifiedTransactions Transaction[] @relation("TransactionVerifiedBy")
+  voidedTransactions   Transaction[] @relation("TransactionVoidedBy")
   stockMovements StockMovement[]
   auditLogs      AuditLog[]
   personas       Persona[]
@@ -484,11 +485,17 @@ model Transaction {
   verifiedById Int?
   verifiedBy   User?     @relation("TransactionVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
   verifiedAt   DateTime?
+  voidedAt     DateTime?
+  voidedById   Int?
+  voidedBy     User?     @relation("TransactionVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  voidReason   String?
 
   @@index([orderId])
   @@index([personaId])
   @@index([userId])
   @@index([verifiedById])
+  @@index([voidedAt])
+  @@index([voidedById])
   @@index([cashDrawerId])
   @@index([bankAccountId])
   @@index([supplierInvoiceId])

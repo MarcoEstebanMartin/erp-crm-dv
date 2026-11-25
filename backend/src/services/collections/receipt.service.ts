@@ -4,6 +4,7 @@ import AppError from '../../utils/AppError';
 import { roundToTwoDecimals } from '../../core/money';
 import { recordLedgerMovement } from '../ledger/account-ledger.service';
 import { env } from '../../config/env.config';
+import { evaluateReceiptVoidPermission } from '../../engines/receipt-void.engine';
 import {
   buildPublicReceiptUrl,
   formatVerificationCode,
@@ -113,6 +114,18 @@ export const receiptService = {
             name: true,
           },
         },
+        cashDrawer: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+        voidedBy: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: safeLimit,
@@ -175,6 +188,12 @@ export const receiptService = {
             username: true,
           },
         },
+        voidedBy: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
       },
     });
 
@@ -203,60 +222,127 @@ export const receiptService = {
       }
     }
 
-    const { user: internalUser, ...safeTransaction } = transaction;
+    const { user: internalUser, voidedBy: internalVoidedBy, voidReason: internalVoidReason, ...safeTransaction } = transaction;
+    const isVoided = Boolean(transaction.voidedAt);
 
     return {
       ...safeTransaction,
+      isVoided,
       ...(options?.isAuthenticatedStaff
-        ? { user: internalUser }
+        ? { user: internalUser, voidedBy: internalVoidedBy, voidReason: internalVoidReason }
         : {
             description: sanitizePublicReceiptDescription(transaction.description),
             user: undefined,
+            voidedBy: undefined,
+            voidReason: undefined,
           }),
       ...buildOfficeReceiptSecurityMeta(transaction.id, transaction.verificationCode),
       authenticity: {
-        verified: true,
+        verified: !isVoided,
+        status: isVoided ? 'VOIDED' : 'VALID',
         issuer: 'Distribuidora Don Venancio',
       },
     };
   },
 
-  async deleteReceipt(params: { adminId: number; userRole: Role; receiptId: number }) {
-    if (isNaN(params.receiptId)) {
+  /**
+   * Anula un recibo de oficina sin borrado físico (soft-void auditable).
+   * - Exige motivo obligatorio (mín. 5 caracteres).
+   * - Opción 1 (Híbrida): FACTURACION solo puede anular recibos del mismo día (AR),
+   *   no verificados y cuya caja no esté cerrada. ADMIN puede anular cualquier recibo de oficina.
+   * - Inserta reversión en AccountLedger vinculada al mismo `transactionId`, limpia `PaymentAllocation`
+   *   y registra rastro completo en `Transaction` + `AuditLog`.
+   */
+  async voidReceipt(params: {
+    adminId: number;
+    userRole: Role;
+    receiptId: number;
+    reason: string;
+    now?: Date;
+  }) {
+    if (isNaN(params.receiptId) || params.receiptId <= 0) {
       throw new AppError('ID de recibo inválido', 400);
     }
 
-    const txRecord = await prisma.transaction.findUnique({
+    const cleanReason = String(params.reason || '').trim();
+    if (cleanReason.length < 5) {
+      throw new AppError('Ingresá un motivo de anulación de al menos 5 caracteres.', 400);
+    }
+
+    const preCheck = await prisma.transaction.findUnique({
       where: { id: params.receiptId },
       include: {
         persona: { select: { id: true, name: true } },
         fieldReceipt: { select: { id: true, receiptNumber: true } },
+        cashDrawer: { select: { id: true, status: true } },
       },
     });
 
-    if (!txRecord || txRecord.type !== TransactionType.INCOME) {
+    if (!preCheck || preCheck.type !== TransactionType.INCOME) {
       throw new AppError('Recibo no encontrado', 404);
     }
 
-    if (txRecord.fieldReceipt) {
-      const receiptLabel =
-        txRecord.fieldReceipt.receiptNumber || `#${txRecord.fieldReceipt.id}`;
-      throw new AppError(
-        `Este recibo (${receiptLabel}) fue emitido en calle. Anulalo desde Recibos en Calle / Rendiciones.`,
-        409,
-      );
+    const preEval = evaluateReceiptVoidPermission({
+      userRole: params.userRole,
+      createdAt: preCheck.createdAt,
+      now: params.now,
+      verified: Boolean(preCheck.verified),
+      alreadyVoided: Boolean(preCheck.voidedAt),
+      isFieldReceipt: Boolean(preCheck.fieldReceipt),
+      fieldReceiptLabel: preCheck.fieldReceipt
+        ? preCheck.fieldReceipt.receiptNumber || `#${preCheck.fieldReceipt.id}`
+        : null,
+      cashDrawerStatus: preCheck.cashDrawer?.status ?? null,
+    });
+
+    if (!preEval.allowed) {
+      throw new AppError(preEval.reason || 'No permitido anular este recibo.', preEval.statusCode || 403);
     }
 
-    if (txRecord.verified && params.userRole !== Role.ADMIN) {
-      throw new AppError(
-        'Este recibo ya fue verificado en una rendición. Solo un Administrador puede anularlo para corregir saldos de caja.',
-        400,
-      );
-    }
-
-    const amountToRestore = roundToTwoDecimals(txRecord.amount.toString()).toNumber();
+    const voidedAt = params.now ?? new Date();
+    const amountToRestore = roundToTwoDecimals(preCheck.amount.toString()).toNumber();
 
     await prisma.$transaction(async (prismaTx) => {
+      if (typeof (prismaTx as any).$queryRaw === 'function') {
+        await (prismaTx as any).$queryRaw`SELECT id FROM "Transaction" WHERE id = ${preCheck.id} FOR UPDATE`;
+      }
+
+      const txRecord =
+        typeof (prismaTx as any).transaction?.findUnique === 'function'
+          ? await prismaTx.transaction.findUnique({
+              where: { id: preCheck.id },
+              include: {
+                persona: { select: { id: true, name: true } },
+                fieldReceipt: { select: { id: true, receiptNumber: true } },
+                cashDrawer: { select: { id: true, status: true } },
+              },
+            })
+          : preCheck;
+
+      if (!txRecord || txRecord.type !== TransactionType.INCOME) {
+        throw new AppError('Recibo no encontrado', 404);
+      }
+
+      const lockedEval = evaluateReceiptVoidPermission({
+        userRole: params.userRole,
+        createdAt: txRecord.createdAt,
+        now: voidedAt,
+        verified: Boolean(txRecord.verified),
+        alreadyVoided: Boolean(txRecord.voidedAt),
+        isFieldReceipt: Boolean(txRecord.fieldReceipt),
+        fieldReceiptLabel: txRecord.fieldReceipt
+          ? txRecord.fieldReceipt.receiptNumber || `#${txRecord.fieldReceipt.id}`
+          : null,
+        cashDrawerStatus: txRecord.cashDrawer?.status ?? null,
+      });
+
+      if (!lockedEval.allowed) {
+        throw new AppError(
+          lockedEval.reason || 'No permitido anular este recibo.',
+          lockedEval.statusCode || 403,
+        );
+      }
+
       if (txRecord.personaId) {
         await recordLedgerMovement(prismaTx, {
           personaId: txRecord.personaId,
@@ -265,9 +351,16 @@ export const receiptService = {
           billingType: txRecord.billingType,
           amount: amountToRestore,
           orderId: txRecord.orderId,
+          transactionId: txRecord.id,
           userId: params.adminId,
           reference: `Anulación Recibo #${txRecord.id}`,
-          description: `Reversión por anulación de Recibo N° ${txRecord.receiptNumber || 'INT-' + txRecord.id.toString().padStart(5, '0')}`,
+          description: `Reversión por anulación de Recibo N° ${txRecord.receiptNumber || 'INT-' + txRecord.id.toString().padStart(5, '0')} (${cleanReason})`,
+        });
+      }
+
+      if (typeof (prismaTx as any).paymentAllocation?.deleteMany === 'function') {
+        await prismaTx.paymentAllocation.deleteMany({
+          where: { transactionId: txRecord.id },
         });
       }
 
@@ -278,12 +371,19 @@ export const receiptService = {
         });
       }
 
-      await prismaTx.transaction.delete({ where: { id: txRecord.id } });
+      await prismaTx.transaction.update({
+        where: { id: txRecord.id },
+        data: {
+          voidedAt,
+          voidedById: params.adminId,
+          voidReason: cleanReason,
+        },
+      });
 
       await prismaTx.auditLog.create({
         data: {
           userId: params.adminId,
-          action: 'DELETE_COLLECTION_RECEIPT',
+          action: 'VOID_COLLECTION_RECEIPT',
           entityType: 'Transaction',
           entityId: txRecord.id,
           oldValues: {
@@ -294,14 +394,39 @@ export const receiptService = {
             paymentMethod: txRecord.paymentMethod,
             billingType: txRecord.billingType,
             verified: txRecord.verified,
+            cashDrawerId: txRecord.cashDrawerId,
+          },
+          newValues: {
+            voidedAt: voidedAt.toISOString(),
+            voidedById: params.adminId,
+            voidReason: cleanReason,
           },
         },
       });
     });
 
     return {
-      receiptLabel: txRecord.receiptNumber || `N° ${txRecord.id}`,
+      receiptLabel: preCheck.receiptNumber || `N° ${preCheck.id}`,
       amountToRestore,
+      voidedAt,
+      voidReason: cleanReason,
     };
+  },
+
+  /** Alias retrocompatible que delega a `voidReceipt` (nunca elimina físicamente). */
+  async deleteReceipt(params: {
+    adminId: number;
+    userRole: Role;
+    receiptId: number;
+    reason?: string;
+    now?: Date;
+  }) {
+    return this.voidReceipt({
+      adminId: params.adminId,
+      userRole: params.userRole,
+      receiptId: params.receiptId,
+      reason: params.reason || '',
+      now: params.now,
+    });
   },
 };

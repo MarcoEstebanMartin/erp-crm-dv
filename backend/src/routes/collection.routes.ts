@@ -8,6 +8,7 @@ import {
   getPendingRendiciones,
   getCollectionsSummary,
   verifyRendicion,
+  voidReceipt,
   deleteReceipt,
 } from '../controllers/collection.controller';
 import { authenticateJWT, optionalAuthenticateJWT, requireRole } from '../middlewares/auth';
@@ -17,6 +18,7 @@ import { validateRequest } from '../middlewares/validateRequest';
 import {
   registerCollectionSchema,
   verifyRendicionSchema,
+  voidReceiptSchema,
 } from '../validators/collection.validator';
 
 const router = Router();
@@ -48,11 +50,21 @@ router.get(
 // Detalle público sanitizado de un recibo (exige token HMAC `?v=...` salvo staff autenticado)
 router.get('/receipt/:id', publicApiRateLimiter, optionalAuthenticateJWT, getReceipt);
 
-// Eliminar/anular un recibo erróneo
+// Anular un recibo erróneo (soft-void auditable con motivo obligatorio; nunca borrado físico)
+router.post(
+  '/receipt/:id/void',
+  authenticateJWT,
+  requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(voidReceiptSchema),
+  voidReceipt,
+);
+
+// Alias retrocompatible (también exige motivo obligatorio y realiza soft-void)
 router.delete(
   '/receipt/:id',
   authenticateJWT,
   requireRole([Role.ADMIN, Role.FACTURACION]),
+  validateRequest(voidReceiptSchema),
   deleteReceipt,
 );
 

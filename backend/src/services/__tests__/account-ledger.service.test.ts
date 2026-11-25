@@ -123,7 +123,7 @@ describe('Libro Mayor Físico Inmutable (AccountLedger)', () => {
     expect(runningBalance).toBe(5000);
   });
 
-  it('deleteReceipt inserta RECEIPT_REVERSAL (DEBIT) en AccountLedger antes de borrar la transacción', async () => {
+  it('voidReceipt inserta RECEIPT_REVERSAL (DEBIT) en AccountLedger y marca soft-void sin borrar la transacción', async () => {
     vi.spyOn(prisma.transaction, 'findUnique').mockResolvedValue({
       id: 77,
       personaId: 12,
@@ -135,6 +135,10 @@ describe('Libro Mayor Físico Inmutable (AccountLedger)', () => {
       paymentMethod: PaymentMethod.CASH,
       verified: false,
       bankAccountId: null,
+      createdAt: new Date(),
+      voidedAt: null,
+      cashDrawer: null,
+      fieldReceipt: null,
       persona: { id: 12, name: 'Fiambrería Centro' },
     } as any);
 
@@ -152,20 +156,46 @@ describe('Libro Mayor Físico Inmutable (AccountLedger)', () => {
           return Promise.resolve({ id: 99, ...data });
         }),
       },
+      paymentAllocation: {
+        deleteMany: vi.fn().mockImplementation(() => {
+          callOrder.push('paymentAllocation.deleteMany');
+          return Promise.resolve({ count: 1 });
+        }),
+      },
       transaction: {
-        delete: vi.fn().mockImplementation(() => {
-          callOrder.push('transaction.delete');
+        update: vi.fn().mockImplementation(() => {
+          callOrder.push('transaction.update');
           return Promise.resolve({});
         }),
+        delete: vi.fn(),
       },
       auditLog: { create: vi.fn().mockResolvedValue({}) },
     };
 
     vi.spyOn(prisma, '$transaction').mockImplementation(async (cb: any) => cb(mockTx));
 
-    await receiptService.deleteReceipt({ receiptId: 77, adminId: 1, userRole: Role.ADMIN });
+    await receiptService.voidReceipt({
+      receiptId: 77,
+      adminId: 1,
+      userRole: Role.ADMIN,
+      reason: 'Error de importe cargado en mostrador',
+    });
 
-    expect(callOrder).toEqual(['persona.update', 'ledger.RECEIPT_REVERSAL', 'transaction.delete']);
+    expect(callOrder).toEqual([
+      'persona.update',
+      'ledger.RECEIPT_REVERSAL',
+      'paymentAllocation.deleteMany',
+      'transaction.update',
+    ]);
+    expect(mockTx.transaction.delete).not.toHaveBeenCalled();
+    expect(mockTx.accountLedger.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          transactionId: 77,
+          sourceType: LedgerSourceType.RECEIPT_REVERSAL,
+        }),
+      }),
+    );
   });
 
   it('getPersonaLedger y checkAllBalances leen directamente de AccountLedger sin colisiones de IDs UI', async () => {

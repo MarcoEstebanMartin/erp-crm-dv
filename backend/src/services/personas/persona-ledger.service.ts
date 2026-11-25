@@ -30,7 +30,7 @@ export class PersonaLedgerSubService {
       where: { personaId: persona.id },
       include: {
         transaction: {
-          select: { id: true, movementId: true, receiptNumber: true },
+          select: { id: true, movementId: true, receiptNumber: true, voidedAt: true, voidReason: true },
         },
       },
       orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
