@@ -33,6 +33,16 @@ export interface CatalogStudioProductDTO extends CatalogProductInput {
 }
 
 const DEFAULT_STATE_KEY = 'default';
+const PDF_CACHE_TTL_MS = 60_000;
+
+interface CachedPdfResult {
+  buffer: Buffer;
+  filename: string;
+  expiresAt: number;
+}
+
+const pdfResultCache = new Map<string, CachedPdfResult>();
+const inFlightPdfJobs = new Map<string, Promise<{ buffer: Buffer; filename: string }>>();
 
 function toStringArray(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
@@ -83,6 +93,7 @@ export class CatalogStudioService {
 
   private static async loadStudioProducts(itemOrder: string[]): Promise<CatalogStudioProductDTO[]> {
     const rows = await prisma.product.findMany({
+      where: { isActive: true },
       select: {
         id: true,
         sku: true,
@@ -202,6 +213,8 @@ export class CatalogStudioService {
       },
     });
 
+    this.invalidatePdfCache();
+
     return {
       title: saved.title,
       subtitle: saved.subtitle || formatCurrentEditionSubtitle(),
@@ -271,47 +284,88 @@ export class CatalogStudioService {
     });
 
     appCache.invalidateProductCatalogThrottled();
+    this.invalidatePdfCache();
     return updated;
   }
 
+  static invalidatePdfCache(): void {
+    pdfResultCache.clear();
+  }
+
+  private static async runSingleFlightPdf(
+    cacheKey: string,
+    builder: () => Promise<{ buffer: Buffer; filename: string }>,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const cached = pdfResultCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return { buffer: cached.buffer, filename: cached.filename };
+    }
+
+    const existingJob = inFlightPdfJobs.get(cacheKey);
+    if (existingJob) {
+      return existingJob;
+    }
+
+    const job = builder()
+      .then((result) => {
+        pdfResultCache.set(cacheKey, {
+          buffer: result.buffer,
+          filename: result.filename,
+          expiresAt: Date.now() + PDF_CACHE_TTL_MS,
+        });
+        return result;
+      })
+      .finally(() => {
+        inFlightPdfJobs.delete(cacheKey);
+      });
+
+    inFlightPdfJobs.set(cacheKey, job);
+    return job;
+  }
+
   static async generateMagazinePdf(): Promise<{ buffer: Buffer; filename: string }> {
-    const { state, products } = await this.getStudioData();
-    const visibleProducts = products.filter((p) => {
-      if (!p.isActive || !p.catalogVisible) return false;
-      if (state.hideOutOfStock && Number(p.stock || 0) <= 0) return false;
-      return true;
-    });
+    return this.runSingleFlightPdf('magazine', async () => {
+      const { state, products } = await this.getStudioData();
+      const visibleProducts = products.filter((p) => {
+        if (!p.isActive || !p.catalogVisible) return false;
+        if (state.hideOutOfStock && Number(p.stock || 0) <= 0) return false;
+        return true;
+      });
 
-    const buffer = await renderCatalogMagazinePdf(visibleProducts, state.combos, {
-      title: state.title,
-      subtitle: state.subtitle,
-      categoryOrder: state.categoryOrder.length > 0 ? state.categoryOrder : undefined,
-    });
+      const buffer = await renderCatalogMagazinePdf(visibleProducts, state.combos, {
+        title: state.title,
+        subtitle: state.subtitle,
+        categoryOrder: state.categoryOrder.length > 0 ? state.categoryOrder : undefined,
+      });
 
-    const suffix = sanitizeFilenamePart(state.subtitle || formatCurrentEditionSubtitle());
-    return {
-      buffer,
-      filename: `OFERTA_SEMANAL_DON_VENANCIO_${suffix}.pdf`,
-    };
+      const suffix = sanitizeFilenamePart(state.subtitle || formatCurrentEditionSubtitle());
+      return {
+        buffer,
+        filename: `OFERTA_SEMANAL_DON_VENANCIO_${suffix}.pdf`,
+      };
+    });
   }
 
   static async generateResumenPdf(onlyOferton = false): Promise<{ buffer: Buffer; filename: string }> {
-    const { state, products } = await this.getStudioData();
-    const visibleProducts = products.filter((p) => {
-      if (!p.isActive || !p.catalogVisible) return false;
-      if (state.hideOutOfStock && Number(p.stock || 0) <= 0) return false;
-      return true;
-    });
+    const cacheKey = onlyOferton ? 'resumen:oferton' : 'resumen:all';
+    return this.runSingleFlightPdf(cacheKey, async () => {
+      const { state, products } = await this.getStudioData();
+      const visibleProducts = products.filter((p) => {
+        if (!p.isActive || !p.catalogVisible) return false;
+        if (state.hideOutOfStock && Number(p.stock || 0) <= 0) return false;
+        return true;
+      });
 
-    const buffer = await renderCatalogResumenPdf(visibleProducts, {
-      subtitle: state.subtitle,
-      onlyOfertonInResumen: onlyOferton,
-    });
+      const buffer = await renderCatalogResumenPdf(visibleProducts, {
+        subtitle: state.subtitle,
+        onlyOfertonInResumen: onlyOferton,
+      });
 
-    const suffix = sanitizeFilenamePart(state.subtitle || formatCurrentEditionSubtitle());
-    return {
-      buffer,
-      filename: `RESUMEN_OFERTAS_DON_VENANCIO_${suffix}.pdf`,
-    };
+      const suffix = sanitizeFilenamePart(state.subtitle || formatCurrentEditionSubtitle());
+      return {
+        buffer,
+        filename: `RESUMEN_OFERTAS_DON_VENANCIO_${suffix}.pdf`,
+      };
+    });
   }
 }

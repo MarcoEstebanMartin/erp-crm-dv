@@ -19,6 +19,7 @@ vi.mock('../../utils/prisma', () => ({
 describe('CatalogStudioService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    CatalogStudioService.invalidatePdfCache();
   });
 
   it('devuelve productos reales del ERP con margen calculado y orden personalizado', async () => {
@@ -183,5 +184,37 @@ describe('CatalogStudioService', () => {
     expect(mag.filename).toContain('OFERTA_SEMANAL_DON_VENANCIO_EDICION_25_11');
     expect(res.buffer.subarray(0, 5).toString('ascii')).toBe('%PDF-');
     expect(res.filename).toContain('RESUMEN_OFERTAS_DON_VENANCIO_EDICION_25_11');
+    expect((prisma.product.findMany as any).mock.calls[0][0]).toMatchObject({
+      where: { isActive: true },
+    });
+  });
+
+  it('reutiliza la generación concurrente (single-flight) y cachea el PDF hasta invalidar', async () => {
+    (prisma.catalogStudioState.findUnique as any).mockResolvedValue({
+      title: 'OFERTAS SEMANALES',
+      subtitle: 'EDICION 25/11',
+      hideOutOfStock: false,
+      categoryOrder: [],
+      itemOrder: [],
+      combos: [],
+      updatedAt: new Date(),
+    });
+    (prisma.product.findMany as any).mockResolvedValue([]);
+
+    const [a, b] = await Promise.all([
+      CatalogStudioService.generateMagazinePdf(),
+      CatalogStudioService.generateMagazinePdf(),
+    ]);
+
+    expect(a.buffer).toBe(b.buffer);
+    expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
+
+    const c = await CatalogStudioService.generateMagazinePdf();
+    expect(c.buffer).toBe(a.buffer);
+    expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
+
+    CatalogStudioService.invalidatePdfCache();
+    await CatalogStudioService.generateMagazinePdf();
+    expect(prisma.product.findMany).toHaveBeenCalledTimes(2);
   });
 });

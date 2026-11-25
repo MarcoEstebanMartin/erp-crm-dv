@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Download, FileText, Plus, Save, Search, Trash2, Edit3 } from 'lucide-react';
 import {
   catalogStudioApi,
@@ -79,51 +79,45 @@ export default function CatalogStudioTab() {
     }
   };
 
-  const handlePatchProduct = async (
-    productId: number,
-    payload: Parameters<typeof catalogStudioApi.patchProduct>[1],
-  ) => {
-    setSavingProductId(productId);
-    setError(null);
-    try {
-      await catalogStudioApi.patchProduct(productId, payload);
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p.id !== productId) return p;
-          return {
-            ...p,
-            badge: payload.catalogBadge !== undefined ? payload.catalogBadge : p.badge,
-            varieties: payload.catalogVarieties !== undefined ? payload.catalogVarieties : p.varieties,
-            minQty: payload.catalogMinQtyLabel !== undefined ? payload.catalogMinQtyLabel : p.minQty,
-            showOldPrice:
-              payload.catalogShowOldPrice !== undefined ? payload.catalogShowOldPrice : p.showOldPrice,
-            oldPrice:
-              payload.catalogOldPrice !== undefined
-                ? payload.catalogOldPrice ?? p.previousListPrice
-                : p.oldPrice,
-            catalogVisible:
-              payload.catalogVisible !== undefined ? payload.catalogVisible : p.catalogVisible,
-            category:
-              payload.commercialCategory !== undefined && payload.commercialCategory
-                ? payload.commercialCategory
-                : p.category,
-          };
-        }),
-      );
-    } catch (err: any) {
-      setError(err?.message || 'No se pudo actualizar el producto.');
-    } finally {
-      setSavingProductId(null);
-    }
-  };
+  const handlePatchProduct = useCallback(
+    async (productId: number, payload: Parameters<typeof catalogStudioApi.patchProduct>[1]) => {
+      setSavingProductId(productId);
+      setError(null);
+      try {
+        await catalogStudioApi.patchProduct(productId, payload);
+        setProducts((prev) =>
+          prev.map((p) => {
+            if (p.id !== productId) return p;
+            return {
+              ...p,
+              badge: payload.catalogBadge !== undefined ? payload.catalogBadge : p.badge,
+              varieties: payload.catalogVarieties !== undefined ? payload.catalogVarieties : p.varieties,
+              minQty: payload.catalogMinQtyLabel !== undefined ? payload.catalogMinQtyLabel : p.minQty,
+              showOldPrice: payload.catalogShowOldPrice ?? p.showOldPrice,
+              oldPrice: payload.catalogOldPrice !== undefined ? (payload.catalogOldPrice ?? p.previousListPrice) : p.oldPrice,
+              catalogVisible: payload.catalogVisible ?? p.catalogVisible,
+              category: payload.commercialCategory || p.category,
+            };
+          }),
+        );
+      } catch (err: any) {
+        setError(err?.message || 'No se pudo actualizar el producto.');
+      } finally {
+        setSavingProductId(null);
+      }
+    },
+    [],
+  );
 
-  const handleToggleBadge = (product: CatalogStudioProduct, badge: CatalogBadgeType) => {
-    handlePatchProduct(product.id, { catalogBadge: badge });
-  };
+  const handleToggleBadge = useCallback(
+    (product: CatalogStudioProduct, badge: CatalogBadgeType) => handlePatchProduct(product.id, { catalogBadge: badge }),
+    [handlePatchProduct],
+  );
 
-  const handleToggleVisible = (product: CatalogStudioProduct) => {
-    handlePatchProduct(product.id, { catalogVisible: !product.catalogVisible });
-  };
+  const handleToggleVisible = useCallback(
+    (product: CatalogStudioProduct) => handlePatchProduct(product.id, { catalogVisible: !product.catalogVisible }),
+    [handlePatchProduct],
+  );
 
   const handleSaveCombo = (combo: CatalogCombo) => {
     const exists = state.combos.some((c) => c.id === combo.id);
@@ -158,10 +152,12 @@ export default function CatalogStudioTab() {
     }
   };
 
+  const deferredSearch = useDeferredValue(search);
+
   const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products]);
 
   const filteredProducts = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = deferredSearch.trim().toLowerCase();
     return activeProducts.filter((p) => {
       if (state.hideOutOfStock && p.stock <= 0 && filterMode !== 'hidden') return false;
       if (selectedCategory && p.category !== selectedCategory) return false;
@@ -176,7 +172,7 @@ export default function CatalogStudioTab() {
         (p.varieties || '').toLowerCase().includes(term)
       );
     });
-  }, [activeProducts, search, selectedCategory, filterMode, state.hideOutOfStock]);
+  }, [activeProducts, deferredSearch, selectedCategory, filterMode, state.hideOutOfStock]);
 
   const groupedSections = useMemo(() => {
     const map = new Map<string, CatalogStudioProduct[]>();

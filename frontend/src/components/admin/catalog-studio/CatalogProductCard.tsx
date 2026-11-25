@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Eye, EyeOff, ImageOff, SlidersHorizontal } from 'lucide-react';
 import type {
   CatalogBadgeType,
@@ -24,7 +25,7 @@ function formatArs(value: number): string {
   return `$${Math.round(value).toLocaleString('es-AR')}`;
 }
 
-export function CatalogProductCard({
+export const CatalogProductCard = memo(function CatalogProductCard({
   product,
   saving,
   onToggleBadge,
@@ -63,7 +64,7 @@ export function CatalogProductCard({
 
       <div className="cs-card-media">
         {imgSrc ? (
-          <img src={imgSrc} alt={product.name} loading="lazy" />
+          <img src={imgSrc} alt={product.name} loading="lazy" decoding="async" />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: '#a1a1aa', fontSize: 11 }}>
             <ImageOff size={18} />
@@ -129,4 +130,4 @@ export function CatalogProductCard({
       </div>
     </article>
   );
-}
+});

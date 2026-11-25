@@ -2,6 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 
+// Evita que libvips acapare RAM nativa o CPU en contenedores con recursos acotados (Railway)
+sharp.cache(false);
+sharp.concurrency(2);
+
 export interface CroppedImageResult {
   buffer: Buffer;
   width: number;
@@ -13,11 +17,23 @@ const LOGO_ASSET_PATH = path.resolve(__dirname, '../../../assets/logo_dv_clean.p
 
 interface CacheEntry {
   mtimeMs: number;
+  byteLength: number;
   data: CroppedImageResult;
 }
 
-const MAX_CACHE_ITEMS = 450;
+const MAX_CACHE_BYTES = 25 * 1024 * 1024; // 25 MB techo estricto en RAM
+const MAX_CROP_DIMENSION = 360;
 const imageCache = new Map<string, CacheEntry>();
+let totalCachedBytes = 0;
+
+export function clearCatalogImageCache(): void {
+  imageCache.clear();
+  totalCachedBytes = 0;
+}
+
+export function getCatalogImageCacheStats(): { entries: number; bytes: number; maxBytes: number } {
+  return { entries: imageCache.size, bytes: totalCachedBytes, maxBytes: MAX_CACHE_BYTES };
+}
 
 export function resolveLogoAssetPath(): string | null {
   return fs.existsSync(LOGO_ASSET_PATH) ? LOGO_ASSET_PATH : null;
@@ -55,6 +71,9 @@ export async function getAutocroppedProductImage(
 
   const cached = imageCache.get(fullPath);
   if (cached && cached.mtimeMs === stat.mtimeMs) {
+    // Refresca orden LRU
+    imageCache.delete(fullPath);
+    imageCache.set(fullPath, cached);
     return cached.data;
   }
 
@@ -67,8 +86,13 @@ export async function getAutocroppedProductImage(
     }
 
     const { data, info } = await pipeline
-      .resize({ width: 520, height: 520, fit: 'inside', withoutEnlargement: true })
-      .png({ compressionLevel: 6 })
+      .resize({
+        width: MAX_CROP_DIMENSION,
+        height: MAX_CROP_DIMENSION,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .png({ compressionLevel: 7 })
       .toBuffer({ resolveWithObject: true });
 
     if (!info.width || !info.height) return null;
@@ -79,11 +103,25 @@ export async function getAutocroppedProductImage(
       height: info.height,
     };
 
-    if (imageCache.size >= MAX_CACHE_ITEMS) {
-      const oldestKey = imageCache.keys().next().value;
-      if (oldestKey) imageCache.delete(oldestKey);
+    const existing = imageCache.get(fullPath);
+    if (existing) {
+      totalCachedBytes -= existing.byteLength;
+      imageCache.delete(fullPath);
     }
-    imageCache.set(fullPath, { mtimeMs: stat.mtimeMs, data: result });
+
+    const entryBytes = data.byteLength;
+    if (entryBytes <= MAX_CACHE_BYTES) {
+      while (totalCachedBytes + entryBytes > MAX_CACHE_BYTES && imageCache.size > 0) {
+        const oldestKey = imageCache.keys().next().value;
+        if (!oldestKey) break;
+        const oldest = imageCache.get(oldestKey);
+        if (oldest) totalCachedBytes -= oldest.byteLength;
+        imageCache.delete(oldestKey);
+      }
+      imageCache.set(fullPath, { mtimeMs: stat.mtimeMs, byteLength: entryBytes, data: result });
+      totalCachedBytes += entryBytes;
+    }
+
     return result;
   } catch {
     return null;
