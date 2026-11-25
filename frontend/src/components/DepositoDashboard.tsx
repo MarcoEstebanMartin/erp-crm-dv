@@ -11,22 +11,31 @@ import { PickingActiveOrderView } from './deposito/PickingActiveOrderView';
 import { PickingConsolidatedView } from './deposito/PickingConsolidatedView';
 import { BultosCloseModal } from './deposito/BultosCloseModal';
 import { DepositoStockListTab } from './deposito/DepositoStockListTab';
+import type { DepositoStockFilter } from './deposito/stockFilterHelpers';
 import { DepositoStockAdjustModal } from './deposito/DepositoStockAdjustModal';
 import { DepositoLotsExpirationTab } from './deposito/DepositoLotsExpirationTab';
 import { DepositoReplenishmentTab } from './deposito/DepositoReplenishmentTab';
 import { DepositoPrintLayouts } from './deposito/DepositoPrintLayouts';
 import { useDepositoController } from './deposito/useDepositoController';
+import './deposito/depositoApp.css';
 
 interface DepositoDashboardProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   pickingOnly?: boolean;
+  appMode?: boolean;
 }
 
-export default function DepositoDashboard({ activeTab, pickingOnly = false }: DepositoDashboardProps) {
+export default function DepositoDashboard({
+  activeTab,
+  setActiveTab,
+  pickingOnly = false,
+  appMode = false,
+}: DepositoDashboardProps) {
   const confirm = useConfirm();
-  const c = useDepositoController(activeTab, confirm, pickingOnly);
+  const c = useDepositoController(activeTab, confirm, pickingOnly, appMode);
   const [focusedMapLocation, setFocusedMapLocation] = useState<string | null>(null);
+  const [pendingStockFilter, setPendingStockFilter] = useState<DepositoStockFilter | undefined>(undefined);
 
   if (activeTab === 'field-receipts') {
     return <FieldCollectionPage />;
@@ -59,7 +68,7 @@ export default function DepositoDashboard({ activeTab, pickingOnly = false }: De
 
   return (
     <div style={{ width: '100%' }}>
-      {!pickingOnly && (
+      {!pickingOnly && !appMode && (
         <div className="no-print linear-tablist" role="tablist" aria-label="Depósito WMS" style={{ marginBottom: '20px' }}>
           {[
             { id: 'wms-map', label: 'Mapa WMS', icon: <Map size={15} aria-hidden="true" /> },
@@ -104,6 +113,16 @@ export default function DepositoDashboard({ activeTab, pickingOnly = false }: De
             onFIFOAutoFillAll={c.handleFIFOAutoFillAll}
             onLotQtyChange={c.handleLotQtyChange}
             onFinishPicking={c.handleFinishPicking}
+            onJumpToMapLocation={
+              pickingOnly
+                ? undefined
+                : (loc) => {
+                    setFocusedMapLocation(loc);
+                    c.setSelectedOrder(null);
+                    if (appMode) setActiveTab('mapa');
+                    else c.setSubTab('wms-map');
+                  }
+            }
           />
         ) : c.showConsolidatedView ? (
           <PickingConsolidatedView
@@ -132,10 +151,21 @@ export default function DepositoDashboard({ activeTab, pickingOnly = false }: De
             setSelectedOrderIds={c.setSelectedOrderIds}
             loading={c.loading}
             onRefresh={c.fetchData}
-            onStartPicking={c.handleStartPicking}
-            onSelectOrder={c.handleSelectOrder}
+            onOpenOrder={c.handleOpenOrderForPicking}
             onBatchStartPicking={c.handleBatchStartPicking}
             onOpenConsolidatedView={() => { c.setConsolidatedCheckedItems({}); c.setConsolidatedZone('ALL'); c.setShowConsolidatedView(true); }}
+            onOpenExpiringStock={
+              pickingOnly
+                ? undefined
+                : () => {
+                    if (appMode) {
+                      setPendingStockFilter('EXPIRING');
+                      setActiveTab('stock');
+                    } else {
+                      c.setSubTab('lot-expiration');
+                    }
+                  }
+            }
             onToggleSelectAll={() => {
               const allSelected = filteredOrders.length > 0 && filteredOrders.every((o) => c.selectedOrderIds[o.id]);
               const next = { ...c.selectedOrderIds };
@@ -180,8 +210,14 @@ export default function DepositoDashboard({ activeTab, pickingOnly = false }: De
           onOpenStockModal={(p) => c.setStockModal({ open: true, product: p, quantityChange: 0, reason: '', lotNumber: '', isNewLot: false, expirationDate: '', location: '' })}
           onJumpToMapLocation={(loc) => {
             setFocusedMapLocation(loc);
-            c.setSubTab('wms-map');
+            if (appMode) {
+              setActiveTab('mapa');
+            } else {
+              c.setSubTab('wms-map');
+            }
           }}
+          initialFilter={pendingStockFilter}
+          onConsumeInitialFilter={() => setPendingStockFilter(undefined)}
         />
       )}
 

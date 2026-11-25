@@ -7,6 +7,7 @@ import {
   getEmployeePdfReport,
   getAuditLogs,
   getDocumentAuditLogs,
+  getSensitiveEvents,
   getUsers,
   createUser,
   toggleUserStatus,
@@ -64,6 +65,7 @@ router.get('/reports/zones', validateRequest(getZoneReportsQuerySchema), getZone
 router.get('/reports/opportunities', validateRequest(getOpportunitiesReportQuerySchema), getCommercialOpportunities);
 
 router.get('/audit-logs', validateRequest(getAuditLogsQuerySchema), getAuditLogs);
+router.get('/sensitive-events', getSensitiveEvents);
 router.get('/users', getUsers);
 router.post('/users', idempotencyGuard, validateRequest(createUserSchema), createUser);
 router.put('/users/:id', idempotencyGuard, validateRequest(updateUserSchema), updateUser);

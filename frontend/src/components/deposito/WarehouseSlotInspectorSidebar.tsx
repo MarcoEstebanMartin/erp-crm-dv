@@ -60,19 +60,7 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
   const actionLabel = isEmpty && !selectedSlot?.isBlocked ? 'Ubicar stock' : 'Abrir estante';
 
   return (
-    <div
-      style={{
-        width: '320px',
-        flexShrink: 0,
-        backgroundColor: '#ffffff',
-        border: '1px solid var(--border-color)',
-        borderRadius: '10px',
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-      }}
-    >
+    <div className={`wms-inspector-panel ${!selectedSlot ? 'wms-inspector-panel--empty' : ''}`}>
       {selectedSlot ? (
         <>
           <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
@@ -142,8 +130,9 @@ export const WarehouseSlotInspectorSidebar: React.FC<WarehouseSlotInspectorSideb
             className="btn btn-primary"
             style={{
               width: '100%',
+              minBlockSize: '42px',
               padding: '9px 14px',
-              fontSize: '0.84rem',
+              fontSize: '0.86rem',
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center',

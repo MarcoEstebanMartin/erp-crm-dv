@@ -1,11 +1,7 @@
 import React from 'react';
-import { Play, Eye, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Layers, Play, RefreshCw, Search } from 'lucide-react';
 import type { Order, ProductLot } from '../../types';
-import {
-  extractCleanLotNumber,
-  formatCleanExpirationDate,
-  isSentinelExpiration,
-} from '../stock/lotLabel';
+import { isSentinelExpiration } from '../stock/lotLabel';
 
 interface PickingOrdersQueueTabProps {
   expiringLots: ProductLot[];
@@ -23,213 +19,255 @@ interface PickingOrdersQueueTabProps {
   setSelectedOrderIds: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
   loading: boolean;
   onRefresh: () => void;
-  onStartPicking: (orderId: number) => void;
-  onSelectOrder: (order: Order) => void;
+  onOpenOrder: (order: Order) => void;
   onBatchStartPicking: () => void;
   onOpenConsolidatedView: () => void;
   onToggleSelectAll: () => void;
+  onOpenExpiringStock?: () => void;
 }
 
 export const PickingOrdersQueueTab: React.FC<PickingOrdersQueueTabProps> = ({
-  expiringLots, filteredOrders, uniqueRoutes, orderSearchQuery, setOrderSearchQuery,
-  routeFilter, setRouteFilter, withdrawalFilter, setWithdrawalFilter, selectedStatus, setSelectedStatus,
-  selectedOrderIds, setSelectedOrderIds, loading, onRefresh, onStartPicking, onSelectOrder,
-  onBatchStartPicking, onOpenConsolidatedView, onToggleSelectAll,
+  expiringLots,
+  filteredOrders,
+  uniqueRoutes,
+  orderSearchQuery,
+  setOrderSearchQuery,
+  routeFilter,
+  setRouteFilter,
+  withdrawalFilter,
+  setWithdrawalFilter,
+  selectedStatus,
+  setSelectedStatus,
+  selectedOrderIds,
+  setSelectedOrderIds,
+  loading,
+  onRefresh,
+  onOpenOrder,
+  onBatchStartPicking,
+  onOpenConsolidatedView,
+  onToggleSelectAll,
+  onOpenExpiringStock,
 }) => {
+  const realExpiringCount = expiringLots.filter((lot) => !isSentinelExpiration(lot.expirationDate)).length;
+  const selectedCount = Object.keys(selectedOrderIds).length;
+  const allSelected = filteredOrders.length > 0 && filteredOrders.every((o) => selectedOrderIds[o.id]);
+
   return (
-    <div>
-      {expiringLots.filter((lot) => !isSentinelExpiration(lot.expirationDate)).length > 0 && (
-        <div className="card" style={{ backgroundColor: '#FFF2F2', border: '1px solid #FFD1D1', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
-          <h4 style={{ margin: '0 0 8px 0', color: '#C0392B', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Lotes Próximos a Vencer (Menos de 30 días)
-          </h4>
-          <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {expiringLots.filter((lot) => !isSentinelExpiration(lot.expirationDate)).map((lot) => {
-              const daysLeft = Math.ceil((new Date(lot.expirationDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
-              const isExpired = daysLeft <= 0;
-              return (
-                <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', padding: '6px 10px', backgroundColor: '#fff', borderRadius: '4px', borderLeft: isExpired ? '4px solid #C0392B' : '4px solid #F39C12' }}>
-                  <div>
-                    <strong>{lot.product?.name}</strong> <span style={{ color: 'var(--text-secondary)' }}>(SKU: {lot.product?.sku})</span>
-                    <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>
-                      Lote: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{extractCleanLotNumber(lot.lotNumber)}</span> | Vence: {formatCleanExpirationDate(lot.expirationDate)}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontWeight: 'bold', color: isExpired ? '#C0392B' : '#E67E22', backgroundColor: isExpired ? '#FDEDEC' : '#FEF9E7', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', display: 'inline-block', marginBottom: '2px' }}>
-                      {isExpired ? 'VENCIDO' : `Vence en ${daysLeft} días`}
-                    </span>
-                    <div style={{ fontWeight: 600 }}>Stock: {lot.stock} u.</div>
-                  </div>
-                </div>
-              );
-            })}
+    <div className="dep-shell">
+      <search aria-label="Filtrar pedidos" className="dep-toolbar">
+        <div className="dep-search-row">
+          <div className="dep-search-box">
+            <label htmlFor="picking-orders-search" className="visually-hidden">Buscar pedidos</label>
+            <Search size={16} aria-hidden="true" className="dep-search-icon" />
+            <input
+              id="picking-orders-search"
+              type="search"
+              className="input"
+              placeholder="Pedido, cliente o localidad..."
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={orderSearchQuery}
+              onChange={(e) => setOrderSearchQuery(e.target.value)}
+            />
           </div>
-        </div>
-      )}
-
-      <search aria-label="Filtrar cola de picking" className="actions-bar" style={{ flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
-        <div className="search-input-wrapper" style={{ minWidth: '280px' }}>
-          <label htmlFor="picking-orders-search" className="visually-hidden">Buscar pedidos</label>
-          <input
-            id="picking-orders-search"
-            type="search"
-            className="input"
-            placeholder="Nro pedido, cliente o localidad..."
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            value={orderSearchQuery}
-            onChange={(e) => setOrderSearchQuery(e.target.value)}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <label htmlFor="picking-route-filter" className="visually-hidden">Ruta</label>
-          <select
-            id="picking-route-filter"
-            className="select" style={{ width: '200px', height: '38px', padding: '6px 12px' }} value={routeFilter}
-            onChange={(e) => { setRouteFilter(e.target.value); if (e.target.value !== 'ALL') setWithdrawalFilter(false); }}
-          >
-            <option value="ALL">Todas las Rutas</option>
-            {uniqueRoutes.map((r) => (<option key={r} value={r}>{r}</option>))}
-          </select>
 
           <button
-            type="button" className="btn"
-            style={{
-              height: '38px', padding: '0 16px',
-              backgroundColor: withdrawalFilter ? 'var(--color-corp-red)' : 'var(--bg-card)',
-              borderColor: withdrawalFilter ? 'var(--color-corp-red)' : 'var(--border-color)',
-              color: withdrawalFilter ? '#fff' : 'var(--text-secondary)',
-              boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)', fontWeight: 600,
-            }}
-            onClick={() => { const val = !withdrawalFilter; setWithdrawalFilter(val); if (val) setRouteFilter('ALL'); }}
+            type="button"
+            className="btn btn-secondary"
+            style={{ minBlockSize: '42px', minInlineSize: '42px', padding: '0 10px' }}
+            onClick={onRefresh}
+            aria-label="Actualizar"
           >
-            Retiros Depósito
+            <RefreshCw size={16} className={loading ? 'spin-animation' : ''} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="dep-chips-row">
+          {[
+            { id: 'ALL', label: 'Todos' },
+            { id: 'PENDING', label: 'Pendientes' },
+            { id: 'PREPARING', label: 'En curso' },
+          ].map((st) => (
+            <button
+              key={st.id}
+              type="button"
+              className={`dep-chip ${selectedStatus === st.id ? 'dep-chip--active' : ''}`}
+              onClick={() => setSelectedStatus(st.id)}
+            >
+              {st.label}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            className={`dep-chip ${withdrawalFilter ? 'dep-chip--active' : ''}`}
+            onClick={() => {
+              const next = !withdrawalFilter;
+              setWithdrawalFilter(next);
+              if (next) setRouteFilter('ALL');
+            }}
+          >
+            Retiro
           </button>
 
-          <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', height: '38px' }}>
-            {[
-              { id: 'ALL', label: 'Todos' },
-              { id: 'PENDING', label: 'Pendientes' },
-              { id: 'PREPARING', label: 'En Preparación' },
-            ].map((st) => (
-              <button
-                key={st.id} type="button"
-                style={{
-                  padding: '0 12px', fontSize: '0.8rem', border: 'none', borderRadius: 0, boxShadow: 'none',
-                  backgroundColor: selectedStatus === st.id ? 'var(--accent-color)' : 'var(--bg-card)',
-                  color: selectedStatus === st.id ? '#fff' : 'var(--text-secondary)',
-                  cursor: 'pointer', fontWeight: selectedStatus === st.id ? 600 : 400,
+          {uniqueRoutes.length > 0 && (
+            <>
+              <label htmlFor="picking-route-filter" className="visually-hidden">Ruta</label>
+              <select
+                id="picking-route-filter"
+                className="select"
+                style={{ width: 'auto', minWidth: '140px', minBlockSize: '36px', padding: '4px 10px', fontSize: '0.82rem' }}
+                value={routeFilter}
+                onChange={(e) => {
+                  setRouteFilter(e.target.value);
+                  if (e.target.value !== 'ALL') setWithdrawalFilter(false);
                 }}
-                onClick={() => setSelectedStatus(st.id)}
               >
-                {st.label}
-              </button>
-            ))}
-          </div>
+                <option value="ALL">Todas las rutas</option>
+                {uniqueRoutes.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </>
+          )}
 
-          <button type="button" className="btn btn-secondary" style={{ height: '38px' }} onClick={onRefresh} aria-label="Actualizar"><RefreshCw size={16} aria-hidden="true" /></button>
+          {realExpiringCount > 0 && onOpenExpiringStock && (
+            <button
+              type="button"
+              className="dep-chip dep-chip--danger"
+              onClick={onOpenExpiringStock}
+              style={{ marginInlineStart: 'auto' }}
+            >
+              <AlertTriangle size={13} aria-hidden="true" />
+              <span className="tabular-nums">{realExpiringCount} por vencer</span>
+            </button>
+          )}
         </div>
       </search>
 
-      {Object.keys(selectedOrderIds).length > 0 && (
-        <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px dashed var(--border-color)', padding: '12px 16px', borderRadius: 'var(--radius-md)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-          <div className="tabular-nums" style={{ fontSize: '0.88rem', fontWeight: 600 }}>{Object.keys(selectedOrderIds).length} seleccionado(s)</div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px' }} onClick={() => setSelectedOrderIds({})}>Limpiar</button>
-            <button type="button" className="btn btn-secondary" style={{ padding: '6px 14px', border: '1px solid var(--accent-color)' }} onClick={onBatchStartPicking} disabled={loading}>Iniciar Lote</button>
-            <button type="button" className="btn btn-primary" style={{ padding: '6px 14px', backgroundColor: 'var(--color-primary)' }} onClick={onOpenConsolidatedView}>Consolidado</button>
+      {selectedCount > 0 && (
+        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button type="button" className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: '0.8rem' }} onClick={onToggleSelectAll}>
+              {allSelected ? 'Quitar todos' : 'Todos'}
+            </button>
+            <span className="tabular-nums" style={{ fontSize: '0.85rem', fontWeight: 700 }}>{selectedCount} selec.</span>
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={() => setSelectedOrderIds({})}>Limpiar</button>
+            <button type="button" className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: '0.8rem' }} onClick={onBatchStartPicking} disabled={loading}>Iniciar</button>
+            <button type="button" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={onOpenConsolidatedView}>
+              <Layers size={14} aria-hidden="true" />
+              <span>Consolidado</span>
+            </button>
           </div>
         </div>
       )}
 
-      <div className="table-container table-container--sticky" role="region" aria-label="Cola de picking" tabIndex={0}>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                <input
-                  type="checkbox"
-                  aria-label="Seleccionar todos"
-                  checked={filteredOrders.length > 0 && filteredOrders.every((o) => selectedOrderIds[o.id])}
-                  ref={(el) => {
-                    if (el) {
-                      const checkedCount = filteredOrders.filter((o) => selectedOrderIds[o.id]).length;
-                      el.indeterminate = checkedCount > 0 && checkedCount < filteredOrders.length;
-                    }
-                  }}
-                  onChange={onToggleSelectAll}
-                />
-              </th>
-              <th scope="col">Nro Pedido</th>
-              <th scope="col">Cliente / Localidad</th>
-              <th scope="col">Ruta / Despacho</th>
-              <th scope="col">Ítems</th>
-              <th scope="col">Estado</th>
-              <th scope="col">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredOrders.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>Sin pedidos para mostrar.</td></tr>
-            ) : (
-              filteredOrders.map((o) => {
-                const isChecked = !!selectedOrderIds[o.id];
-                const isWithdrawal = !o.persona?.route || o.persona.route.trim() === '' || o.persona.route.toUpperCase() === 'RETIRO';
-                return (
-                  <tr key={o.id} style={{ backgroundColor: isChecked ? 'rgba(0,0,0,0.015)' : 'transparent' }}>
-                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                      <input
-                        type="checkbox"
-                        aria-label={`Seleccionar pedido #${o.id}`}
-                        checked={isChecked}
-                        onChange={() => setSelectedOrderIds((prev) => {
+      {filteredOrders.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 16px', background: 'var(--bg-card)', border: '1px dashed var(--border-color)', borderRadius: '10px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          Sin pedidos pendientes.
+        </div>
+      ) : (
+        <div className="dep-orders-grid" role="list" aria-label="Cola de pedidos">
+          {filteredOrders.map((o) => {
+            const isChecked = Boolean(selectedOrderIds[o.id]);
+            const isPreparing = o.status === 'PREPARING';
+            const isWithdrawal =
+              !o.persona?.route ||
+              o.persona.route.trim() === '' ||
+              o.persona.route.toUpperCase() === 'RETIRO';
+
+            return (
+              <article
+                key={o.id}
+                role="listitem"
+                className={`dep-order-card ${isPreparing ? 'dep-order-card--preparing' : ''} ${isChecked ? 'dep-order-card--selected' : ''}`}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', minInlineSize: 0, flex: 1 }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Seleccionar pedido #${o.id}`}
+                      checked={isChecked}
+                      onChange={() =>
+                        setSelectedOrderIds((prev) => {
                           const copy = { ...prev };
-                          if (copy[o.id]) delete copy[o.id]; else copy[o.id] = true;
+                          if (copy[o.id]) delete copy[o.id];
+                          else copy[o.id] = true;
                           return copy;
-                        })}
-                      />
-                    </td>
-                    <td className="tabular-nums" style={{ fontWeight: 700 }}>#{o.id}</td>
-                    <td style={{ fontWeight: 600 }}>
-                      <div>{o.persona?.name || o.client?.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>{o.persona?.city || 'Sin Localidad'}</div>
-                    </td>
-                    <td>
-                      {isWithdrawal ? (
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#10B981', backgroundColor: '#ECFDF5', border: '1px solid rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>RETIRO DEPÓSITO</span>
-                      ) : (
-                        o.persona?.route && (
-                          <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--color-primary)', border: '1px solid rgba(59, 130, 246, 0.15)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>{o.persona.route}</span>
-                        )
+                        })
+                      }
+                      style={{ width: '18px', height: '18px', flexShrink: 0 }}
+                    />
+                    <div style={{ minInlineSize: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span className="tabular-nums" style={{ fontWeight: 800, fontSize: '0.95rem' }}>
+                          #{o.id}
+                        </span>
+                        <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)', overflowWrap: 'break-word' }}>
+                          {o.persona?.name || o.client?.name}
+                        </span>
+                      </div>
+                      {o.persona?.city && (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          {o.persona.city}
+                        </div>
                       )}
-                    </td>
-                    <td className="tabular-nums">{(o.items || []).length} ítems</td>
-                    <td>
-                      <span className={`badge ${o.status === 'PENDING' ? 'badge-pending' : 'badge-preparing'}`}>
-                        {o.status === 'PENDING' ? 'Pendiente' : 'En Preparación'}
-                      </span>
-                    </td>
-                    <td>
-                      {o.status === 'PENDING' ? (
-                        <button type="button" className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => onStartPicking(o.id)}>
-                          <Play size={12} aria-hidden="true" /><span>Iniciar Armado</span>
-                        </button>
-                      ) : (
-                        <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => onSelectOrder(o)}>
-                          <Eye size={12} aria-hidden="true" /><span>Ver Picking</span>
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </div>
+                  </label>
+
+                  <span className={`badge ${isPreparing ? 'badge-preparing' : 'badge-pending'}`} style={{ flexShrink: 0 }}>
+                    {isPreparing ? 'En curso' : 'Pendiente'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', paddingTop: '6px', borderTop: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: isWithdrawal ? '#ecfdf5' : '#f1f5f9',
+                        color: isWithdrawal ? '#047857' : '#334155',
+                        border: isWithdrawal ? '1px solid #a7f3d0' : '1px solid #e2e8f0',
+                      }}
+                    >
+                      {isWithdrawal ? 'Retiro' : o.persona?.route}
+                    </span>
+                    <span className="tabular-nums" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      {(o.items || []).length} ítems
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className={`btn ${isPreparing ? 'btn-secondary' : 'btn-primary'}`}
+                    style={{ minBlockSize: '38px', padding: '6px 14px', fontSize: '0.84rem', fontWeight: 600 }}
+                    disabled={loading}
+                    onClick={() => onOpenOrder(o)}
+                  >
+                    {isPreparing ? (
+                      <>
+                        <span>Continuar</span>
+                        <ChevronRight size={15} aria-hidden="true" />
+                      </>
+                    ) : (
+                      <>
+                        <Play size={13} aria-hidden="true" />
+                        <span>Armar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

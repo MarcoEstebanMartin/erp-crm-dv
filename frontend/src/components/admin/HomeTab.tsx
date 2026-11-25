@@ -10,6 +10,7 @@ import WeeklyScheduleModal from '../modals/WeeklyScheduleModal';
 import { HomePendingCashCard } from './home/HomePendingCashCard';
 import { HomeQuickActionsGrid } from './home/HomeQuickActionsGrid';
 import { HomeWeeklyScheduleRibbon } from './home/HomeWeeklyScheduleRibbon';
+import { HomeSensitiveEventsStrip } from './home/HomeSensitiveEventsStrip';
 import { FleetExpenseQuickModal } from './home/FleetExpenseQuickModal';
 
 interface HomeTabProps {
@@ -198,6 +199,8 @@ export default function HomeTab({
         </h1>
         <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{formattedDate}</span>
       </div>
+
+      <HomeSensitiveEventsStrip />
 
       <div className="home-kpis-wrap">
         <div className="dashboard-grid home-kpis-grid">

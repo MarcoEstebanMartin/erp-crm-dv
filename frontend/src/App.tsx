@@ -73,7 +73,7 @@ function App() {
 
   const getDefaultRouteForRole = (role: string) => {
     if (role === 'ADMIN' || role === 'FACTURACION') return '/admin/dashboard';
-    if (role === 'DEPOSITO') return '/deposito/picking';
+    if (role === 'DEPOSITO') return '/deposito/pedidos';
     return '/vendedor/inicio';
   };
 
@@ -145,8 +145,8 @@ function App() {
         onLogout={handleLogout}
       />
       
-      <main className="main-content" style={{ paddingBottom: user?.role === 'VENDEDOR' ? '70px' : undefined }}>
-        <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)', paddingTop: user.role === 'VENDEDOR' ? '8px' : '0' }}>
+      <main className="main-content" style={{ paddingBottom: user?.role === 'VENDEDOR' || user?.role === 'DEPOSITO' ? '70px' : undefined }}>
+        <section style={{ animation: 'fadeIn 0.4s cubic-bezier(0.25, 1, 0.5, 1)', paddingTop: user.role === 'VENDEDOR' || user.role === 'DEPOSITO' ? '8px' : '0' }}>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               {/* Rutas de Administración (restringido a ADMIN y FACTURACION) */}
@@ -169,7 +169,10 @@ function App() {
                 path="/deposito/:tab?"
                 element={
                   user.role === 'DEPOSITO' || user.role === 'ADMIN' || user.role === 'FACTURACION' ? (
-                    <DepositoPages setActiveTab={setActiveTab} />
+                    <DepositoPages
+                      setActiveTab={setActiveTab}
+                      canDeliver={Boolean(user.permissions?.canDeliver)}
+                    />
                   ) : (
                     <Navigate to={getDefaultRouteForRole(user.role)} replace />
                   )

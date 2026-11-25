@@ -5,6 +5,7 @@ import { env } from '../config/env.config';
 import { setStaffSessionCookie } from '../utils/cookie-auth.util';
 import { sessionCache } from '../utils/session-cache.util';
 import { adminService } from '../services/admin.service';
+import { adminSensitiveEventsService } from '../services/admin/admin-sensitive-events.service';
 import { personaService } from '../services/persona.service';
 import {
   getSystemConfigSnapshot,
@@ -26,6 +27,17 @@ export async function getFinancialReports(req: AuthenticatedRequest, res: Respon
   } catch (error: any) {
     console.error('Error al procesar reporte financiero:', error);
     res.status(500).json({ status: 'error', message: 'Error al procesar el reporte financiero.' });
+  }
+}
+
+export async function getSensitiveEvents(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const days = req.query.days ? Number(req.query.days) : 7;
+    const data = await adminSensitiveEventsService.getSensitiveEvents(days);
+    res.status(200).json({ status: 'success', data });
+  } catch (error: any) {
+    console.error('Error al obtener eventos sensibles:', error);
+    res.status(500).json({ status: 'error', message: 'Error al obtener eventos sensibles.' });
   }
 }
 

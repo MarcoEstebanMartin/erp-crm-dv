@@ -21,8 +21,11 @@ const ADMIN_TAB_LOADERS: Record<string, ChunkLoader> = {
 };
 
 const DEPOSITO_TAB_LOADERS: Record<string, ChunkLoader> = {
-  deposito: () => import('../components/DepositoDashboard'),
-  products: () => import('../components/admin/ProductsTab'),
+  pedidos: () => import('../components/DepositoDashboard'),
+  stock: () => import('../components/DepositoDashboard'),
+  mapa: () => import('../components/deposito/WarehouseMap'),
+  reparto: () => import('../components/RepartoDashboard'),
+  cobrar: () => import('../components/field-receipts/FieldCollectionPage'),
 };
 
 const prefetchedKeys = new Set<string>();

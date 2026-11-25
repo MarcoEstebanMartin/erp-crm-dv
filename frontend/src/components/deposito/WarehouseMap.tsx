@@ -132,6 +132,11 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
       return;
     }
     if (!cell.is_storage) return;
+    if (selectedSlotCode === cell.code && !pendingPlaceItem) {
+      setFocusedLevel(null);
+      setIs3DModalOpen(true);
+      return;
+    }
     setSelectedSlotCode(cell.code);
     if (pendingPlaceItem && !cell.isBlocked) {
       setFocusedLevel(null);
@@ -150,7 +155,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
   const showSectorFilters = selectedWarehouse === 'D1' || selectedWarehouse === 'ALL';
 
   return (
-    <div className={`wms-map-root ${isFullscreen ? 'wms-map-fullscreen' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+    <div className={`wms-map-root wms-layout-shell ${isFullscreen ? 'wms-map-fullscreen' : ''}`}>
       <div
         role="toolbar"
         aria-label="Controles del mapa de depósito"
@@ -158,33 +163,16 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
           backgroundColor: '#ffffff',
           border: '1px solid var(--border-color)',
           borderRadius: '10px',
-          padding: '12px 16px',
+          padding: '10px 12px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '10px',
+          gap: '8px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>Mapa Depósito</h3>
-          <span
-            style={{
-              fontSize: '0.73rem',
-              fontWeight: 600,
-              color: '#64748b',
-              backgroundColor: '#f1f5f9',
-              padding: '2px 8px',
-              borderRadius: '999px',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {activeSlotsCount} slots
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <search aria-label="Buscar slot o producto" style={{ position: 'relative', width: '195px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 180px', minInlineSize: 0 }}>
+          <search aria-label="Buscar slot o producto" style={{ position: 'relative', flex: '1 1 180px', maxWidth: '280px' }}>
             <label htmlFor="wms-map-search" className="visually-hidden">Buscar slot o producto</label>
             <input
               id="wms-map-search"
@@ -196,17 +184,33 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
               placeholder="Slot o producto..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ fontSize: '0.8rem', paddingLeft: '28px', height: '32px' }}
+              style={{ fontSize: '0.84rem', paddingLeft: '30px', minBlockSize: '38px', width: '100%' }}
             />
-            <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: '9px', top: '9px', color: '#94a3b8' }} />
+            <Search size={14} aria-hidden="true" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
           </search>
+          <span
+            style={{
+              fontSize: '0.73rem',
+              fontWeight: 600,
+              color: '#64748b',
+              backgroundColor: '#f1f5f9',
+              padding: '3px 8px',
+              borderRadius: '999px',
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {activeSlotsCount} slots
+          </span>
+        </div>
 
-          <div role="group" aria-label="Depósitos" style={{ display: 'flex', gap: '3px', backgroundColor: '#f1f5f9', padding: '2px', borderRadius: '7px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div role="group" aria-label="Depósitos" style={{ display: 'flex', gap: '3px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
             {([
               { id: 'ALL', label: 'Planta' },
-              { id: 'D1', label: 'Dep. 1' },
-              { id: 'D2', label: 'Dep. 2' },
-              { id: 'D3', label: 'Dep. 3' },
+              { id: 'D1', label: 'D1' },
+              { id: 'D2', label: 'D2' },
+              { id: 'D3', label: 'D3' },
             ] as const).map((btn) => {
               const active = selectedWarehouse === btn.id;
               return (
@@ -215,12 +219,14 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
                   type="button"
                   aria-pressed={active}
                   style={{
-                    fontSize: '0.76rem',
-                    padding: '4px 10px',
-                    borderRadius: '5px',
+                    fontSize: '0.78rem',
+                    padding: '6px 10px',
+                    minBlockSize: '34px',
+                    borderRadius: '6px',
                     fontWeight: 600,
                     border: 'none',
                     cursor: 'pointer',
+                    touchAction: 'manipulation',
                     backgroundColor: active ? '#0f172a' : 'transparent',
                     color: active ? '#ffffff' : '#475569',
                   }}
@@ -236,14 +242,14 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
             type="button"
             aria-pressed={sidebarTab === 'tray' && !isEditMode}
             className={`btn ${sidebarTab === 'tray' && !isEditMode ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: '0.76rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px', height: '32px' }}
+            style={{ fontSize: '0.78rem', padding: '6px 11px', borderRadius: '8px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px', minBlockSize: '38px' }}
             onClick={() => {
               setIsEditMode(false);
               setSidebarTab((prev) => (prev === 'tray' ? 'inspector' : 'tray'));
             }}
           >
             <PackagePlus size={14} aria-hidden="true" />
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>Sin ubicar ({unassignedItems.length})</span>
+            <span className="tabular-nums">Sin ubicar ({unassignedItems.length})</span>
           </button>
 
           {isAdmin && (
@@ -252,8 +258,8 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
               aria-pressed={isEditMode}
               className={`btn ${isEditMode ? 'btn-primary' : 'btn-secondary'}`}
               style={{
-                fontSize: '0.76rem', padding: '5px 10px', borderRadius: '6px', fontWeight: 600,
-                display: 'inline-flex', alignItems: 'center', gap: '5px', height: '32px',
+                fontSize: '0.78rem', padding: '6px 11px', borderRadius: '8px', fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: '5px', minBlockSize: '38px',
                 ...(isEditMode ? { backgroundColor: '#0f172a', borderColor: '#0f172a', color: '#fff' } : {}),
               }}
               onClick={() => {
@@ -276,10 +282,10 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
             aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Expandir mapa'}
             title={isFullscreen ? 'Salir' : 'Expandir'}
             className="btn btn-secondary"
-            style={{ padding: '5px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '32px', minInlineSize: '32px' }}
+            style={{ padding: '6px 9px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minBlockSize: '38px', minInlineSize: '38px' }}
             onClick={() => setIsFullscreen(!isFullscreen)}
           >
-            {isFullscreen ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />}
+            {isFullscreen ? <Minimize2 size={15} aria-hidden="true" /> : <Maximize2 size={15} aria-hidden="true" />}
           </button>
         </div>
       </div>
@@ -314,7 +320,7 @@ export const WarehouseMap: React.FC<WarehouseMapProps> = ({
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', width: '100%', flexWrap: 'wrap' }}>
+      <div className="wms-body-grid">
         <WarehouseMapGrid
           matrix={filteredMatrix}
           slotStockMap={slotStockMap}

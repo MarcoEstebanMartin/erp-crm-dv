@@ -30,7 +30,20 @@ function sortEligibleLotsFefo(lots: any[]): any[] {
     });
 }
 
-export function useDepositoController(activeTab: string, confirm: any, pickingOnly: boolean = false) {
+function resolveInitialSubTab(activeTab: string, pickingOnly: boolean): string {
+  if (pickingOnly) return 'picking';
+  if (activeTab === 'pedidos' || activeTab === 'picking') return 'picking';
+  if (activeTab === 'stock' || activeTab === 'products') return 'stock-list';
+  if (activeTab === 'mapa' || activeTab === 'wms-map') return 'wms-map';
+  return 'wms-map';
+}
+
+export function useDepositoController(
+  activeTab: string,
+  confirm: any,
+  pickingOnly: boolean = false,
+  appMode: boolean = false,
+) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -58,7 +71,7 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
   const [showConsolidatedView, setShowConsolidatedView] = useState<boolean>(false);
   const [consolidatedCheckedItems, setConsolidatedCheckedItems] = useState<Record<number, boolean>>({});
   const [consolidatedZone, setConsolidatedZone] = useState<string>('ALL');
-  const [subTab, setSubTab] = useState<string>(pickingOnly ? 'picking' : 'wms-map');
+  const [subTab, setSubTab] = useState<string>(() => resolveInitialSubTab(activeTab, pickingOnly));
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [pendingPurchaseOrders, setPendingPurchaseOrders] = useState<any[]>([]);
   const [generatingPOForProvider, setGeneratingPOForProvider] = useState<number | null>(null);
@@ -97,7 +110,7 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
         if (seq !== fetchSeqRef.current) return;
         setOrders(data.filter((o: any) => o.status === OrderStatus.PENDING || o.status === OrderStatus.PREPARING));
       }
-      if (subTab === 'picking' || subTab === 'lot-expiration') {
+      if (subTab === 'picking' || subTab === 'lot-expiration' || (appMode && subTab === 'stock-list')) {
         try {
           const lotsRes = await api.getExpiringLots();
           if (seq !== fetchSeqRef.current) return;
@@ -109,12 +122,12 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
         if (seq !== fetchSeqRef.current) return;
         setProducts(data || []);
       }
-      if (!pickingOnly) {
+      if (!pickingOnly && !appMode) {
         const allProds = await api.getProducts('', true);
         if (seq !== fetchSeqRef.current) return;
         setAllProducts(allProds || []);
       }
-      if (!pickingOnly && subTab === 'replenishment') {
+      if (!pickingOnly && !appMode && subTab === 'replenishment') {
         try {
           const pendingPurchs = await api.getPurchaseOrders({ status: 'PENDING' });
           if (seq !== fetchSeqRef.current) return;
@@ -126,7 +139,7 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
       setErrorMsg(err.message || 'Error al obtener datos.');
       setLoading(false);
     }
-  }, [subTab, debouncedSearchQuery, pickingOnly]);
+  }, [subTab, debouncedSearchQuery, pickingOnly, appMode]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -135,7 +148,7 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
     setErrorMsg(null);
     setSelectedOrderIds({});
     setShowConsolidatedView(false);
-    setSubTab(pickingOnly ? 'picking' : activeTab === 'products' ? 'stock-list' : 'wms-map');
+    setSubTab(resolveInitialSubTab(activeTab, pickingOnly));
   }, [activeTab, pickingOnly]);
 
   useEffect(() => {
@@ -168,26 +181,21 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
     }
   }, [selectedOrder]);
 
-  const handleSelectOrder = async (order: Order) => {
+  const handleOpenOrderForPicking = async (order: Order) => {
     setErrorMsg(null);
     setLoading(true);
     try {
+      if (order.status === OrderStatus.PENDING) {
+        await api.updateOrderStatus(order.id, OrderStatus.PREPARING);
+      }
       const fullOrder = await api.getOrderById(order.id);
       setSelectedOrder(fullOrder);
+      fetchData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al cargar el detalle del pedido.');
+      setErrorMsg(err.message || 'Error al abrir el pedido.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleStartPicking = async (orderId: number) => {
-    setErrorMsg(null);
-    try {
-      await api.updateOrderStatus(orderId, OrderStatus.PREPARING);
-      setSuccessMsg(`Pedido #${orderId} en preparación.`);
-      fetchData();
-    } catch (err: any) { setErrorMsg(err.message || 'Error al iniciar picking.'); }
   };
 
   const handleLotQtyChange = (orderItemId: number, lotId: number, value: number, maxStock: number) => {
@@ -358,7 +366,7 @@ export function useDepositoController(activeTab: string, confirm: any, pickingOn
     orderSearchQuery, setOrderSearchQuery, routeFilter, setRouteFilter, withdrawalFilter, setWithdrawalFilter, selectedStatus, setSelectedStatus,
     selectedOrderIds, setSelectedOrderIds, showConsolidatedView, setShowConsolidatedView, consolidatedCheckedItems, setConsolidatedCheckedItems,
     consolidatedZone, setConsolidatedZone, subTab, setSubTab, allProducts, pendingPurchaseOrders, generatingPOForProvider, setGeneratingPOForProvider,
-    fetchData, handleSelectOrder, handleStartPicking, handleLotQtyChange, handleFIFOAutoFill, handleFIFOAutoFillAll, handleFinishPicking, handleConfirmBultosAndFinish,
+    fetchData, handleOpenOrderForPicking, handleLotQtyChange, handleFIFOAutoFill, handleFIFOAutoFillAll, handleFinishPicking, handleConfirmBultosAndFinish,
     handleStockAdjustSubmit, selectedOrdersList, consolidatedItems, handleBatchStartPicking,
   };
 }

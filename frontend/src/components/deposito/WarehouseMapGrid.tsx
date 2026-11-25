@@ -102,7 +102,7 @@ export const WarehouseMapGrid: React.FC<WarehouseMapGridProps> = ({
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto', width: '100%' }}>
+      <div className="wms-grid-scroll" role="region" aria-label="Plano de racks" tabIndex={0}>
         <table style={{ borderCollapse: 'separate', borderSpacing: '3px', width: 'max-content', minWidth: '100%', fontSize: '0.66rem', fontFamily: 'sans-serif' }}>
           <tbody>
             {matrix.map((row, rIdx) => (

@@ -2173,6 +2173,10 @@ dialog.app-native-dialog::backdrop {
     width: 100%;
   }
 
+  html:has(.vendedor-bottom-nav) {
+    scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
   .main-content:has(~ .vendedor-bottom-nav),
   body:has(.vendedor-bottom-nav) .main-content {
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;

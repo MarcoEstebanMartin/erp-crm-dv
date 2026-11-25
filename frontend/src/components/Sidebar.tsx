@@ -1,26 +1,13 @@
 import { startTransition, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Building2,
-  DollarSign,
-  History,
-  Home,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Navigation,
-  Package,
-  Receipt,
-  RefreshCw,
-  ShoppingCart,
-  Truck,
-  Users,
-  Warehouse,
-  X,
+  Building2, ClipboardList, DollarSign, Home, LayoutDashboard, LogOut, Map,
+  Navigation, Package, Receipt, ShoppingCart, Truck, Users, Warehouse, X,
 } from 'lucide-react';
 import { api } from '../utils/api';
 import { prefetchTabChunk } from '../utils/tabPrefetcher';
 import { VendedorBottomNav } from './sidebar/VendedorBottomNav';
+import { MobileHeader } from './sidebar/MobileHeader';
 
 interface SidebarProps {
   username: string;
@@ -53,7 +40,9 @@ const ADMIN_PARENT_TAB_MAP: Record<string, string> = {
   rrhh: 'config',
 };
 
-export default function Sidebar({ username, role, canDeliver = false, canPick = false, activeTab, setActiveTab, onLogout }: SidebarProps) {
+export default function Sidebar({
+  username, role, canDeliver = false, canPick = false, activeTab, setActiveTab, onLogout,
+}: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -62,31 +51,28 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
 
   useEffect(() => {
     if (role !== 'VENDEDOR') return;
-    const onCartCount = (ev: Event) => {
-      const count = Number((ev as CustomEvent<number>).detail || 0);
-      setVendedorCartCount(count);
-    };
+    const onCartCount = (ev: Event) => setVendedorCartCount(Number((ev as CustomEvent<number>).detail || 0));
     window.addEventListener('dv:vendedor-cart-count', onCartCount);
     return () => window.removeEventListener('dv:vendedor-cart-count', onCartCount);
   }, [role]);
 
   const currentTab = (() => {
     const segments = location.pathname.split('/').filter(Boolean);
-    let rawTab = activeTab || (role === 'VENDEDOR' ? 'inicio' : role === 'DEPOSITO' ? 'deposito' : 'dashboard');
+    let rawTab = activeTab || (role === 'VENDEDOR' ? 'inicio' : role === 'DEPOSITO' ? 'pedidos' : 'dashboard');
     if (segments[0] === 'deposito') {
-      rawTab = segments[1] === 'stock' ? 'products' : 'deposito';
+      const seg = (segments[1] || '').toLowerCase();
+      if (seg === 'stock' || seg === 'products') rawTab = 'stock';
+      else if (seg === 'mapa' || seg === 'wms-map') rawTab = 'mapa';
+      else if (seg === 'reparto' || seg === 'logistica') rawTab = canDeliver ? 'reparto' : 'pedidos';
+      else if (seg === 'cobrar' || seg === 'field-receipts') rawTab = canDeliver ? 'cobrar' : 'pedidos';
+      else rawTab = 'pedidos';
     } else if (segments.length >= 2) {
       rawTab = segments[1];
     }
-    if (role === 'ADMIN' || role === 'FACTURACION') {
-      return ADMIN_PARENT_TAB_MAP[rawTab] || rawTab;
-    }
-    return rawTab;
+    return role === 'ADMIN' || role === 'FACTURACION' ? ADMIN_PARENT_TAB_MAP[rawTab] || rawTab : rawTab;
   })();
 
-  useEffect(() => {
-    setIsMobileOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setIsMobileOpen(false); }, [location.pathname]);
 
   const getMenuItems = () => {
     if (role === 'ADMIN' || role === 'FACTURACION') {
@@ -100,45 +86,40 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
         { id: 'config', label: 'Configuración', icon: <Building2 size={18} aria-hidden="true" /> },
       ];
     }
-
     if (role === 'DEPOSITO') {
-      return [
-        { id: 'deposito', label: 'Picking', icon: <Warehouse size={18} aria-hidden="true" /> },
-        { id: 'products', label: 'Stock', icon: <Package size={18} aria-hidden="true" /> },
-        { id: 'field-receipts', label: 'Recibos', icon: <DollarSign size={18} aria-hidden="true" /> },
-        { id: 'history', label: 'Historial', icon: <History size={18} aria-hidden="true" /> },
+      const depositoItems = [
+        { id: 'pedidos', label: 'Pedidos', icon: <ClipboardList size={18} aria-hidden="true" /> },
+        { id: 'stock', label: 'Stock', icon: <Package size={18} aria-hidden="true" /> },
+        { id: 'mapa', label: 'Mapa', icon: <Map size={18} aria-hidden="true" /> },
       ];
+      if (canDeliver) {
+        depositoItems.push(
+          { id: 'reparto', label: 'Reparto', icon: <Truck size={18} aria-hidden="true" /> },
+          { id: 'cobrar', label: 'Cobrar', icon: <Receipt size={18} aria-hidden="true" /> },
+        );
+      }
+      return depositoItems;
     }
-
     const vendedorItems = [
       { id: 'inicio', label: 'Inicio', icon: <Home size={18} aria-hidden="true" /> },
       { id: 'clients', label: 'Ruta', icon: <Navigation size={18} aria-hidden="true" /> },
       { id: 'orders', label: 'Vender', icon: <ShoppingCart size={18} aria-hidden="true" /> },
       { id: 'field-receipts', label: 'Cobrar', icon: <Receipt size={18} aria-hidden="true" /> },
     ];
-    if (canDeliver) {
-      vendedorItems.push({ id: 'logistica', label: 'Reparto', icon: <Truck size={18} aria-hidden="true" /> });
-    }
-    if (canPick) {
-      vendedorItems.push({ id: 'deposito', label: 'Depósito', icon: <Warehouse size={18} aria-hidden="true" /> });
-    }
+    if (canDeliver) vendedorItems.push({ id: 'logistica', label: 'Reparto', icon: <Truck size={18} aria-hidden="true" /> });
+    if (canPick) vendedorItems.push({ id: 'deposito', label: 'Depósito', icon: <Warehouse size={18} aria-hidden="true" /> });
     return vendedorItems;
   };
 
   const handleTabSelect = (tabId: string) => {
-    if (role === 'VENDEDOR' && tabId === currentTab) {
+    if ((role === 'VENDEDOR' || role === 'DEPOSITO') && tabId === currentTab) {
       if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
         window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
       }
       return;
     }
     setIsMobileOpen(false);
-    let targetPath = `/admin/${tabId}`;
-    if (role === 'VENDEDOR') {
-      targetPath = `/vendedor/${tabId}`;
-    } else if (role === 'DEPOSITO') {
-      targetPath = tabId === 'deposito' ? '/deposito/picking' : tabId === 'products' ? '/deposito/stock' : `/vendedor/${tabId}`;
-    }
+    const targetPath = role === 'VENDEDOR' ? `/vendedor/${tabId}` : role === 'DEPOSITO' ? `/deposito/${tabId}` : `/admin/${tabId}`;
     startTransition(() => {
       setActiveTab(tabId);
       navigate(targetPath);
@@ -146,99 +127,42 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
   };
 
   const menuItems = getMenuItems();
-  const handleLogoutClick = () => {
-    api.logout();
-    onLogout();
-  };
-  const roleLabel = ROLE_LABELS[role] || 'Operativo';
+  const handleLogoutClick = () => { api.logout(); onLogout(); };
   const currentItemLabel = menuItems.find((item) => item.id === currentTab)?.label || 'Don Venancio';
-  const isVendedor = role === 'VENDEDOR';
+  const isMobileAppRole = role === 'VENDEDOR' || role === 'DEPOSITO';
 
   return (
     <>
-      <header className="mobile-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {!isVendedor && (
-            <button
-              type="button"
-              className="mobile-hamburger-btn"
-              onClick={() => setIsMobileOpen(!isMobileOpen)}
-              aria-label="Abrir menú"
-              aria-expanded={isMobileOpen}
-            >
-              {isMobileOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
-            </button>
-          )}
-          <img
-            src="/logo.png"
-            alt="Don Venancio"
-            className="mobile-header-logo"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-          <span className="mobile-header-title">{isVendedor ? 'Preventa' : currentItemLabel}</span>
-        </div>
+      <MobileHeader
+        isMobileAppRole={isMobileAppRole}
+        isMobileOpen={isMobileOpen}
+        onToggleMobileMenu={() => setIsMobileOpen(!isMobileOpen)}
+        title={role === 'VENDEDOR' ? 'Preventa' : currentItemLabel}
+        userLabel={username || ROLE_LABELS[role] || 'Operativo'}
+        isRefreshing={isRefreshing}
+        onRefresh={() => { if (isRefreshing) return; setIsRefreshing(true); window.location.reload(); }}
+        onLogout={handleLogoutClick}
+      />
 
-        <div className="mobile-header-status" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            {username || roleLabel}
-          </span>
-
-          {isVendedor && (
-            <button
-              type="button"
-              onClick={() => { if (isRefreshing) return; setIsRefreshing(true); window.location.reload(); }}
-              aria-label="Actualizar"
-              title="Actualizar"
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px', borderRadius: '6px', touchAction: 'manipulation' }}
-            >
-              <RefreshCw size={17} className={isRefreshing ? 'spin-animation' : ''} aria-hidden="true" />
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={handleLogoutClick}
-            aria-label="Salir"
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
-          >
-            <LogOut size={18} aria-hidden="true" />
-          </button>
-        </div>
-      </header>
-
-      {isVendedor && (
+      {isMobileAppRole && (
         <VendedorBottomNav
           menuItems={menuItems}
           currentTab={currentTab}
-          vendedorCartCount={vendedorCartCount}
+          vendedorCartCount={role === 'VENDEDOR' ? vendedorCartCount : 0}
           onSelect={handleTabSelect}
         />
       )}
 
-      {!isVendedor && isMobileOpen && (
+      {!isMobileAppRole && isMobileOpen && (
         <div className="sidebar-backdrop" onClick={() => setIsMobileOpen(false)} />
       )}
 
-      <aside className={`sidebar ${!isVendedor && isMobileOpen ? 'sidebar-mobile-active' : ''}`}>
+      <aside className={`sidebar ${!isMobileAppRole && isMobileOpen ? 'sidebar-mobile-active' : ''}`}>
         <div className="sidebar-brand">
           <div className="sidebar-brand-header">
-            <img
-              src="/logo.png"
-              alt="Don Venancio"
-              className="sidebar-logo"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            {!isVendedor && (
-              <button
-                type="button"
-                className="mobile-drawer-close-btn"
-                onClick={() => setIsMobileOpen(false)}
-                aria-label="Cerrar menú"
-              >
+            <img src="/logo.png" alt="Don Venancio" className="sidebar-logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            {!isMobileAppRole && (
+              <button type="button" className="mobile-drawer-close-btn" onClick={() => setIsMobileOpen(false)} aria-label="Cerrar menú">
                 <X size={20} aria-hidden="true" />
               </button>
             )}
@@ -266,29 +190,13 @@ export default function Sidebar({ username, role, canDeliver = false, canPick = 
         </nav>
 
         {username && (
-          <div
-            style={{
-              padding: '0 12px 10px',
-              fontSize: '0.78rem',
-              fontWeight: 400,
-              color: 'var(--text-muted)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-            title={username}
-          >
+          <div style={{ padding: '0 12px 10px', fontSize: '0.78rem', fontWeight: 400, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={username}>
             {username}
           </div>
         )}
 
         <div className="sidebar-user">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            style={{ width: '100%', justifyContent: 'flex-start', padding: '10px 12px', fontSize: '0.88rem' }}
-            onClick={handleLogoutClick}
-          >
+          <button type="button" className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', padding: '10px 12px', fontSize: '0.88rem' }} onClick={handleLogoutClick}>
             <LogOut size={18} aria-hidden="true" />
             <span>Salir</span>
           </button>
