@@ -1,9 +1,10 @@
 import type { FC } from 'react';
 
 interface ProfitabilityTablesAndMatrixProps {
-  subView: 'clients' | 'products';
+  subView: 'clients' | 'products' | 'cities';
   filteredClients: any[];
   filteredProducts: any[];
+  filteredCities: any[];
   formatCurrency: (val: number) => string;
 }
 
@@ -11,8 +12,87 @@ export const ProfitabilityTablesAndMatrix: FC<ProfitabilityTablesAndMatrixProps>
   subView,
   filteredClients,
   filteredProducts,
+  filteredCities,
   formatCurrency,
 }) => {
+  if (subView === 'cities') {
+    return (
+      <div
+        className="table-container table-container--sticky"
+        role="region"
+        aria-label="Rentabilidad por localidad"
+        tabIndex={0}
+        style={{ margin: 0, border: '1px solid var(--border-color)', borderRadius: '10px' }}
+      >
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+          <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
+            <tr>
+              <th scope="col" style={{ padding: '10px 12px', width: '40px', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>#</th>
+              <th scope="col" style={{ padding: '10px 12px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Localidad</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Clientes</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Pedidos</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Facturación ($)</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Costo ($)</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 700 }}>Utilidad bruta ($)</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-primary)', fontWeight: 700 }}>Margen (%)</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Ticket prom.</th>
+              <th scope="col" style={{ padding: '10px 12px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Partic. (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredCities.length === 0 ? (
+              <tr>
+                <td colSpan={10} style={{ padding: '32px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  Sin resultados.
+                </td>
+              </tr>
+            ) : (
+              filteredCities.map((row: any, idx: number) => {
+                const isNegative = row.grossProfit < 0;
+                return (
+                  <tr key={row.city} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      {idx + 1}
+                    </td>
+                    <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {row.city}
+                    </td>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                      {row.clientCount}
+                    </td>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                      {row.orderCount}
+                    </td>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'right' }}>
+                      {formatCurrency(row.totalRevenue)}
+                    </td>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>
+                      {formatCurrency(row.totalCost)}
+                    </td>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: isNegative ? 'var(--color-corp-red)' : '#047857' }}>
+                      {formatCurrency(row.grossProfit)}
+                    </td>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'center' }}>
+                      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '6px', backgroundColor: isNegative ? '#fef2f2' : '#f1f5f9', color: isNegative ? 'var(--color-corp-red)' : '#0f172a', fontWeight: 600, fontSize: '0.78rem' }}>
+                        {row.marginPercent}%
+                      </span>
+                    </td>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'right' }}>
+                      {formatCurrency(row.averageTicket)}
+                    </td>
+                    <td className="tabular-nums" style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                      {row.sharePercent}%
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   if (subView === 'clients') {
     return (
       <div

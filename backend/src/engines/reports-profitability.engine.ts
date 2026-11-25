@@ -246,6 +246,55 @@ export function computeProfitabilityMetrics(input: ProfitabilityComputationInput
   const totalCostDec = sumIntegerAmounts(clients.map((c) => c.totalCost));
   const totalGrossProfitDec = totalRevenueDec.minus(totalCostDec);
 
+  const cityMap = new Map<
+    string,
+    {
+      city: string;
+      clientCount: number;
+      orderCount: number;
+      totalRevenueDec: Decimal;
+      totalCostDec: Decimal;
+    }
+  >();
+
+  for (const c of clientMap.values()) {
+    let bucket = cityMap.get(c.city);
+    if (!bucket) {
+      bucket = {
+        city: c.city,
+        clientCount: 0,
+        orderCount: 0,
+        totalRevenueDec: new Decimal(0),
+        totalCostDec: new Decimal(0),
+      };
+      cityMap.set(c.city, bucket);
+    }
+    bucket.clientCount += 1;
+    bucket.orderCount += c.orderCount;
+    bucket.totalRevenueDec = bucket.totalRevenueDec.plus(c.totalRevenueDec);
+    bucket.totalCostDec = bucket.totalCostDec.plus(c.totalCostDec);
+  }
+
+  const cities = Array.from(cityMap.values())
+    .map((ct) => {
+      const grossProfitDec = ct.totalRevenueDec.minus(ct.totalCostDec);
+      return {
+        city: ct.city,
+        clientCount: ct.clientCount,
+        orderCount: ct.orderCount,
+        totalRevenue: roundToIntegerPeso(ct.totalRevenueDec).toNumber(),
+        totalCost: roundToIntegerPeso(ct.totalCostDec).toNumber(),
+        grossProfit: roundToIntegerPeso(grossProfitDec).toNumber(),
+        marginPercent: computeMarginPercent(grossProfitDec, ct.totalRevenueDec, 2),
+        averageTicket:
+          ct.orderCount > 0 ? roundToIntegerPeso(ct.totalRevenueDec.dividedBy(ct.orderCount)).toNumber() : 0,
+        sharePercent: totalRevenueDec.gt(0)
+          ? computeMarginPercent(Decimal.max(0, ct.totalRevenueDec), totalRevenueDec, 2)
+          : 0,
+      };
+    })
+    .sort((a, b) => b.grossProfit - a.grossProfit || b.totalRevenue - a.totalRevenue);
+
   return {
     kpis: {
       totalRevenue: totalRevenueDec.toNumber(),
@@ -258,5 +307,6 @@ export function computeProfitabilityMetrics(input: ProfitabilityComputationInput
     },
     clients,
     products,
+    cities,
   };
 }

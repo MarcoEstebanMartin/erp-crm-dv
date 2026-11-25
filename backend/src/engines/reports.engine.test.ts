@@ -400,6 +400,69 @@ describe('Reportes Minimalistas — Motores Decimal.js, Fechas AR (-03:00), Nota
     expect(summary.summary.grossMarginPct).toBe(22.44);
   });
 
+  it('computeProfitabilityMetrics agrupa rentabilidad por localidad normalizada (cities) y cuadra al peso con KPIs globales', () => {
+    const prodA = { id: 10, sku: 'A1', name: 'Prod A', isPesable: false, rubroId: 1, rubro: { id: 1, name: 'Lácteos' } };
+    const prof = computeProfitabilityMetrics({
+      orders: [
+        {
+          personaId: 1,
+          sellerId: 7,
+          billingType: 'OFFICIAL',
+          persona: { id: 1, name: 'Cli 1', city: 'Gral. Villegas', sellerId: 7, seller: { username: 'diego' } },
+          items: [{ productId: 10, quantity: 10, subtotal: 100000, unitCostSnapshot: 7000, product: prodA }],
+        },
+        {
+          personaId: 2,
+          sellerId: 7,
+          billingType: 'INTERNAL',
+          persona: { id: 2, name: 'Cli 2', city: 'GENERAL VILLEGAS', sellerId: 7, seller: { username: 'diego' } },
+          items: [{ productId: 10, quantity: 5, subtotal: 50000, unitCostSnapshot: 7000, product: prodA }],
+        },
+        {
+          personaId: 3,
+          sellerId: 7,
+          billingType: 'INTERNAL',
+          persona: { id: 3, name: 'Cli 3', city: 'Bunge', sellerId: 7, seller: { username: 'diego' } },
+          items: [{ productId: 10, quantity: 5, subtotal: 50000, unitCostSnapshot: 8000, product: prodA }],
+        },
+      ],
+      creditNotes: [],
+      filters: {},
+    });
+
+    expect(prof.cities).toEqual([
+      {
+        city: 'GENERAL VILLEGAS',
+        clientCount: 2,
+        orderCount: 2,
+        totalRevenue: 150000,
+        totalCost: 105000,
+        grossProfit: 45000,
+        marginPercent: 30,
+        averageTicket: 75000,
+        sharePercent: 75,
+      },
+      {
+        city: 'EMILIO V. BUNGE',
+        clientCount: 1,
+        orderCount: 1,
+        totalRevenue: 50000,
+        totalCost: 40000,
+        grossProfit: 10000,
+        marginPercent: 20,
+        averageTicket: 50000,
+        sharePercent: 25,
+      },
+    ]);
+
+    const sumRev = prof.cities.reduce((acc, c) => acc + c.totalRevenue, 0);
+    const sumCost = prof.cities.reduce((acc, c) => acc + c.totalCost, 0);
+    const sumGross = prof.cities.reduce((acc, c) => acc + c.grossProfit, 0);
+    expect(sumRev).toBe(prof.kpis.totalRevenue);
+    expect(sumCost).toBe(prof.kpis.totalCost);
+    expect(sumGross).toBe(prof.kpis.totalGrossProfit);
+  });
+
   it('crm.controller.ts no tiene mocks Coca Cola/Quilmes y admin.routes.ts expone /reports/pdf/employee/:userId sin rutas muertas', () => {
     const crmContent = fs.readFileSync(path.resolve(__dirname, '../controllers/crm.controller.ts'), 'utf8');
     expect(crmContent).not.toMatch(/Coca Cola|Quilmes/i);

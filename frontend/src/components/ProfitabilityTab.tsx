@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FC, type KeyboardEvent } from 'react';
-import { Package, Users } from 'lucide-react';
+import { MapPin, Package, Users } from 'lucide-react';
 import { api } from '../utils/api';
 import { ProfitabilityFiltersAndKpis } from './reports/profitability/ProfitabilityFiltersAndKpis';
 import { ProfitabilityTablesAndMatrix } from './reports/profitability/ProfitabilityTablesAndMatrix';
@@ -10,7 +10,7 @@ interface ProfitabilityTabProps {
   rubros?: Array<{ id: number; name: string }>;
 }
 
-type SubViewId = 'clients' | 'products';
+type SubViewId = 'clients' | 'products' | 'cities';
 type ClassificationFilter = 'ALL' | 'LOW_MARGIN' | 'STAR' | 'VOLUME' | 'OPPORTUNITY';
 
 export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubros = [] }) => {
@@ -121,9 +121,14 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
     return matchesSearch && matchesClass;
   });
 
+  const filteredCities = (reportData?.cities || []).filter((ct: any) =>
+    ct.city.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
   const subTabs: Array<{ id: SubViewId; label: string; Icon: typeof Users }> = [
     { id: 'clients', label: `Clientes (${reportData?.clients?.length || 0})`, Icon: Users },
     { id: 'products', label: `Productos (${reportData?.products?.length || 0})`, Icon: Package },
+    { id: 'cities', label: `Localidades (${reportData?.cities?.length || 0})`, Icon: MapPin },
   ];
 
   const handleSubTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
@@ -210,7 +215,13 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
               id="profitability-search"
               type="text"
               className="input"
-              placeholder={subView === 'clients' ? 'Buscar cliente o localidad...' : 'Buscar SKU o producto...'}
+              placeholder={
+                subView === 'clients'
+                  ? 'Buscar cliente o localidad...'
+                  : subView === 'cities'
+                    ? 'Buscar localidad...'
+                    : 'Buscar SKU o producto...'
+              }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               autoCorrect="off"
@@ -227,6 +238,7 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
           subView={subView}
           filteredClients={filteredClients}
           filteredProducts={filteredProducts}
+          filteredCities={filteredCities}
           formatCurrency={formatCurrency}
         />
       </div>
