@@ -133,7 +133,7 @@ export const voidReceipt = async (req: AuthenticatedRequest, res: Response) => {
     });
     return res.json({
       status: 'success',
-      message: `Recibo ${receiptLabel} anulado correctamente. Se restableció $${amountToRestore.toLocaleString('es-AR')} al saldo pendiente del cliente.`,
+      message: `${receiptLabel} anulado.`,
       voidedAt,
       voidReason,
     });

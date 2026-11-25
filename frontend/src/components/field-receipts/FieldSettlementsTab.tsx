@@ -97,12 +97,11 @@ export const FieldSettlementsTab: React.FC = () => {
     setVoidError(null);
     try {
       if (voidTarget.kind === 'OFFICE') {
-        const res = await fieldReceiptsApi.voidOfficeReceipt(voidTarget.id, reason);
-        setMessage(res.message || `Recibo ${voidTarget.receiptLabel} anulado.`);
+        await fieldReceiptsApi.voidOfficeReceipt(voidTarget.id, reason);
       } else {
         await fieldReceiptsApi.voidReceipt(voidTarget.id, reason);
-        setMessage(`Recibo ${voidTarget.receiptLabel} anulado con contra-asiento en Cuenta Corriente.`);
       }
+      setMessage(`${voidTarget.receiptLabel} anulado.`);
       setVoidTarget(null);
       await loadData();
     } catch (err: any) {

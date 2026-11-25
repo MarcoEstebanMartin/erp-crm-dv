@@ -419,7 +419,7 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                           <FileDown size={13} aria-hidden="true" /> {busyPdfKey === `pdf-${row.key}` ? '…' : 'PDF'}
                         </button>
                       )}
-                      {!row.officeReceipt && row.viewUrl && (
+                      {!row.officeReceipt && !row.isVoided && row.viewUrl && (
                         <a
                           href={row.viewUrl}
                           target="_blank"
