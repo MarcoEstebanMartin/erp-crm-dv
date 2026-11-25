@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { TransactionType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { adminSensitiveEventsService } from '../admin/admin-sensitive-events.service';
 
@@ -8,7 +9,7 @@ describe('adminSensitiveEventsService', () => {
   });
 
   it('agrega anulaciones de oficina, calle y diferencias de caja excluyendo arqueos exactos', async () => {
-    vi.spyOn(prisma.transaction, 'findMany').mockResolvedValue([
+    const txSpy = vi.spyOn(prisma.transaction, 'findMany').mockResolvedValue([
       {
         id: 979,
         receiptNumber: 'REC-00979',
@@ -65,6 +66,11 @@ describe('adminSensitiveEventsService', () => {
       cashDiscrepanciesCount: 1,
       cashDiscrepanciesNet: -5000,
     });
+    expect(txSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ type: TransactionType.INCOME }),
+      }),
+    );
     expect(res.events.map((e) => e.id)).toEqual([
       'cash-diff-6',
       'void-field-12',

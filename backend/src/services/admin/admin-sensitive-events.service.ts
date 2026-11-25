@@ -1,4 +1,4 @@
-import { FieldReceiptStatus } from '@prisma/client';
+import { FieldReceiptStatus, TransactionType } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import { roundToIntegerPeso, toDecimal } from '../../core/money';
 
@@ -50,7 +50,10 @@ export const adminSensitiveEventsService = {
 
     const [voidedOffice, voidedField, closedDrawers] = await Promise.all([
       prisma.transaction.findMany({
-        where: { voidedAt: { gte: since } },
+        where: {
+          type: TransactionType.INCOME,
+          voidedAt: { gte: since },
+        },
         select: {
           id: true,
           receiptNumber: true,

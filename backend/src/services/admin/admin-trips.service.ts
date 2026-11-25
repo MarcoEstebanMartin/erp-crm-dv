@@ -1,4 +1,4 @@
-import { OrderStatus, Prisma } from '@prisma/client';
+import { OrderStatus } from '@prisma/client';
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { roundToIntegerPeso, roundToTwoDecimals } from '../../core/money';
@@ -6,11 +6,7 @@ import { VehicleFuelLogMetricInput } from '../../engines/fuel.engine';
 import { computeTripProfitabilityMetrics } from '../../engines/reports-trips.engine';
 import { resolveReportDateRange } from './admin-report.helpers';
 
-interface TripCostRow {
-  id: number;
-  tripKm: Prisma.Decimal | number | string | null;
-  tripExpenses: Prisma.Decimal | number | string | null;
-}
+const FUEL_HISTORY_WINDOW_DAYS = 365;
 
 export class AdminTripsSubService {
   async getTripProfitabilityReport(filters: { startDate?: string; endDate?: string }) {
@@ -37,22 +33,18 @@ export class AdminTripsSubService {
       orderBy: [{ date: 'desc' }, { id: 'desc' }],
     });
 
-    const routeIds = routes.map((r) => r.id);
     const vehicleIds = Array.from(
       new Set(routes.map((r) => r.vehicleId).filter((id): id is number => typeof id === 'number')),
     );
 
-    const [tripCostRows, fuelLogs] = await Promise.all([
-      routeIds.length > 0
-        ? prisma.$queryRaw<TripCostRow[]>`
-            SELECT id, "tripKm", "tripExpenses"
-            FROM "DeliveryRoute"
-            WHERE id IN (${Prisma.join(routeIds)})
-          `
-        : Promise.resolve<TripCostRow[]>([]),
+    const fuelWindowStart = new Date(Date.now() - FUEL_HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const fuelLogs =
       vehicleIds.length > 0
-        ? prisma.fuelLog.findMany({
-            where: { vehicleId: { in: vehicleIds } },
+        ? await prisma.fuelLog.findMany({
+            where: {
+              vehicleId: { in: vehicleIds },
+              date: { gte: fuelWindowStart },
+            },
             select: {
               vehicleId: true,
               odometer: true,
@@ -62,10 +54,8 @@ export class AdminTripsSubService {
             },
             orderBy: { odometer: 'asc' },
           })
-        : Promise.resolve([]),
-    ]);
+        : [];
 
-    const tripCostById = new Map<number, TripCostRow>(tripCostRows.map((row) => [row.id, row]));
     const vehicleFuelLogsByVehicleId = new Map<number, VehicleFuelLogMetricInput[]>();
     for (const log of fuelLogs) {
       const list = vehicleFuelLogsByVehicleId.get(log.vehicleId) || [];
@@ -79,22 +69,19 @@ export class AdminTripsSubService {
     }
 
     return computeTripProfitabilityMetrics({
-      routes: routes.map((route) => {
-        const costs = tripCostById.get(route.id);
-        return {
-          id: route.id,
-          routeName: route.routeName,
-          driverName: route.driverName,
-          vehicleId: route.vehicleId,
-          vehiclePlate: route.vehiclePlate,
-          vehicleDescription: route.vehicleDescription,
-          status: route.status,
-          date: route.date,
-          tripKm: costs?.tripKm ?? null,
-          tripExpenses: costs?.tripExpenses ?? 0,
-          orders: route.orders,
-        };
-      }),
+      routes: routes.map((route) => ({
+        id: route.id,
+        routeName: route.routeName,
+        driverName: route.driverName,
+        vehicleId: route.vehicleId,
+        vehiclePlate: route.vehiclePlate,
+        vehicleDescription: route.vehicleDescription,
+        status: route.status,
+        date: route.date,
+        tripKm: route.tripKm ?? null,
+        tripExpenses: route.tripExpenses ?? 0,
+        orders: route.orders,
+      })),
       vehicleFuelLogsByVehicleId,
     });
   }
@@ -120,11 +107,13 @@ export class AdminTripsSubService {
         ? roundToIntegerPeso(input.tripExpenses).toNumber()
         : 0;
 
-    await prisma.$executeRaw`
-      UPDATE "DeliveryRoute"
-      SET "tripKm" = ${normalizedKm}, "tripExpenses" = ${normalizedExpenses}, "updatedAt" = NOW()
-      WHERE id = ${routeId}
-    `;
+    await prisma.deliveryRoute.update({
+      where: { id: routeId },
+      data: {
+        tripKm: normalizedKm,
+        tripExpenses: normalizedExpenses,
+      },
+    });
 
     return {
       id: routeId,
