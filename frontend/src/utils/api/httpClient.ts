@@ -125,7 +125,7 @@ export async function request(path: string, options: RequestInit = {}) {
 // Comprobar la conexión con el servidor
 export async function testServerConnection(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/health`, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${API_BASE_URL}/health`, { signal: AbortSignal.timeout(8000) });
     return res.status === 200;
   } catch (e) {
     return false;

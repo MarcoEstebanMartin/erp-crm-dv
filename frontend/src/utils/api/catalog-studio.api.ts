@@ -64,14 +64,14 @@ export interface CatalogStudioResponse {
 }
 
 async function downloadPdfEndpoint(endpoint: string, fallbackName: string): Promise<void> {
-  const url = `${API_BASE_URL}${endpoint}`;
-  let res = await fetch(url, {
+  const endpointUrl = `${API_BASE_URL}${endpoint}`;
+  let res = await fetch(endpointUrl, {
     method: 'GET',
     credentials: 'include',
   });
   if (res.status === 502 || res.status === 503 || res.status === 504) {
     await new Promise((resolve) => setTimeout(resolve, 450));
-    res = await fetch(url, {
+    res = await fetch(endpointUrl, {
       method: 'GET',
       credentials: 'include',
     });
