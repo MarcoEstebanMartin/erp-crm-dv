@@ -11,6 +11,7 @@ interface BultoLabel {
   clientName: string;
   address: string;
   city: string;
+  phone: string;
   driverName: string;
   sellerName: string;
   bultoIndex: number;
@@ -22,6 +23,7 @@ interface BultoLabel {
 export const printShippingLabelsBultos = ({ orders }: { orders: any[] }) => {
   const { company } = getPrintCompanyContext();
   const labels: BultoLabel[] = [];
+  const todayStr = new Date().toLocaleDateString('es-AR');
 
   orders.forEach((order) => {
     const client = resolvePrintClientMeta(order);
@@ -29,6 +31,7 @@ export const printShippingLabelsBultos = ({ orders }: { orders: any[] }) => {
     const driverName = order.deliveryRoute?.driverName || 'Reparto General';
     const sellerName = order.seller?.username || order.seller?.name || 'Vendedor';
     const notes = order.notes || order.bultosDetails?.notes || '';
+    const phone = client.persona?.phone || '';
     const isPesable = (order.items || []).some(
       (i: any) => i.product?.isPesable || (i.weight && Number(i.weight) > 0),
     );
@@ -39,6 +42,7 @@ export const printShippingLabelsBultos = ({ orders }: { orders: any[] }) => {
         clientName: client.name,
         address: client.address,
         city: client.city,
+        phone,
         driverName,
         sellerName,
         bultoIndex: i,
@@ -53,33 +57,51 @@ export const printShippingLabelsBultos = ({ orders }: { orders: any[] }) => {
     .map(
       (lbl) => `
       <div class="label-page">
-        <div>
-          <div class="brand-header">
-            <div class="brand-name">${escapePrintHtml(company.nombreFantasia)}</div>
-            <div style="font-size: 11px; font-weight: 800;">RÓTULO OFICIAL DE DESPACHO Y CONTROL</div>
+        <div class="label-body">
+          <div class="top-bar">
+            <span class="brand-name">${escapePrintHtml(company.nombreFantasia)}</span>
+            <span class="load-date">${escapePrintHtml(todayStr)}</span>
           </div>
-          <div class="bulto-badge">
-            <span>PEDIDO #${lbl.orderId}</span>
-            <span>BULTO ${lbl.bultoIndex} DE ${lbl.totalBultos}</span>
+
+          <div class="hero-row">
+            <div class="order-block">
+              <div class="micro-label">PEDIDO</div>
+              <div class="order-number">#${lbl.orderId}</div>
+            </div>
+            <div class="bulto-pill">
+              <div class="bulto-caption">BULTO</div>
+              <div class="bulto-ratio">${lbl.bultoIndex} / ${lbl.totalBultos}</div>
+            </div>
           </div>
-          <div class="client-box">
+
+          <div class="client-card">
+            <div class="micro-label">DESTINATARIO</div>
             <div class="client-title">${escapePrintHtml(lbl.clientName)}</div>
-            <div class="client-dest">Destino: ${escapePrintHtml(lbl.address)}${lbl.city ? ` (${escapePrintHtml(lbl.city)})` : ''}</div>
+            <div class="client-dest">${escapePrintHtml(lbl.address)}</div>
+            ${lbl.city ? `<div class="client-city">${escapePrintHtml(lbl.city)}</div>` : ''}
+            ${lbl.phone ? `<div class="client-phone">Tel: ${escapePrintHtml(lbl.phone)}</div>` : ''}
           </div>
-          <div class="route-info">
-            <div><strong>REPARTO / RUTA:</strong> ${escapePrintHtml(lbl.driverName.toUpperCase())}</div>
-            <div><strong>VENDEDOR:</strong> ${escapePrintHtml(lbl.sellerName.toUpperCase())}</div>
-            <div><strong>FECHA DE CARGA:</strong> ${new Date().toLocaleDateString('es-AR')}</div>
+
+          <div class="meta-grid">
+            <div class="meta-cell">
+              <div class="micro-label">RUTA</div>
+              <div class="meta-value">${escapePrintHtml(lbl.driverName)}</div>
+            </div>
+            <div class="meta-cell">
+              <div class="micro-label">VENDEDOR</div>
+              <div class="meta-value">${escapePrintHtml(lbl.sellerName)}</div>
+            </div>
           </div>
-          ${lbl.isPesable ? '<div class="frio-tag">CONTIENE ARTÍCULOS PESABLES / FRÍO</div>' : ''}
-          ${lbl.notes ? `<div class="notes-box"><strong>NOTA VENDEDOR:</strong> ${escapePrintHtml(lbl.notes)}</div>` : ''}
+
+          ${lbl.isPesable ? '<div class="frio-badge">FRÍO / PESABLES</div>' : ''}
+          ${
+            lbl.notes
+              ? `<div class="notes-box"><span class="notes-label">NOTA</span>${escapePrintHtml(lbl.notes)}</div>`
+              : ''
+          }
         </div>
-        <div>
-          <div style="text-align: center; margin-bottom: 4px; font-size: 11px; font-weight: 800;">
-            VERIFICAR FAJA DE SEGURIDAD / CONTROL EN PORTÓN
-          </div>
-          <div class="footer-code">*DV-ORD-${lbl.orderId}-B${lbl.bultoIndex}OF${lbl.totalBultos}*</div>
-        </div>
+
+        <div class="footer-code">DV-${lbl.orderId}-B${lbl.bultoIndex}/${lbl.totalBultos}</div>
       </div>`,
     )
     .join('');
@@ -87,33 +109,53 @@ export const printShippingLabelsBultos = ({ orders }: { orders: any[] }) => {
   openPrintDocument(
     'width=600,height=800',
     `<!DOCTYPE html>
-    <html>
+    <html lang="es">
       <head>
-        <title>Etiquetas de Despacho Térmicas</title>
+        <meta charset="UTF-8" />
+        <title>Rótulos de Bultos</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
         <style>
           @page { size: 100mm 150mm; margin: 0; }
           * { box-sizing: border-box; }
-          body { font-family: ${PRINT_FONT_STACK}; margin: 0; padding: 0; background: #fff; color: #000; }
-          .label-page { width: 100mm; height: 145mm; padding: 6mm 8mm; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #000; }
+          body { font-family: ${PRINT_FONT_STACK}; margin: 0; padding: 0; background: #fff; color: #111827; -webkit-font-smoothing: antialiased; }
+          .label-page { width: 100mm; height: 146mm; padding: 7mm 7.5mm 6mm; page-break-after: always; page-break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; }
           .label-page:last-child { page-break-after: avoid; }
-          .brand-header { text-align: center; border-bottom: 3px solid #000; padding-bottom: 4px; }
-          .brand-name { font-size: 16px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; }
-          .bulto-badge { font-size: 22px; font-weight: 900; background: #000; color: #fff; padding: 4px 10px; border-radius: 6px; text-align: center; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
-          .client-box { border: 2px solid #000; padding: 8px; border-radius: 6px; margin: 6px 0; }
-          .client-title { font-size: 16px; font-weight: 900; line-height: 1.1; text-transform: uppercase; }
-          .client-dest { font-size: 13px; font-weight: 700; margin-top: 4px; }
-          .route-info { font-size: 12.5px; font-weight: 700; border-top: 2px dashed #000; border-bottom: 2px dashed #000; padding: 6px 0; margin: 6px 0; }
-          .frio-tag { font-size: 12px; font-weight: 900; background: #000; color: #fff; padding: 4px; text-align: center; border-radius: 4px; margin-top: 4px; }
-          .notes-box { background: #f3f4f6; border: 1.5px solid #000; border-radius: 4px; padding: 6px; font-size: 12px; font-weight: 700; margin-top: 4px; }
-          .footer-code { text-align: center; font-family: monospace; font-size: 14px; font-weight: bold; letter-spacing: 2px; border-top: 2px solid #000; padding-top: 4px; }
-          @media print { body { -webkit-print-color-adjust: exact; } }
+          .label-body { display: flex; flex-direction: column; gap: 10px; }
+          .top-bar { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #111827; padding-bottom: 6px; }
+          .brand-name { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #111827; }
+          .load-date { font-size: 10.5px; font-weight: 500; color: #374151; font-variant-numeric: tabular-nums; }
+          .hero-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
+          .micro-label { font-size: 8.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; margin-bottom: 2px; }
+          .order-number { font-size: 28px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #111827; }
+          .bulto-pill { background: #111827; color: #ffffff; border-radius: 7px; padding: 6px 13px; text-align: center; min-width: 84px; }
+          .bulto-caption { font-size: 8px; font-weight: 600; letter-spacing: 0.1em; opacity: 0.8; line-height: 1; }
+          .bulto-ratio { font-size: 20px; font-weight: 700; line-height: 1.15; margin-top: 2px; font-variant-numeric: tabular-nums; }
+          .client-card { border: 1px solid #111827; border-radius: 8px; padding: 10px 12px; }
+          .client-title { font-size: 16.5px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; color: #111827; text-wrap: balance; }
+          .client-dest { font-size: 12.5px; font-weight: 500; line-height: 1.35; margin-top: 5px; color: #111827; }
+          .client-city { font-size: 11.5px; font-weight: 600; color: #374151; margin-top: 2px; }
+          .client-phone { font-size: 11px; font-weight: 500; color: #374151; margin-top: 3px; font-variant-numeric: tabular-nums; }
+          .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid #d1d5db; border-bottom: 1px solid #d1d5db; padding: 8px 0; }
+          .meta-value { font-size: 12px; font-weight: 600; color: #111827; line-height: 1.25; }
+          .frio-badge { border: 1.5px solid #111827; border-radius: 6px; padding: 5px 10px; text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; color: #111827; }
+          .notes-box { border: 1px solid #9ca3af; border-radius: 6px; padding: 7px 10px; font-size: 11.5px; font-weight: 500; line-height: 1.35; color: #111827; }
+          .notes-label { display: inline-block; font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em; color: #4b5563; margin-right: 6px; }
+          .footer-code { text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; color: #374151; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
       </head>
       <body>
         ${labelsHtml}
         <script>
           window.onload = function() {
-            setTimeout(() => { window.print(); }, 400);
+            const triggerPrint = () => window.print();
+            if (document.fonts && document.fonts.ready) {
+              Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 700))]).then(triggerPrint);
+            } else {
+              setTimeout(triggerPrint, 400);
+            }
           };
         </script>
       </body>

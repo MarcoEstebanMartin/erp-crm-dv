@@ -248,19 +248,33 @@ export function FulfillmentToolbar({
           className="btn btn-secondary"
           style={{
             height: '28px',
-            padding: '0 10px',
+            minWidth: '28px',
+            padding: selectedOrderIdsCount > 0 ? '0 8px' : '0 7px',
             fontSize: '0.78rem',
             fontWeight: 600,
             backgroundColor: '#FFFFFF',
             borderColor: '#E5E7EB',
             color: '#374151',
             borderRadius: '6px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
           }}
           onClick={handlePrintLabels}
-          title="Imprimir rótulos térmicos adhesivos para los bultos"
+          aria-label={
+            selectedOrderIdsCount > 0
+              ? `Imprimir rótulos (${selectedOrderIdsCount})`
+              : 'Imprimir rótulos'
+          }
+          title={
+            selectedOrderIdsCount > 0
+              ? `Imprimir rótulos (${selectedOrderIdsCount} seleccionados)`
+              : 'Imprimir rótulos térmicos adhesivos para los bultos'
+          }
         >
-          <Tag size={13} aria-hidden="true" />
-          Rótulos {selectedOrderIdsCount > 0 ? `(${selectedOrderIdsCount})` : ''}
+          <Tag size={14} aria-hidden="true" />
+          {selectedOrderIdsCount > 0 && <span>{selectedOrderIdsCount}</span>}
         </button>
       </div>
     </div>

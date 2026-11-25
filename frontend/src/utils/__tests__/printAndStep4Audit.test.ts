@@ -205,8 +205,12 @@ describe('Paso 4C - Barrel printHelpers, plantillas limpias y hooks postMessage'
 
     writtenHtml = '';
     printShippingLabelsBultos({ orders: [sampleOrder] });
-    expect(writtenHtml).toContain('CONTIENE ARTÍCULOS PESABLES / FRÍO');
-    expect(writtenHtml).toContain('BULTO 1 DE 1');
+    expect(writtenHtml).toContain('Plus Jakarta Sans');
+    expect(writtenHtml).toContain('FRÍO / PESABLES');
+    expect(writtenHtml).toContain('1 / 1');
+    expect(writtenHtml).toContain('DV-95-B1/1');
+    expect(writtenHtml).not.toContain('RÓTULO OFICIAL DE DESPACHO Y CONTROL');
+    expect(writtenHtml).not.toContain('VERIFICAR FAJA DE SEGURIDAD');
 
     writtenHtml = '';
     printDeliveryRouteCustodyGuide({
