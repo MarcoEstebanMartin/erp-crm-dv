@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FileDown, Search, Trash2 } from 'lucide-react';
+import { Ban, FileDown, Search } from 'lucide-react';
 import {
   type FieldReceiptDTO,
   type OfficeReceiptDTO,
@@ -36,6 +36,9 @@ interface UnifiedReceiptRow {
   paymentMethodLabel: string;
   amount: number;
   isVoided: boolean;
+  voidedByName?: string | null;
+  voidReason?: string | null;
+  voidBlockedReason?: string | null;
   verified: boolean;
   viewUrl: string | null;
   officeReceipt?: OfficeReceiptDTO;
@@ -46,7 +49,7 @@ interface UnifiedReceiptsListProps {
   officeReceipts: OfficeReceiptDTO[];
   fieldReceipts: FieldReceiptEntry[];
   onDeleteOfficeReceipt: (receipt: OfficeReceiptDTO) => Promise<void>;
-  onVoidFieldReceipt: (receiptId: number) => Promise<void>;
+  onVoidFieldReceipt: (receipt: FieldReceiptDTO) => Promise<void>;
   onRejectCheck: (paymentId: number) => Promise<void>;
   onResendWhatsApp: (receiptId: number) => Promise<void>;
   onClientWhatsAppSaved?: (saved: SavedClientWhatsAppDTO) => void;
@@ -70,6 +73,24 @@ const METHOD_LABELS: Record<string, string> = {
   CHECK: 'Cheque',
   OTHER: 'Otro',
 };
+
+const arDateKeyFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Argentina/Buenos_Aires',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function getOfficeVoidBlockedReason(r: OfficeReceiptDTO, userRole: string): string | null {
+  if (userRole === 'ADMIN') return null;
+  if (userRole !== 'FACTURACION') return 'Sin permisos para anular';
+  if (r.verified) return 'Solo Admin: recibo ya verificado';
+  if (r.cashDrawer?.status === 'CLOSED') return 'Solo Admin: caja cerrada';
+  if (arDateKeyFmt.format(new Date(r.createdAt)) !== arDateKeyFmt.format(new Date())) {
+    return 'Solo Admin: recibo de día anterior';
+  }
+  return null;
+}
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
@@ -157,6 +178,8 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
     }
   };
 
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('user_role') || '' : '';
+
   const unifiedRows = useMemo<UnifiedReceiptRow[]>(() => {
     const officeRows: UnifiedReceiptRow[] = officeReceipts.map((r) => ({
       key: `office-${r.id}`,
@@ -167,7 +190,10 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
       collectorName: r.user?.username || 'Oficina',
       paymentMethodLabel: METHOD_LABELS[r.paymentMethod] || r.paymentMethod,
       amount: Math.round(Number(r.amount || 0)),
-      isVoided: false,
+      isVoided: Boolean(r.voidedAt),
+      voidedByName: r.voidedBy?.username ?? null,
+      voidReason: r.voidReason ?? null,
+      voidBlockedReason: r.voidedAt ? null : getOfficeVoidBlockedReason(r, userRole),
       verified: Boolean(r.verified),
       viewUrl: r.verificationCode
         ? `/recibo/${r.id}?v=${encodeURIComponent(r.verificationCode)}`
@@ -316,13 +342,34 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                         {row.origin === 'OFFICE' ? 'Oficina' : row.origin === 'DRIVER' ? 'Repartidor' : 'Vendedor'}
                       </span>
                       {row.isVoided && (
-                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#E30613' }}>ANULADO</span>
+                        <span
+                          title={row.voidReason || 'Anulado'}
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            padding: '1px 7px',
+                            borderRadius: '999px',
+                            background: '#fef2f2',
+                            color: '#E30613',
+                            border: '1px solid #fecaca',
+                          }}
+                        >
+                          Anulado
+                        </span>
                       )}
                     </div>
                   </td>
                   <td style={{ padding: '10px' }}>
-                    <div style={{ fontWeight: 600, color: '#111827' }}>{row.clientName}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{row.collectorName}</div>
+                    <div style={{ fontWeight: 600, color: row.isVoided ? '#6b7280' : '#111827' }}>{row.clientName}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                      {row.collectorName}
+                      {row.isVoided && (row.voidedByName || row.voidReason) && (
+                        <span style={{ color: '#b91c1c' }}>
+                          {' · '}Anuló {row.voidedByName || 'Admin'}
+                          {row.voidReason ? `: ${row.voidReason}` : ''}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ padding: '10px', whiteSpace: 'nowrap', color: '#374151' }}>
                     {row.paymentMethodLabel}
@@ -332,7 +379,17 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                       </span>
                     )}
                   </td>
-                  <td style={{ padding: '10px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: row.isVoided ? '#9ca3af' : '#111827' }}>
+                  <td
+                    style={{
+                      padding: '10px',
+                      textAlign: 'right',
+                      whiteSpace: 'nowrap',
+                      fontWeight: 700,
+                      fontVariantNumeric: 'tabular-nums',
+                      color: row.isVoided ? '#9ca3af' : '#111827',
+                      textDecoration: row.isVoided ? 'line-through' : 'none',
+                    }}
+                  >
                     ${row.amount.toLocaleString('es-AR')}
                   </td>
                   <td style={{ padding: '10px', textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -433,12 +490,14 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                       {!row.isVoided && (
                         <button
                           type="button"
+                          disabled={Boolean(row.voidBlockedReason)}
                           onClick={() => {
+                            if (row.voidBlockedReason) return;
                             if (row.officeReceipt) void onDeleteOfficeReceipt(row.officeReceipt);
-                            else if (row.fieldReceipt) void onVoidFieldReceipt(row.fieldReceipt.id);
+                            else if (row.fieldReceipt) void onVoidFieldReceipt(row.fieldReceipt);
                           }}
-                          title="Anular recibo"
-                          aria-label="Anular recibo"
+                          title={row.voidBlockedReason || 'Anular recibo'}
+                          aria-label={row.voidBlockedReason || 'Anular recibo'}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -449,11 +508,11 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
                             borderRadius: '6px',
                             border: '1px solid #e5e7eb',
                             background: '#fff',
-                            color: '#6b7280',
-                            cursor: 'pointer',
+                            color: row.voidBlockedReason ? '#d1d5db' : '#6b7280',
+                            cursor: row.voidBlockedReason ? 'not-allowed' : 'pointer',
                           }}
                         >
-                          <Trash2 size={14} aria-hidden="true" />
+                          <Ban size={14} aria-hidden="true" />
                         </button>
                       )}
                     </div>

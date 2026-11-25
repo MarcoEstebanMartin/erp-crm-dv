@@ -14,6 +14,8 @@ export interface PublicReceiptData {
   description?: string | null;
   createdAt: string;
   verified?: boolean;
+  isVoided?: boolean;
+  voidedAt?: string | null;
   verificationCode?: string | null;
   publicUrl?: string | null;
   persona?: {
@@ -37,6 +39,7 @@ export interface PublicReceiptData {
   } | null;
   authenticity?: {
     verified: boolean;
+    status?: 'VALID' | 'VOIDED';
     issuer: string;
   };
 }

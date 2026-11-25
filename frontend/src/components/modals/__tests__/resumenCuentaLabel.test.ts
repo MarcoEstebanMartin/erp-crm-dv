@@ -137,4 +137,33 @@ describe('ResumenCuentaModal — buildResumenRows y saldo acumulado', () => {
     expect(formatSignedCurrency(-25480)).toBe('-$25.480');
     expect(formatSignedCurrency(0)).toBe('$0');
   });
+
+  it('oculta pares de recibo anulado + reversión por defecto manteniendo saldo idéntico y los muestra si includeVoided=true', () => {
+    const ledger = [
+      { id: 'order-1', type: 'DEBIT', amount: 100000, date: '2026-11-20T09:00:00.000Z', description: 'Factura INT-00010' },
+      { id: 'transaction-979', type: 'CREDIT', sourceType: 'COLLECTION_RECEIPT', isVoided: true, amount: 79726, date: '2026-11-25T10:00:00.000Z', description: 'Recibo REC-00979' },
+      { id: 'ledger-980', type: 'DEBIT', sourceType: 'RECEIPT_REVERSAL', isVoided: true, amount: 79726, date: '2026-11-25T10:05:00.000Z', description: 'Reversión Recibo REC-00979' },
+      { id: 'transaction-981', type: 'CREDIT', sourceType: 'COLLECTION_RECEIPT', isVoided: false, amount: 25000, date: '2026-11-25T11:00:00.000Z', description: 'Recibo REC-00981' },
+    ];
+
+    const clean = buildResumenRows(ledger, {
+      branchFilter: 'ALL',
+      dateRange: 'all',
+      now: new Date('2026-11-25T15:00:00.000Z'),
+    });
+
+    expect(clean.hasVoidedEntries).toBe(true);
+    expect(clean.rows.map((r) => r.id)).toEqual(['order-1', 'transaction-981']);
+    expect(clean.finalBalance).toBe(75000);
+
+    const withVoided = buildResumenRows(ledger, {
+      branchFilter: 'ALL',
+      dateRange: 'all',
+      includeVoided: true,
+      now: new Date('2026-11-25T15:00:00.000Z'),
+    });
+
+    expect(withVoided.rows).toHaveLength(4);
+    expect(withVoided.finalBalance).toBe(75000);
+  });
 });

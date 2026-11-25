@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import type { AuditTarget, DeclaredCheckItem } from './types';
 import AuditLeftPanel from './AuditLeftPanel';
 import AuditReceiptsPanel from './AuditReceiptsPanel';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
+import { VoidReceiptModal } from '../modals/VoidReceiptModal';
 
 interface RendicionAuditModalProps {
   auditTarget: AuditTarget | null;
@@ -26,7 +27,7 @@ interface RendicionAuditModalProps {
   onAuditRouteNoteChange: (val: string) => void;
   auditNotes: string;
   onAuditNotesChange: (val: string) => void;
-  onDeleteReceipt: (tx: any) => void;
+  onDeleteReceipt: (tx: any, reason?: string) => Promise<void> | void;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }
@@ -56,6 +57,7 @@ export default function RendicionAuditModal({
   onClose,
   onSubmit,
 }: RendicionAuditModalProps) {
+  const [voidTx, setVoidTx] = useState<any | null>(null);
   const totalExpected = auditTarget
     ? Number(auditTarget.data.totalCash || 0) + Number(auditTarget.data.totalChecks || 0)
     : 0;
@@ -147,7 +149,7 @@ export default function RendicionAuditModal({
                 transactions={auditTarget.data.transactions}
                 totalExpected={totalExpected}
                 actionLoading={actionLoading}
-                onDeleteReceipt={onDeleteReceipt}
+                onDeleteReceipt={(tx) => setVoidTx(tx)}
               />
             </div>
 
@@ -175,6 +177,19 @@ export default function RendicionAuditModal({
           </form>
         </>
       )}
+      <VoidReceiptModal
+        isOpen={Boolean(voidTx)}
+        receiptLabel={voidTx?.receiptNumber || `N° ${voidTx?.id || ''}`}
+        clientName={voidTx?.persona?.name || 'Cliente'}
+        amount={Number(voidTx?.amount || 0)}
+        submitting={actionLoading}
+        onClose={() => setVoidTx(null)}
+        onConfirm={async (reason) => {
+          if (!voidTx) return;
+          await onDeleteReceipt(voidTx, reason);
+          setVoidTx(null);
+        }}
+      />
     </NativeModalDialog>
   );
 }

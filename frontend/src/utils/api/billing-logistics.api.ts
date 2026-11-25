@@ -307,9 +307,17 @@ export const billingLogisticsApi = {
     });
   },
 
-  deleteReceipt: async (id: number) => {
-    return await request(`/collections/receipt/${id}`, {
-      method: 'DELETE'
+  voidReceipt: async (id: number, reason: string) => {
+    return await request(`/collections/receipt/${id}/void`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  deleteReceipt: async (id: number, reason: string) => {
+    return await request(`/collections/receipt/${id}/void`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
     });
   },
 

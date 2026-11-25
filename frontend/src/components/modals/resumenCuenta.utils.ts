@@ -22,6 +22,8 @@ export interface ResumenLedgerRow {
   debit: number;
   credit: number;
   balance: number;
+  isVoided?: boolean;
+  voidReason?: string | null;
   metadata: Record<string, any>;
 }
 
@@ -33,6 +35,7 @@ export interface BuildResumenRowsOptions {
   dateRange: ResumenDateRange;
   customStart?: string;
   customEnd?: string;
+  includeVoided?: boolean;
   now?: Date;
 }
 
@@ -40,6 +43,7 @@ export interface BuildResumenRowsResult {
   rows: ResumenLedgerRow[];
   priorBalance: number;
   hasPriorEntries: boolean;
+  hasVoidedEntries: boolean;
   finalBalance: number;
 }
 
@@ -106,7 +110,11 @@ export function formatSignedCurrency(amount: number): string {
 }
 
 export function buildResumenRows(ledger: any[], options: BuildResumenRowsOptions): BuildResumenRowsResult {
-  let combined: ResumenLedgerRow[] = (ledger || []).map((item: any) => {
+  const hasVoidedEntries = (ledger || []).some((item: any) => Boolean(item?.isVoided));
+
+  let combined: ResumenLedgerRow[] = (ledger || [])
+    .filter((item: any) => options.includeVoided || !item?.isVoided)
+    .map((item: any) => {
     const isDebit = item.type === 'DEBIT';
     const idStr = String(item.id || '');
     const isPureDate =
@@ -127,6 +135,8 @@ export function buildResumenRows(ledger: any[], options: BuildResumenRowsOptions
       debit: isDebit ? Number(item.amount || 0) : 0,
       credit: !isDebit ? Number(item.amount || 0) : 0,
       balance: 0,
+      isVoided: Boolean(item.isVoided),
+      voidReason: item.voidReason ?? null,
       metadata: item.metadata ? { ...item.metadata, movementId: item.movementId } : { movementId: item.movementId },
     };
   });
@@ -181,5 +191,5 @@ export function buildResumenRows(ledger: any[], options: BuildResumenRowsOptions
     rows.push(row);
   }
 
-  return { rows, priorBalance, hasPriorEntries, finalBalance };
+  return { rows, priorBalance, hasPriorEntries, hasVoidedEntries, finalBalance };
 }

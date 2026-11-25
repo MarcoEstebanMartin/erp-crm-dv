@@ -133,6 +133,7 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
   }
 
   const receiptNo = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
+  const isVoided = Boolean(receipt.isVoided || receipt.authenticity?.status === 'VOIDED');
   const customerName = formatCustomerDisplayName(receipt.persona?.name);
   const amountText = formatReceiptAmountAr(receipt.amount);
   const methodLabel = formatPaymentMethodLabel(receipt.paymentMethod);
@@ -168,11 +169,31 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
         </header>
 
         <section className="dv-receipt-amount-section">
-          <div className="dv-receipt-badge">
-            <ShieldCheck size={14} aria-hidden="true" />
-            <span>Comprobante oficial</span>
+          {isVoided ? (
+            <div
+              className="dv-receipt-badge"
+              role="alert"
+              style={{
+                background: '#fef2f2',
+                color: '#E30613',
+                border: '1px solid #fecaca',
+              }}
+            >
+              <ShieldAlert size={14} aria-hidden="true" />
+              <span>Comprobante anulado</span>
+            </div>
+          ) : (
+            <div className="dv-receipt-badge">
+              <ShieldCheck size={14} aria-hidden="true" />
+              <span>Comprobante oficial</span>
+            </div>
+          )}
+          <div
+            className="dv-receipt-amount"
+            style={isVoided ? { color: '#9ca3af', textDecoration: 'line-through' } : undefined}
+          >
+            {amountText}
           </div>
-          <div className="dv-receipt-amount">{amountText}</div>
         </section>
 
         <dl className="dv-receipt-details">
@@ -209,40 +230,42 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
           </section>
         )}
 
-        <footer className="dv-receipt-actions">
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            disabled={downloading}
-            className="dv-receipt-btn dv-receipt-btn--primary"
-          >
-            <Download size={16} aria-hidden="true" />
-            <span>{downloading ? 'Generando…' : 'Descargar PDF'}</span>
-          </button>
-
-          {canNativeShare ? (
+        {!isVoided && (
+          <footer className="dv-receipt-actions">
             <button
               type="button"
-              onClick={handleSharePdf}
+              onClick={handleDownloadPdf}
               disabled={downloading}
-              className="dv-receipt-btn dv-receipt-btn--secondary"
-              aria-label="Compartir PDF"
+              className="dv-receipt-btn dv-receipt-btn--primary"
             >
-              <Share2 size={16} aria-hidden="true" />
-              <span>Compartir</span>
+              <Download size={16} aria-hidden="true" />
+              <span>{downloading ? 'Generando…' : 'Descargar PDF'}</span>
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="dv-receipt-btn dv-receipt-btn--secondary"
-              aria-label="Imprimir"
-            >
-              <Printer size={16} aria-hidden="true" />
-              <span>Imprimir</span>
-            </button>
-          )}
-        </footer>
+
+            {canNativeShare ? (
+              <button
+                type="button"
+                onClick={handleSharePdf}
+                disabled={downloading}
+                className="dv-receipt-btn dv-receipt-btn--secondary"
+                aria-label="Compartir PDF"
+              >
+                <Share2 size={16} aria-hidden="true" />
+                <span>Compartir</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="dv-receipt-btn dv-receipt-btn--secondary"
+                aria-label="Imprimir"
+              >
+                <Printer size={16} aria-hidden="true" />
+                <span>Imprimir</span>
+              </button>
+            )}
+          </footer>
+        )}
       </article>
     </main>
   );

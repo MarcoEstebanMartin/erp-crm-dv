@@ -141,6 +141,10 @@ export interface OfficeReceiptDTO {
   user?: { id: number; username: string } | null;
   order?: { id: number; invoiceNumber: string | null } | null;
   bankAccount?: { id: number; name: string } | null;
+  cashDrawer?: { id: number; status: string } | null;
+  voidedAt?: string | null;
+  voidReason?: string | null;
+  voidedBy?: { id: number; username: string } | null;
   shareToken?: string;
   verificationCode?: string;
   publicUrl?: string;
@@ -176,8 +180,11 @@ export const fieldReceiptsApi = {
   listOfficeReceipts(limit = 200): Promise<OfficeReceiptDTO[]> {
     return apiClient.get(`/collections/receipts?limit=${limit}`);
   },
-  deleteOfficeReceipt(id: number): Promise<{ status: string; message: string }> {
-    return apiClient.delete(`/collections/receipt/${id}`);
+  voidOfficeReceipt(id: number, reason: string): Promise<{ status: string; message: string; voidedAt?: string; voidReason?: string }> {
+    return apiClient.post(`/collections/receipt/${id}/void`, { reason });
+  },
+  deleteOfficeReceipt(id: number, reason: string): Promise<{ status: string; message: string }> {
+    return this.voidOfficeReceipt(id, reason);
   },
   getOfflineBundle(): Promise<OfflineBundleResponse> {
     return apiClient.get('/field-receipts/offline-bundle');

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { X, Printer, Calendar } from 'lucide-react';
 import { api } from '../../utils/api';
 import { billingApi, type EligibleOrderForCreditNote } from '../../api/billing.api';
-import { useConfirm } from '../../context/ConfirmContext';
 import { NativeModalDialog } from './NativeModalDialog';
 import { ResumenCuentaDetailModals } from './ResumenCuentaDetailModals';
+import { VoidReceiptModal } from './VoidReceiptModal';
 import { StandaloneCreditNoteModal } from '../billing/credit-notes/StandaloneCreditNoteModal';
 import {
   buildResumenRows,
@@ -34,8 +34,14 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
   const [customEnd, setCustomEnd] = useState('');
 
   const userRole = localStorage.getItem('user_role') || '';
-  const isAdminOrFacturacion = userRole === 'ADMIN' || userRole === 'FACTURACION';
-  const confirm = useConfirm();
+  const isAdmin = userRole === 'ADMIN';
+  const isAdminOrFacturacion = isAdmin || userRole === 'FACTURACION';
+
+  const [showVoided, setShowVoided] = useState(false);
+  const [hasVoidedEntries, setHasVoidedEntries] = useState(false);
+  const [voidTarget, setVoidTarget] = useState<{ txId: number; label: string; amount: number } | null>(null);
+  const [voidSubmitting, setVoidSubmitting] = useState(false);
+  const [voidError, setVoidError] = useState<string | null>(null);
 
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [selectedCreditNote, setSelectedCreditNote] = useState<any | null>(null);
@@ -49,7 +55,7 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
 
   useEffect(() => {
     fetchTransactions();
-  }, [dateRange, branchFilter, customStart, customEnd]);
+  }, [dateRange, branchFilter, customStart, customEnd, showVoided]);
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -58,11 +64,13 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
       const ledger = res.ledger || [];
       const fullSummary = buildResumenRows(ledger, { branchFilter: 'ALL', dateRange: 'all' });
       setLiveTotalBalance(fullSummary.finalBalance);
+      setHasVoidedEntries(fullSummary.hasVoidedEntries);
       const result = buildResumenRows(ledger, {
         branchFilter,
         dateRange,
         customStart,
         customEnd,
+        includeVoided: isAdmin && showVoided,
       });
       setTransactions(result.rows);
       setPriorBalance(result.priorBalance);
@@ -94,15 +102,25 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
     }
   };
 
-  const handleDeleteReceipt = async (txId: number, receiptDesc: string, creditAmount: number) => {
-    if (!(await confirm(`¿Anular recibo "${receiptDesc}" por $${creditAmount.toLocaleString('es-AR')}?`))) return;
+  const handleDeleteReceipt = (txId: number, receiptDesc: string, creditAmount: number) => {
+    setVoidError(null);
+    setVoidTarget({ txId, label: receiptDesc, amount: creditAmount });
+  };
+
+  const handleConfirmVoidReceipt = async (reason: string) => {
+    if (!voidTarget) return;
+    setVoidSubmitting(true);
+    setVoidError(null);
     try {
-      const res = await api.deleteReceipt(txId);
+      const res = await api.voidReceipt(voidTarget.txId, reason);
       setActionBanner({ type: 'success', text: res.message || 'Recibo anulado.' });
+      setVoidTarget(null);
       setSelectedTransaction(null);
       fetchTransactions();
     } catch (err: any) {
-      setActionBanner({ type: 'error', text: err?.response?.data?.error || err?.message || 'Error al anular recibo.' });
+      setVoidError(err?.response?.data?.error || err?.message || 'Error al anular recibo.');
+    } finally {
+      setVoidSubmitting(false);
     }
   };
 
@@ -198,6 +216,13 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
           )}
 
           <div style={{ flex: 1 }} />
+
+          {isAdmin && hasVoidedEntries && (
+            <label className="no-print" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', color: '#4b5563', cursor: 'pointer', userSelect: 'none' }}>
+              <input type="checkbox" checked={showVoided} onChange={(e) => setShowVoided(e.target.checked)} />
+              Ver anulados
+            </label>
+          )}
 
           <button
             type="button"
@@ -401,6 +426,16 @@ export default function ResumenCuentaModal({ client, onClose }: ResumenCuentaMod
           fetchTransactions();
         }}
         onError={(msg) => setActionBanner({ type: 'error', text: msg })}
+      />
+      <VoidReceiptModal
+        isOpen={Boolean(voidTarget)}
+        receiptLabel={voidTarget?.label || ''}
+        clientName={client?.name || 'Cliente'}
+        amount={voidTarget?.amount || 0}
+        submitting={voidSubmitting}
+        error={voidError}
+        onClose={() => { setVoidTarget(null); setVoidError(null); }}
+        onConfirm={handleConfirmVoidReceipt}
       />
     </NativeModalDialog>
   );

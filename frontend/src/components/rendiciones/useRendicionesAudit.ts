@@ -113,24 +113,17 @@ export function useRendicionesAudit(options?: { onSuccess?: () => void }) {
     setRealChecks(String(sumChecks));
   };
 
-  const handleDeleteReceipt = async (tx: any) => {
-    const receiptName = tx.receiptNumber || `N° ${tx.id}`;
-    const clientName = tx.persona?.name || 'Cliente';
-    const amountStr = formatCurrency(Number(tx.amount));
-
-    const ok = await confirm({
-      title: 'Eliminar recibo',
-      message: `¿Eliminar recibo ${receiptName} (${clientName} por ${amountStr})? Se restablecerá el saldo pendiente del cliente.`,
-      confirmText: 'Eliminar',
-      cancelText: 'Cancelar',
-      type: 'danger',
-    });
-    if (!ok) return;
+  const handleDeleteReceipt = async (tx: any, reason?: string) => {
+    const cleanReason = String(reason || '').trim();
+    if (cleanReason.length < 5) {
+      setErrorMsg('Ingresá un motivo de al menos 5 caracteres para anular el recibo.');
+      return;
+    }
 
     setActionLoading(true);
     setErrorMsg(null);
     try {
-      const res = await api.deleteReceipt(tx.id);
+      const res = await api.voidReceipt(tx.id, cleanReason);
 
       if (auditTarget) {
         const remainingTxs = auditTarget.data.transactions.filter((t: any) => t.id !== tx.id);

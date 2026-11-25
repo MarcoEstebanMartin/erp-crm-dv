@@ -4,19 +4,30 @@ import {
   fieldReceiptsApi,
   type ClientWhatsAppCoverageDTO,
   type CollectorSettlementDTO,
+  type FieldReceiptDTO,
   type OfficeReceiptDTO,
 } from '../../api/fieldReceipts.api';
-import { useConfirm } from '../../context/ConfirmContext';
 import { resolveFieldReceiptChannel } from '../rendiciones/fieldSettlementChannel';
 import { UnifiedReceiptsList } from './UnifiedReceiptsList';
+import { VoidReceiptModal } from '../modals/VoidReceiptModal';
+
+interface PendingVoidTarget {
+  kind: 'OFFICE' | 'FIELD';
+  id: number;
+  receiptLabel: string;
+  clientName: string;
+  amount: number;
+}
 
 export const FieldSettlementsTab: React.FC = () => {
-  const confirm = useConfirm();
   const [settlements, setSettlements] = useState<CollectorSettlementDTO[]>([]);
   const [officeReceipts, setOfficeReceipts] = useState<OfficeReceiptDTO[]>([]);
   const [waCoverage, setWaCoverage] = useState<ClientWhatsAppCoverageDTO | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [voidTarget, setVoidTarget] = useState<PendingVoidTarget | null>(null);
+  const [voidSubmitting, setVoidSubmitting] = useState(false);
+  const [voidError, setVoidError] = useState<string | null>(null);
 
   const refreshCoverage = useCallback(async () => {
     try {
@@ -57,30 +68,47 @@ export const FieldSettlementsTab: React.FC = () => {
     await loadData();
   };
 
-  const handleVoidFieldReceipt = async (receiptId: number) => {
-    const reason = window.prompt('Motivo de anulación del recibo:');
-    if (!reason || reason.trim().length < 3) return;
-    await fieldReceiptsApi.voidReceipt(receiptId, reason.trim());
-    setMessage('Recibo anulado con contra-asiento en Cuenta Corriente.');
-    await loadData();
+  const handleOpenVoidFieldReceipt = async (receipt: FieldReceiptDTO) => {
+    setVoidError(null);
+    setVoidTarget({
+      kind: 'FIELD',
+      id: receipt.id,
+      receiptLabel: receipt.receiptNumber || receipt.provisionalCode,
+      clientName: receipt.persona?.name || 'Cliente',
+      amount: Math.round(Number(receipt.totalAmount || 0)),
+    });
   };
 
-  const handleDeleteOfficeReceipt = async (receipt: OfficeReceiptDTO) => {
+  const handleOpenVoidOfficeReceipt = async (receipt: OfficeReceiptDTO) => {
     const nro = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
-    const ok = await confirm({
-      title: `¿Anular ${nro}?`,
-      message: `Se revertirá el pago de $${Math.round(Number(receipt.amount)).toLocaleString('es-AR')} en la cuenta corriente de ${receipt.persona?.name || 'este cliente'}.`,
-      confirmText: 'Anular',
-      cancelText: 'Cancelar',
-      type: 'danger',
+    setVoidError(null);
+    setVoidTarget({
+      kind: 'OFFICE',
+      id: receipt.id,
+      receiptLabel: nro,
+      clientName: receipt.persona?.name || 'Cliente',
+      amount: Math.round(Number(receipt.amount || 0)),
     });
-    if (!ok) return;
+  };
+
+  const handleConfirmVoid = async (reason: string) => {
+    if (!voidTarget) return;
+    setVoidSubmitting(true);
+    setVoidError(null);
     try {
-      const res = await fieldReceiptsApi.deleteOfficeReceipt(receipt.id);
-      setMessage(res.message || `Recibo ${nro} anulado.`);
+      if (voidTarget.kind === 'OFFICE') {
+        const res = await fieldReceiptsApi.voidOfficeReceipt(voidTarget.id, reason);
+        setMessage(res.message || `Recibo ${voidTarget.receiptLabel} anulado.`);
+      } else {
+        await fieldReceiptsApi.voidReceipt(voidTarget.id, reason);
+        setMessage(`Recibo ${voidTarget.receiptLabel} anulado con contra-asiento en Cuenta Corriente.`);
+      }
+      setVoidTarget(null);
       await loadData();
     } catch (err: any) {
-      setMessage(err?.message || 'Error al anular recibo.');
+      setVoidError(err?.response?.data?.error || err?.message || 'Error al anular recibo.');
+    } finally {
+      setVoidSubmitting(false);
     }
   };
 
@@ -168,11 +196,25 @@ export const FieldSettlementsTab: React.FC = () => {
       <UnifiedReceiptsList
         officeReceipts={officeReceipts}
         fieldReceipts={allFieldReceipts}
-        onDeleteOfficeReceipt={handleDeleteOfficeReceipt}
-        onVoidFieldReceipt={handleVoidFieldReceipt}
+        onDeleteOfficeReceipt={handleOpenVoidOfficeReceipt}
+        onVoidFieldReceipt={handleOpenVoidFieldReceipt}
         onRejectCheck={handleRejectCheck}
         onResendWhatsApp={handleResendWhatsApp}
         onClientWhatsAppSaved={() => void refreshCoverage()}
+      />
+
+      <VoidReceiptModal
+        isOpen={Boolean(voidTarget)}
+        receiptLabel={voidTarget?.receiptLabel || ''}
+        clientName={voidTarget?.clientName || ''}
+        amount={voidTarget?.amount || 0}
+        submitting={voidSubmitting}
+        error={voidError}
+        onClose={() => {
+          setVoidTarget(null);
+          setVoidError(null);
+        }}
+        onConfirm={handleConfirmVoid}
       />
     </div>
   );
