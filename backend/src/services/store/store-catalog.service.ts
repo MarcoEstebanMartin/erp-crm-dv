@@ -166,9 +166,10 @@ export class StoreCatalogService {
       offerName = decorated.offerName;
       isOffer = decorated.isOffer;
 
+      const rawHighlight = p.storeHighlight ?? p.catalogBadge;
       const storeHighlight =
-        p.storeHighlight === 'OFERTON' || p.storeHighlight === 'DESTACADO'
-          ? p.storeHighlight
+        rawHighlight === 'OFERTON' || rawHighlight === 'DESTACADO'
+          ? rawHighlight
           : null;
       if (storeHighlight === 'OFERTON') {
         isOffer = true;

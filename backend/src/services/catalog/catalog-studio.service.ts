@@ -108,6 +108,7 @@ export class CatalogStudioService {
         minOrderQuantity: true,
         imageUrl: true,
         commercialCategory: true,
+        storeHighlight: true,
         catalogBadge: true,
         catalogVarieties: true,
         catalogMinQtyLabel: true,
@@ -139,7 +140,7 @@ export class CatalogStudioService {
         marginPct: computeMarginPercent(priceInt, costNum),
         category: normalizeCatalogCategory(rawCat),
         rubroName: p.rubro?.name || null,
-        badge: normalizeCatalogBadge(p.catalogBadge),
+        badge: normalizeCatalogBadge(p.catalogBadge ?? p.storeHighlight),
         minQty: p.catalogMinQtyLabel || null,
         minOrderQuantity: p.minOrderQuantity,
         unitsPerBox: p.unitsPerBox,
@@ -247,7 +248,10 @@ export class CatalogStudioService {
     }
 
     const updateData: Record<string, unknown> = {};
-    if (payload.catalogBadge !== undefined) updateData.catalogBadge = payload.catalogBadge;
+    if (payload.catalogBadge !== undefined) {
+      updateData.catalogBadge = payload.catalogBadge;
+      updateData.storeHighlight = payload.catalogBadge;
+    }
     if (payload.catalogVarieties !== undefined) {
       updateData.catalogVarieties = payload.catalogVarieties ? payload.catalogVarieties.trim() : null;
     }
@@ -273,6 +277,7 @@ export class CatalogStudioService {
       select: {
         id: true,
         sku: true,
+        storeHighlight: true,
         catalogBadge: true,
         catalogVarieties: true,
         catalogMinQtyLabel: true,
@@ -358,6 +363,7 @@ export class CatalogStudioService {
 
       const buffer = await renderCatalogResumenPdf(visibleProducts, {
         subtitle: state.subtitle,
+        categoryOrder: state.categoryOrder.length > 0 ? state.categoryOrder : undefined,
         onlyOfertonInResumen: onlyOferton,
       });
 

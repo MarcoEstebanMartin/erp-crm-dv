@@ -1,10 +1,9 @@
 import PDFDocument from 'pdfkit';
 import {
+  buildResumenSections,
   formatCatalogPrice,
   formatCurrentEditionSubtitle,
-  isRefrigeratedCategory,
-  normalizeCatalogBadge,
-  parseMinQtyBadge,
+  formatResumenMinQty,
   type CatalogProductInput,
   type CatalogRenderConfig,
 } from '../../engines/catalog-studio.engine';
@@ -39,13 +38,6 @@ function collectPdfBuffer(doc: PDFKit.PDFDocument): Promise<Buffer> {
   });
 }
 
-function formatMinQtyShort(item: CatalogProductInput): string {
-  const parsed = parseMinQtyBadge(item.minQty, item.minOrderQuantity);
-  if (!parsed) return '';
-  if (parsed.top === 'VENTA') return `x ${parsed.bottom}`;
-  return `Mín. ${parsed.center} ${parsed.bottom.toLowerCase()}`;
-}
-
 function drawPageHeader(
   doc: PDFKit.PDFDocument,
   fonts: PdfFontSet,
@@ -67,10 +59,10 @@ function drawPageHeader(
   }
 
   doc
-    .font(fonts.bold)
-    .fontSize(11.5)
-    .fillColor('#18181B')
-    .text('Ofertas Semanales', textStartX, topY + 9, { lineBreak: false });
+    .font(fonts.regular)
+    .fontSize(12.5)
+    .fillColor('#27272A')
+    .text('Ofertas', textStartX, topY + 8, { lineBreak: false });
 
   const rightLabel = pageNum === 1 ? subtitle : `${subtitle}  •  PÁG. ${pageNum}`;
   doc
@@ -82,7 +74,6 @@ function drawPageHeader(
   const dividerY = topY + headerH;
   doc.save();
   doc.strokeColor('#E4E4E7').lineWidth(0.6).moveTo(X0, dividerY).lineTo(X3, dividerY).stroke();
-  doc.strokeColor('#D74B4B').lineWidth(1.3).moveTo(X0, dividerY).lineTo(X0 + 44, dividerY).stroke();
   doc.restore();
 
   // Table columns header
@@ -153,19 +144,11 @@ export async function renderCatalogResumenPdf(
   const fonts = registerCatalogFonts(doc);
 
   const subtitle = (config.subtitle?.trim() || formatCurrentEditionSubtitle()).toUpperCase();
-
-  // Filter highlighted products (OFERTON + DESTACADO, or only OFERTON if requested)
-  const highlighted = products.filter((p) => {
-    const b = normalizeCatalogBadge(p.badge);
-    if (!b) return false;
-    return config.onlyOfertonInResumen ? b === 'OFERTON' : true;
-  });
-
-  const refrigerados = highlighted.filter((p) => isRefrigeratedCategory(p.category));
-  const varios = highlighted.filter((p) => !isRefrigeratedCategory(p.category));
-  const sections: Array<{ name: string; items: CatalogProductInput[] }> = [];
-  if (refrigerados.length > 0) sections.push({ name: 'REFRIGERADOS', items: refrigerados });
-  if (varios.length > 0) sections.push({ name: 'VARIOS', items: varios });
+  const sections = buildResumenSections(
+    products,
+    config.categoryOrder,
+    Boolean(config.onlyOfertonInResumen),
+  );
 
   let pageNum = 1;
   doc.addPage({ size: [PAGE_W, PAGE_H], margin: 0 });
@@ -207,37 +190,32 @@ export async function renderCatalogResumenPdf(
       }
 
       const item = sec.items[idx];
-      const isOferton = normalizeCatalogBadge(item.badge) === 'OFERTON';
       const rowBg = idx % 2 === 1 ? '#FAFAFA' : '#FFFFFF';
 
       doc.save();
       doc.rect(X0, currY, USABLE_W, ROW_H).fill(rowBg);
       doc.lineWidth(0.35).strokeColor('#E4E4E7').rect(X0, currY, USABLE_W, ROW_H).stroke();
-
-      // Subtle red dot indicator for OFERTON
-      const nameX = isOferton ? X0 + 14 : X0 + 8;
-      if (isOferton) {
-        doc.circle(X0 + 7.5, currY + ROW_H / 2, 2.2).fill('#D0021B');
-      }
+      doc.moveTo(X1, currY).lineTo(X1, currY + ROW_H).stroke();
+      doc.moveTo(X2, currY).lineTo(X2, currY + ROW_H).stroke();
 
       doc
-        .font(isOferton ? fonts.bold : fonts.regular)
-        .fontSize(8.4)
+        .font(fonts.regular)
+        .fontSize(8.5)
         .fillColor('#18181B')
-        .text(item.name.toUpperCase(), nameX, currY + 6, {
-          width: COL1_W - (nameX - X0) - 6,
+        .text(item.name.toUpperCase(), X0 + 8, currY + 6, {
+          width: COL1_W - 14,
           height: 12,
           ellipsis: true,
           lineBreak: false,
         });
 
-      const minLabel = formatMinQtyShort(item);
+      const minLabel = formatResumenMinQty(item.minQty, item.minOrderQuantity);
       if (minLabel) {
         doc
           .font(fonts.regular)
-          .fontSize(7.4)
-          .fillColor('#71717A')
-          .text(minLabel, X1 + 2, currY + 6.5, {
+          .fontSize(7.6)
+          .fillColor('#52525B')
+          .text(minLabel, X1 + 2, currY + 6.4, {
             width: COL2_W - 4,
             align: 'center',
             lineBreak: false,
@@ -247,10 +225,10 @@ export async function renderCatalogResumenPdf(
       doc
         .font(fonts.bold)
         .fontSize(9.2)
-        .fillColor(isOferton ? '#D0021B' : '#18181B')
+        .fillColor('#18181B')
         .text(formatCatalogPrice(item.price), X2 + 4, currY + 5.6, {
           width: COL3_W - 8,
-          align: 'right',
+          align: 'center',
           lineBreak: false,
         });
 

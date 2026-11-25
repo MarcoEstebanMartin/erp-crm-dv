@@ -11,6 +11,7 @@ import { productReconciliationSubService } from './catalog/product-reconciliatio
 import { productWmsSubService } from './catalog/product-wms.service';
 import { productImageSubService } from './catalog/product-image.service';
 import { productionOutboundBridgeService } from './catalog/production-outbound-bridge.service';
+import { CatalogStudioService } from './catalog/catalog-studio.service';
 
 function enrichWithStockValuation<
   T extends {
@@ -183,6 +184,10 @@ export class ProductService {
           data.storeHighlight === 'OFERTON' || data.storeHighlight === 'DESTACADO'
             ? data.storeHighlight
             : null,
+        catalogBadge:
+          data.storeHighlight === 'OFERTON' || data.storeHighlight === 'DESTACADO'
+            ? data.storeHighlight
+            : null,
         rubroId: rubroId ? Number(rubroId) : null,
         providerId: providerId ? Number(providerId) : null,
       },
@@ -251,6 +256,12 @@ export class ProductService {
               ? data.storeHighlight
               : null
             : undefined,
+        catalogBadge:
+          data.storeHighlight !== undefined
+            ? data.storeHighlight === 'OFERTON' || data.storeHighlight === 'DESTACADO'
+              ? data.storeHighlight
+              : null
+            : undefined,
         rubro: data.rubroId !== undefined ? (data.rubroId ? { connect: { id: Number(data.rubroId) } } : { disconnect: true }) : undefined,
         provider: data.providerId !== undefined ? (data.providerId ? { connect: { id: Number(data.providerId) } } : { disconnect: true }) : undefined,
         defaultLocation: data.defaultLocation !== undefined ? (data.defaultLocation ? String(data.defaultLocation).trim() : null) : undefined,
@@ -258,6 +269,9 @@ export class ProductService {
       },
     });
 
+    if (data.storeHighlight !== undefined) {
+      CatalogStudioService.invalidatePdfCache();
+    }
     if (userId) {
       await logAudit({
         userId,

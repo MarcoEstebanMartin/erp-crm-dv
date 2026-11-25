@@ -330,3 +330,48 @@ export function groupCatalogSections(
     .map((name) => buckets.get(name)!)
     .filter((s) => s.products.length > 0 || s.combos.length > 0);
 }
+
+export interface ResumenSection {
+  name: 'REFRIGERADOS' | 'VARIOS';
+  items: CatalogProductInput[];
+}
+
+export function buildResumenSections(
+  products: CatalogProductInput[],
+  customCategoryOrder?: string[] | null,
+  onlyOferton = false,
+): ResumenSection[] {
+  const highlighted = products.filter((p) => {
+    const b = normalizeCatalogBadge(p.badge);
+    if (!b) return false;
+    return onlyOferton ? b === 'OFERTON' : true;
+  });
+
+  const orderedSections = groupCatalogSections(highlighted, [], customCategoryOrder);
+  const refrigerados: CatalogProductInput[] = [];
+  const varios: CatalogProductInput[] = [];
+
+  for (const sec of orderedSections) {
+    if (isRefrigeratedCategory(sec.name)) {
+      refrigerados.push(...sec.products);
+    } else {
+      varios.push(...sec.products);
+    }
+  }
+
+  const result: ResumenSection[] = [];
+  if (refrigerados.length > 0) result.push({ name: 'REFRIGERADOS', items: refrigerados });
+  if (varios.length > 0) result.push({ name: 'VARIOS', items: varios });
+  return result;
+}
+
+export function formatResumenMinQty(
+  rawVal?: string | null,
+  fallbackMinOrderQty?: number | null,
+): string {
+  const parsed = parseMinQtyBadge(rawVal, fallbackMinOrderQty);
+  if (!parsed) return '';
+  const unit = parsed.bottom === 'UNID.' ? 'u.' : parsed.bottom.toLowerCase();
+  if (parsed.top === 'VENTA') return `x ${unit}`;
+  return `Mín. ${parsed.center} ${unit}`;
+}

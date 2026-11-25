@@ -35,7 +35,6 @@ export const CatalogProductCard = memo(function CatalogProductCard({
   const isOferton = product.badge === 'OFERTON';
   const isDestacado = product.badge === 'DESTACADO';
   const outOfStock = product.stock <= 0;
-  const lowMargin = product.marginPct !== null && product.marginPct <= 0;
   const imgSrc = resolveImageSrc(product.imageUrl);
 
   const cardClasses = [
@@ -53,11 +52,6 @@ export const CatalogProductCard = memo(function CatalogProductCard({
         <span className="cs-pill">{product.sku}</span>
         <div className="cs-meta-pills">
           {outOfStock && <span className="cs-pill cs-pill-danger">Sin stock</span>}
-          {product.marginPct !== null && (
-            <span className={`cs-pill ${lowMargin ? 'cs-pill-danger' : ''}`}>
-              {product.marginPct > 0 ? `+${product.marginPct}%` : `${product.marginPct}%`}
-            </span>
-          )}
           {product.minQty && <span className="cs-pill cs-pill-warn">Mín. {product.minQty}</span>}
         </div>
       </div>

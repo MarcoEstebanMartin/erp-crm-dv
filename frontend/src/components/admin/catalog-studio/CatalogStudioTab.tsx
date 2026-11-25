@@ -104,6 +104,9 @@ export default function CatalogStudioTab() {
 
       try {
         await catalogStudioApi.patchProduct(productId, payload);
+        if (payload.catalogBadge !== undefined) {
+          queryClient.invalidateQueries({ queryKey: ['products'] });
+        }
       } catch (err: any) {
         setProducts(snapshot);
         queryClient.setQueryData(CATALOG_STUDIO_QUERY_KEY, (prev: typeof studioData) =>

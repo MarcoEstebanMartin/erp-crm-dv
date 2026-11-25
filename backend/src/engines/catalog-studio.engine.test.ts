@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildResumenSections,
   cleanVarietiesText,
   computeMarginPercent,
   formatCatalogPrice,
+  formatResumenMinQty,
   groupCatalogSections,
   normalizeCatalogBadge,
   normalizeCatalogCategory,
@@ -73,5 +75,35 @@ describe('catalog-studio.engine', () => {
     expect(normalizeCatalogBadge('¡Ofertón!')).toBe('OFERTON');
     expect(normalizeCatalogBadge('destacado')).toBe('DESTACADO');
     expect(normalizeCatalogBadge('')).toBeNull();
+  });
+
+  it('ordena el PDF Resumen en REFRIGERADOS y VARIOS respetando el orden canónico de secciones', () => {
+    const sections = buildResumenSections([
+      { id: 1, sku: '0100', name: 'BAYGON AEROSOL', price: 3999, category: 'Limpieza', badge: 'OFERTON' },
+      { id: 2, sku: '0020', name: 'CREMIGAL MOZZARELLA', price: 10360, category: 'Cremigal', badge: 'DESTACADO' },
+      { id: 3, sku: '0050', name: 'AMANDA YERBA', price: 1499, category: 'Yerbas', badge: 'OFERTON' },
+      { id: 4, sku: '0010', name: 'MELINCUÉ BARRA TYBO', price: 11156, category: 'Melincué', badge: 'OFERTON' },
+      { id: 5, sku: '0030', name: 'M.ROJO DURAZNOS', price: 3838, category: 'Conservas', badge: 'DESTACADO' },
+      { id: 6, sku: '0099', name: 'SIN BADGE', price: 999, category: 'Almacén', badge: null },
+    ]);
+
+    expect(sections.map((s) => s.name)).toEqual(['REFRIGERADOS', 'VARIOS']);
+    expect(sections[0].items.map((p) => p.name)).toEqual([
+      'MELINCUÉ BARRA TYBO',
+      'CREMIGAL MOZZARELLA',
+    ]);
+    expect(sections[1].items.map((p) => p.name)).toEqual([
+      'M.ROJO DURAZNOS',
+      'AMANDA YERBA',
+      'BAYGON AEROSOL',
+    ]);
+  });
+
+  it('formatea mínimos del PDF Resumen de forma compacta igual al modelo oficial', () => {
+    expect(formatResumenMinQty('3 UNID.')).toBe('Mín. 3 u.');
+    expect(formatResumenMinQty('3 CAJA')).toBe('Mín. 3 caja');
+    expect(formatResumenMinQty('12 UNID.')).toBe('Mín. 12 u.');
+    expect(formatResumenMinQty(null, 6)).toBe('Mín. 6 u.');
+    expect(formatResumenMinQty(null, 1)).toBe('');
   });
 });

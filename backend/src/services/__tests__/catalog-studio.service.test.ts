@@ -116,6 +116,7 @@ describe('CatalogStudioService', () => {
     expect(callArg.data).not.toHaveProperty('costPrice');
     expect(callArg.data).not.toHaveProperty('stock');
     expect(callArg.data.catalogBadge).toBe('OFERTON');
+    expect(callArg.data.storeHighlight).toBe('OFERTON');
     expect(callArg.data.commercialCategory).toBe('Bebidas');
   });
 
