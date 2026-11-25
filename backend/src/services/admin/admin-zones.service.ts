@@ -2,7 +2,14 @@ import prisma from '../../utils/prisma';
 import { CreditNoteStatus, OrderStatus } from '@prisma/client';
 import { Decimal } from 'decimal.js';
 import { roundToIntegerPeso, roundToThreeDecimalsWeight, sumIntegerAmounts } from '../../core/money';
-import { computeMarginPercent, MAIN_CITIES, resolveItemHistoricalMetrics } from '../../engines/reports-core.engine';
+import {
+  computeMarginPercent,
+  findFallbackCostSnapshot,
+  MAIN_CITIES,
+  resolveCreditNoteCommercialRevenueDec,
+  resolveItemHistoricalMetrics,
+  resolveOrderCommercialRevenueDec,
+} from '../../engines/reports-core.engine';
 import { getArgentinaWeekMondayIso, resolveReportDateRange } from './admin-report.helpers';
 
 export class AdminZonesSubService {
@@ -69,6 +76,7 @@ export class AdminZonesSubService {
                   sku: true,
                   name: true,
                   isPesable: true,
+                  costPrice: true,
                   rubroId: true,
                   rubro: { select: { id: true, name: true } },
                 },
@@ -89,6 +97,11 @@ export class AdminZonesSubService {
               seller: { select: { id: true, username: true } },
             },
           },
+          order: {
+            select: {
+              items: { select: { productId: true, unitCostSnapshot: true } },
+            },
+          },
           items: {
             include: {
               product: {
@@ -97,6 +110,7 @@ export class AdminZonesSubService {
                   sku: true,
                   name: true,
                   isPesable: true,
+                  costPrice: true,
                   rubroId: true,
                   rubro: { select: { id: true, name: true } },
                 },
@@ -128,9 +142,12 @@ export class AdminZonesSubService {
     const weeklyMap = new Map<string, { weekStart: string; totalDec: Decimal; count: number }>();
     const weeklyRubroMap = new Map<string, Map<string, Decimal>>();
     const rubrosAccumulatedMap = new Map<string, { id: number | null; name: string; totalSalesDec: Decimal; itemsCount: number }>();
+    let totalZoneRevenueDec = new Decimal(0);
+    let totalZoneCostDec = new Decimal(0);
 
     for (const order of orders) {
-      const totalAmtDec = roundToIntegerPeso(order.totalAmount || 0);
+      const totalAmtDec = resolveOrderCommercialRevenueDec(order);
+      totalZoneRevenueDec = totalZoneRevenueDec.plus(totalAmtDec);
       const clientId = order.personaId;
 
       const clientData = clientMap.get(clientId) || {
@@ -158,7 +175,8 @@ export class AdminZonesSubService {
       }
 
       for (const item of order.items) {
-        const { qtyDec, itemRevenueDec } = resolveItemHistoricalMetrics(item);
+        const { qtyDec, itemRevenueDec, itemCostDec } = resolveItemHistoricalMetrics(item);
+        totalZoneCostDec = totalZoneCostDec.plus(itemCostDec);
         const rubroName = item.product.rubro?.name || 'VARIOS';
         const rubroId = item.product.rubroId || null;
 
@@ -190,7 +208,8 @@ export class AdminZonesSubService {
     }
 
     for (const cn of creditNotes) {
-      const cnAmtDec = roundToIntegerPeso(cn.totalAmount || 0);
+      const cnAmtDec = resolveCreditNoteCommercialRevenueDec(cn);
+      totalZoneRevenueDec = totalZoneRevenueDec.minus(cnAmtDec);
       const clientData = clientMap.get(cn.personaId);
       if (clientData) {
         clientData.totalSpentDec = clientData.totalSpentDec.minus(cnAmtDec);
@@ -204,7 +223,12 @@ export class AdminZonesSubService {
       const weekRubro = weeklyRubroMap.get(weekKey);
 
       for (const item of cn.items) {
-        const { qtyDec, itemRevenueDec } = resolveItemHistoricalMetrics(item);
+        const fallback = findFallbackCostSnapshot(cn.order?.items, item.productId);
+        const { qtyDec, itemRevenueDec, itemCostDec } = resolveItemHistoricalMetrics({
+          ...item,
+          fallbackUnitCostSnapshot: fallback,
+        });
+        totalZoneCostDec = totalZoneCostDec.minus(itemCostDec);
         const rubroName = item.product.rubro?.name || 'VARIOS';
 
         const prodData = productMap.get(item.productId);
@@ -310,9 +334,17 @@ export class AdminZonesSubService {
       .sort((a, b) => b.stock - a.stock)
       .slice(0, 10);
 
+    const zoneGrossProfitDec = totalZoneRevenueDec.minus(totalZoneCostDec);
+
     return {
       totalClients,
       totalDebt,
+      profitability: {
+        totalRevenue: roundToIntegerPeso(totalZoneRevenueDec).toNumber(),
+        totalCost: roundToIntegerPeso(totalZoneCostDec).toNumber(),
+        grossProfit: roundToIntegerPeso(zoneGrossProfitDec).toNumber(),
+        grossMarginPct: computeMarginPercent(zoneGrossProfitDec, totalZoneRevenueDec, 2),
+      },
       clients,
       availableCities: [...MAIN_CITIES, 'OTRAS'].sort(),
       availableSellers: sellers,
