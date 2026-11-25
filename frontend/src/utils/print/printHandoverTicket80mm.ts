@@ -2,7 +2,6 @@ import type { CollectorSettlementDTO } from '../../api/fieldReceipts.api';
 import {
   escapePrintHtml,
   formatArsPrint,
-  getPrintCompanyContext,
   openPrintDocument,
   roundIntPesoPrint,
 } from './printFormatters';
@@ -81,7 +80,12 @@ export function buildFieldSettlementTicketData(
   const checksAmount = roundIntPesoPrint(settlement.expectedChecksAmount || 0);
   const transfersAmount = roundIntPesoPrint(settlement.pendingTransfersAmount || 0);
   const totalDelivered = cashAmount + checksAmount + transfersAmount;
-  const difference = cashAmount - expectedCashAmount;
+  const difference =
+    settlement.cashDifference != null
+      ? roundIntPesoPrint(settlement.cashDifference)
+      : expectedCashAmount > 0
+        ? cashAmount - expectedCashAmount
+        : 0;
   const routeId = (settlement as CollectorSettlementDTO & { deliveryRouteId?: number | null }).deliveryRouteId;
   const role = settlement.collector?.role === 'REPARTIDOR' ? 'Chofer' : 'Vendedor';
 
@@ -94,7 +98,7 @@ export function buildFieldSettlementTicketData(
     receivedBy: opts.receivedBy || 'Caja / Administración',
     reference: routeId != null ? `Viaje #${routeId}` : null,
     cashAmount,
-    expectedCashAmount,
+    expectedCashAmount: expectedCashAmount > 0 ? expectedCashAmount : null,
     checksAmount,
     checksCount: settlement.expectedChecksCount || 0,
     transfersAmount,
@@ -211,22 +215,19 @@ export function buildRouteClosureTicketData(
 }
 
 export function buildHandoverTicket80mmHtml(data: HandoverTicketData): string {
-  const { company } = getPrintCompanyContext();
   const formattedTs = formatTicketTimestampAr(data.timestampIso);
   const subtitle = KIND_SUBTITLE[data.kind];
   const lines = data.receiptLines || [];
   const visibleLines = lines.slice(0, MAX_INLINE_RECEIPTS);
   const hiddenLinesCount = Math.max(0, lines.length - visibleLines.length);
 
-  const differenceVal = data.difference != null ? roundIntPesoPrint(data.difference) : null;
+  const differenceVal = data.difference != null ? roundIntPesoPrint(data.difference) : 0;
   const differenceLabel =
-    differenceVal === null
+    differenceVal === 0
       ? ''
-      : differenceVal === 0
-        ? 'SIN DIFERENCIA ($0)'
-        : differenceVal < 0
-          ? `FALTANTE: -$${formatArsPrint(Math.abs(differenceVal))}`
-          : `SOBRANTE: +$${formatArsPrint(differenceVal)}`;
+      : differenceVal < 0
+        ? `FALTANTE: -$${formatArsPrint(Math.abs(differenceVal))}`
+        : `SOBRANTE: +$${formatArsPrint(differenceVal)}`;
 
   const receiptRowsHtml = visibleLines
     .map(
@@ -254,7 +255,7 @@ export function buildHandoverTicket80mmHtml(data: HandoverTicketData): string {
       body {
         width: 72mm;
         margin: 0 auto;
-        padding: 3mm 0 6mm;
+        padding: 3mm 0 4mm;
         font-family: 'Courier New', Courier, monospace;
         font-size: 11.5px;
         line-height: 1.35;
@@ -264,27 +265,20 @@ export function buildHandoverTicket80mmHtml(data: HandoverTicketData): string {
       }
       .center { text-align: center; }
       .bold { font-weight: 700; }
-      .brand { font-size: 15px; font-weight: 700; letter-spacing: 0.4px; }
-      .doc-title { font-size: 13px; font-weight: 700; margin-top: 4px; }
-      .doc-sub { font-size: 11px; font-weight: 700; }
-      .reprint-box {
-        margin: 6px 0;
-        padding: 3px 4px;
-        border: 1.5px solid #000;
+      .doc-title { font-size: 12.5px; font-weight: 700; letter-spacing: 0.3px; }
+      .reprint-tag {
+        margin: 4px 0;
+        padding: 2px 4px;
+        border: 1px solid #000;
         text-align: center;
         font-weight: 700;
-        font-size: 12px;
-      }
-      .audit-box {
-        margin: 6px 0;
-        padding: 5px 6px;
-        border: 1px solid #000;
+        font-size: 11px;
       }
       .audit-ts {
-        font-size: 13px;
+        font-size: 13.5px;
         font-weight: 700;
         text-align: center;
-        margin-top: 2px;
+        margin: 3px 0 2px;
       }
       .divider {
         border-top: 1px dashed #000;
@@ -296,7 +290,7 @@ export function buildHandoverTicket80mmHtml(data: HandoverTicketData): string {
         gap: 6px;
         margin: 2px 0;
       }
-      .kv-label { font-weight: 700; flex-shrink: 0; }
+      .kv-label { flex-shrink: 0; }
       .kv-val { text-align: right; word-break: break-word; }
       .total-row {
         display: flex;
@@ -306,10 +300,8 @@ export function buildHandoverTicket80mmHtml(data: HandoverTicketData): string {
         font-weight: 700;
         margin: 4px 0;
       }
-      .diff-box {
+      .diff-row {
         margin-top: 4px;
-        padding: 3px 5px;
-        border: 1px dashed #000;
         text-align: center;
         font-weight: 700;
         font-size: 11.5px;
@@ -331,63 +323,40 @@ export function buildHandoverTicket80mmHtml(data: HandoverTicketData): string {
       .col-code { white-space: nowrap; padding-right: 4px; }
       .col-client { padding-right: 4px; }
       .text-right { text-align: right; white-space: nowrap; }
-      .sig-block {
-        margin-top: 14px;
-      }
-      .sig-line {
-        border-top: 1px solid #000;
-        margin-top: 22px;
-        padding-top: 2px;
-        text-align: center;
-        font-size: 10.5px;
-      }
-      .footer {
-        margin-top: 10px;
-        text-align: center;
-        font-size: 10px;
-      }
     </style>
   </head>
   <body>
     <div class="center">
-      <div class="brand">${escapePrintHtml(company.nombreFantasia)}</div>
-      <div>CUIT: ${escapePrintHtml(company.cuit)}</div>
-      <div class="doc-title">COMPROBANTE DE ENTREGA</div>
-      <div class="doc-sub">${escapePrintHtml(subtitle)}</div>
-    </div>
-
-    ${data.isReprint ? `<div class="reprint-box">*** REIMPRESIÓN ***</div>` : ''}
-
-    <div class="audit-box">
-      <div class="kv">
-        <span class="kv-label">N° COMPROBANTE:</span>
-        <span class="kv-val bold">${escapePrintHtml(data.voucherCode)}</span>
-      </div>
-      <div class="center" style="font-size: 10px; margin-top: 3px;">FECHA Y HORA EXACTA</div>
+      <div class="doc-title">${escapePrintHtml(subtitle)}</div>
+      <div class="bold">${escapePrintHtml(data.voucherCode)}</div>
       <div class="audit-ts">${escapePrintHtml(formattedTs)}</div>
     </div>
 
-    <div class="kv">
-      <span class="kv-label">ENTREGÓ${data.deliveredByRole ? ` (${escapePrintHtml(data.deliveredByRole)})` : ''}:</span>
-      <span class="kv-val bold">${escapePrintHtml(data.deliveredBy)}</span>
-    </div>
-    <div class="kv">
-      <span class="kv-label">RECIBIÓ:</span>
-      <span class="kv-val">${escapePrintHtml(data.receivedBy)}</span>
-    </div>
-    ${data.reference ? `<div class="kv"><span class="kv-label">REFERENCIA:</span><span class="kv-val">${escapePrintHtml(data.reference)}</span></div>` : ''}
-    ${data.vehicleInfo ? `<div class="kv"><span class="kv-label">VEHÍCULO:</span><span class="kv-val">${escapePrintHtml(data.vehicleInfo)}</span></div>` : ''}
+    ${data.isReprint ? `<div class="reprint-tag">REIMPRESIÓN</div>` : ''}
 
     <div class="divider"></div>
 
     <div class="kv">
-      <span>Efectivo entregado</span>
+      <span class="kv-label">Entregó${data.deliveredByRole ? ` (${escapePrintHtml(data.deliveredByRole)})` : ''}:</span>
+      <span class="kv-val bold">${escapePrintHtml(data.deliveredBy)}</span>
+    </div>
+    <div class="kv">
+      <span class="kv-label">Recibió:</span>
+      <span class="kv-val">${escapePrintHtml(data.receivedBy)}</span>
+    </div>
+    ${data.reference ? `<div class="kv"><span class="kv-label">Ref:</span><span class="kv-val">${escapePrintHtml(data.reference)}</span></div>` : ''}
+    ${data.vehicleInfo ? `<div class="kv"><span class="kv-label">Vehículo:</span><span class="kv-val">${escapePrintHtml(data.vehicleInfo)}</span></div>` : ''}
+
+    <div class="divider"></div>
+
+    <div class="kv">
+      <span>Efectivo</span>
       <span class="bold">$${formatArsPrint(data.cashAmount)}</span>
     </div>
     ${
-      data.expectedCashAmount != null && data.expectedCashAmount !== data.cashAmount
+      data.expectedCashAmount != null && data.expectedCashAmount > 0 && data.expectedCashAmount !== data.cashAmount
         ? `<div class="kv">
-            <span>Efectivo esperado</span>
+            <span>Esperado</span>
             <span>$${formatArsPrint(data.expectedCashAmount)}</span>
           </div>`
         : ''
@@ -428,11 +397,11 @@ export function buildHandoverTicket80mmHtml(data: HandoverTicketData): string {
     <div class="divider"></div>
 
     <div class="total-row">
-      <span>TOTAL RENDIDO</span>
+      <span>TOTAL</span>
       <span>$${formatArsPrint(data.totalDelivered)}</span>
     </div>
 
-    ${differenceLabel ? `<div class="diff-box">${escapePrintHtml(differenceLabel)}</div>` : ''}
+    ${differenceLabel ? `<div class="diff-row">${escapePrintHtml(differenceLabel)}</div>` : ''}
 
     ${
       visibleLines.length > 0
@@ -461,16 +430,6 @@ export function buildHandoverTicket80mmHtml(data: HandoverTicketData): string {
     }
 
     ${data.notes ? `<div class="divider"></div><div style="font-size: 10.5px;"><strong>Obs:</strong> ${escapePrintHtml(data.notes)}</div>` : ''}
-
-    <div class="sig-block">
-      <div class="sig-line">Firma quien entrega</div>
-      <div class="sig-line">Firma quien recibe (Caja)</div>
-    </div>
-
-    <div class="footer">
-      <div>Documento interno de control de valores</div>
-      <div>Conserve este ticket como constancia</div>
-    </div>
 
     <script>
       window.onload = function () {

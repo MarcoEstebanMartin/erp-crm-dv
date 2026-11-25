@@ -42,13 +42,13 @@ describe('printHandoverTicket80mm', () => {
     expect(html).toContain('25/11/2026 18:42:17');
     expect(html).toContain('Gemini &lt;Ventas&gt;');
     expect(html).not.toContain('<Ventas>');
-    expect(html).toContain('SIN DIFERENCIA ($0)');
-    expect(html).not.toContain('*** REIMPRESIÓN ***');
-    expect(html).toContain('Firma quien entrega');
-    expect(html).toContain('Firma quien recibe (Caja)');
+    expect(html).not.toContain('CUIT:');
+    expect(html).not.toContain('Firma quien entrega');
+    expect(html).not.toContain('Firma quien recibe');
+    expect(html).not.toContain('REIMPRESIÓN');
   });
 
-  it('muestra la marca de REIMPRESIÓN y diferencia faltante cuando corresponde', () => {
+  it('muestra REIMPRESIÓN y diferencia faltante cuando corresponde', () => {
     const data = buildFieldSettlementTicketData(
       {
         id: 18,
@@ -73,7 +73,7 @@ describe('printHandoverTicket80mm', () => {
     );
 
     const html = buildHandoverTicket80mmHtml(data);
-    expect(html).toContain('*** REIMPRESIÓN ***');
+    expect(html).toContain('REIMPRESIÓN');
     expect(html).toContain('FALTANTE: -$5.000');
     expect(html).toContain('25/11/2026 17:10:05');
   });
