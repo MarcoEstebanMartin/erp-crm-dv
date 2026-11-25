@@ -97,6 +97,28 @@ describe('catalog-studio.engine', () => {
       'AMANDA YERBA',
       'BAYGON AEROSOL',
     ]);
+
+    const onlyOfertones = buildResumenSections(
+      [
+        { id: 1, sku: '0100', name: 'BAYGON AEROSOL', price: 3999, category: 'Limpieza', badge: 'OFERTON' },
+        { id: 2, sku: '0020', name: 'CREMIGAL MOZZARELLA', price: 10360, category: 'Cremigal', badge: 'DESTACADO' },
+      ],
+      undefined,
+      'ofertones',
+    );
+    expect(onlyOfertones.map((s) => s.name)).toEqual(['VARIOS']);
+    expect(onlyOfertones[0].items.map((p) => p.name)).toEqual(['BAYGON AEROSOL']);
+
+    const onlyDestacados = buildResumenSections(
+      [
+        { id: 1, sku: '0100', name: 'BAYGON AEROSOL', price: 3999, category: 'Limpieza', badge: 'OFERTON' },
+        { id: 2, sku: '0020', name: 'CREMIGAL MOZZARELLA', price: 10360, category: 'Cremigal', badge: 'DESTACADO' },
+      ],
+      undefined,
+      'destacados',
+    );
+    expect(onlyDestacados.map((s) => s.name)).toEqual(['REFRIGERADOS']);
+    expect(onlyDestacados[0].items.map((p) => p.name)).toEqual(['CREMIGAL MOZZARELLA']);
   });
 
   it('formatea mínimos del PDF Resumen de forma compacta igual al modelo oficial', () => {

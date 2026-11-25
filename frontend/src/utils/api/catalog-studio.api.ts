@@ -1,6 +1,7 @@
 import { API_BASE_URL, request } from './httpClient';
 
 export type CatalogBadgeType = 'OFERTON' | 'DESTACADO' | null;
+export type CatalogResumenMode = 'all' | 'ofertones' | 'destacados';
 
 export interface CatalogComboSide {
   productId?: number | null;
@@ -132,9 +133,13 @@ export const catalogStudioApi = {
   downloadMagazinePdf: () =>
     downloadPdfEndpoint('/catalog-studio/pdf/magazine', 'OFERTA_SEMANAL_DON_VENANCIO.pdf'),
 
-  downloadResumenPdf: (onlyOferton = false) =>
-    downloadPdfEndpoint(
-      `/catalog-studio/pdf/resumen${onlyOferton ? '?onlyOferton=true' : ''}`,
-      'RESUMEN_OFERTAS_DON_VENANCIO.pdf',
-    ),
+  downloadResumenPdf: (mode: CatalogResumenMode = 'all') => {
+    const fallback =
+      mode === 'ofertones'
+        ? 'OFERTONES_DON_VENANCIO.pdf'
+        : mode === 'destacados'
+          ? 'DESTACADOS_DON_VENANCIO.pdf'
+          : 'RESUMEN_OFERTAS_DON_VENANCIO.pdf';
+    return downloadPdfEndpoint(`/catalog-studio/pdf/resumen?mode=${mode}`, fallback);
+  },
 };

@@ -26,6 +26,7 @@ export const CANONICAL_CATALOG_CATEGORY_ORDER: readonly string[] = [
 ];
 
 export type CatalogBadgeType = 'OFERTON' | 'DESTACADO' | null;
+export type CatalogResumenMode = 'all' | 'ofertones' | 'destacados';
 
 export interface CatalogProductInput {
   id: number;
@@ -72,6 +73,7 @@ export interface CatalogRenderConfig {
   subtitle?: string;
   categoryOrder?: string[];
   onlyOfertonInResumen?: boolean;
+  resumenMode?: CatalogResumenMode;
 }
 
 export interface MinQtyBadgeData {
@@ -339,12 +341,21 @@ export interface ResumenSection {
 export function buildResumenSections(
   products: CatalogProductInput[],
   customCategoryOrder?: string[] | null,
-  onlyOferton = false,
+  modeOrOnlyOferton: CatalogResumenMode | boolean = 'all',
 ): ResumenSection[] {
+  const mode: CatalogResumenMode =
+    typeof modeOrOnlyOferton === 'boolean'
+      ? modeOrOnlyOferton
+        ? 'ofertones'
+        : 'all'
+      : modeOrOnlyOferton;
+
   const highlighted = products.filter((p) => {
     const b = normalizeCatalogBadge(p.badge);
     if (!b) return false;
-    return onlyOferton ? b === 'OFERTON' : true;
+    if (mode === 'ofertones') return b === 'OFERTON';
+    if (mode === 'destacados') return b === 'DESTACADO';
+    return true;
   });
 
   const orderedSections = groupCatalogSections(highlighted, [], customCategoryOrder);

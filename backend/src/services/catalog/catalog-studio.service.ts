@@ -10,6 +10,7 @@ import {
   normalizeCatalogCategory,
   type CatalogComboInput,
   type CatalogProductInput,
+  type CatalogResumenMode,
 } from '../../engines/catalog-studio.engine';
 import {
   collapseCatalogVariantFamilies,
@@ -391,8 +392,17 @@ export class CatalogStudioService {
     });
   }
 
-  static async generateResumenPdf(onlyOferton = false): Promise<{ buffer: Buffer; filename: string }> {
-    const cacheKey = onlyOferton ? 'resumen:oferton' : 'resumen:all';
+  static async generateResumenPdf(
+    modeOrOnlyOferton: CatalogResumenMode | boolean = 'all',
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const mode: CatalogResumenMode =
+      typeof modeOrOnlyOferton === 'boolean'
+        ? modeOrOnlyOferton
+          ? 'ofertones'
+          : 'all'
+        : modeOrOnlyOferton;
+
+    const cacheKey = `resumen:${mode}`;
     return this.runSingleFlightPdf(cacheKey, async () => {
       const { state, products } = await this.getStudioData();
       const visibleProducts = products.filter((p) => {
@@ -404,13 +414,19 @@ export class CatalogStudioService {
       const buffer = await renderCatalogResumenPdf(visibleProducts, {
         subtitle: state.subtitle,
         categoryOrder: state.categoryOrder.length > 0 ? state.categoryOrder : undefined,
-        onlyOfertonInResumen: onlyOferton,
+        resumenMode: mode,
       });
 
       const suffix = sanitizeFilenamePart(state.subtitle || formatCurrentEditionSubtitle());
+      const prefix =
+        mode === 'ofertones'
+          ? 'OFERTONES_DON_VENANCIO'
+          : mode === 'destacados'
+            ? 'DESTACADOS_DON_VENANCIO'
+            : 'RESUMEN_OFERTAS_DON_VENANCIO';
       return {
         buffer,
-        filename: `RESUMEN_OFERTAS_DON_VENANCIO_${suffix}.pdf`,
+        filename: `${prefix}_${suffix}.pdf`,
       };
     });
   }

@@ -56,8 +56,15 @@ export const downloadMagazinePdf = async (_req: Request, res: Response): Promise
 
 export const downloadResumenPdf = async (req: Request, res: Response): Promise<void> => {
   try {
+    const rawMode = String(req.query.mode || '').toLowerCase();
     const onlyOferton = String(req.query.onlyOferton || '').toLowerCase() === 'true';
-    const { buffer, filename } = await CatalogStudioService.generateResumenPdf(onlyOferton);
+    const mode =
+      rawMode === 'ofertones' || rawMode === 'destacados' || rawMode === 'all'
+        ? rawMode
+        : onlyOferton
+          ? 'ofertones'
+          : 'all';
+    const { buffer, filename } = await CatalogStudioService.generateResumenPdf(mode);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Cache-Control', 'no-store');

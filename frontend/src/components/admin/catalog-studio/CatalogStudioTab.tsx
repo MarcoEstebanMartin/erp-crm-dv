@@ -1,10 +1,11 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, FileText, Plus, Save, Search, Trash2, Edit3 } from 'lucide-react';
+import { ChevronDown, Download, FileText, Plus, Save, Search, Trash2, Edit3 } from 'lucide-react';
 import {
   catalogStudioApi,
   type CatalogBadgeType,
   type CatalogCombo,
+  type CatalogResumenMode,
   type CatalogStudioProduct,
   type CatalogStudioState,
 } from '../../../utils/api/catalog-studio.api';
@@ -13,7 +14,7 @@ import { CatalogProductEditDialog } from './CatalogProductEditDialog';
 import { CatalogComboDialog } from './CatalogComboDialog';
 import './catalogStudio.css';
 
-type FilterMode = 'all' | 'highlighted' | 'no_photo' | 'hidden';
+type FilterMode = 'all' | 'ofertones' | 'destacados' | 'no_photo' | 'hidden';
 const CATALOG_STUDIO_QUERY_KEY = ['catalog-studio'] as const;
 
 const EMPTY_STATE: CatalogStudioState = {
@@ -48,6 +49,7 @@ export default function CatalogStudioTab() {
   const [editingProduct, setEditingProduct] = useState<CatalogStudioProduct | null>(null);
   const [comboDialogOpen, setComboDialogOpen] = useState(false);
   const [editingCombo, setEditingCombo] = useState<CatalogCombo | null>(null);
+  const resumenMenuRef = useRef<HTMLDetailsElement>(null);
 
   const persistState = async (next: CatalogStudioState, silent = false) => {
     if (!silent) setSavingState(true);
@@ -144,15 +146,16 @@ export default function CatalogStudioTab() {
     persistState(nextState);
   };
 
-  const handleDownload = async (type: 'magazine' | 'resumen') => {
+  const handleDownload = async (type: 'magazine' | 'resumen', resumenMode: CatalogResumenMode = 'all') => {
+    if (resumenMenuRef.current) resumenMenuRef.current.open = false;
     setDownloadingPdf(type);
     setError(null);
     try {
-      await persistState(state);
+      await persistState(state, true);
       if (type === 'magazine') {
         await catalogStudioApi.downloadMagazinePdf();
       } else {
-        await catalogStudioApi.downloadResumenPdf(false);
+        await catalogStudioApi.downloadResumenPdf(resumenMode);
       }
     } catch (err: any) {
       setError(err?.message || 'Error al descargar el PDF.');
@@ -170,7 +173,8 @@ export default function CatalogStudioTab() {
     return activeProducts.filter((p) => {
       if (state.hideOutOfStock && p.stock <= 0 && filterMode !== 'hidden') return false;
       if (selectedCategory && p.category !== selectedCategory) return false;
-      if (filterMode === 'highlighted' && !p.badge) return false;
+      if (filterMode === 'ofertones' && p.badge !== 'OFERTON') return false;
+      if (filterMode === 'destacados' && p.badge !== 'DESTACADO') return false;
       if (filterMode === 'no_photo' && p.imageUrl) return false;
       if (filterMode === 'hidden' && p.catalogVisible) return false;
       if (filterMode !== 'hidden' && !p.catalogVisible) return false;
@@ -206,10 +210,16 @@ export default function CatalogStudioTab() {
     return result;
   }, [filteredProducts, categories, state.categoryOrder]);
 
-  const highlightedCount = useMemo(
-    () => activeProducts.filter((p) => p.catalogVisible && Boolean(p.badge)).length,
-    [activeProducts],
-  );
+  const { ofertonesCount, destacadosCount, highlightedCount } = useMemo(() => {
+    let ofertones = 0;
+    let destacados = 0;
+    for (const p of activeProducts) {
+      if (!p.catalogVisible) continue;
+      if (p.badge === 'OFERTON') ofertones++;
+      else if (p.badge === 'DESTACADO') destacados++;
+    }
+    return { ofertonesCount: ofertones, destacadosCount: destacados, highlightedCount: ofertones + destacados };
+  }, [activeProducts]);
 
   if (loading) {
     return (
@@ -271,15 +281,48 @@ export default function CatalogStudioTab() {
             <Save size={14} />
             <span>{savingState ? 'Guardando...' : 'Guardar'}</span>
           </button>
-          <button
-            type="button"
-            className="cs-btn cs-btn-dark"
-            disabled={downloadingPdf !== null}
-            onClick={() => handleDownload('resumen')}
-          >
-            <FileText size={14} />
-            <span>{downloadingPdf === 'resumen' ? 'Generando...' : `Resumen (${highlightedCount})`}</span>
-          </button>
+          <details ref={resumenMenuRef} className="cs-dropdown">
+            <summary className="cs-btn cs-btn-dark">
+              <FileText size={14} />
+              <span>{downloadingPdf === 'resumen' ? 'Generando...' : `Resumen (${highlightedCount})`}</span>
+              <ChevronDown size={13} />
+            </summary>
+            <div className="cs-dropdown-menu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className="cs-dropdown-item"
+                disabled={downloadingPdf !== null}
+                onClick={() => handleDownload('resumen', 'ofertones')}
+              >
+                <span className="cs-dot cs-dot-red" />
+                <span>Solo Ofertones</span>
+                <span className="cs-dropdown-count">{ofertonesCount}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="cs-dropdown-item"
+                disabled={downloadingPdf !== null}
+                onClick={() => handleDownload('resumen', 'destacados')}
+              >
+                <span className="cs-dot cs-dot-dark" />
+                <span>Solo Destacados</span>
+                <span className="cs-dropdown-count">{destacadosCount}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="cs-dropdown-item"
+                disabled={downloadingPdf !== null}
+                onClick={() => handleDownload('resumen', 'all')}
+              >
+                <span className="cs-dot cs-dot-split" />
+                <span>Juntos (1 hoja)</span>
+                <span className="cs-dropdown-count">{highlightedCount}</span>
+              </button>
+            </div>
+          </details>
           <button
             type="button"
             className="cs-btn cs-btn-primary"
@@ -330,7 +373,8 @@ export default function CatalogStudioTab() {
           {(
             [
               ['all', 'Visibles'],
-              ['highlighted', 'Destacados'],
+              ['ofertones', `Ofertones (${ofertonesCount})`],
+              ['destacados', `Destacados (${destacadosCount})`],
               ['no_photo', 'Sin foto'],
               ['hidden', 'Ocultos'],
             ] as Array<[FilterMode, string]>
