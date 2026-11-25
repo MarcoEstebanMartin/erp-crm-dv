@@ -14,6 +14,10 @@ interface ProfitabilityTabProps {
 type SubViewId = 'clients' | 'products' | 'cities' | 'trips';
 type ClassificationFilter = 'ALL' | 'LOW_MARGIN' | 'STAR' | 'VOLUME' | 'OPPORTUNITY';
 
+const PRESET_KEY_MAP: Record<string, 'this_month' | 'last_month' | 'quarter' | 'year'> = { THIS_MONTH: 'this_month', LAST_MONTH: 'last_month', QUARTER: 'quarter', YEAR: 'year' };
+const CURRENCY_FMT = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
+const formatCurrency = (val: number): string => CURRENCY_FMT.format(val || 0);
+
 export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubros = [] }) => {
   const initialRange = computeArDatePreset('this_month');
   const [loading, setLoading] = useState<boolean>(true);
@@ -59,23 +63,11 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
 
   const handlePresetChange = (preset: string) => {
     setDatePreset(preset);
-    if (preset === 'THIS_MONTH') {
-      const r = computeArDatePreset('this_month');
-      setStartDate(r.startDate);
-      setEndDate(r.endDate);
-    } else if (preset === 'LAST_MONTH') {
-      const r = computeArDatePreset('last_month');
-      setStartDate(r.startDate);
-      setEndDate(r.endDate);
-    } else if (preset === 'QUARTER') {
-      const r = computeArDatePreset('quarter');
-      setStartDate(r.startDate);
-      setEndDate(r.endDate);
-    } else if (preset === 'YEAR') {
-      const r = computeArDatePreset('year');
-      setStartDate(r.startDate);
-      setEndDate(r.endDate);
-    }
+    const key = PRESET_KEY_MAP[preset];
+    if (!key) return;
+    const r = computeArDatePreset(key);
+    setStartDate(r.startDate);
+    setEndDate(r.endDate);
   };
 
   useEffect(() => {
@@ -103,18 +95,23 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
     };
   }, [startDate, endDate, selectedSeller, selectedRubro, selectedBillingType]);
 
+  const tripReqIdRef = useRef<number>(0);
+
   const loadTripReport = useCallback(async () => {
+    const reqId = ++tripReqIdRef.current;
     setTripsLoading(true);
     try {
       const data = await api.getTripProfitabilityReport({
         startDate: startDate || undefined,
         endDate: endDate || undefined,
       });
-      setTripData(data);
+      if (reqId === tripReqIdRef.current) setTripData(data);
     } catch (error) {
-      console.error('Error al cargar rentabilidad por viaje:', error);
+      if (reqId === tripReqIdRef.current) {
+        console.error('Error al cargar rentabilidad por viaje:', error);
+      }
     } finally {
-      setTripsLoading(false);
+      if (reqId === tripReqIdRef.current) setTripsLoading(false);
     }
   }, [startDate, endDate]);
 
@@ -130,41 +127,22 @@ export const ProfitabilityTab: FC<ProfitabilityTabProps> = ({ sellers = [], rubr
     await loadTripReport();
   };
 
-  const formatCurrency = (val: number): string =>
-    new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      maximumFractionDigits: 0,
-    }).format(val || 0);
-
-  const filteredClients = (reportData?.clients || []).filter(
-    (c: any) =>
-      c.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.city.toLowerCase().includes(searchTerm.toLowerCase()),
+  const q = searchTerm.toLowerCase();
+  const filteredClients = (reportData?.clients || []).filter((c: any) =>
+    c.businessName.toLowerCase().includes(q) || c.city.toLowerCase().includes(q),
   );
-
-  const filteredProducts = (reportData?.products || []).filter((p: any) => {
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesClass = classificationFilter === 'ALL' || p.classification === classificationFilter;
-    return matchesSearch && matchesClass;
-  });
-
-  const filteredCities = (reportData?.cities || []).filter((ct: any) =>
-    ct.city.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredProducts = (reportData?.products || []).filter((p: any) =>
+    (p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)) &&
+    (classificationFilter === 'ALL' || p.classification === classificationFilter),
   );
-
-  const filteredTrips = (tripData?.trips || []).filter((t: any) => {
-    const q = searchTerm.toLowerCase();
-    if (!q) return true;
-    return (
-      t.routeName.toLowerCase().includes(q) ||
-      t.driverName.toLowerCase().includes(q) ||
-      t.vehiclePlate.toLowerCase().includes(q) ||
-      (t.cities || []).some((c: string) => c.toLowerCase().includes(q))
-    );
-  });
+  const filteredCities = (reportData?.cities || []).filter((ct: any) => ct.city.toLowerCase().includes(q));
+  const filteredTrips = (tripData?.trips || []).filter((t: any) =>
+    !q ||
+    t.routeName.toLowerCase().includes(q) ||
+    t.driverName.toLowerCase().includes(q) ||
+    t.vehiclePlate.toLowerCase().includes(q) ||
+    (t.cities || []).some((c: string) => c.toLowerCase().includes(q)),
+  );
 
   const subTabs: Array<{ id: SubViewId; label: string; Icon: typeof Users }> = [
     { id: 'clients', label: `Clientes (${reportData?.clients?.length || 0})`, Icon: Users },
