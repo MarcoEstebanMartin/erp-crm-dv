@@ -113,8 +113,6 @@ export const ZoneAnalysisReportTab: FC<ZoneAnalysisReportTabProps> = ({ sellers:
     zoneWeeklyInvoicing.reduce((sum: number, w: any) => sum + (w.total || 0), 0);
   const totalOrdersInZone = zoneWeeklyInvoicing.reduce((sum: number, w: any) => sum + (w.count || 0), 0);
   const avgTicketInZone = totalOrdersInZone > 0 ? Math.round(totalInvoicedInZone / totalOrdersInZone) : 0;
-  const zoneGrossProfit = zoneData.profitability?.grossProfit || 0;
-  const zoneGrossMarginPct = zoneData.profitability?.grossMarginPct || 0;
   const availableRubros = zoneData.rubroMetrics?.map((r: any) => r.name) || [];
 
   const getWeeklyVal = (w: any) => {
@@ -179,24 +177,9 @@ export const ZoneAnalysisReportTab: FC<ZoneAnalysisReportTabProps> = ({ sellers:
         <div className="card" style={{ padding: '16px 18px', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Facturación</span>
-            <DollarSign size={15} color="#475569" aria-hidden="true" />
+            <DollarSign size={15} color="#137333" aria-hidden="true" />
           </div>
-          <span className="tabular-nums" style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>${totalInvoicedInZone.toLocaleString('es-AR')}</span>
-        </div>
-
-        <div className="card" style={{ padding: '16px 18px', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Utilidad bruta</span>
-            <TrendingUp size={15} color="#475569" aria-hidden="true" />
-          </div>
-          <div className="tabular-nums" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: zoneGrossProfit >= 0 ? '#137333' : 'var(--color-corp-red)' }}>
-              ${zoneGrossProfit.toLocaleString('es-AR')}
-            </span>
-            <span className="badge" style={{ backgroundColor: zoneGrossProfit >= 0 ? '#e6f4ea' : 'var(--color-danger-bg)', color: zoneGrossProfit >= 0 ? '#137333' : 'var(--color-danger)', fontSize: '0.74rem', padding: '2px 6px', fontWeight: 600 }}>
-              {zoneGrossMarginPct}%
-            </span>
-          </div>
+          <span className="tabular-nums" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#137333' }}>${totalInvoicedInZone.toLocaleString('es-AR')}</span>
         </div>
 
         <div className="card" style={{ padding: '16px 18px', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>

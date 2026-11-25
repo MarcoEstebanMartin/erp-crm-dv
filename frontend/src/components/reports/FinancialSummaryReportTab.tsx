@@ -72,9 +72,6 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({
   const totalFacturado = currentReport?.summary?.netSales ?? officialSales + internalSales;
   const totalCostoReal = currentReport?.summary?.totalCost ?? Math.round(officialCostReal + internalCostReal);
   const totalMargenBruto = currentReport?.summary?.grossProfit ?? Math.round(totalFacturado - totalCostoReal);
-  const pctMargenBruto =
-    currentReport?.summary?.grossMarginPct ??
-    (totalFacturado > 0 ? Number(((totalMargenBruto / totalFacturado) * 100).toFixed(2)) : 0);
   const totalGastosReal = currentReport?.expenses?.total || 0;
   const totalMargenNeto = currentReport?.summary?.netProfit ?? Math.round(totalMargenBruto - totalGastosReal);
   const pctMargenConsolidado =
@@ -192,16 +189,6 @@ export const FinancialSummaryReportTab: FC<FinancialSummaryReportTabProps> = ({
         <div className="card" style={{ padding: '16px 18px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
           <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>Costo mercadería (CMV)</span>
           <span className="tabular-nums" style={{ fontSize: '1.45rem', fontWeight: 700, color: '#475569' }}>${totalCostoReal.toLocaleString('es-AR')}</span>
-        </div>
-
-        <div className="card" style={{ padding: '16px 18px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>Utilidad bruta</span>
-          <div className="tabular-nums" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.45rem', fontWeight: 700, color: totalMargenBruto >= 0 ? '#137333' : 'var(--color-corp-red)' }}>${totalMargenBruto.toLocaleString('es-AR')}</span>
-            <span className="badge" style={{ backgroundColor: totalMargenBruto >= 0 ? '#e6f4ea' : 'var(--color-danger-bg)', color: totalMargenBruto >= 0 ? '#137333' : 'var(--color-danger)', fontSize: '0.72rem', padding: '2px 6px' }}>
-              {pctMargenBruto}%
-            </span>
-          </div>
         </div>
 
         <div className="card" style={{ padding: '16px 18px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
