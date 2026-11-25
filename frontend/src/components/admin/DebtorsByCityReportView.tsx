@@ -25,13 +25,37 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
 }) => {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState('');
+  const [followUpFilter, setFollowUpFilter] = useState<'ALL' | 'FOLLOW_UP'>('ALL');
 
-  const filteredDebtors = debtorsReport.filter((d) => {
+  const getRowFollowUp = (d: any): { flagged: boolean; label: string | null } => {
+    if (selectedBranchFilter === 'A' && d.branchA) {
+      return { flagged: Boolean(d.branchA.needsFollowUp), label: d.branchA.followUpLabel ?? null };
+    }
+    if (selectedBranchFilter === 'X' && d.branchX) {
+      return { flagged: Boolean(d.branchX.needsFollowUp), label: d.branchX.followUpLabel ?? null };
+    }
+    if (typeof d.needsFollowUp === 'boolean') {
+      return { flagged: d.needsFollowUp, label: d.followUpLabel ?? null };
+    }
+    const fallbackFlagged = Boolean(d.hasMultiplePendingInvoices);
+    return {
+      flagged: fallbackFlagged,
+      label: fallbackFlagged ? `${d.pendingInvoicesCount} boletas` : null,
+    };
+  };
+
+  const baseFilteredDebtors = debtorsReport.filter((d) => {
     const matchesCity = selectedCities.includes(d.city || 'Sin Localidad');
     const matchesBranch = selectedBranchFilter === 'A' ? d.debtA > 0 : selectedBranchFilter === 'X' ? d.debtX > 0 : true;
     const matchesSeller = selectedSellerFilter !== 'ALL' ? d.sellerId?.toString() === selectedSellerFilter : true;
     return matchesCity && matchesBranch && matchesSeller;
   });
+
+  const followUpCount = baseFilteredDebtors.filter((d) => getRowFollowUp(d).flagged).length;
+
+  const filteredDebtors = followUpFilter === 'FOLLOW_UP'
+    ? baseFilteredDebtors.filter((d) => getRowFollowUp(d).flagged)
+    : baseFilteredDebtors;
 
   const totalA = filteredDebtors.reduce((acc, d) => acc + d.debtA, 0);
   const totalX = filteredDebtors.reduce((acc, d) => acc + d.debtX, 0);
@@ -121,12 +145,26 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
           </select>
         </div>
 
-        <div style={{ flex: '1 1 190px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ flex: '1 1 170px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <label htmlFor="debtors-branch-filter" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Sucursal</label>
           <select id="debtors-branch-filter" className="input" value={selectedBranchFilter} onChange={(e) => setSelectedBranchFilter(e.target.value)} style={{ padding: '8px 12px' }}>
             <option value="ALL">Todas</option>
             <option value="A">Sucursal A</option>
             <option value="X">Sucursal X</option>
+          </select>
+        </div>
+
+        <div style={{ flex: '1 1 170px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label htmlFor="debtors-followup-filter" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Reclamo</label>
+          <select
+            id="debtors-followup-filter"
+            className="input"
+            value={followUpFilter}
+            onChange={(e) => setFollowUpFilter(e.target.value as 'ALL' | 'FOLLOW_UP')}
+            style={{ padding: '8px 12px' }}
+          >
+            <option value="ALL">Todos ({baseFilteredDebtors.length})</option>
+            <option value="FOLLOW_UP">A reclamar ({followUpCount})</option>
           </select>
         </div>
       </div>
@@ -180,17 +218,34 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
                     </thead>
                     <tbody>
                       {groups[city].map((d) => {
+                        const { flagged, label: followUpLabel } = getRowFollowUp(d);
                         const encodedMsg = encodeURIComponent(`Estimado/a ${d.name}, le escribimos de Distribuidora DV para recordarle su saldo deudor pendiente de $${Math.round(d.outstandingBalance).toLocaleString('es-AR')}. Muchas gracias.`);
                         const waLink = d.phone ? `https://wa.me/${d.phone.replace(/\D/g, '')}?text=${encodedMsg}` : null;
                         return (
-                          <tr key={d.id}>
+                          <tr
+                            key={d.id}
+                            style={flagged ? { backgroundColor: '#FFF7ED', boxShadow: 'inset 3px 0 0 #EA580C' } : undefined}
+                          >
                             <td>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <span style={{ fontWeight: 600 }}>{d.name}</span>
                                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{d.address || '-'}</span>
-                                {d.hasMultiplePendingInvoices && (
-                                  <span className="tabular-nums" style={{ fontSize: '0.72rem', backgroundColor: '#FCE8E6', color: '#C5221F', padding: '2px 8px', borderRadius: '10px', fontWeight: 600, marginTop: '4px', alignSelf: 'flex-start' }}>
-                                    {d.pendingInvoicesCount} boletas
+                                {flagged && followUpLabel && (
+                                  <span
+                                    className="tabular-nums"
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      backgroundColor: '#FFEDD5',
+                                      color: '#9A3412',
+                                      border: '1px solid #FDBA74',
+                                      padding: '2px 8px',
+                                      borderRadius: '10px',
+                                      fontWeight: 600,
+                                      marginTop: '4px',
+                                      alignSelf: 'flex-start',
+                                    }}
+                                  >
+                                    {followUpLabel}
                                   </span>
                                 )}
                               </div>

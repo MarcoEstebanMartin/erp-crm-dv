@@ -6,28 +6,57 @@ interface DebtorsPrintSheetProps {
   sellerLabel: string;
 }
 
+const getBranchPrintMeta = (d: any, amountKey: 'debtA' | 'debtX') => {
+  const branch = amountKey === 'debtA' ? d.branchA : d.branchX;
+  if (branch) {
+    return {
+      flagged: Boolean(branch.needsFollowUp),
+      label: branch.followUpLabel || '',
+    };
+  }
+  const fallbackFlagged = Boolean(d.needsFollowUp ?? d.hasMultiplePendingInvoices);
+  const fallbackLabel =
+    d.followUpLabel || (d.hasMultiplePendingInvoices ? `${d.pendingInvoicesCount} boletas` : '');
+  return { flagged: fallbackFlagged, label: fallbackLabel };
+};
+
 const renderDebtorTable = (rows: any[], amountKey: 'debtA' | 'debtX') => (
   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', tableLayout: 'fixed' }}>
     <thead>
       <tr style={{ borderBottom: '1px solid #94a3b8' }}>
-        <th style={{ textAlign: 'left', padding: '6px 8px', width: '55%' }}>Cliente</th>
-        <th style={{ textAlign: 'left', padding: '6px 8px', width: '25%' }}>Ruta</th>
-        <th style={{ textAlign: 'right', padding: '6px 8px', width: '20%' }}>Saldo</th>
+        <th style={{ textAlign: 'left', padding: '6px 8px', width: '44%' }}>Cliente</th>
+        <th style={{ textAlign: 'left', padding: '6px 8px', width: '18%' }}>Ruta</th>
+        <th style={{ textAlign: 'right', padding: '6px 8px', width: '16%' }}>Saldo</th>
+        <th style={{ textAlign: 'left', padding: '6px 8px', width: '22%' }}>Detalle</th>
       </tr>
     </thead>
     <tbody>
-      {rows.map((d) => (
-        <tr key={`${amountKey}-${d.id}`} style={{ borderBottom: '1px solid #e2e8f0' }}>
-          <td style={{ padding: '7px 8px', verticalAlign: 'top' }}>
-            <div style={{ fontWeight: 600 }}>{d.name}</div>
-            {d.address && <div style={{ fontSize: '0.72rem', color: '#475569' }}>{d.address}</div>}
-          </td>
-          <td style={{ padding: '7px 8px', verticalAlign: 'top' }}>{d.route || '-'}</td>
-          <td className="tabular-nums" style={{ textAlign: 'right', padding: '7px 8px', fontWeight: 700, verticalAlign: 'top' }}>
-            ${Math.round(Number(d[amountKey] || 0)).toLocaleString('es-AR')}
-          </td>
-        </tr>
-      ))}
+      {rows.map((d) => {
+        const { flagged, label } = getBranchPrintMeta(d, amountKey);
+        return (
+          <tr
+            key={`${amountKey}-${d.id}`}
+            style={{
+              borderBottom: '1px solid #e2e8f0',
+              backgroundColor: flagged ? '#FED7AA' : 'transparent',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+            }}
+          >
+            <td style={{ padding: '7px 8px', verticalAlign: 'top' }}>
+              <div style={{ fontWeight: flagged ? 700 : 600 }}>{d.name}</div>
+              {d.address && <div style={{ fontSize: '0.72rem', color: '#475569' }}>{d.address}</div>}
+            </td>
+            <td style={{ padding: '7px 8px', verticalAlign: 'top' }}>{d.route || '-'}</td>
+            <td className="tabular-nums" style={{ textAlign: 'right', padding: '7px 8px', fontWeight: 700, verticalAlign: 'top' }}>
+              ${Math.round(Number(d[amountKey] || 0)).toLocaleString('es-AR')}
+            </td>
+            <td style={{ padding: '7px 8px', verticalAlign: 'top', fontWeight: 700, fontSize: '0.76rem', color: '#9A3412' }}>
+              {label}
+            </td>
+          </tr>
+        );
+      })}
     </tbody>
   </table>
 );
@@ -41,9 +70,25 @@ export const DebtorsPrintSheet: React.FC<DebtorsPrintSheetProps> = ({
 
   const cityKeys = Object.keys(groups).sort();
   const cityLabel = cityKeys.length === 1 ? cityKeys[0] : cityKeys.join(', ');
+  const flaggedCount = filteredDebtors.filter(
+    (d) =>
+      Boolean(d.branchA?.needsFollowUp) ||
+      Boolean(d.branchX?.needsFollowUp) ||
+      Boolean(d.needsFollowUp),
+  ).length;
 
   return (
-    <div className="print-only" style={{ padding: '16px', color: '#000', backgroundColor: '#fff', width: '100%' }}>
+    <div
+      className="print-only"
+      style={{
+        padding: '16px',
+        color: '#000',
+        backgroundColor: '#fff',
+        width: '100%',
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '2px solid #1D1D1F', paddingBottom: '10px', marginBottom: '16px' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#1D1D1F' }}>
@@ -51,6 +96,7 @@ export const DebtorsPrintSheet: React.FC<DebtorsPrintSheetProps> = ({
           </h1>
           <div style={{ fontSize: '0.85rem', color: '#334155', marginTop: '4px' }}>
             Vendedor: {sellerLabel}
+            {flaggedCount > 0 ? ` · A reclamar: ${flaggedCount}` : ''}
           </div>
         </div>
         <div className="tabular-nums" style={{ textAlign: 'right', fontSize: '0.85rem', color: '#334155' }}>

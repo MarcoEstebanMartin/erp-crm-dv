@@ -85,12 +85,14 @@ describe('Paso 1 Performance Clientes — Consultas SQL Paralelas y Filtro Comis
       { id: 8, outstandingBalance: '0.00' },
     ]);
 
-    expect(metricsMap.get(7)).toEqual({
+    expect(metricsMap.get(7)).toMatchObject({
       outstandingBalance: 6000,
       debtA: 0,
       debtX: 6000,
       pendingInvoicesCount: 1,
       hasMultiplePendingInvoices: false,
+      needsFollowUp: true,
+      followUpLabel: 'Resto',
     });
     expect(metricsMap.has(8)).toBe(false);
 

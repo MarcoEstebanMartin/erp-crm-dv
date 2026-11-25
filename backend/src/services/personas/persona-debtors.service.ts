@@ -10,6 +10,7 @@ import { getOfficialCityOrOther, OFFICIAL_CITIES } from '../../utils/normalize';
 import { toDecimal } from '../../core/money';
 import {
   computeDebtorFifoMetrics,
+  createEmptyBranchFollowUp,
   type DebtorFifoMetrics,
   type DebtorOrderFifoInput,
 } from '../../engines/persona-debtors.engine';
@@ -55,7 +56,14 @@ export class PersonaDebtorsSubService {
     const [deliveredOrders, unallocatedTx, unallocatedCn] = await Promise.all([
       dbClient.order.findMany({
         where: { personaId: { in: debtorIds }, status: OrderStatus.DELIVERED },
-        select: { id: true, personaId: true, billingType: true, totalAmount: true },
+        select: {
+          id: true,
+          personaId: true,
+          billingType: true,
+          totalAmount: true,
+          deliveredAt: true,
+          createdAt: true,
+        },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       }),
       dbClient.transaction.groupBy({
@@ -138,6 +146,7 @@ export class PersonaDebtorsSubService {
         totalAmount: order.totalAmount?.toString() ?? '0',
         directIncomeSum: directIncomeByOrderId.get(order.id) ?? '0',
         directCreditNoteSum: directCnByOrderId.get(order.id) ?? '0',
+        date: order.deliveredAt ?? order.createdAt ?? null,
       });
       ordersByPersona.set(order.personaId, list);
     }
@@ -221,6 +230,11 @@ export class PersonaDebtorsSubService {
         debtX: 0,
         pendingInvoicesCount: 0,
         hasMultiplePendingInvoices: false,
+        needsFollowUp: false,
+        oldestPendingDays: null,
+        followUpLabel: null,
+        branchA: createEmptyBranchFollowUp(),
+        branchX: createEmptyBranchFollowUp(),
       };
 
       return {
@@ -239,6 +253,11 @@ export class PersonaDebtorsSubService {
         debtX: metrics.debtX,
         pendingInvoicesCount: metrics.pendingInvoicesCount,
         hasMultiplePendingInvoices: metrics.hasMultiplePendingInvoices,
+        needsFollowUp: metrics.needsFollowUp,
+        oldestPendingDays: metrics.oldestPendingDays,
+        followUpLabel: metrics.followUpLabel,
+        branchA: metrics.branchA,
+        branchX: metrics.branchX,
         sellerId: client.sellerId,
         sellerName: client.seller?.username || 'Sin Preventista',
       };
