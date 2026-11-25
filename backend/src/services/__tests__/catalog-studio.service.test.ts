@@ -12,6 +12,7 @@ vi.mock('../../utils/prisma', () => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
   },
 }));
@@ -217,5 +218,118 @@ describe('CatalogStudioService', () => {
     CatalogStudioService.invalidatePdfCache();
     await CatalogStudioService.generateMagazinePdf();
     expect(prisma.product.findMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('agrupa variantes activas bajo el SKU padre inactivo y propaga catalogBadge/storeHighlight a hijos', async () => {
+    (prisma.catalogStudioState.findUnique as any).mockResolvedValue({
+      title: 'OFERTAS SEMANALES',
+      subtitle: 'EDICION 25/11',
+      hideOutOfStock: false,
+      categoryOrder: [],
+      itemOrder: [],
+      combos: [],
+      updatedAt: new Date(),
+    });
+
+    (prisma.product.findMany as any)
+      .mockResolvedValueOnce([
+        {
+          id: 101,
+          sku: '0456-1',
+          name: 'TERMA SERRANO x 1350ml',
+          listPrice: 1999,
+          costPrice: 1500,
+          previousListPrice: null,
+          stock: 10,
+          isActive: true,
+          isPesable: false,
+          unitsPerBox: 6,
+          minOrderQuantity: 1,
+          imageUrl: null,
+          commercialCategory: 'Bebidas',
+          storeHighlight: null,
+          catalogBadge: null,
+          catalogVarieties: null,
+          catalogMinQtyLabel: null,
+          catalogShowOldPrice: false,
+          catalogOldPrice: null,
+          catalogVisible: true,
+          rubro: { name: 'Bebidas' },
+        },
+        {
+          id: 102,
+          sku: '0456-2',
+          name: 'TERMA LIMON x 1350ml',
+          listPrice: 1999,
+          costPrice: 1500,
+          previousListPrice: null,
+          stock: 5,
+          isActive: true,
+          isPesable: false,
+          unitsPerBox: 6,
+          minOrderQuantity: 1,
+          imageUrl: null,
+          commercialCategory: 'Bebidas',
+          storeHighlight: null,
+          catalogBadge: null,
+          catalogVarieties: null,
+          catalogMinQtyLabel: null,
+          catalogShowOldPrice: false,
+          catalogOldPrice: null,
+          catalogVisible: true,
+          rubro: { name: 'Bebidas' },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 100,
+          sku: '0456',
+          name: 'TERMA X 1350ML',
+          listPrice: 1500,
+          costPrice: 1100,
+          previousListPrice: null,
+          stock: 197,
+          isActive: false,
+          isPesable: false,
+          unitsPerBox: 6,
+          minOrderQuantity: 1,
+          imageUrl: '/uploads/products/0456.jpg',
+          commercialCategory: 'Bebidas',
+          storeHighlight: 'DESTACADO',
+          catalogBadge: 'DESTACADO',
+          catalogVarieties: null,
+          catalogMinQtyLabel: null,
+          catalogShowOldPrice: false,
+          catalogOldPrice: null,
+          catalogVisible: true,
+          rubro: { name: 'Bebidas' },
+        },
+      ]);
+
+    const studio = await CatalogStudioService.getStudioData();
+    expect(studio.products).toHaveLength(1);
+    expect(studio.products[0]).toMatchObject({
+      sku: '0456',
+      price: 1999,
+      stock: 15,
+      badge: 'DESTACADO',
+      varieties: 'SERRANO - LIMON',
+      imageUrl: '/uploads/products/0456.jpg',
+    });
+
+    (prisma.product.findUnique as any).mockResolvedValue({ id: 100 });
+    (prisma.product.update as any).mockResolvedValue({
+      id: 100,
+      sku: '0456',
+      storeHighlight: 'OFERTON',
+      catalogBadge: 'OFERTON',
+    });
+    (prisma.product.updateMany as any).mockResolvedValue({ count: 2 });
+
+    await CatalogStudioService.updateProductCatalogFields(100, { catalogBadge: 'OFERTON' });
+    expect(prisma.product.updateMany).toHaveBeenCalledWith({
+      where: { isActive: true, sku: { startsWith: '0456-' } },
+      data: { catalogBadge: 'OFERTON', storeHighlight: 'OFERTON' },
+    });
   });
 });

@@ -11,6 +11,10 @@ import {
   type CatalogComboInput,
   type CatalogProductInput,
 } from '../../engines/catalog-studio.engine';
+import {
+  collapseCatalogVariantFamilies,
+  parseVariantSkuBase,
+} from '../../engines/catalog-variant-family.engine';
 import { renderCatalogMagazinePdf } from './catalog-pdf-magazine.service';
 import { renderCatalogResumenPdf } from './catalog-pdf-resumen.service';
 
@@ -74,6 +78,63 @@ function applyItemOrder<T extends { sku: string }>(items: T[], itemOrder: string
   });
 }
 
+const STUDIO_PRODUCT_SELECT = {
+  id: true,
+  sku: true,
+  name: true,
+  listPrice: true,
+  costPrice: true,
+  previousListPrice: true,
+  stock: true,
+  isActive: true,
+  isPesable: true,
+  unitsPerBox: true,
+  minOrderQuantity: true,
+  imageUrl: true,
+  commercialCategory: true,
+  storeHighlight: true,
+  catalogBadge: true,
+  catalogVarieties: true,
+  catalogMinQtyLabel: true,
+  catalogShowOldPrice: true,
+  catalogOldPrice: true,
+  catalogVisible: true,
+  rubro: { select: { name: true } },
+} as const;
+
+function mapRowToStudioDto(p: any): CatalogStudioProductDTO {
+  const priceInt = roundToIntegerPeso(p.listPrice).toNumber();
+  const costNum = Number(p.costPrice || 0);
+  const prevListNum = p.previousListPrice ? roundToIntegerPeso(p.previousListPrice).toNumber() : null;
+  const customOldNum = p.catalogOldPrice ? roundToIntegerPeso(p.catalogOldPrice).toNumber() : null;
+  const effectiveOldPrice = customOldNum ?? prevListNum;
+  const rawCat = p.commercialCategory || p.rubro?.name || 'Almacén';
+
+  return {
+    id: p.id,
+    sku: p.sku,
+    name: p.name,
+    price: priceInt,
+    costPrice: costNum,
+    previousListPrice: prevListNum,
+    oldPrice: effectiveOldPrice,
+    showOldPrice: Boolean(p.catalogShowOldPrice),
+    marginPct: computeMarginPercent(priceInt, costNum),
+    category: normalizeCatalogCategory(rawCat),
+    rubroName: p.rubro?.name || null,
+    badge: normalizeCatalogBadge(p.catalogBadge ?? p.storeHighlight),
+    minQty: p.catalogMinQtyLabel || null,
+    minOrderQuantity: p.minOrderQuantity,
+    unitsPerBox: p.unitsPerBox,
+    isPesable: p.isPesable,
+    varieties: p.catalogVarieties || null,
+    imageUrl: p.imageUrl || null,
+    stock: p.stock,
+    isActive: p.isActive,
+    catalogVisible: p.catalogVisible,
+  };
+}
+
 export class CatalogStudioService {
   private static async loadStateRow(): Promise<CatalogStudioStateDTO> {
     const row = await prisma.catalogStudioState.findUnique({
@@ -92,68 +153,34 @@ export class CatalogStudioService {
   }
 
   private static async loadStudioProducts(itemOrder: string[]): Promise<CatalogStudioProductDTO[]> {
-    const rows = await prisma.product.findMany({
+    const activeRows = await prisma.product.findMany({
       where: { isActive: true },
-      select: {
-        id: true,
-        sku: true,
-        name: true,
-        listPrice: true,
-        costPrice: true,
-        previousListPrice: true,
-        stock: true,
-        isActive: true,
-        isPesable: true,
-        unitsPerBox: true,
-        minOrderQuantity: true,
-        imageUrl: true,
-        commercialCategory: true,
-        storeHighlight: true,
-        catalogBadge: true,
-        catalogVarieties: true,
-        catalogMinQtyLabel: true,
-        catalogShowOldPrice: true,
-        catalogOldPrice: true,
-        catalogVisible: true,
-        rubro: { select: { name: true } },
-      },
+      select: STUDIO_PRODUCT_SELECT,
       orderBy: [{ name: 'asc' }],
     });
 
-    const mapped: CatalogStudioProductDTO[] = rows.map((p) => {
-      const priceInt = roundToIntegerPeso(p.listPrice).toNumber();
-      const costNum = Number(p.costPrice || 0);
-      const prevListNum = p.previousListPrice ? roundToIntegerPeso(p.previousListPrice).toNumber() : null;
-      const customOldNum = p.catalogOldPrice ? roundToIntegerPeso(p.catalogOldPrice).toNumber() : null;
-      const effectiveOldPrice = customOldNum ?? prevListNum;
-      const rawCat = p.commercialCategory || p.rubro?.name || 'Almacén';
+    const activeSkus = new Set(activeRows.map((r) => r.sku.trim()));
+    const missingParentSkus = Array.from(
+      new Set(
+        activeRows
+          .map((r) => parseVariantSkuBase(r.sku))
+          .filter((base): base is string => Boolean(base) && !activeSkus.has(base!)),
+      ),
+    );
 
-      return {
-        id: p.id,
-        sku: p.sku,
-        name: p.name,
-        price: priceInt,
-        costPrice: costNum,
-        previousListPrice: prevListNum,
-        oldPrice: effectiveOldPrice,
-        showOldPrice: Boolean(p.catalogShowOldPrice),
-        marginPct: computeMarginPercent(priceInt, costNum),
-        category: normalizeCatalogCategory(rawCat),
-        rubroName: p.rubro?.name || null,
-        badge: normalizeCatalogBadge(p.catalogBadge ?? p.storeHighlight),
-        minQty: p.catalogMinQtyLabel || null,
-        minOrderQuantity: p.minOrderQuantity,
-        unitsPerBox: p.unitsPerBox,
-        isPesable: p.isPesable,
-        varieties: p.catalogVarieties || null,
-        imageUrl: p.imageUrl || null,
-        stock: p.stock,
-        isActive: p.isActive,
-        catalogVisible: p.catalogVisible,
-      };
-    });
+    const parentRows =
+      missingParentSkus.length > 0
+        ? await prisma.product.findMany({
+            where: { sku: { in: missingParentSkus } },
+            select: STUDIO_PRODUCT_SELECT,
+          })
+        : [];
 
-    return applyItemOrder(mapped, itemOrder);
+    const mappedActive = activeRows.map(mapRowToStudioDto);
+    const mappedParents = parentRows.map(mapRowToStudioDto);
+    const collapsed = collapseCatalogVariantFamilies(mappedActive, mappedParents);
+
+    return applyItemOrder(collapsed, itemOrder);
   }
 
   static async getStudioData() {
@@ -287,6 +314,19 @@ export class CatalogStudioService {
         commercialCategory: true,
       },
     });
+
+    if (payload.catalogBadge !== undefined && !parseVariantSkuBase(updated.sku)) {
+      await prisma.product.updateMany({
+        where: {
+          isActive: true,
+          sku: { startsWith: `${updated.sku}-` },
+        },
+        data: {
+          catalogBadge: payload.catalogBadge,
+          storeHighlight: payload.catalogBadge,
+        },
+      });
+    }
 
     appCache.invalidateProductCatalogThrottled();
     this.invalidatePdfCache();
