@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
+import { ensureProductImageOnDisk } from '../../middlewares/product-image-cache.middleware';
 
 // Evita que libvips acapare RAM nativa o CPU en contenedores con recursos acotados (Railway)
 sharp.cache(false);
@@ -59,7 +60,18 @@ export function resolveSafeProductPhotoPath(imageUrl?: string | null): string | 
 export async function getAutocroppedProductImage(
   imageUrl?: string | null,
 ): Promise<CroppedImageResult | null> {
-  const fullPath = resolveSafeProductPhotoPath(imageUrl);
+  let fullPath = resolveSafeProductPhotoPath(imageUrl);
+  if (!fullPath && imageUrl) {
+    const clean = String(imageUrl).trim().split('?')[0];
+    if (clean && !/^https?:\/\//i.test(clean)) {
+      try {
+        const hydrated = await ensureProductImageOnDisk(path.basename(clean), UPLOADS_PRODUCTS_DIR);
+        if (hydrated) fullPath = hydrated.fullPath;
+      } catch {
+        return null;
+      }
+    }
+  }
   if (!fullPath) return null;
 
   let stat: fs.Stats;

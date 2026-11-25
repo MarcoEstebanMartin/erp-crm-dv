@@ -82,6 +82,92 @@ function inferMimeFromExtension(filename: string, dbMime?: string | null): strin
 }
 
 /**
+ * Hidrata en disco una foto faltante de producto desde `chatbot-dv.product_images` (READ ONLY)
+ * con control de concurrencia (`runImageDbFetch`) y escritura atómica.
+ * Reutilizado tanto por el middleware HTTP como por el generador PDF de Catalog Studio en Railway.
+ */
+export async function ensureProductImageOnDisk(
+  rawNameInput: string,
+  productsUploadsDir: string,
+  overrideProdDbUrl?: string,
+): Promise<{ buffer: Buffer; mimeType: string; fullPath: string } | null> {
+  const rawName = path.basename(rawNameInput || '');
+  const match = SAFE_IMAGE_FILENAME_RE.exec(rawName);
+  if (!match) return null;
+
+  const targetPath = path.join(productsUploadsDir, rawName);
+  if (fs.existsSync(targetPath)) {
+    const cachedBuffer = fs.readFileSync(targetPath);
+    if (cachedBuffer.length > 0) {
+      return {
+        buffer: cachedBuffer,
+        mimeType: inferMimeFromExtension(rawName),
+        fullPath: targetPath,
+      };
+    }
+  }
+
+  const skuCandidate = match[1].split('_')[0].trim();
+  if (!skuCandidate) return null;
+
+  const client = getReadOnlyImageClient(overrideProdDbUrl);
+  if (!client) return null;
+
+  let pending = inFlightDownloads.get(rawName);
+  if (!pending) {
+    pending = runImageDbFetch(async () => {
+      if (fs.existsSync(targetPath)) {
+        const cachedBuffer = fs.readFileSync(targetPath);
+        if (cachedBuffer.length > 0) {
+          return {
+            buffer: cachedBuffer,
+            mimeType: inferMimeFromExtension(rawName),
+          };
+        }
+      }
+
+      const rows = await client.$transaction(
+        async (tx) => {
+          await tx.$executeRawUnsafe('SET LOCAL transaction_read_only = on');
+          return tx.$queryRawUnsafe<RawImageRow[]>(
+            `SELECT mime_type, ENCODE(image_data, 'base64') AS img_b64
+             FROM public.product_images
+             WHERE TRIM(sku) = $1 AND OCTET_LENGTH(image_data) > 0
+             LIMIT 1`,
+            skuCandidate,
+          );
+        },
+        IMAGE_FETCH_TX_OPTIONS,
+      );
+      const row = rows[0];
+      if (!row?.img_b64) return null;
+
+      const buffer = Buffer.from(row.img_b64, 'base64');
+      if (buffer.length === 0) return null;
+
+      if (!fs.existsSync(productsUploadsDir)) {
+        fs.mkdirSync(productsUploadsDir, { recursive: true });
+      }
+      const tmpPath = `${targetPath}.tmp_${process.pid}_${Date.now()}`;
+      fs.writeFileSync(tmpPath, buffer);
+      fs.renameSync(tmpPath, targetPath);
+
+      return {
+        buffer,
+        mimeType: inferMimeFromExtension(rawName, row.mime_type),
+      };
+    }).finally(() => {
+      inFlightDownloads.delete(rawName);
+    });
+    inFlightDownloads.set(rawName, pending);
+  }
+
+  const resolved = await pending;
+  if (!resolved) return null;
+  return { ...resolved, fullPath: targetPath };
+}
+
+/**
  * Middleware de autocuración de caché local de imágenes (`backend/uploads/products/`).
  * Si un contenedor nuevo (ej. Railway o segunda PC) aún no tiene el archivo en disco,
  * lo recupera en modo READ ONLY desde `chatbot-dv.product_images`, lo persiste atómicamente
@@ -99,76 +185,12 @@ export function createProductImageCacheFallback(
     }
 
     const rawName = path.basename(req.path || '');
-    const match = SAFE_IMAGE_FILENAME_RE.exec(rawName);
-    if (!match) {
-      next();
-      return;
-    }
-
-    const skuCandidate = match[1].split('_')[0].trim();
-    if (!skuCandidate) {
-      next();
-      return;
-    }
-
-    const client = getReadOnlyImageClient(overrideProdDbUrl);
-    if (!client) {
-      next();
-      return;
-    }
-
     try {
-      let pending = inFlightDownloads.get(rawName);
-      if (!pending) {
-        pending = runImageDbFetch(async () => {
-          const targetPath = path.join(productsUploadsDir, rawName);
-          if (fs.existsSync(targetPath)) {
-            const cachedBuffer = fs.readFileSync(targetPath);
-            if (cachedBuffer.length > 0) {
-              return {
-                buffer: cachedBuffer,
-                mimeType: inferMimeFromExtension(rawName),
-              };
-            }
-          }
-
-          const rows = await client.$transaction(
-            async (tx) => {
-              await tx.$executeRawUnsafe('SET LOCAL transaction_read_only = on');
-              return tx.$queryRawUnsafe<RawImageRow[]>(
-                `SELECT mime_type, ENCODE(image_data, 'base64') AS img_b64
-                 FROM public.product_images
-                 WHERE TRIM(sku) = $1 AND OCTET_LENGTH(image_data) > 0
-                 LIMIT 1`,
-                skuCandidate,
-              );
-            },
-            IMAGE_FETCH_TX_OPTIONS,
-          );
-          const row = rows[0];
-          if (!row?.img_b64) return null;
-
-          const buffer = Buffer.from(row.img_b64, 'base64');
-          if (buffer.length === 0) return null;
-
-          if (!fs.existsSync(productsUploadsDir)) {
-            fs.mkdirSync(productsUploadsDir, { recursive: true });
-          }
-          const tmpPath = `${targetPath}.tmp_${process.pid}_${Date.now()}`;
-          fs.writeFileSync(tmpPath, buffer);
-          fs.renameSync(tmpPath, targetPath);
-
-          return {
-            buffer,
-            mimeType: inferMimeFromExtension(rawName, row.mime_type),
-          };
-        }).finally(() => {
-          inFlightDownloads.delete(rawName);
-        });
-        inFlightDownloads.set(rawName, pending);
-      }
-
-      const resolved = await pending;
+      const resolved = await ensureProductImageOnDisk(
+        rawName,
+        productsUploadsDir,
+        overrideProdDbUrl,
+      );
 
       if (!resolved) {
         next();
@@ -181,7 +203,7 @@ export function createProductImageCacheFallback(
       res.status(200).end(method === 'HEAD' ? undefined : resolved.buffer);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[ProductImageCache] Error recuperando ${rawName} (SKU ${skuCandidate}): ${msg}`);
+      console.warn(`[ProductImageCache] Error recuperando ${rawName}: ${msg}`);
       next();
     }
   };
