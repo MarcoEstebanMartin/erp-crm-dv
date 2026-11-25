@@ -49,8 +49,8 @@ export default function CatalogStudioTab() {
   const [comboDialogOpen, setComboDialogOpen] = useState(false);
   const [editingCombo, setEditingCombo] = useState<CatalogCombo | null>(null);
 
-  const persistState = async (next: CatalogStudioState) => {
-    setSavingState(true);
+  const persistState = async (next: CatalogStudioState, silent = false) => {
+    if (!silent) setSavingState(true);
     setError(null);
     try {
       const saved = await catalogStudioApi.saveState({
@@ -68,7 +68,7 @@ export default function CatalogStudioTab() {
     } catch (err: any) {
       setError(err?.message || 'No se pudo guardar el estado.');
     } finally {
-      setSavingState(false);
+      if (!silent) setSavingState(false);
     }
   };
 
@@ -243,7 +243,7 @@ export default function CatalogStudioTab() {
               onChange={(e) => {
                 const next = { ...state, hideOutOfStock: !e.target.checked };
                 setState(next);
-                persistState(next);
+                persistState(next, true);
               }}
             />
             <span>Ver sin stock</span>
