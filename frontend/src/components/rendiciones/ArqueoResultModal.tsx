@@ -1,6 +1,11 @@
-import { CheckCircle, X } from 'lucide-react';
+import { CheckCircle, Printer, X } from 'lucide-react';
 import { getWhatsAppSendLink } from './types';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
+import { api } from '../../utils/api';
+import {
+  buildArqueoTicketData,
+  printHandoverTicket80mm,
+} from '../../utils/print/printHandoverTicket80mm';
 
 interface ArqueoResultModalProps {
   arqueoResult: any | null;
@@ -118,7 +123,21 @@ export default function ArqueoResultModal({
             </table>
           </div>
 
-          <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+          <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={() =>
+                printHandoverTicket80mm(
+                  buildArqueoTicketData(arqueoResult, {
+                    receivedBy: api.getCurrentUser()?.username || 'Caja / Administración',
+                  }),
+                )
+              }
+            >
+              <Printer size={15} aria-hidden="true" /> Ticket 80mm
+            </button>
             <button type="button" className="btn btn-primary" onClick={onClose}>
               Cerrar
             </button>

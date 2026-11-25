@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Plus, X, ChevronRight, Truck, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Plus, X, ChevronRight, Truck, CheckCircle, AlertTriangle, Printer } from 'lucide-react';
 import { useRepartoController } from './reparto/useRepartoController';
 import { RepartoActiveRoutePanel } from './reparto/RepartoActiveRoutePanel';
 import { RepartoDriverRoutePanel } from './reparto/RepartoDriverRoutePanel';
@@ -7,6 +7,7 @@ import { RepartoCreateRouteModal } from './reparto/RepartoCreateRouteModal';
 import { RepartoSettleRouteModal } from './reparto/RepartoSettleRouteModal';
 import { PrintRouteSheet } from './reparto/RepartoPrintRouteSheet';
 import { FieldCollectModal } from './field-receipts/FieldCollectModal';
+import { printHandoverTicket80mm } from '../utils/print/printHandoverTicket80mm';
 
 type TripsTab = 'active' | 'history';
 
@@ -40,11 +41,18 @@ export default function RepartoDashboard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {c.successMsg && (
-        <div role="status" className="no-print" style={{ backgroundColor: 'var(--color-success-bg)', borderLeft: '4px solid var(--color-success)', color: 'var(--text-primary)', padding: '12px 16px', borderRadius: '8px', fontSize: '0.88rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div role="status" className="no-print" style={{ backgroundColor: 'var(--color-success-bg)', borderLeft: '4px solid var(--color-success)', color: 'var(--text-primary)', padding: '12px 16px', borderRadius: '8px', fontSize: '0.88rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={16} aria-hidden="true" />{c.successMsg}</span>
-          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => c.setSuccessMsg(null)} aria-label="Cerrar notificación">
-            <X size={15} aria-hidden="true" />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {c.lastClosedRouteTicket && (
+              <button type="button" className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }} onClick={() => printHandoverTicket80mm(c.lastClosedRouteTicket!)}>
+                <Printer size={14} aria-hidden="true" /> Imprimir Ticket
+              </button>
+            )}
+            <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => { c.setSuccessMsg(null); c.setLastClosedRouteTicket(null); }} aria-label="Cerrar notificación">
+              <X size={15} aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -245,13 +253,10 @@ export default function RepartoDashboard() {
       )}
 
       <FieldCollectModal
-        client={c.collectStopTarget?.client ?? null}
-        collectorUserId={Number(c.currentUser?.id || 0)}
-        bankAccounts={c.bankAccounts}
-        deliveryRouteId={c.collectStopTarget?.deliveryRouteId ?? null}
+        client={c.collectStopTarget?.client ?? null} collectorUserId={Number(c.currentUser?.id || 0)}
+        bankAccounts={c.bankAccounts} deliveryRouteId={c.collectStopTarget?.deliveryRouteId ?? null}
         suggestedAmount={c.collectStopTarget?.suggestedAmount ?? null}
-        onClose={() => c.setCollectStopTarget(null)}
-        onSuccess={c.handleCollectSuccess}
+        onClose={() => c.setCollectStopTarget(null)} onSuccess={c.handleCollectSuccess}
       />
 
       <RepartoCreateRouteModal
@@ -280,14 +285,10 @@ export default function RepartoDashboard() {
       />
 
       <RepartoSettleRouteModal
-        show={c.showSettleModal}
-        settleRoute={c.settleRoute}
-        settlements={c.settlements}
-        setSettlements={c.setSettlements}
-        bankAccounts={c.bankAccounts}
-        errorMsg={c.errorMsg}
-        onClose={() => { c.setErrorMsg(null); c.setShowSettleModal(false); }}
-        onSubmit={c.handleSettleSubmit}
+        show={c.showSettleModal} settleRoute={c.settleRoute}
+        settlements={c.settlements} setSettlements={c.setSettlements}
+        bankAccounts={c.bankAccounts} errorMsg={c.errorMsg}
+        onClose={() => { c.setErrorMsg(null); c.setShowSettleModal(false); }} onSubmit={c.handleSettleSubmit}
       />
 
       <PrintRouteSheet route={c.selectedRoute} locations={c.activeRouteTspDetails.locations} />

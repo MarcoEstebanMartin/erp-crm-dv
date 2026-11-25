@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, RefreshCw, AlertCircle, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle, RefreshCw, AlertCircle, ShieldCheck, Printer, X } from 'lucide-react';
 import ArqueoCajaModal from './ArqueoCajaModal';
 import type { RendicionesTabType, RouteGroup, SellerGroup } from './rendiciones/types';
 import { useRendicionesAudit } from './rendiciones/useRendicionesAudit';
@@ -7,10 +7,12 @@ import { useDepositDrawers } from './rendiciones/useDepositDrawers';
 import { useFieldRendiciones } from './rendiciones/useFieldRendiciones';
 import PendingRendicionesTabs from './rendiciones/PendingRendicionesTabs';
 import { PendingFieldTransfersCard } from './rendiciones/FieldSettlementCards';
+import { RecentApprovedSettlementsCard } from './rendiciones/RecentApprovedSettlementsCard';
 import RendicionAuditModal from './rendiciones/RendicionAuditModal';
 import CajaOpenModal from './rendiciones/CajaOpenModal';
 import InspectDrawerModal from './rendiciones/InspectDrawerModal';
 import ArqueoResultModal from './rendiciones/ArqueoResultModal';
+import { printHandoverTicket80mm } from '../utils/print/printHandoverTicket80mm';
 
 export type { SellerGroup, RouteGroup };
 
@@ -67,9 +69,21 @@ const RendicionesDashboard: React.FC = () => {
             <CheckCircle size={18} color="#10b981" aria-hidden="true" />
             <span>{topSuccess}</span>
           </span>
-          <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => { audit.setSuccessMsg(null); field.setStatusMsg(null); }} aria-label="Cerrar notificación">
-            <X size={15} aria-hidden="true" />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {field.lastApprovedTicket && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '4px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                onClick={() => printHandoverTicket80mm(field.lastApprovedTicket!)}
+              >
+                <Printer size={14} aria-hidden="true" /> Imprimir Ticket
+              </button>
+            )}
+            <button type="button" className="btn btn-ghost" style={{ padding: '4px' }} onClick={() => { audit.setSuccessMsg(null); field.setStatusMsg(null); field.setLastApprovedTicket(null); }} aria-label="Cerrar notificación">
+              <X size={15} aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -173,6 +187,8 @@ const RendicionesDashboard: React.FC = () => {
         setPreviewImage={field.setPreviewImage}
         onVerifyTransfer={(pid, action, bankId) => void field.handleVerifyTransfer(pid, action, bankId)}
       />
+
+      <RecentApprovedSettlementsCard settlements={field.approvedSettlements} />
 
       <RendicionAuditModal
         auditTarget={audit.auditTarget}

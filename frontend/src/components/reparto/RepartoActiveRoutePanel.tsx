@@ -1,6 +1,8 @@
 import { useState, type FC, type Dispatch, type SetStateAction } from 'react';
 import { Navigation, CheckCircle, Play, Map, Printer, Pencil, ChevronUp, ChevronDown, Banknote, Route } from 'lucide-react';
 import { printDeliveryRouteCustodyGuide } from '../../utils/printHelpers';
+import { api } from '../../utils/api';
+import { printCompletedRouteReprintTicket } from '../../utils/print/printHandoverTicket80mm';
 import { RouteMap } from './LeafletRouteMap';
 import { computeTripDisplayMetrics, getStopOutstandingBalance } from './repartoRouteHelpers';
 
@@ -83,6 +85,16 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
           {selectedRoute.status === 'IN_TRANSIT' && (
             <button type="button" className="btn btn-primary" style={{ fontSize: '0.78rem', backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => handleOpenSettleModal(selectedRoute)}>
               <CheckCircle size={12} aria-hidden="true" /> Cerrar Viaje
+            </button>
+          )}
+          {selectedRoute.status === 'COMPLETED' && (
+            <button
+              type="button"
+              className="btn btn-secondary no-print"
+              style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              onClick={() => printCompletedRouteReprintTicket(selectedRoute, api.getCurrentUser()?.username || 'Caja / Administración')}
+            >
+              <Printer size={12} aria-hidden="true" /> Ticket 80mm
             </button>
           )}
           <button type="button" className="btn btn-secondary no-print" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => printDeliveryRouteCustodyGuide(selectedRoute)}>

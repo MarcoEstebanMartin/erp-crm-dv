@@ -8,6 +8,11 @@ import {
   type RouteSettlementRow,
 } from './repartoSettlementHelpers';
 import { computeStopSuggestedCollectAmount, getStopOutstandingBalance } from './repartoRouteHelpers';
+import {
+  buildRouteClosureTicketData,
+  printHandoverTicket80mm,
+  type HandoverTicketData,
+} from '../../utils/print/printHandoverTicket80mm';
 
 export interface CollectStopTarget {
   client: OfflineBundleClient;
@@ -40,6 +45,7 @@ export function useRepartoGpsAndSettle({
   const [settleRoute, setSettleRoute] = useState<any | null>(null);
   const [settlements, setSettlements] = useState<RouteSettlementRow[]>([]);
   const [collectStopTarget, setCollectStopTarget] = useState<CollectStopTarget | null>(null);
+  const [lastClosedRouteTicket, setLastClosedRouteTicket] = useState<HandoverTicketData | null>(null);
 
   useGpsTracker({
     activeRouteId: selectedRoute?.id,
@@ -93,6 +99,19 @@ export function useRepartoGpsAndSettle({
         checksDeclared: totals.totalCheck,
         transfersDeclared: totals.totalTransfer,
       });
+      const ticketData = buildRouteClosureTicketData(settleRoute, {
+        cashAmount: totals.totalCash,
+        checksAmount: totals.totalCheck,
+        transfersAmount: totals.totalTransfer,
+        creditAmount: totals.totalCredit,
+        notDeliveredCount: totals.notDeliveredCount,
+        notDeliveredAmount: totals.totalNotDelivered,
+        ordersCount: settlements.length,
+        receivedBy: api.getCurrentUser()?.username || 'Caja / Administración',
+        closedAt: new Date().toISOString(),
+      });
+      setLastClosedRouteTicket(ticketData);
+      printHandoverTicket80mm(ticketData);
       setSuccessMsg(`Viaje #${settleRoute.id} cerrado.`);
       setShowSettleModal(false);
       setSettleRoute(null);
@@ -159,6 +178,8 @@ export function useRepartoGpsAndSettle({
     handleSettleSubmit,
     collectStopTarget,
     setCollectStopTarget,
+    lastClosedRouteTicket,
+    setLastClosedRouteTicket,
     handleOpenCollectForStop,
     handleCollectSuccess,
   };

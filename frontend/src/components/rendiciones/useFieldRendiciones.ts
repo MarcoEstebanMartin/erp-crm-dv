@@ -5,8 +5,14 @@ import {
   type CollectorSettlementDTO,
   type OfflineBundleBankAccount,
 } from '../../api/fieldReceipts.api';
+import { api } from '../../utils/api';
 import { HOME_QUERY_KEYS } from '../../hooks/queries/useHomeQuery';
 import { isPendingOpenSettlement, resolveSettlementChannel } from './fieldSettlementChannel';
+import {
+  buildFieldSettlementTicketData,
+  printHandoverTicket80mm,
+  type HandoverTicketData,
+} from '../../utils/print/printHandoverTicket80mm';
 
 export function useFieldRendiciones() {
   const queryClient = useQueryClient();
@@ -19,6 +25,7 @@ export function useFieldRendiciones() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [lastApprovedTicket, setLastApprovedTicket] = useState<HandoverTicketData | null>(null);
 
   const fetchFieldRendiciones = useCallback(async () => {
     setLoading(true);
@@ -52,6 +59,19 @@ export function useFieldRendiciones() {
     [openSettlements],
   );
 
+  const approvedSettlements = useMemo(
+    () =>
+      settlements
+        .filter((s) => s.status === 'APPROVED' || s.status === 'DISCREPANCY')
+        .sort((a, b) => {
+          const ta = new Date(a.approvedAt || a.createdAt).getTime();
+          const tb = new Date(b.approvedAt || b.createdAt).getTime();
+          return tb - ta;
+        })
+        .slice(0, 15),
+    [settlements],
+  );
+
   const pendingTransfers = useMemo(
     () =>
       settlements.flatMap((s) =>
@@ -73,7 +93,15 @@ export function useFieldRendiciones() {
     try {
       const raw = declaredCashById[s.id] ?? String(Math.round(Number(s.expectedCash || 0)));
       const declared = Math.round(Number(raw) || 0);
-      await fieldReceiptsApi.approveSettlement(s.id, declared);
+      const approvedRes: any = await fieldReceiptsApi.approveSettlement(s.id, declared);
+      const receivedBy = api.getCurrentUser()?.username || 'Caja / Administración';
+      const ticketData = buildFieldSettlementTicketData(s, {
+        declaredCash: declared,
+        receivedBy,
+        approvedAt: approvedRes?.approvedAt || new Date().toISOString(),
+      });
+      setLastApprovedTicket(ticketData);
+      printHandoverTicket80mm(ticketData);
       setStatusMsg(`Rendición de ${s.collector?.username || `#${s.collectorUserId}`} aprobada.`);
       await Promise.all([
         fetchFieldRendiciones(),
@@ -127,6 +155,9 @@ export function useFieldRendiciones() {
     banks,
     sellerFieldSettlements,
     driverFieldSettlements,
+    approvedSettlements,
+    lastApprovedTicket,
+    setLastApprovedTicket,
     pendingTransfers,
     declaredCashById,
     setDeclaredCashById,
