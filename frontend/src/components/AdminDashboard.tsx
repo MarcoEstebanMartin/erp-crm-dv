@@ -8,6 +8,7 @@ import { AdminModalsHost } from './admin/AdminModalsHost';
 const ClientsTab = lazy(() => import('./admin/ClientsTab'));
 const OrdersTab = lazy(() => import('./admin/OrdersTab'));
 const ProductsTab = lazy(() => import('./admin/ProductsTab'));
+const CatalogStudioTab = lazy(() => import('./admin/catalog-studio/CatalogStudioTab'));
 const ConfigTab = lazy(() => import('./admin/ConfigTab'));
 const CajaHubSection = lazy(() =>
   import('./admin/CajaHubSection').then((m) => ({ default: m.CajaHubSection })),
@@ -121,6 +122,12 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
             onUploadImage={c.handleUploadImage}
             initialCatalogTab={activeTab === 'stock' ? 'stock' : 'products'}
           />
+        </Suspense>
+      )}
+
+      {activeTab === 'catalogo' && isAdmin && (
+        <Suspense fallback={<LoadingDashboard />}>
+          <CatalogStudioTab />
         </Suspense>
       )}
 
