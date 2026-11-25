@@ -1,9 +1,16 @@
 import { Eye, EyeOff, ImageOff, SlidersHorizontal } from 'lucide-react';
-import { resolveProductImageUrl } from '../../../utils/imageUrl';
 import type {
   CatalogBadgeType,
   CatalogStudioProduct,
 } from '../../../utils/api/catalog-studio.api';
+
+function resolveImageSrc(imageUrl?: string | null): string {
+  if (!imageUrl) return '';
+  const trimmed = imageUrl.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('/')) return trimmed;
+  return `/uploads/products/${trimmed}`;
+}
 
 interface CatalogProductCardProps {
   product: CatalogStudioProduct;
@@ -28,7 +35,7 @@ export function CatalogProductCard({
   const isDestacado = product.badge === 'DESTACADO';
   const outOfStock = product.stock <= 0;
   const lowMargin = product.marginPct !== null && product.marginPct <= 0;
-  const imgSrc = product.imageUrl ? resolveProductImageUrl(product.imageUrl) : '';
+  const imgSrc = resolveImageSrc(product.imageUrl);
 
   const cardClasses = [
     'cs-card',
