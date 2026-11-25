@@ -45,6 +45,7 @@ import weeklyScheduleRoutes from './routes/weeklySchedule.routes';
 import webChatRoutes from './routes/webChat.routes';
 import excelImporterRoutes from './routes/excel_importer.routes';
 import fieldReceiptsRoutes from './routes/fieldReceipts.routes';
+import catalogStudioRoutes from './routes/catalog-studio.routes';
 
 
 const app: Application = express();
@@ -131,6 +132,7 @@ app.use('/api/sale-routes', saleRouteRoutes);
 app.use('/api/fleet', fleetRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/offers', offerRoutes);
+app.use('/api/catalog-studio', catalogStudioRoutes);
 app.use('/api/hr', hrRoutes);
 const guardEmbeddedPublicStore = (req: Request, res: Response, next: NextFunction): void => {
   const extractedStaff = extractStaffToken(req);
