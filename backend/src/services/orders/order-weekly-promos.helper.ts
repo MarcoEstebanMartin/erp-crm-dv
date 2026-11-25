@@ -9,6 +9,7 @@ import {
 } from '../../engines/weekly-promos.engine';
 import { toDecimal } from '../../core/money';
 import { appCache } from '../../utils/cache';
+import { lockProductsForUpdate } from '../../utils/db-locks.util';
 
 export const ACTIVE_WEEKLY_PROMOS_CACHE_KEY = 'weekly_promos_active';
 export const ACTIVE_WEEKLY_PROMOS_TTL_SECONDS = 60;
@@ -162,9 +163,19 @@ export async function decrementStockByProductMapInTx(params: {
     formatConcurrentError,
   } = params;
 
-  for (const [productIdStr, qtyToDecrement] of Object.entries(stockRequiredByProduct)) {
-    const productId = Number(productIdStr);
-    if (!qtyToDecrement || qtyToDecrement <= 0) continue;
+  const sortedEntries = Object.entries(stockRequiredByProduct)
+    .map(([productIdStr, qty]) => [Number(productIdStr), qty] as [number, number])
+    .filter(([productId, qty]) => Number.isInteger(productId) && productId > 0 && qty > 0)
+    .sort((a, b) => a[0] - b[0]);
+
+  if (sortedEntries.length === 0) return;
+
+  await lockProductsForUpdate(
+    tx,
+    sortedEntries.map(([productId]) => productId),
+  );
+
+  for (const [productId, qtyToDecrement] of sortedEntries) {
 
     if (ignoreStockCheck) {
       await tx.product.update({

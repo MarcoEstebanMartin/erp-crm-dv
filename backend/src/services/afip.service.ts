@@ -17,12 +17,26 @@ const certsExist = fs.existsSync(certPath) && fs.existsSync(keyPath);
 const useMock = isTestEnv || envAfipMock || (!certsExist && !isProduction);
 
 let afipClient: any = null;
-let afipLock = Promise.resolve();
+const activeAfipVoucherLocks = new Map<string, Promise<unknown>>();
 
-function withAfipLock<T>(task: () => Promise<T>): Promise<T> {
-  const res = afipLock.then(task, task);
-  afipLock = res.then(() => {}, () => {});
-  return res;
+/**
+ * Serializa emisiones AFIP/ARCA por clave `(puntoVenta:cbteTipo)` para garantizar
+ * correlatividad estricta sin bloquear tipos de comprobante independientes (ej. Factura A vs Factura B).
+ */
+export async function withAfipVoucherLock<T>(
+  lockKey: string,
+  task: () => Promise<T>,
+): Promise<T> {
+  const prev = activeAfipVoucherLocks.get(lockKey) ?? Promise.resolve();
+  const current = prev.catch(() => undefined).then(() => task());
+  activeAfipVoucherLocks.set(lockKey, current);
+  try {
+    return await current;
+  } finally {
+    if (activeAfipVoucherLocks.get(lockKey) === current) {
+      activeAfipVoucherLocks.delete(lockKey);
+    }
+  }
 }
 
 if (!useMock) {
@@ -317,10 +331,12 @@ function generateMockAfipResult(
  * Solicita el CAE a AFIP para una Factura A o B con candado secuencial anti-colisión.
  */
 export async function emitirFacturaAFIP(request: InvoiceRequest): Promise<InvoiceResult> {
-  return withAfipLock(async () => {
-    const sysCfg = await getSystemConfigSnapshot();
-    const puntoDeVenta = sysCfg.company.puntoVenta || 1;
-    const cbteTipo: 1 | 6 = request.invoiceType === 'A' ? 1 : 6;
+  const sysCfg = await getSystemConfigSnapshot();
+  const puntoDeVenta = sysCfg.company.puntoVenta || 1;
+  const cbteTipo: 1 | 6 = request.invoiceType === 'A' ? 1 : 6;
+  const lockKey = `${puntoDeVenta}:${cbteTipo}`;
+
+  return withAfipVoucherLock(lockKey, async () => {
     const isSimulacro =
       useMock || process.env.AFIP_MOCK === 'true' || Boolean(sysCfg.afipMockMode) || !afipClient;
 
@@ -377,11 +393,13 @@ export async function emitirFacturaAFIPConReintento(
 export async function emitirNotaCreditoAFIP(
   request: CreditNoteAfipRequest,
 ): Promise<InvoiceResult> {
-  return withAfipLock(async () => {
-    const sysCfg = await getSystemConfigSnapshot();
-    const puntoDeVenta = sysCfg.company.puntoVenta || 1;
-    const emitterCuit = sysCfg.company.cuit || cuit;
-    const cbteTipo: 3 | 8 = request.invoiceType === 'A' ? 3 : 8;
+  const sysCfg = await getSystemConfigSnapshot();
+  const puntoDeVenta = sysCfg.company.puntoVenta || 1;
+  const emitterCuit = sysCfg.company.cuit || cuit;
+  const cbteTipo: 3 | 8 = request.invoiceType === 'A' ? 3 : 8;
+  const lockKey = `${puntoDeVenta}:${cbteTipo}`;
+
+  return withAfipVoucherLock(lockKey, async () => {
     const isSimulacro =
       useMock || process.env.AFIP_MOCK === 'true' || Boolean(sysCfg.afipMockMode) || !afipClient;
 
