@@ -8,6 +8,7 @@ import {
   getAuditLogs,
   getDocumentAuditLogs,
   getSensitiveEvents,
+  markSensitiveEventsSeen,
   getUsers,
   createUser,
   toggleUserStatus,
@@ -74,6 +75,7 @@ router.patch('/reports/trips/:routeId/costs', validateRequest(updateRouteTripCos
 
 router.get('/audit-logs', validateRequest(getAuditLogsQuerySchema), getAuditLogs);
 router.get('/sensitive-events', getSensitiveEvents);
+router.post('/sensitive-events/seen', markSensitiveEventsSeen);
 router.get('/users', getUsers);
 router.post('/users', idempotencyGuard, validateRequest(createUserSchema), createUser);
 router.put('/users/:id', idempotencyGuard, validateRequest(updateUserSchema), updateUser);

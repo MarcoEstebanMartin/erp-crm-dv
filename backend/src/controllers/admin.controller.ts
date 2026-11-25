@@ -33,11 +33,27 @@ export async function getFinancialReports(req: AuthenticatedRequest, res: Respon
 export async function getSensitiveEvents(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const days = req.query.days ? Number(req.query.days) : 7;
-    const data = await adminSensitiveEventsService.getSensitiveEvents(days);
+    const data = await adminSensitiveEventsService.getSensitiveEvents(days, req.user?.id);
     res.status(200).json({ status: 'success', data });
   } catch (error: any) {
     console.error('Error al obtener eventos sensibles:', error);
     res.status(500).json({ status: 'error', message: 'Error al obtener eventos sensibles.' });
+  }
+}
+
+export async function markSensitiveEventsSeen(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ status: 'error', message: 'Usuario no autenticado.' });
+      return;
+    }
+    const upTo = typeof req.body?.upTo === 'string' ? req.body.upTo : undefined;
+    const data = await adminSensitiveEventsService.markSensitiveEventsSeen(userId, upTo);
+    res.status(200).json({ status: 'success', data });
+  } catch (error: any) {
+    console.error('Error al marcar eventos sensibles como vistos:', error);
+    res.status(500).json({ status: 'error', message: 'Error al marcar eventos sensibles como vistos.' });
   }
 }
 

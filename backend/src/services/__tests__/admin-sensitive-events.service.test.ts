@@ -77,4 +77,47 @@ describe('adminSensitiveEventsService', () => {
       'void-office-979',
     ]);
   });
+
+  it('filtra eventos ya vistos usando sensitiveEventsSeenAt del usuario', async () => {
+    const seenAt = new Date('2026-11-25T14:30:00.000Z');
+    const now = new Date('2026-11-25T16:00:00.000Z');
+
+    vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
+      sensitiveEventsSeenAt: seenAt,
+    } as any);
+    const txSpy = vi.spyOn(prisma.transaction, 'findMany').mockResolvedValue([] as any);
+    const frSpy = vi.spyOn(prisma.fieldReceipt, 'findMany').mockResolvedValue([] as any);
+    const cdSpy = vi.spyOn(prisma.cashDrawer, 'findMany').mockResolvedValue([] as any);
+
+    const res = await adminSensitiveEventsService.getSensitiveEvents(7, 1, now);
+
+    expect(res.seenAt).toBe(seenAt.toISOString());
+    expect(res.summary.totalCount).toBe(0);
+    expect(txSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ voidedAt: { gt: seenAt } }) }),
+    );
+    expect(frSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ voidedAt: { gt: seenAt } }) }),
+    );
+    expect(cdSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ closedAt: { gt: seenAt } }) }),
+    );
+  });
+
+  it('guarda sensitiveEventsSeenAt con upTo válido al marcar como visto', async () => {
+    const upTo = '2026-11-25T15:00:00.000Z';
+    const now = new Date('2026-11-25T15:05:00.000Z');
+    const updateSpy = vi.spyOn(prisma.user, 'update').mockResolvedValue({
+      sensitiveEventsSeenAt: new Date(upTo),
+    } as any);
+
+    const res = await adminSensitiveEventsService.markSensitiveEventsSeen(1, upTo, now);
+
+    expect(updateSpy).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { sensitiveEventsSeenAt: new Date(upTo) },
+      select: { sensitiveEventsSeenAt: true },
+    });
+    expect(res.seenAt).toBe(upTo);
+  });
 });

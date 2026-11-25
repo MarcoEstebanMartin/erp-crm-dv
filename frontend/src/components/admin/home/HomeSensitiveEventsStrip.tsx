@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { apiClient } from '../../../api/apiClient';
 import { api } from '../../../utils/api';
 
@@ -49,6 +49,7 @@ export const HomeSensitiveEventsStrip: React.FC = () => {
   const [days, setDays] = useState<1 | 7>(7);
   const [data, setData] = useState<SensitiveEventsPayload | null>(null);
   const [hasAnyInWeek, setHasAnyInWeek] = useState(false);
+  const [markingSeen, setMarkingSeen] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -71,6 +72,23 @@ export const HomeSensitiveEventsStrip: React.FC = () => {
       cancelled = true;
     };
   }, [isAdmin, days]);
+
+  const handleMarkSeen = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (markingSeen) return;
+    setMarkingSeen(true);
+    try {
+      const upTo = data?.events[0]?.occurredAt;
+      await apiClient.post('/admin/sensitive-events/seen', upTo ? { upTo } : {});
+      setHasAnyInWeek(false);
+      setData(null);
+    } catch {
+      // Mantener visible si falla el guardado en servidor
+    } finally {
+      setMarkingSeen(false);
+    }
+  };
 
   if (!isAdmin || !data) return null;
   if (data.summary.totalCount === 0 && !hasAnyInWeek) return null;
@@ -155,6 +173,31 @@ export const HomeSensitiveEventsStrip: React.FC = () => {
               </button>
             ))}
           </span>
+          {summary.totalCount > 0 && (
+            <button
+              type="button"
+              onClick={handleMarkSeen}
+              disabled={markingSeen}
+              aria-label="Marcar eventos como vistos"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                padding: '2px 8px',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                background: '#ffffff',
+                color: '#374151',
+                cursor: markingSeen ? 'wait' : 'pointer',
+                opacity: markingSeen ? 0.6 : 1,
+              }}
+            >
+              <Check size={12} aria-hidden="true" />
+              Visto
+            </button>
+          )}
           <ChevronDown size={14} color="#6b7280" aria-hidden="true" />
         </span>
       </summary>

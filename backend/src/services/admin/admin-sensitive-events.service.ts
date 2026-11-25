@@ -20,6 +20,7 @@ export interface SensitiveEventItem {
 
 export interface SensitiveEventsResponse {
   days: number;
+  seenAt: string | null;
   summary: {
     totalCount: number;
     voidedReceiptsCount: number;
@@ -44,15 +45,31 @@ function resolveSinceDate(days: number, now = new Date()): Date {
 }
 
 export const adminSensitiveEventsService = {
-  async getSensitiveEvents(rawDays?: number, now = new Date()): Promise<SensitiveEventsResponse> {
+  async getSensitiveEvents(
+    rawDays?: number,
+    userId?: number,
+    now = new Date(),
+  ): Promise<SensitiveEventsResponse> {
     const days = Math.min(Math.max(Math.floor(Number(rawDays) || 7), 1), 30);
-    const since = resolveSinceDate(days, now);
+    const windowSince = resolveSinceDate(days, now);
+
+    let seenAt: Date | null = null;
+    if (typeof userId === 'number' && Number.isInteger(userId) && userId > 0) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { sensitiveEventsSeenAt: true },
+      });
+      seenAt = user?.sensitiveEventsSeenAt ?? null;
+    }
+
+    const useSeenCutoff = seenAt !== null && seenAt.getTime() >= windowSince.getTime();
+    const dateFilter = useSeenCutoff ? { gt: seenAt as Date } : { gte: windowSince };
 
     const [voidedOffice, voidedField, closedDrawers] = await Promise.all([
       prisma.transaction.findMany({
         where: {
           type: TransactionType.INCOME,
-          voidedAt: { gte: since },
+          voidedAt: dateFilter,
         },
         select: {
           id: true,
@@ -69,7 +86,7 @@ export const adminSensitiveEventsService = {
       prisma.fieldReceipt.findMany({
         where: {
           status: FieldReceiptStatus.VOIDED,
-          voidedAt: { gte: since },
+          voidedAt: dateFilter,
         },
         select: {
           id: true,
@@ -87,7 +104,7 @@ export const adminSensitiveEventsService = {
       prisma.cashDrawer.findMany({
         where: {
           status: 'CLOSED',
-          closedAt: { gte: since },
+          closedAt: dateFilter,
           realBalance: { not: null },
           closingBalance: { not: null },
         },
@@ -170,6 +187,7 @@ export const adminSensitiveEventsService = {
 
     return {
       days,
+      seenAt: seenAt ? seenAt.toISOString() : null,
       summary: {
         totalCount: events.length,
         voidedReceiptsCount,
@@ -178,6 +196,30 @@ export const adminSensitiveEventsService = {
         cashDiscrepanciesNet: roundToIntegerPeso(cashDiscrepanciesNetDec).toNumber(),
       },
       events: events.slice(0, 50),
+    };
+  },
+
+  async markSensitiveEventsSeen(
+    userId: number,
+    upToIso?: string,
+    now = new Date(),
+  ): Promise<{ seenAt: string }> {
+    let targetDate = now;
+    if (typeof upToIso === 'string' && upToIso.trim()) {
+      const parsed = new Date(upToIso);
+      if (!Number.isNaN(parsed.getTime()) && parsed.getTime() <= now.getTime() + 5000) {
+        targetDate = parsed;
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { sensitiveEventsSeenAt: targetDate },
+      select: { sensitiveEventsSeenAt: true },
+    });
+
+    return {
+      seenAt: (updated.sensitiveEventsSeenAt ?? targetDate).toISOString(),
     };
   },
 };
