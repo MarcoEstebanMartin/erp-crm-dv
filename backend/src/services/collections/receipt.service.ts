@@ -240,7 +240,10 @@ export const receiptService = {
       authenticity: {
         verified: !isVoided,
         status: isVoided ? 'VOIDED' : 'VALID',
-        issuer: 'Distribuidora Don Venancio',
+        issuer:
+          transaction.billingType === 'OFFICIAL'
+            ? 'Distribuidora Don Venancio'
+            : 'Comprobante Digital',
       },
     };
   },

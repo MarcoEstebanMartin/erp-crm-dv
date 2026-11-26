@@ -47,6 +47,7 @@ export const whatsappDispatchService = {
     const pdf = await receiptPdfService.generateAndSaveReceiptPdf({
       receiptNumber: receipt.receiptNumber,
       provisionalCode: receipt.provisionalCode,
+      billingType: receipt.billingType === 'OFFICIAL' ? 'OFFICIAL' : 'INTERNAL',
       capturedAt: receipt.capturedAt,
       customerName: receipt.persona.name,
       customerCuit: receipt.persona.cuit,

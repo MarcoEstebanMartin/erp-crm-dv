@@ -90,13 +90,22 @@
   border-radius: 8px;
   background: #111827;
   color: #ffffff;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   letter-spacing: 0.02em;
+}
+
+.dv-receipt-logo {
+  height: 38px;
+  width: auto;
+  max-width: 68px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
 }
 
 .dv-receipt-brand-text {
@@ -150,6 +159,12 @@
   color: #047857;
   border: 1px solid #a7f3d0;
   margin-bottom: 12px;
+}
+
+.dv-receipt-badge--provisional {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
 }
 
 .dv-receipt-amount {

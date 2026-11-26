@@ -116,6 +116,7 @@ export function resolvePublicReceiptOrigin(rawOrigin?: string | null): string {
 export interface OfficeReceiptMessageInput {
   id: number;
   receiptNumber?: string | null;
+  billingType?: 'OFFICIAL' | 'INTERNAL' | null;
   amount: number | string;
   paymentMethod?: string | null;
   createdAt?: string | null;
@@ -134,9 +135,13 @@ export function buildOfficeReceiptWhatsAppMessage(
   const dateStr = formatReceiptDateAr(receipt.createdAt);
   const method = formatPaymentMethodLabel(receipt.paymentMethod, receipt.bankAccount?.name);
   const total = formatReceiptAmountAr(receipt.amount);
+  const headerLine =
+    receipt.billingType === 'OFFICIAL'
+      ? '*Don Venancio* · Recibo de Cobro'
+      : '*Recibo Provisorio*';
 
   const lines: string[] = [
-    '*Don Venancio* · Recibo de Cobro',
+    headerLine,
     '',
     `*N°:* ${nro}`,
     `*Cliente:* ${customer}`,
@@ -157,6 +162,7 @@ export function buildOfficeReceiptWhatsAppMessage(
 export interface FieldReceiptMessageInput {
   receiptNumber?: string | null;
   provisionalCode: string;
+  billingType?: 'OFFICIAL' | 'INTERNAL' | null;
   totalAmount: number | string;
   capturedAt?: string | null;
   pdfUrl?: string | null;
@@ -175,9 +181,13 @@ export function buildFieldReceiptWhatsAppMessage(
   const dateStr = formatReceiptDateAr(receipt.capturedAt);
   const method = formatFieldPaymentsSummary(receipt.payments);
   const total = formatReceiptAmountAr(receipt.totalAmount);
+  const headerLine =
+    receipt.billingType === 'OFFICIAL'
+      ? '*Don Venancio* · Recibo Digital'
+      : '*Recibo Provisorio*';
 
   const lines: string[] = [
-    '*Don Venancio* · Recibo Digital',
+    headerLine,
     '',
     `*N°:* ${nro}`,
     `*Cliente:* ${customer}`,

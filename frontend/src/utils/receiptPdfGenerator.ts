@@ -9,6 +9,7 @@ import {
 export interface PublicReceiptData {
   id: number;
   receiptNumber?: string | null;
+  billingType?: 'OFFICIAL' | 'INTERNAL' | null;
   amount: number | string;
   paymentMethod: string;
   description?: string | null;
@@ -110,14 +111,57 @@ export function formatReceiptDateTimeAr(isoDate: string): string {
   return `${datePart} · ${timePart}`;
 }
 
+interface CachedLogoImage {
+  dataUrl: string;
+  aspectRatio: number;
+}
+
+let cachedOfficialLogoPromise: Promise<CachedLogoImage | null> | null = null;
+
+function loadOfficialLogoPng(): Promise<CachedLogoImage | null> {
+  if (typeof window === 'undefined' || typeof fetch !== 'function') {
+    return Promise.resolve(null);
+  }
+  if (!cachedOfficialLogoPromise) {
+    cachedOfficialLogoPromise = (async () => {
+      try {
+        const response = await fetch('/logo.png');
+        if (!response.ok) return null;
+        const blob = await response.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('No se pudo leer /logo.png'));
+          reader.readAsDataURL(blob);
+        });
+        if (!dataUrl) return null;
+        const aspectRatio = await new Promise<number>((resolve) => {
+          const img = new Image();
+          img.onload = () =>
+            resolve(img.naturalHeight > 0 ? img.naturalWidth / img.naturalHeight : 1.6);
+          img.onerror = () => resolve(1.6);
+          img.src = dataUrl;
+        });
+        return { dataUrl, aspectRatio };
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return cachedOfficialLogoPromise;
+}
+
 /**
- * Genera el comprobante oficial en PDF con formato móvil compacto (105 mm de ancho,
+ * Genera el comprobante en PDF con formato móvil compacto (105 mm de ancho,
  * estilo recibo bancario / Mercado Pago) para lectura nítida en celular sin hacer zoom.
+ * - Sucursal A (`OFFICIAL`): Logo oficial Don Venancio + "Comprobante Oficial".
+ * - Sucursal X (`INTERNAL`): Recuadro negro con "D" + "Recibo Provisorio" (sin razón social).
  */
 export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promise<Blob> {
   const pageWidth = 105;
   const marginX = 8;
   const contentWidth = pageWidth - marginX * 2;
+  const isOfficial = receipt.billingType === 'OFFICIAL';
 
   const receiptNo = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
   const customerName = formatCustomerDisplayName(receipt.persona?.name);
@@ -131,6 +175,7 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
   const verificationCode = receipt.verificationCode || '';
   const verifyUrl =
     receipt.publicUrl || (typeof window !== 'undefined' ? window.location.href : '');
+  const officialLogo = isOfficial ? await loadOfficialLogoPng() : null;
 
   const rows: Array<[string, string]> = [
     ['Cliente', customerName],
@@ -163,23 +208,45 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
     format: [pageWidth, pageHeight],
   });
 
-  // Fondo blanco limpio + encabezado institucional
-  doc.setFillColor(17, 24, 39); // gray-900
-  doc.roundedRect(marginX, 9, 11, 11, 2.2, 2.2, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('DV', marginX + 5.5, 16, { align: 'center' });
+  // Encabezado diferenciado por sucursal
+  if (isOfficial) {
+    let textOffsetX = marginX + 14;
+    if (officialLogo) {
+      const logoH = 12;
+      const logoW = Math.min(20, logoH * officialLogo.aspectRatio);
+      doc.addImage(officialLogo.dataUrl, 'PNG', marginX, 8.5, logoW, logoH);
+      textOffsetX = marginX + logoW + 2.5;
+    } else {
+      doc.setFillColor(17, 24, 39);
+      doc.roundedRect(marginX, 9, 11, 11, 2.2, 2.2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('DV', marginX + 5.5, 16, { align: 'center' });
+    }
 
-  doc.setTextColor(17, 24, 39);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text('Don Venancio', marginX + 14, 13.8);
+    doc.setTextColor(17, 24, 39);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12.5);
+    doc.text('Don Venancio', textOffsetX, 13.8);
 
-  doc.setTextColor(107, 114, 128);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('Recibo de Cobro', marginX + 14, 18.8);
+    doc.setTextColor(107, 114, 128);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.8);
+    doc.text('Recibo de Cobro', textOffsetX, 18.8);
+  } else {
+    doc.setFillColor(17, 24, 39); // gray-900
+    doc.roundedRect(marginX, 9, 11, 11, 2.2, 2.2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('D', marginX + 5.5, 16.3, { align: 'center' });
+
+    doc.setTextColor(17, 24, 39);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12.5);
+    doc.text('Recibo Provisorio', marginX + 14, 16);
+  }
 
   // Número de recibo en pill superior derecha
   doc.setFillColor(243, 244, 246);
@@ -195,13 +262,23 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
   doc.line(marginX, 25, pageWidth - marginX, 25);
 
   // Bloque central de monto (grande y legible en celular)
-  doc.setFillColor(236, 253, 245);
-  doc.setDrawColor(167, 243, 208);
-  doc.roundedRect(pageWidth / 2 - 24, 30, 48, 7.2, 3.6, 3.6, 'FD');
-  doc.setTextColor(4, 120, 87);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.text('COMPROBANTE OFICIAL', pageWidth / 2, 34.8, { align: 'center' });
+  if (isOfficial) {
+    doc.setFillColor(236, 253, 245);
+    doc.setDrawColor(167, 243, 208);
+    doc.roundedRect(pageWidth / 2 - 24, 30, 48, 7.2, 3.6, 3.6, 'FD');
+    doc.setTextColor(4, 120, 87);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('COMPROBANTE OFICIAL', pageWidth / 2, 34.8, { align: 'center' });
+  } else {
+    doc.setFillColor(243, 244, 246);
+    doc.setDrawColor(209, 213, 219);
+    doc.roundedRect(pageWidth / 2 - 23, 30, 46, 7.2, 3.6, 3.6, 'FD');
+    doc.setTextColor(55, 65, 81);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('RECIBO PROVISORIO', pageWidth / 2, 34.8, { align: 'center' });
+  }
 
   doc.setTextColor(17, 24, 39);
   doc.setFont('helvetica', 'bold');

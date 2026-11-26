@@ -133,6 +133,7 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
   }
 
   const receiptNo = receipt.receiptNumber || `REC-${String(receipt.id).padStart(5, '0')}`;
+  const isOfficial = receipt.billingType === 'OFFICIAL';
   const isVoided = Boolean(receipt.isVoided || receipt.authenticity?.status === 'VOIDED');
   const customerName = formatCustomerDisplayName(receipt.persona?.name);
   const amountText = formatReceiptAmountAr(receipt.amount);
@@ -157,13 +158,29 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
       <article className="dv-receipt-card">
         <header className="dv-receipt-header">
           <div className="dv-receipt-brand">
-            <div className="dv-receipt-monogram" aria-hidden="true">
-              DV
-            </div>
-            <div className="dv-receipt-brand-text">
-              <h1 className="dv-receipt-company">Don Venancio</h1>
-              <p className="dv-receipt-subtitle">Recibo de Cobro</p>
-            </div>
+            {isOfficial ? (
+              <>
+                <img
+                  src="/logo.png"
+                  alt="Don Venancio"
+                  className="dv-receipt-logo"
+                  decoding="async"
+                />
+                <div className="dv-receipt-brand-text">
+                  <h1 className="dv-receipt-company">Don Venancio</h1>
+                  <p className="dv-receipt-subtitle">Recibo de Cobro</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="dv-receipt-monogram" aria-hidden="true">
+                  D
+                </div>
+                <div className="dv-receipt-brand-text">
+                  <h1 className="dv-receipt-company">Recibo Provisorio</h1>
+                </div>
+              </>
+            )}
           </div>
           <span className="dv-receipt-number">{receiptNo}</span>
         </header>
@@ -182,10 +199,14 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
               <ShieldAlert size={14} aria-hidden="true" />
               <span>Comprobante anulado</span>
             </div>
-          ) : (
+          ) : isOfficial ? (
             <div className="dv-receipt-badge">
               <ShieldCheck size={14} aria-hidden="true" />
               <span>Comprobante oficial</span>
+            </div>
+          ) : (
+            <div className="dv-receipt-badge dv-receipt-badge--provisional">
+              <span>Recibo provisorio</span>
             </div>
           )}
           <div

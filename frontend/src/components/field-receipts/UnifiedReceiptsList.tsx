@@ -70,6 +70,7 @@ function toPublicReceiptData(r: OfficeReceiptDTO): PublicReceiptData {
   return {
     id: r.id,
     receiptNumber: r.receiptNumber,
+    billingType: r.billingType,
     amount: r.amount,
     paymentMethod: r.paymentMethod,
     description: r.description,

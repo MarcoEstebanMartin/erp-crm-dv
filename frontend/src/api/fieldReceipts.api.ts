@@ -87,6 +87,7 @@ export interface FieldReceiptDTO {
   id: number;
   receiptNumber: string | null;
   provisionalCode: string;
+  billingType?: 'OFFICIAL' | 'INTERNAL';
   personaId: number;
   persona?: {
     id: number;
