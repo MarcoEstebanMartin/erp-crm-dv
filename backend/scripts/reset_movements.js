@@ -11,15 +11,19 @@ const SEQUENCES_TO_RESET = [
   'AccountLedger_id_seq',
   'AuditLog_id_seq',
   'CashDrawer_id_seq',
+  'CollectorSettlement_id_seq',
   'CreditNoteItem_id_seq',
   'CreditNote_id_seq',
   'CrmOrderDraft_id_seq',
   'DeliveryRoute_id_seq',
   'Expense_id_seq',
+  'FieldReceiptPayment_id_seq',
+  'FieldReceipt_id_seq',
   'FuelLog_id_seq',
   'OrderItemLot_id_seq',
   'OrderItem_id_seq',
   'Order_id_seq',
+  'PaymentAllocation_id_seq',
   'Payroll_id_seq',
   'ProductLot_id_seq',
   'PurchaseOrderItem_id_seq',
@@ -83,6 +87,10 @@ async function runPostResetAudit(expectedActiveCount, expectedVehicleExpiries) {
     orders,
     accountLedger,
     transactions,
+    paymentAllocations,
+    fieldReceipts,
+    fieldReceiptPayments,
+    collectorSettlements,
     cashDrawers,
     deliveryRoutes,
     creditNotes,
@@ -99,6 +107,10 @@ async function runPostResetAudit(expectedActiveCount, expectedVehicleExpiries) {
     prisma.order.count(),
     prisma.accountLedger.count(),
     prisma.transaction.count(),
+    prisma.paymentAllocation.count(),
+    prisma.fieldReceipt.count(),
+    prisma.fieldReceiptPayment.count(),
+    prisma.collectorSettlement.count(),
     prisma.cashDrawer.count(),
     prisma.deliveryRoute.count(),
     prisma.creditNote.count(),
@@ -129,6 +141,10 @@ async function runPostResetAudit(expectedActiveCount, expectedVehicleExpiries) {
     orders,
     accountLedger,
     transactions,
+    paymentAllocations,
+    fieldReceipts,
+    fieldReceiptPayments,
+    collectorSettlements,
     cashDrawers,
     deliveryRoutes,
     creditNotes,
@@ -149,6 +165,10 @@ async function runPostResetAudit(expectedActiveCount, expectedVehicleExpiries) {
     orders !== 0 ||
     accountLedger !== 0 ||
     transactions !== 0 ||
+    paymentAllocations !== 0 ||
+    fieldReceipts !== 0 ||
+    fieldReceiptPayments !== 0 ||
+    collectorSettlements !== 0 ||
     cashDrawers !== 0 ||
     deliveryRoutes !== 0 ||
     creditNotes !== 0 ||
@@ -199,6 +219,10 @@ async function resetMovements() {
   await prisma.$transaction(
     async (tx) => {
       await tx.accountLedger.deleteMany({});
+      await tx.fieldReceiptPayment.deleteMany({});
+      await tx.fieldReceipt.deleteMany({});
+      await tx.collectorSettlement.deleteMany({});
+      await tx.paymentAllocation.deleteMany({});
       await tx.crmOrderDraft.deleteMany({});
       await tx.routeGpsPing.deleteMany({});
       await tx.saleRouteVisit.deleteMany({});
