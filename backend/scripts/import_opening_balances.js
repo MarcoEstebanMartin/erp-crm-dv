@@ -135,6 +135,7 @@ async function run() {
       cleanName: cleanDisplayName(rawName),
       address: cleanAddress(rawAddr),
       cuit,
+      billingType: rawName.includes('*') ? 'INTERNAL' : 'OFFICIAL',
       balance,
     });
   }
@@ -228,6 +229,10 @@ async function run() {
   }
   console.log(`- Deudores (DEBIT): ${debitCount} clientes — Total: $${totalDebit.toFixed(args.keepCents ? 2 : 0)}`);
   console.log(`- Saldos a favor (CREDIT): ${creditCount} clientes — Total: -$${totalCredit.toFixed(args.keepCents ? 2 : 0)}`);
+  const allToProcess = [...matched, ...(args.createMissing ? toCreate : [])];
+  const countA = allToProcess.filter((x) => x.billingType === 'OFFICIAL').length;
+  const countX = allToProcess.filter((x) => x.billingType === 'INTERNAL').length;
+  console.log(`- Distribución por sucursal (regla asterisco): Sucursal A (sin *): ${countA} | Sucursal X (con *): ${countX}`);
   console.log(`- Neto total a cargar: $${totalDebit.minus(totalCredit).toFixed(args.keepCents ? 2 : 0)}`);
 
   if (!args.apply) {
@@ -283,7 +288,7 @@ async function run() {
             personaId: op.target.id,
             entryType: isDebit ? 'DEBIT' : 'CREDIT',
             sourceType: 'OPENING_BALANCE',
-            billingType: 'INTERNAL',
+            billingType: op.billingType,
             amount: op.balance.abs().toNumber(),
             balanceAfter: newBal.toNumber(),
             reference: 'SALDO-INICIAL',

@@ -369,5 +369,32 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       expect(bothBranchesFlagged.branchX.followUpLabel).toBe('Resto 12/11 y última');
       expect(bothBranchesFlagged.followUpLabel).toBe('A: Últimas 2 · X: Resto 12/11 y última');
     });
+
+    it('respeta saldos iniciales (OPENING_BALANCE) por sucursal A y X incluso sin pedidos previos y absorbe pagos a cuenta FIFO', () => {
+      const onlyOpeningA = computeDebtorFifoMetrics({
+        outstandingBalance: 1329582,
+        orders: [],
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        openingOfficialDebt: 1329582,
+        openingInternalDebt: 0,
+      });
+      expect(onlyOpeningA.debtA).toBe(1329582);
+      expect(onlyOpeningA.debtX).toBe(0);
+
+      const openingAWithPartialPaymentAndNewOrderX = computeDebtorFifoMetrics({
+        outstandingBalance: 1079582,
+        orders: [
+          { id: 10, billingType: 'INTERNAL', totalAmount: 50000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-25T10:00:00-03:00' },
+        ],
+        unallocatedOfficialCredit: 300000,
+        unallocatedInternalCredit: 0,
+        openingOfficialDebt: 1329582,
+        openingInternalDebt: 0,
+      });
+      expect(openingAWithPartialPaymentAndNewOrderX.debtA).toBe(1029582);
+      expect(openingAWithPartialPaymentAndNewOrderX.debtX).toBe(50000);
+      expect(openingAWithPartialPaymentAndNewOrderX.debtA + openingAWithPartialPaymentAndNewOrderX.debtX).toBe(1079582);
+    });
   });
 });

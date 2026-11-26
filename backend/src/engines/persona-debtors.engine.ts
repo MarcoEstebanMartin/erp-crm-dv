@@ -25,6 +25,8 @@ export interface DebtorFifoInput {
   orders: DebtorOrderFifoInput[];
   unallocatedOfficialCredit: NumericInput;
   unallocatedInternalCredit: NumericInput;
+  openingOfficialDebt?: NumericInput;
+  openingInternalDebt?: NumericInput;
   referenceDate?: Date;
   overdueDaysThreshold?: number;
 }
@@ -279,26 +281,41 @@ export function computeDebtorFifoMetrics(input: DebtorFifoInput): DebtorFifoMetr
   const officialOrders = input.orders.filter((o) => o.billingType === 'OFFICIAL');
   const internalOrders = input.orders.filter((o) => o.billingType === 'INTERNAL');
 
+  const openingOfficialDec = Decimal.max(0, toDecimal(input.openingOfficialDebt ?? 0));
+  const openingInternalDec = Decimal.max(0, toDecimal(input.openingInternalDebt ?? 0));
+  const unallocOfficialDec = Decimal.max(0, toDecimal(input.unallocatedOfficialCredit));
+  const unallocInternalDec = Decimal.max(0, toDecimal(input.unallocatedInternalCredit));
+
+  const usedOnOpeningOfficial = Decimal.min(openingOfficialDec, unallocOfficialDec);
+  const remainingOpeningOfficial = openingOfficialDec.minus(usedOnOpeningOfficial);
+  const creditForOfficialOrders = Decimal.max(0, unallocOfficialDec.minus(usedOnOpeningOfficial));
+
+  const usedOnOpeningInternal = Decimal.min(openingInternalDec, unallocInternalDec);
+  const remainingOpeningInternal = openingInternalDec.minus(usedOnOpeningInternal);
+  const creditForInternalOrders = Decimal.max(0, unallocInternalDec.minus(usedOnOpeningInternal));
+
   const officialResult = calculateBranchFifo(
     officialOrders,
-    input.unallocatedOfficialCredit,
+    creditForOfficialOrders,
     referenceDate,
     overdueDaysThreshold,
   );
   const internalResult = calculateBranchFifo(
     internalOrders,
-    input.unallocatedInternalCredit,
+    creditForInternalOrders,
     referenceDate,
     overdueDaysThreshold,
   );
 
-  const totalCalculated = officialResult.remainingDebt.plus(internalResult.remainingDebt);
+  const officialTotalRemaining = remainingOpeningOfficial.plus(officialResult.remainingDebt);
+  const internalTotalRemaining = remainingOpeningInternal.plus(internalResult.remainingDebt);
+  const totalCalculated = officialTotalRemaining.plus(internalTotalRemaining);
   let debtA = 0;
   let debtX = 0;
 
   if (totalCalculated.gt(0)) {
     const debtADec = roundToIntegerPeso(
-      officialResult.remainingDebt.mul(dbOutstandingDec).div(totalCalculated),
+      officialTotalRemaining.mul(dbOutstandingDec).div(totalCalculated),
     );
     const debtXDec = Decimal.max(0, dbOutstandingDec.minus(debtADec));
     debtA = Math.max(0, debtADec.toNumber());

@@ -5,6 +5,8 @@ import {
   BillingType,
   OrderStatus,
   CreditNoteStatus,
+  LedgerSourceType,
+  LedgerEntryType,
 } from '@prisma/client';
 import { getOfficialCityOrOther, OFFICIAL_CITIES } from '../../utils/normalize';
 import { toDecimal } from '../../core/money';
@@ -53,7 +55,7 @@ export class PersonaDebtorsSubService {
 
     const debtorIds = activeDebtors.map((p) => p.id);
 
-    const [deliveredOrders, unallocatedTx, unallocatedCn] = await Promise.all([
+    const [deliveredOrders, unallocatedTx, unallocatedCn, openingLedger] = await Promise.all([
       dbClient.order.findMany({
         where: { personaId: { in: debtorIds }, status: OrderStatus.DELIVERED },
         select: {
@@ -80,6 +82,16 @@ export class PersonaDebtorsSubService {
         },
         _sum: { totalAmount: true },
       }),
+      dbClient.accountLedger?.groupBy
+        ? dbClient.accountLedger.groupBy({
+            by: ['personaId', 'billingType', 'entryType'],
+            where: {
+              personaId: { in: debtorIds },
+              sourceType: LedgerSourceType.OPENING_BALANCE,
+            },
+            _sum: { amount: true },
+          })
+        : Promise.resolve([]),
     ]);
 
     const orderIds = (deliveredOrders || []).map((o: any) => o.id);
@@ -151,6 +163,18 @@ export class PersonaDebtorsSubService {
       ordersByPersona.set(order.personaId, list);
     }
 
+    const openingOfficialByPersona = new Map<number, ReturnType<typeof toDecimal>>();
+    const openingInternalByPersona = new Map<number, ReturnType<typeof toDecimal>>();
+    for (const row of openingLedger || []) {
+      const amt = toDecimal(row._sum?.amount?.toString() ?? '0');
+      const signed = row.entryType === LedgerEntryType.DEBIT ? amt : amt.negated();
+      const targetMap =
+        row.billingType === BillingType.OFFICIAL
+          ? openingOfficialByPersona
+          : openingInternalByPersona;
+      targetMap.set(row.personaId, (targetMap.get(row.personaId) || toDecimal(0)).plus(signed));
+    }
+
     const metricsMap = new Map<number, DebtorFifoMetrics>();
     for (const debtor of activeDebtors) {
       const metrics = computeDebtorFifoMetrics({
@@ -158,6 +182,8 @@ export class PersonaDebtorsSubService {
         orders: ordersByPersona.get(debtor.id) || [],
         unallocatedOfficialCredit: unallocatedOfficialByPersona.get(debtor.id) || 0,
         unallocatedInternalCredit: unallocatedInternalByPersona.get(debtor.id) || 0,
+        openingOfficialDebt: openingOfficialByPersona.get(debtor.id) || 0,
+        openingInternalDebt: openingInternalByPersona.get(debtor.id) || 0,
       });
       metricsMap.set(debtor.id, metrics);
     }
