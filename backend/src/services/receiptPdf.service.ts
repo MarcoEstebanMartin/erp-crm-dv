@@ -126,8 +126,6 @@ async function buildStyledReceiptPdfBuffer(
       doc.roundedRect(marginX, 24, 30, 30, 6).fill('#111827');
       doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(15);
       doc.text('D', marginX, 32.5, { width: 30, align: 'center' });
-      doc.fillColor('#111827').font('Helvetica-Bold').fontSize(12.5);
-      doc.text('Recibo Provisorio', marginX + 38, 33, { width: 135 });
     }
 
     // Pill número de recibo

@@ -155,7 +155,7 @@ function loadOfficialLogoPng(): Promise<CachedLogoImage | null> {
  * Genera el comprobante en PDF con formato móvil compacto (105 mm de ancho,
  * estilo recibo bancario / Mercado Pago) para lectura nítida en celular sin hacer zoom.
  * - Sucursal A (`OFFICIAL`): Logo oficial Don Venancio + "Comprobante Oficial".
- * - Sucursal X (`INTERNAL`): Recuadro negro con "D" + "Recibo Provisorio" (sin razón social).
+ * - Sucursal X (`INTERNAL`): Recuadro negro con "D" sin texto lateral + badge central "RECIBO PROVISORIO".
  */
 export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promise<Blob> {
   const pageWidth = 105;
@@ -241,11 +241,6 @@ export async function generateReceiptPdfBlob(receipt: PublicReceiptData): Promis
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.text('D', marginX + 5.5, 16.3, { align: 'center' });
-
-    doc.setTextColor(17, 24, 39);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12.5);
-    doc.text('Recibo Provisorio', marginX + 14, 16);
   }
 
   // Número de recibo en pill superior derecha

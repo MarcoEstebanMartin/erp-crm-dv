@@ -172,14 +172,9 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({ receiptId }) => {
                 </div>
               </>
             ) : (
-              <>
-                <div className="dv-receipt-monogram" aria-hidden="true">
-                  D
-                </div>
-                <div className="dv-receipt-brand-text">
-                  <h1 className="dv-receipt-company">Recibo Provisorio</h1>
-                </div>
-              </>
+              <div className="dv-receipt-monogram" aria-label="Recibo provisorio">
+                D
+              </div>
             )}
           </div>
           <span className="dv-receipt-number">{receiptNo}</span>

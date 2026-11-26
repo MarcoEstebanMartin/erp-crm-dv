@@ -67,4 +67,21 @@ describe('receiptPdfGenerator (PDF minimalista con QR anti-estafas)', () => {
     const header = new TextDecoder().decode(bytes.slice(0, 5));
     expect(header).toBe('%PDF-');
   });
+
+  it('en Sucursal X deja solo el ícono D en el encabezado y mantiene el badge central RECIBO PROVISORIO', async () => {
+    const blob = await generateReceiptPdfBlob({
+      id: 99,
+      receiptNumber: 'REC-00099',
+      billingType: 'INTERNAL',
+      amount: 15000,
+      paymentMethod: 'CASH',
+      description: 'Pago a cuenta corriente',
+      createdAt: '2026-11-26T12:00:00.000Z',
+      persona: { id: 10, name: 'CLIENTE PRUEBA' },
+    });
+
+    const rawPdf = new TextDecoder('latin1').decode(new Uint8Array(await blob.arrayBuffer()));
+    expect(rawPdf).not.toContain('(Recibo Provisorio)');
+    expect(rawPdf).toContain('(RECIBO PROVISORIO)');
+  });
 });

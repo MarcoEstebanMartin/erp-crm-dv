@@ -1,6 +1,21 @@
+import zlib from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { receiptPdfService } from '../receiptPdf.service';
 import { normalizeArgentinaWhatsAppPhone } from '../whatsappDispatch.service';
+
+function extractPdfPageText(buffer: Buffer): string {
+  const raw = buffer.toString('latin1');
+  const match = raw.match(/\/Filter \/FlateDecode[\s\S]*?stream\r?\n([\s\S]*?)\r?\nendstream/);
+  const stream = match ? zlib.inflateSync(Buffer.from(match[1], 'latin1')).toString('latin1') : raw;
+  const decodedRuns: string[] = [];
+  for (const tj of stream.matchAll(/\[([\s\S]*?)\]\s*TJ/g)) {
+    const text = Array.from(tj[1].matchAll(/<([0-9a-fA-F]+)>/g))
+      .map((m) => Buffer.from(m[1], 'hex').toString('latin1'))
+      .join('');
+    decodedRuns.push(text);
+  }
+  return decodedRuns.join('\n');
+}
 
 describe('T004 — Generador PDF de Recibo y Normalización WhatsApp Argentina', () => {
   it('genera PDF 1.4 oficial (Sucursal A) con logo y marca Don Venancio y provisorio (Sucursal X) sin Don Venancio', async () => {
@@ -44,6 +59,9 @@ describe('T004 — Generador PDF de Recibo y Normalización WhatsApp Argentina',
 
     expect(internalPdf.buffer.subarray(0, 8).toString('utf8')).toBe('%PDF-1.4');
     expect(internalPdf.buffer.toString('latin1')).not.toContain('Don Venancio');
+    const internalStream = extractPdfPageText(internalPdf.buffer);
+    expect(internalStream).toContain('RECIBO PROVISORIO');
+    expect(internalStream).not.toContain('Recibo Provisorio');
   });
 
   it('normaliza teléfonos argentinos al formato internacional 549...', () => {
