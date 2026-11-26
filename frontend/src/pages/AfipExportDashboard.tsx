@@ -122,6 +122,7 @@ export default function AfipExportDashboard() {
         year,
         ventasData: data?.ventasData || [],
         comprasData: data?.comprasData || [],
+        retencionesData: data?.retencionesData || [],
         onProgress: (msg) => setProgressMsg(msg),
       });
 
