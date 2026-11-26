@@ -16,7 +16,7 @@ import {
   drawCategoryBanner,
   drawEditionHeader,
   drawMinQtyMedallion,
-  drawStarburstBadge,
+  drawPriceTagBadge,
   drawTinyStar,
   registerCatalogFonts,
   type PdfFontSet,
@@ -36,7 +36,7 @@ const COL_W = (USABLE_W - (COLS - 1) * COL_GAP) / COLS;
 const ROW_H = 198;
 const ROW_GAP = 12;
 const COMBO_H = 214;
-const HEADER_H = 92;
+const HEADER_H = 74;
 const BANNER_H = 18;
 const BANNER_MB = 16;
 const TOP_MARGIN_SUBSEQUENT = 14;
@@ -52,17 +52,17 @@ async function drawProductCell(
   h: number,
 ): Promise<void> {
   const badge = normalizeCatalogBadge(item.badge);
-  const isHighlighted = badge !== null;
   const isOferton = badge === 'OFERTON';
+  const isDestacado = badge === 'DESTACADO';
   let ribH = 0;
   let topPhotoPad = 8;
 
-  if (isHighlighted) {
-    const ribbonText = isOferton ? 'OFERTÓN!' : 'DESTACADO';
-    const ribBg = isOferton ? '#D0021B' : '#0B1120';
-    const ribBorder = isOferton ? '#FEF08A' : '#F59E0B';
-    const ribTextColor = isOferton ? '#FFFFFF' : '#FEF08A';
-    const cardBorder = isOferton ? '#DC2626' : '#D97706';
+  if (isDestacado) {
+    const ribbonText = 'DESTACADO';
+    const ribBg = '#0B1120';
+    const ribBorder = '#F59E0B';
+    const ribTextColor = '#FEF08A';
+    const cardBorder = '#D97706';
 
     // Shadow
     doc.save();
@@ -121,7 +121,7 @@ async function drawProductCell(
   const displayBrand = description && brand ? brand : '';
   const cleanSab = cleanVarietiesText(item.varieties);
 
-  let bottomY = y + h - (isHighlighted ? 9 : 7);
+  let bottomY = y + h - (isDestacado ? 9 : 7);
 
   // 1. Optional Varieties Pill
   let pillInfo: {
@@ -206,59 +206,27 @@ async function drawProductCell(
     doc.restore();
   }
 
-  // 5. Starburst Price Badge (Top-Right)
+  // 5. Price Tag Badge (Top-Right)
   const priceStr = formatCatalogPrice(item.price);
-  const pFontSize = priceStr.length >= 8 ? 17.5 : 19;
-  doc.font(fonts.price).fontSize(pFontSize);
-  const priceTextW = doc.widthOfString(priceStr);
-  const badgeRx = Math.max(38, (priceTextW + 24) / 2);
-  const badgeRy = 18;
-  const badgeCx = x + w - badgeRx - 2;
-  const badgeCy = y + ribH + badgeRy + (isHighlighted ? 4 : 2);
+  const oldPriceStr =
+    item.showOldPrice && item.oldPrice && Number(item.oldPrice) > Number(item.price)
+      ? formatCatalogPrice(item.oldPrice)
+      : null;
 
-  // Optional crossed-out old price pill
-  if (item.showOldPrice && item.oldPrice && Number(item.oldPrice) > Number(item.price)) {
-    const oldStr = formatCatalogPrice(item.oldPrice);
-    doc.font(fonts.bold).fontSize(10.5);
-    const oldW = doc.widthOfString(oldStr) + 10;
-    const oldH = 15;
-    const oldX = Math.max(x + 4, badgeCx - badgeRx - oldW + 3);
-    const oldY = badgeCy - oldH / 2 - 4;
-
-    doc.save();
-    doc.roundedRect(oldX, oldY, oldW, oldH, 2.5).fill('#FEF08A');
-    doc.lineWidth(0.5).strokeColor('#EAB308').roundedRect(oldX, oldY, oldW, oldH, 2.5).stroke();
-    doc
-      .font(fonts.bold)
-      .fontSize(10.5)
-      .fillColor('#0F172A')
-      .text(oldStr, oldX, oldY + 2.2, { width: oldW, align: 'center', lineBreak: false });
-    doc
-      .strokeColor('#D0021B')
-      .lineWidth(1.1)
-      .moveTo(oldX + 2, oldY + oldH / 2)
-      .lineTo(oldX + oldW - 2, oldY + oldH / 2)
-      .stroke();
-    doc.restore();
-  }
-
-  drawStarburstBadge(doc, badgeCx, badgeCy, badgeRx, badgeRy, 22, 3.0, '#D0021B');
-  doc
-    .font(fonts.price)
-    .fontSize(pFontSize)
-    .fillColor('#FFFFFF')
-    .text(priceStr, badgeCx - badgeRx, badgeCy - pFontSize * 0.56, {
-      width: badgeRx * 2,
-      align: 'center',
-      lineBreak: false,
-    });
+  drawPriceTagBadge(doc, fonts, {
+    priceStr,
+    oldPriceStr,
+    isOferton,
+    rightEdgeX: x + w - (isDestacado ? 5 : 2),
+    topY: y + ribH + (isDestacado ? 5 : 2),
+  });
 
   // 6. Min Qty Circle Medallion (Top-Left)
   const minQtyData = parseMinQtyBadge(item.minQty, item.minOrderQuantity);
   if (minQtyData) {
     const circleR = 17.5;
     const circleCx = x + circleR + 3;
-    const circleCy = y + ribH + circleR + (isHighlighted ? 5 : 3);
+    const circleCy = y + ribH + circleR + (isDestacado ? 5 : 3);
     drawMinQtyMedallion(doc, fonts, circleCx, circleCy, circleR, minQtyData);
   }
 
@@ -358,7 +326,7 @@ export async function renderCatalogMagazinePdf(
     const sec = sections[secIdx];
     await preloadSectionImages(sec.products, sec.combos, 4);
     const isFirstPage = secIdx === 0;
-    const topSpace = isFirstPage ? HEADER_H + 14 : TOP_MARGIN_SUBSEQUENT;
+    const topSpace = isFirstPage ? HEADER_H + 12 : TOP_MARGIN_SUBSEQUENT;
 
     // Calculate rows: combos first (full width), then products in 3-col chunks
     const productRows: CatalogProductInput[][] = [];

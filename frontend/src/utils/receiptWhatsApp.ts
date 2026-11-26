@@ -1,4 +1,4 @@
-export const DEFAULT_PUBLIC_RECEIPT_ORIGIN = 'https://erp-dv-prueba-production.up.railway.app';
+export const DEFAULT_PUBLIC_RECEIPT_ORIGIN = 'https://erp.donvenancio.com.ar';
 
 const UPPERCASE_TOKENS = new Set(['S.A.', 'S.R.L.', 'S.A.S.', 'S.H.', 'SA', 'SRL', 'SAS', 'SH']);
 const LOWERCASE_CONNECTORS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e']);

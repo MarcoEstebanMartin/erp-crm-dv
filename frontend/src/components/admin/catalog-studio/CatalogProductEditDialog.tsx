@@ -149,7 +149,11 @@ export function CatalogProductEditDialog({
                 className="cs-input"
                 value={minQty}
                 onChange={(e) => setMinQty(e.target.value)}
-                placeholder="Ej: 3 UNID. o 3 CAJA"
+                placeholder={
+                  product.minOrderQuantity > 1
+                    ? `ERP: ${product.minOrderQuantity} UNID.`
+                    : 'Ej: 3 UNID. o 3 CAJA'
+                }
               />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                 {MIN_QTY_PRESETS.map((preset) => (
@@ -163,6 +167,16 @@ export function CatalogProductEditDialog({
                     {preset}
                   </button>
                 ))}
+                {product.minOrderQuantity > 1 && (
+                  <button
+                    type="button"
+                    className="cs-btn"
+                    style={{ padding: '3px 8px', fontSize: 11 }}
+                    onClick={() => setMinQty('SIN MINIMO')}
+                  >
+                    Sin mínimo
+                  </button>
+                )}
                 {minQty && (
                   <button
                     type="button"

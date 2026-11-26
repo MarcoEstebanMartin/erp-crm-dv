@@ -52,7 +52,7 @@ describe('receiptPdfGenerator (PDF minimalista con QR anti-estafas)', () => {
       description: 'Rendición Reparto - Chofer: Fabian - Ruta #3 - Pago de MARTIN MARCO ESTEBAN',
       createdAt: '2026-11-18T15:30:00.000Z',
       verificationCode: 'DV-8F3A-9C12',
-      publicUrl: 'https://erp-dv-prueba-production.up.railway.app/recibo/52?v=8f3a9c12b4e17d05',
+      publicUrl: 'https://erp.donvenancio.com.ar/recibo/52?v=8f3a9c12b4e17d05',
       persona: {
         id: 10,
         name: 'MARTIN MARCO ESTEBAN',

@@ -11,6 +11,7 @@ import {
 } from '../../../utils/api/catalog-studio.api';
 import { CatalogProductCard } from './CatalogProductCard';
 import { CatalogProductEditDialog } from './CatalogProductEditDialog';
+import { CatalogProductPhotoDialog } from './CatalogProductPhotoDialog';
 import { CatalogComboDialog } from './CatalogComboDialog';
 import './catalogStudio.css';
 
@@ -47,6 +48,7 @@ export default function CatalogStudioTab() {
   const [savingState, setSavingState] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState<'magazine' | 'resumen' | null>(null);
   const [editingProduct, setEditingProduct] = useState<CatalogStudioProduct | null>(null);
+  const [photoProduct, setPhotoProduct] = useState<CatalogStudioProduct | null>(null);
   const [comboDialogOpen, setComboDialogOpen] = useState(false);
   const [editingCombo, setEditingCombo] = useState<CatalogCombo | null>(null);
   const resumenMenuRef = useRef<HTMLDetailsElement>(null);
@@ -128,6 +130,20 @@ export default function CatalogStudioTab() {
   const handleToggleVisible = useCallback(
     (product: CatalogStudioProduct) => handlePatchProduct(product.id, { catalogVisible: !product.catalogVisible }),
     [handlePatchProduct],
+  );
+
+  const handleProductImageUpdated = useCallback(
+    (productId: number, imageUrl: string | null) => {
+      const applyImage = (list: CatalogStudioProduct[]) =>
+        list.map((p) => (p.id === productId ? { ...p, imageUrl } : p));
+      setProducts((prev) => applyImage(prev));
+      setPhotoProduct((prev) => (prev && prev.id === productId ? { ...prev, imageUrl } : prev));
+      queryClient.setQueryData(CATALOG_STUDIO_QUERY_KEY, (prev: typeof studioData) =>
+        prev ? { ...prev, products: applyImage(prev.products) } : prev,
+      );
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    [queryClient],
   );
 
   const handleSaveCombo = (combo: CatalogCombo) => {
@@ -465,6 +481,7 @@ export default function CatalogStudioTab() {
                   onToggleBadge={handleToggleBadge}
                   onToggleVisible={handleToggleVisible}
                   onOpenEdit={setEditingProduct}
+                  onOpenPhoto={setPhotoProduct}
                 />
               ))}
             </div>
@@ -477,6 +494,12 @@ export default function CatalogStudioTab() {
         categories={categories}
         onClose={() => setEditingProduct(null)}
         onSave={handlePatchProduct}
+      />
+
+      <CatalogProductPhotoDialog
+        product={photoProduct}
+        onClose={() => setPhotoProduct(null)}
+        onImageUpdated={handleProductImageUpdated}
       />
 
       <CatalogComboDialog

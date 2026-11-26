@@ -182,7 +182,7 @@ export function CatalogComboDialog({
         </div>
 
         <div className="cs-dialog-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '140px minmax(0, 1fr)', gap: 10 }}>
             <div className="cs-field">
               <label htmlFor="cs-combo-num">Etiqueta</label>
               <input
@@ -205,9 +205,9 @@ export function CatalogComboDialog({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="cs-combo-grid">
             {/* Producto 1 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12, background: '#fafafa', border: '1px solid #e4e4e7', borderRadius: 8 }}>
+            <div className="cs-combo-side">
               <strong style={{ fontSize: 12 }}>Producto 1</strong>
               <input
                 className="cs-input"
@@ -234,7 +234,7 @@ export function CatalogComboDialog({
                 onChange={(e) => setName1(e.target.value)}
                 required
               />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 8 }}>
+              <div className="cs-combo-price-row">
                 <input
                   type="number"
                   min={0}
@@ -268,7 +268,7 @@ export function CatalogComboDialog({
             </div>
 
             {/* Producto 2 */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12, background: '#fafafa', border: '1px solid #e4e4e7', borderRadius: 8 }}>
+            <div className="cs-combo-side">
               <strong style={{ fontSize: 12 }}>Producto 2</strong>
               <input
                 className="cs-input"
@@ -311,7 +311,7 @@ export function CatalogComboDialog({
                   placeholder="SIN CARGO"
                 />
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 8 }}>
+                <div className="cs-combo-price-row">
                   <input
                     type="number"
                     min={0}

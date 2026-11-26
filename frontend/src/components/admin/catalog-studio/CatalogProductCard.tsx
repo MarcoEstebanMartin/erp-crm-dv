@@ -4,8 +4,9 @@ import type {
   CatalogBadgeType,
   CatalogStudioProduct,
 } from '../../../utils/api/catalog-studio.api';
+import { resolveEffectiveMinQtyLabel } from './catalogMinQty.helper';
 
-function resolveImageSrc(imageUrl?: string | null): string {
+export function resolveCatalogImageSrc(imageUrl?: string | null): string {
   if (!imageUrl) return '';
   const trimmed = imageUrl.trim();
   if (!trimmed) return '';
@@ -19,6 +20,7 @@ interface CatalogProductCardProps {
   onToggleBadge: (product: CatalogStudioProduct, badge: CatalogBadgeType) => void;
   onToggleVisible: (product: CatalogStudioProduct) => void;
   onOpenEdit: (product: CatalogStudioProduct) => void;
+  onOpenPhoto: (product: CatalogStudioProduct) => void;
 }
 
 function formatArs(value: number): string {
@@ -31,11 +33,13 @@ export const CatalogProductCard = memo(function CatalogProductCard({
   onToggleBadge,
   onToggleVisible,
   onOpenEdit,
+  onOpenPhoto,
 }: CatalogProductCardProps) {
   const isOferton = product.badge === 'OFERTON';
   const isDestacado = product.badge === 'DESTACADO';
   const outOfStock = product.stock <= 0;
-  const imgSrc = resolveImageSrc(product.imageUrl);
+  const imgSrc = resolveCatalogImageSrc(product.imageUrl);
+  const effectiveMinQty = resolveEffectiveMinQtyLabel(product.minQty, product.minOrderQuantity);
 
   const cardClasses = [
     'cs-card',
@@ -52,11 +56,17 @@ export const CatalogProductCard = memo(function CatalogProductCard({
         <span className="cs-pill">{product.sku}</span>
         <div className="cs-meta-pills">
           {outOfStock && <span className="cs-pill cs-pill-danger">Sin stock</span>}
-          {product.minQty && <span className="cs-pill cs-pill-warn">Mín. {product.minQty}</span>}
+          {effectiveMinQty && <span className="cs-pill cs-pill-warn">Mín. {effectiveMinQty}</span>}
         </div>
       </div>
 
-      <div className="cs-card-media">
+      <button
+        type="button"
+        className="cs-card-media cs-card-media-btn"
+        aria-label={`${imgSrc ? 'Ver o cambiar imagen' : 'Subir imagen'} de ${product.name}`}
+        title={imgSrc ? 'Ver o cambiar imagen' : 'Subir imagen'}
+        onClick={() => onOpenPhoto(product)}
+      >
         {imgSrc ? (
           <img src={imgSrc} alt={product.name} loading="lazy" decoding="async" />
         ) : (
@@ -65,7 +75,7 @@ export const CatalogProductCard = memo(function CatalogProductCard({
             <span>Sin foto</span>
           </div>
         )}
-      </div>
+      </button>
 
       <div className="cs-card-name">{product.name}</div>
 

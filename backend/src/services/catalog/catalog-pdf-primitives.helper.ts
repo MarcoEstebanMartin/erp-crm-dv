@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import type PDFKit from 'pdfkit';
 import type { MinQtyBadgeData } from '../../engines/catalog-studio.engine';
 import { resolveLogoAssetPath } from './catalog-image-crop.helper';
@@ -9,8 +10,32 @@ export interface PdfFontSet {
   price: string;
 }
 
-export function registerCatalogFonts(doc: PDFKit.PDFDocument): PdfFontSet {
+function resolveBundledFontDir(): string | null {
   const candidates = [
+    path.resolve(__dirname, '../../../assets/fonts'),
+    path.resolve(process.cwd(), 'assets/fonts'),
+    path.resolve(process.cwd(), 'backend/assets/fonts'),
+  ];
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, 'Montserrat-Bold.ttf'))) {
+      return dir;
+    }
+  }
+  return null;
+}
+
+export function registerCatalogFonts(doc: PDFKit.PDFDocument): PdfFontSet {
+  const bundledDir = resolveBundledFontDir();
+  const candidates = [
+    ...(bundledDir
+      ? [
+          {
+            reg: path.join(bundledDir, 'Montserrat-Regular.ttf'),
+            bold: path.join(bundledDir, 'Montserrat-Bold.ttf'),
+            price: path.join(bundledDir, 'Montserrat-ExtraBold.ttf'),
+          },
+        ]
+      : []),
     {
       reg: 'C:/Windows/Fonts/GOTHIC.TTF',
       bold: 'C:/Windows/Fonts/GOTHICB.TTF',
@@ -71,22 +96,23 @@ export function drawEditionHeader(
   title: string,
   subtitle: string,
 ): number {
-  // 1. Crimson Luxury Red background (#B91226)
-  doc.save();
-  doc.rect(0, 0, pageW, headerH).fill('#B91226');
+  const usableW = pageW - 2 * marginX;
+  const topBarH = 3;
 
-  // 2. Top gold hairline accent
-  doc.strokeOpacity(0.38).strokeColor('#FEF08A').lineWidth(1.2);
-  doc.moveTo(0, 0.6).lineTo(pageW, 0.6).stroke();
+  // 1. Clean white editorial background + thin crimson top signature bar
+  doc.save();
+  doc.rect(0, 0, pageW, headerH).fill('#FFFFFF');
+  doc.rect(0, 0, pageW, topBarH).fill('#E30613');
   doc.restore();
 
-  // 3. Logo Don Venancio (left, vertically centered)
+  // 2. Refined smaller Logo Don Venancio (left, vertically centered)
   const logoPath = resolveLogoAssetPath();
   if (logoPath) {
     try {
+      const logoH = 44;
       doc.save();
-      doc.image(logoPath, marginX + 4, (headerH - 62) / 2, {
-        fit: [106, 62],
+      doc.image(logoPath, marginX + 2, topBarH + (headerH - topBarH - logoH) / 2, {
+        fit: [74, logoH],
         align: 'center',
         valign: 'center',
       });
@@ -96,47 +122,67 @@ export function drawEditionHeader(
     }
   }
 
-  // 4. Centered Title
+  // 3. Minimalist bold centered title
   const cleanTitle = String(title || 'OFERTAS SEMANALES').toUpperCase();
-  const titleSize = cleanTitle.length <= 22 ? 22 : 19;
+  const titleSize = cleanTitle.length <= 22 ? 18.5 : 16;
   doc
-    .font(fonts.bold)
+    .font(fonts.price)
     .fontSize(titleSize)
-    .fillColor('#FFFFFF')
-    .text(cleanTitle, 0, 22, { width: pageW, align: 'center', characterSpacing: 0.6 });
+    .fillColor('#18181B')
+    .text(cleanTitle, 0, 19, {
+      width: pageW,
+      align: 'center',
+      characterSpacing: 1.4,
+      lineBreak: false,
+    });
 
-  // 5. Edition Obsidian Pill
+  // 4. Editorial gray subtitle flanked by fine rules & crimson micro-dots
   const cleanSub = String(subtitle || '').toUpperCase();
   if (cleanSub) {
-    doc.font(fonts.bold).fontSize(8.5);
-    const subW = doc.widthOfString(cleanSub, { characterSpacing: 0.8 });
-    const pillW = Math.max(130, subW + 36);
-    const pillH = 20;
-    const pillX = (pageW - pillW) / 2;
-    const pillY = 54;
+    const subY = 45;
+    const subFontSize = 8.2;
+    const subTracking = 2.2;
+    doc.font(fonts.regular).fontSize(subFontSize);
+    const subW = doc.widthOfString(cleanSub, { characterSpacing: subTracking });
+    const cx = pageW / 2;
+    const lineY = subY + 4.5;
+    const dotOffset = subW / 2 + 8;
+    const lineStart = dotOffset + 5;
+    const lineLen = 22;
 
     doc.save();
-    doc.roundedRect(pillX, pillY, pillW, pillH, pillH / 2).fill('#0B1120');
     doc
-      .strokeOpacity(0.35)
-      .strokeColor('#FEF08A')
-      .lineWidth(0.8)
-      .roundedRect(pillX, pillY, pillW, pillH, pillH / 2)
-      .stroke();
-    doc.restore();
-
-    doc
-      .font(fonts.bold)
-      .fontSize(8.5)
-      .fillColor('#FFFFFF')
-      .text(cleanSub, pillX, pillY + 5.5, {
-        width: pillW,
+      .font(fonts.regular)
+      .fontSize(subFontSize)
+      .fillColor('#71717A')
+      .text(cleanSub, 0, subY, {
+        width: pageW,
         align: 'center',
-        characterSpacing: 0.8,
+        characterSpacing: subTracking,
+        lineBreak: false,
       });
+
+    doc.fillColor('#E30613');
+    doc.circle(cx - dotOffset, lineY, 1.3).fill();
+    doc.circle(cx + dotOffset, lineY, 1.3).fill();
+
+    doc.strokeColor('#D4D4D8').lineWidth(0.7);
+    doc.moveTo(cx - lineStart - lineLen, lineY).lineTo(cx - lineStart, lineY).stroke();
+    doc.moveTo(cx + lineStart, lineY).lineTo(cx + lineStart + lineLen, lineY).stroke();
+    doc.restore();
   }
 
-  return headerH + 14;
+  // 5. Crisp bottom hairline divider
+  doc.save();
+  doc
+    .strokeColor('#E4E4E7')
+    .lineWidth(0.75)
+    .moveTo(marginX, headerH - 1)
+    .lineTo(marginX + usableW, headerH - 1)
+    .stroke();
+  doc.restore();
+
+  return headerH + 12;
 }
 
 export function drawCategoryBanner(
@@ -274,4 +320,127 @@ export function drawMinQtyMedallion(
     .fillColor('#E2E8F0')
     .text(data.bottom, cx - r, cy + r * 0.36, { width: r * 2, align: 'center' });
   doc.restore();
+}
+
+export interface PriceTagBadgeOptions {
+  priceStr: string;
+  oldPriceStr?: string | null;
+  isOferton?: boolean;
+  rightEdgeX: number;
+  topY: number;
+}
+
+export function drawPriceTagBadge(
+  doc: PDFKit.PDFDocument,
+  fonts: PdfFontSet,
+  opts: PriceTagBadgeOptions,
+): void {
+  const { priceStr, oldPriceStr, isOferton = false, rightEdgeX, topY } = opts;
+  const hasOld = Boolean(oldPriceStr);
+
+  const pFontSize = priceStr.length >= 8 ? 15.5 : priceStr.length >= 7 ? 17 : 18.5;
+  doc.font(fonts.price).fontSize(pFontSize);
+  const priceTextW = doc.widthOfString(priceStr);
+
+  const rectW = Math.max(70, priceTextW + 18);
+  const rectH = isOferton ? 33 : 28;
+  const rectX = rightEdgeX - rectW;
+  const rectY = topY + (hasOld ? 12.5 : 0);
+
+  // 1. Subtle drop shadow for main red rectangle
+  doc.save();
+  doc.fillColor('#0F172A').fillOpacity(0.16);
+  doc.roundedRect(rectX + 1, rectY + 1.4, rectW, rectH, 7).fill();
+  doc.restore();
+
+  // 2. Main red rounded rectangle + bold white price
+  doc.save();
+  doc.roundedRect(rectX, rectY, rectW, rectH, 7).fill('#E30613');
+
+  const priceY = isOferton
+    ? rectY + (rectH - 5 - pFontSize * 1.15) / 2
+    : rectY + (rectH - pFontSize * 1.15) / 2;
+
+  doc
+    .font(fonts.price)
+    .fontSize(pFontSize)
+    .fillColor('#FFFFFF')
+    .text(priceStr, rectX, priceY, {
+      width: rectW,
+      align: 'center',
+      lineBreak: false,
+    });
+  doc.restore();
+
+  // 3. Tilted yellow old-price pill overlapping top-right (+10% scale)
+  if (hasOld && oldPriceStr) {
+    const oldFontSize = 10.35;
+    doc.font(fonts.price).fontSize(oldFontSize);
+    const oldTextW = doc.widthOfString(oldPriceStr);
+    const oldW = Math.max(51, oldTextW + 13.5);
+    const oldH = 17.05;
+    const oldX = rectX + rectW - oldW - 1;
+    const oldY = rectY - oldH + 5;
+    const oldCx = oldX + oldW / 2;
+    const oldCy = oldY + oldH / 2;
+
+    doc.save();
+    doc.rotate(4.2, { origin: [oldCx, oldCy] });
+    doc.fillColor('#0F172A').fillOpacity(0.14);
+    doc.roundedRect(oldX + 0.7, oldY + 1.1, oldW, oldH, 4.2).fill();
+    doc.fillOpacity(1);
+    doc.roundedRect(oldX, oldY, oldW, oldH, 4.2).fill('#FBBF24');
+
+    doc
+      .font(fonts.price)
+      .fontSize(oldFontSize)
+      .fillColor('#18181B')
+      .text(oldPriceStr, oldX, oldY + (oldH - oldFontSize * 1.18) / 2, {
+        width: oldW,
+        align: 'center',
+        lineBreak: false,
+      });
+
+    const strikePad = Math.max(4.4, (oldW - oldTextW) / 2 - 1.5);
+    doc
+      .strokeColor('#DC2626')
+      .lineWidth(1.35)
+      .moveTo(oldX + strikePad, oldCy + 0.3)
+      .lineTo(oldX + oldW - strikePad, oldCy + 0.3)
+      .stroke();
+    doc.restore();
+  }
+
+  // 4. Tilted dark obsidian OFERTÓN! pill overlapping bottom-left (+10% scale)
+  if (isOferton) {
+    const pillLabel = 'OFERTÓN!';
+    const pillFontSize = 8.6;
+    doc.font(fonts.price).fontSize(pillFontSize);
+    const pillTextW = doc.widthOfString(pillLabel, { characterSpacing: 0.45 });
+    const pillW = Math.max(60, Math.min(rectW - 4, pillTextW + 15.5));
+    const pillH = 14.85;
+    const pillX = rectX + 4;
+    const pillY = rectY + rectH - 6;
+    const pillCx = pillX + pillW / 2;
+    const pillCy = pillY + pillH / 2;
+
+    doc.save();
+    doc.rotate(-3.4, { origin: [pillCx, pillCy] });
+    doc.fillColor('#0F172A').fillOpacity(0.18);
+    doc.roundedRect(pillX + 0.7, pillY + 1.1, pillW, pillH, 3.3).fill();
+    doc.fillOpacity(1);
+    doc.roundedRect(pillX, pillY, pillW, pillH, 3.3).fill('#0F172A');
+
+    doc
+      .font(fonts.price)
+      .fontSize(pillFontSize)
+      .fillColor('#FFFFFF')
+      .text(pillLabel, pillX, pillY + (pillH - pillFontSize * 1.18) / 2, {
+        width: pillW,
+        align: 'center',
+        characterSpacing: 0.45,
+        lineBreak: false,
+      });
+    doc.restore();
+  }
 }

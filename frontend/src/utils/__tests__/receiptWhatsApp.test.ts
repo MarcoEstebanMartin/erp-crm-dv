@@ -43,7 +43,7 @@ describe('receiptWhatsApp (mensajes profesionales, minimalistas y sin localhost)
         persona: { name: 'MARTIN MARCO ESTEBAN', phone: '3388123456' },
         bankAccount: { name: 'Banco Nación' },
         verificationCode: 'DV-8F3A-9C12-4B7E',
-        publicUrl: 'https://erp-dv-prueba-production.up.railway.app/recibo/52?v=DV-8F3A-9C12-4B7E',
+        publicUrl: 'https://erp.donvenancio.com.ar/recibo/52?v=DV-8F3A-9C12-4B7E',
       },
       'http://localhost:5174',
     );

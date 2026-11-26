@@ -5,7 +5,7 @@ export type ReceiptKind = 'office' | 'field';
 const TOKEN_VERSION = 'dv-receipt-v1';
 const TOKEN_HEX_LENGTH = 16;
 
-export const DEFAULT_PUBLIC_APP_URL = 'https://erp-dv-prueba-production.up.railway.app';
+export const DEFAULT_PUBLIC_APP_URL = 'https://erp.donvenancio.com.ar';
 
 const EPHEMERAL_HOST_SUFFIXES = [
   '.trycloudflare.com',
