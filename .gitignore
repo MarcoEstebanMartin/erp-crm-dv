@@ -42,6 +42,7 @@ backend/certs/*.pem
 *.pdf
 *.xlsx
 *.xls
+Clientes*.csv
 *.zip
 *.exe
 backups_auditoria/
