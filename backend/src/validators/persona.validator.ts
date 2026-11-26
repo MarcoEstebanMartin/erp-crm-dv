@@ -125,6 +125,8 @@ export const recordPersonaPaymentSchema = z.object({
     type: z.enum(['INCOME', 'OUTCOME']).optional(),
     supplierInvoiceId: z.union([z.number(), z.string()]).optional().nullable(),
     orderId: z.number().optional().nullable(),
+    orderIds: z.array(z.number().int().positive()).max(50).optional(),
+    applyToUnbilledBalance: z.boolean().optional(),
     bankAccountId: z.union([z.number(), z.string()]).optional().nullable(),
     allowCreditOnAccount: z.boolean().optional(),
     isCreditOnAccount: z.boolean().optional(),

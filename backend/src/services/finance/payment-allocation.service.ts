@@ -20,6 +20,7 @@ export interface AllocateTransactionParams {
   personaId: number;
   amount: NumericInput;
   preferredOrderId?: number | null;
+  preferredOrderIds?: number[];
   allocateOverflowToFifo?: boolean;
   manualAllocations?: ManualAllocationInput[];
 }
@@ -83,6 +84,7 @@ export class PaymentAllocationService {
       paymentAmount: params.amount,
       orders: allocatableOrders,
       preferredOrderId: params.preferredOrderId,
+      preferredOrderIds: params.preferredOrderIds,
       allocateOverflowToFifo: params.allocateOverflowToFifo,
       manualAllocations: params.manualAllocations,
     });
@@ -145,6 +147,42 @@ export class PaymentAllocationService {
       const available = roundToTwoDecimals(toDecimal(tx.amount.toString()).minus(used));
       if (available.gt(0)) {
         creditTransactions.push({ transactionId: tx.id, availableCredit: available });
+      }
+    }
+
+    // Descontar débitos sin factura (ej. Saldo inicial migrado) que ya fueron cubiertos
+    // por cobros sin imputar a Order, para no aplicarlos por error como saldo a favor.
+    if (creditTransactions.length > 0 && typeof (db as any).accountLedger?.findMany === 'function') {
+      const nonOrderLedgerRows: Array<{ entryType: string; transactionId: number | null; amount: { toString(): string } }> =
+        await (db as any).accountLedger.findMany({
+          where: { personaId: params.personaId, orderId: null },
+          select: { entryType: true, transactionId: true, amount: true },
+        });
+      let nonOrderNetDebit = new Decimal(0);
+      for (const row of nonOrderLedgerRows) {
+        if (row.entryType === 'DEBIT') {
+          nonOrderNetDebit = nonOrderNetDebit.plus(toDecimal(row.amount.toString()));
+        } else if (row.entryType === 'CREDIT' && row.transactionId === null) {
+          nonOrderNetDebit = nonOrderNetDebit.minus(toDecimal(row.amount.toString()));
+        }
+      }
+      let toAbsorb = Decimal.max(0, roundToTwoDecimals(nonOrderNetDebit));
+      if (toAbsorb.gt(0)) {
+        const adjustedCredits: AvailableCreditTransactionInput[] = [];
+        for (const item of creditTransactions) {
+          const avail = toDecimal(item.availableCredit);
+          if (toAbsorb.gt(0)) {
+            const absorbed = Decimal.min(avail, toAbsorb);
+            toAbsorb = roundToTwoDecimals(toAbsorb.minus(absorbed));
+            const left = roundToTwoDecimals(avail.minus(absorbed));
+            if (left.gt(0)) {
+              adjustedCredits.push({ transactionId: item.transactionId, availableCredit: left });
+            }
+          } else {
+            adjustedCredits.push(item);
+          }
+        }
+        creditTransactions.splice(0, creditTransactions.length, ...adjustedCredits);
       }
     }
 

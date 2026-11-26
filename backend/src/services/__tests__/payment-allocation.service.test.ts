@@ -169,4 +169,48 @@ describe('PaymentAllocationService', () => {
     expect(result.totalAvailableCredit).toBe(0);
     expect(result.netBalance).toBe(49836);
   });
+
+  it('applyAvailableCreditToOrder no aplica como saldo a favor un cobro que canceló Saldo inicial (OPENING_BALANCE)', async () => {
+    const createMany = vi.fn().mockResolvedValue({ count: 0 });
+    const mockDb: any = {
+      order: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 3,
+          status: OrderStatus.DELIVERED,
+          totalAmount: { toString: () => '100000' },
+          paymentAllocations: [],
+          creditNotes: [],
+        }),
+      },
+      transaction: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: 700,
+            amount: { toString: () => '231321' },
+            paymentAllocations: [], // Cubrió Saldo inicial sin Order
+          },
+        ]),
+      },
+      accountLedger: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            entryType: 'DEBIT',
+            transactionId: null,
+            amount: { toString: () => '231321' },
+          },
+        ]),
+      },
+      paymentAllocation: { createMany },
+    };
+
+    const res = await service.applyAvailableCreditToOrder(mockDb, {
+      orderId: 3,
+      personaId: 10838,
+    });
+
+    expect(res.totalApplied).toBe(0);
+    expect(res.remainingOrderPending).toBe(100000);
+    expect(res.orderStatus).toBe('PENDING');
+    expect(createMany).not.toHaveBeenCalled();
+  });
 });

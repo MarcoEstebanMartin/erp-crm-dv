@@ -26,39 +26,70 @@ interface PreviewLine {
 interface AdminPaymentAllocationPreviewProps {
   paymentAmount: string;
   pendingInvoices: PendingInvoiceOption[];
-  selectedInvoiceId: number | null;
+  selectedInvoiceIds: number[];
+  unbilledBalance?: number;
+  includeUnbilledBalance?: boolean;
 }
 
 export const AdminPaymentAllocationPreview: React.FC<AdminPaymentAllocationPreviewProps> = ({
   paymentAmount,
   pendingInvoices,
-  selectedInvoiceId,
+  selectedInvoiceIds,
+  unbilledBalance = 0,
+  includeUnbilledBalance = false,
 }) => {
   const lines = useMemo<PreviewLine[]>(() => {
     const parsed = Math.round(Number(paymentAmount));
-    if (!Number.isFinite(parsed) || parsed <= 0 || pendingInvoices.length === 0) return [];
+    const hasUnbilled = unbilledBalance > 0;
+    if (!Number.isFinite(parsed) || parsed <= 0 || (pendingInvoices.length === 0 && !hasUnbilled)) {
+      return [];
+    }
 
-    const ordered = selectedInvoiceId
-      ? [
-          ...pendingInvoices.filter((i) => i.id === selectedInvoiceId),
-          ...pendingInvoices.filter((i) => i.id !== selectedInvoiceId),
-        ]
-      : pendingInvoices;
+    const selectedSet = new Set(selectedInvoiceIds);
+    const orderedInvoices =
+      selectedInvoiceIds.length > 0
+        ? [
+            ...selectedInvoiceIds
+              .map((id) => pendingInvoices.find((i) => i.id === id))
+              .filter((i): i is PendingInvoiceOption => Boolean(i)),
+            ...pendingInvoices.filter((i) => !selectedSet.has(i.id)),
+          ]
+        : pendingInvoices;
+
+    type PreviewTarget = { key: string; label: string; pending: number };
+    const unbilledTarget: PreviewTarget | null = hasUnbilled
+      ? { key: 'unbilled', label: 'Saldo anterior', pending: unbilledBalance }
+      : null;
+
+    const invoiceTargets: PreviewTarget[] = orderedInvoices.map((inv) => {
+      const dateStr = formatInvoiceShortDate(inv.createdAt);
+      return {
+        key: String(inv.id),
+        label: dateStr ? `${inv.invoiceNumber} · ${dateStr}` : inv.invoiceNumber,
+        pending: Math.round(Number(inv.pendingAmount)),
+      };
+    });
+
+    const prioritizeUnbilled =
+      hasUnbilled && (includeUnbilledBalance || selectedInvoiceIds.length === 0);
+    const targets: PreviewTarget[] = unbilledTarget
+      ? prioritizeUnbilled
+        ? [unbilledTarget, ...invoiceTargets]
+        : [...invoiceTargets, unbilledTarget]
+      : invoiceTargets;
 
     let remaining = parsed;
     const result: PreviewLine[] = [];
 
-    for (const inv of ordered) {
+    for (const target of targets) {
       if (remaining <= 0) break;
-      const pending = Math.round(Number(inv.pendingAmount));
-      if (pending <= 0) continue;
-      const applied = Math.min(remaining, pending);
-      const leftAfter = pending - applied;
+      if (target.pending <= 0) continue;
+      const applied = Math.min(remaining, target.pending);
+      const leftAfter = target.pending - applied;
       remaining -= applied;
-      const dateStr = formatInvoiceShortDate(inv.createdAt);
       result.push({
-        key: String(inv.id),
-        label: dateStr ? `${inv.invoiceNumber} · ${dateStr}` : inv.invoiceNumber,
+        key: target.key,
+        label: target.label,
         amount: applied,
         badge: leftAfter === 0 ? 'Saldada' : `Resta $${leftAfter.toLocaleString('es-AR')}`,
       });
@@ -75,7 +106,7 @@ export const AdminPaymentAllocationPreview: React.FC<AdminPaymentAllocationPrevi
     }
 
     return result;
-  }, [paymentAmount, pendingInvoices, selectedInvoiceId]);
+  }, [paymentAmount, pendingInvoices, selectedInvoiceIds, unbilledBalance, includeUnbilledBalance]);
 
   if (lines.length === 0) return null;
 

@@ -1,15 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
-import { api } from '../../utils/api';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
 import { AdminPaymentCheckFields } from './AdminPaymentCheckFields';
-import {
-  AdminPaymentAllocationPreview,
-  formatInvoiceShortDate,
-  type PendingInvoiceOption,
-} from './AdminPaymentAllocationPreview';
-
-type ClientPaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CHECK';
+import { AdminPaymentAllocationPreview } from './AdminPaymentAllocationPreview';
+import { AdminPaymentInvoiceSelector } from './AdminPaymentInvoiceSelector';
+import { useAdminPaymentModal, type ClientPaymentMethod } from './useAdminPaymentModal';
 
 interface AdminPaymentModalProps {
   paymentModal: { open: boolean; clientId: number; clientName: string } | null;
@@ -28,143 +23,51 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
   setErrorMsg,
   setSuccessMsg,
 }) => {
-  const creditCheckboxRef = useRef<HTMLInputElement>(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<ClientPaymentMethod>('CASH');
-  const [paymentDescription, setPaymentDescription] = useState('');
-  const [checkNumber, setCheckNumber] = useState('');
-  const [checkBank, setCheckBank] = useState('');
-  const [checkDueDate, setCheckDueDate] = useState('');
-  const [isEcheq, setIsEcheq] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentPendingInvoices, setPaymentPendingInvoices] = useState<PendingInvoiceOption[]>([]);
-  const [availableCredit, setAvailableCredit] = useState(0);
-  const [outstandingBalance, setOutstandingBalance] = useState<number | null>(null);
-  const [paymentSelectedInvoiceId, setPaymentSelectedInvoiceId] = useState<number | null>(null);
-  const [allowCreditOnAccount, setAllowCreditOnAccount] = useState(false);
-  const [needsCreditOverride, setNeedsCreditOverride] = useState(false);
-  const [modalError, setModalError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (paymentModal && paymentModal.open) {
-      setPaymentAmount('');
-      setPaymentMethod('CASH');
-      setPaymentDescription('');
-      setCheckNumber('');
-      setCheckBank('');
-      setCheckDueDate('');
-      setIsEcheq(false);
-      setPaymentSelectedInvoiceId(null);
-      setAllowCreditOnAccount(false);
-      setNeedsCreditOverride(false);
-      setModalError(null);
-      const profileBalance =
-        clientProfileModal?.client?.id === paymentModal.clientId
-          ? Math.round(Number(clientProfileModal.client.outstandingBalance || 0))
-          : null;
-      setOutstandingBalance(profileBalance);
-      api
-        .getPersonaPendingInvoices(paymentModal.clientId)
-        .then((res) => {
-          const rawInvoices: PendingInvoiceOption[] =
-            res?.invoices && Array.isArray(res.invoices) ? res.invoices : [];
-          const sortedInvoices = [...rawInvoices].sort((a, b) => {
-            const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return ta !== tb ? ta - tb : a.id - b.id;
-          });
-          setPaymentPendingInvoices(sortedInvoices);
-          setPaymentSelectedInvoiceId(sortedInvoices.length > 0 ? sortedInvoices[0].id : null);
-          setAvailableCredit(Math.round(Number(res?.totalAvailableCredit || 0)));
-          if (res?.outstandingBalance !== undefined && res?.outstandingBalance !== null) {
-            setOutstandingBalance(Math.round(Number(res.outstandingBalance)));
-          } else if (res?.netBalance !== undefined && res?.netBalance !== null) {
-            setOutstandingBalance(Math.round(Number(res.netBalance)));
-          }
-        })
-        .catch(() => {
-          setPaymentPendingInvoices([]);
-          setAvailableCredit(0);
-        });
-    } else {
-      setPaymentPendingInvoices([]);
-      setAvailableCredit(0);
-      setOutstandingBalance(null);
-      setAllowCreditOnAccount(false);
-      setNeedsCreditOverride(false);
-      setModalError(null);
-    }
-  }, [paymentModal, clientProfileModal]);
+  const {
+    creditCheckboxRef,
+    paymentAmount,
+    setPaymentAmount,
+    paymentMethod,
+    handlePaymentMethodChange,
+    paymentDescription,
+    setPaymentDescription,
+    checkNumber,
+    setCheckNumber,
+    checkBank,
+    setCheckBank,
+    checkDueDate,
+    setCheckDueDate,
+    isEcheq,
+    setIsEcheq,
+    paymentLoading,
+    paymentPendingInvoices,
+    unbilledBalance,
+    includeUnbilledBalance,
+    availableCredit,
+    outstandingBalance,
+    paymentSelectedInvoiceIds,
+    allowCreditOnAccount,
+    setAllowCreditOnAccount,
+    modalError,
+    setModalError,
+    effectiveDebt,
+    fillTargetAmount,
+    excessAmount,
+    showCreditToggle,
+    handleToggleInvoice,
+    handleToggleUnbilledBalance,
+    handleToggleAllInvoices,
+    handleSubmit,
+  } = useAdminPaymentModal({
+    paymentModal,
+    clientProfileModal,
+    onClose,
+    onSuccess,
+    setErrorMsg,
+    setSuccessMsg,
+  });
 
   if (!paymentModal || !paymentModal.open) return null;
-
-  const parsedAmount = Math.round(Number(paymentAmount) || 0);
-  const selectedInvoice = paymentSelectedInvoiceId
-    ? paymentPendingInvoices.find((i) => i.id === paymentSelectedInvoiceId) || null
-    : null;
-  const effectiveDebt = Math.max(0, outstandingBalance ?? 0);
-  const fillTargetAmount = selectedInvoice ? Math.max(0, Math.round(Number(selectedInvoice.pendingAmount))) : effectiveDebt;
-  const excessAmount =
-    parsedAmount > 0 && outstandingBalance !== null && parsedAmount > effectiveDebt
-      ? parsedAmount - effectiveDebt
-      : 0;
-  const showCreditToggle = excessAmount > 0 || needsCreditOverride;
-  const isOverflowingOldestIntoFifo =
-    selectedInvoice !== null &&
-    paymentPendingInvoices[0]?.id === selectedInvoice.id &&
-    parsedAmount > Math.round(Number(selectedInvoice.pendingAmount));
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!paymentAmount || Number(paymentAmount) <= 0) {
-      setModalError('Monto inválido.');
-      return;
-    }
-    if (paymentMethod === 'CHECK' && !checkNumber.trim()) {
-      setModalError('Ingresá el número de cheque o eCheq.');
-      return;
-    }
-    if (showCreditToggle && !allowCreditOnAccount) {
-      setModalError('Tildá "Dejar plata a favor" para continuar.');
-      creditCheckboxRef.current?.focus();
-      return;
-    }
-    if (paymentLoading) return;
-
-    try {
-      setPaymentLoading(true);
-      setModalError(null);
-      setErrorMsg(null);
-
-      await api.registerPayment(paymentModal.clientId, {
-        amount: Number(paymentAmount),
-        paymentMethod,
-        description: paymentDescription.trim() || undefined,
-        orderId: isOverflowingOldestIntoFifo ? undefined : paymentSelectedInvoiceId || undefined,
-        allowCreditOnAccount: showCreditToggle ? allowCreditOnAccount : false,
-        ...(paymentMethod === 'CHECK'
-          ? {
-              checkNumber: checkNumber.trim(),
-              checkBank: checkBank.trim() || undefined,
-              checkDueDate: checkDueDate || undefined,
-              isEcheq,
-            }
-          : {}),
-      });
-
-      setSuccessMsg('Cobro registrado.');
-      await onSuccess(paymentModal.clientId);
-      onClose();
-    } catch (err: any) {
-      const msg = err?.message || 'Error al registrar cobro.';
-      if (msg.includes('Dejar plata a favor')) {
-        setNeedsCreditOverride(true);
-      }
-      setModalError(msg);
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
 
   return (
     <NativeModalDialog
@@ -217,35 +120,16 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
           )}
         </div>
 
-        {paymentPendingInvoices.length > 0 && (
-          <div className="form-group">
-            <label htmlFor="payment-invoice">Imputar</label>
-            <select
-              id="payment-invoice"
-              name="orderId"
-              className="select"
-              value={paymentSelectedInvoiceId ?? paymentPendingInvoices[0].id}
-              onChange={(e) => {
-                const invId = Number(e.target.value);
-                setPaymentSelectedInvoiceId(invId);
-                const inv = paymentPendingInvoices.find((i) => i.id === invId);
-                if (inv) setPaymentAmount(String(Math.round(Number(inv.pendingAmount))));
-              }}
-            >
-              {paymentPendingInvoices.map((inv) => {
-                const dateStr = formatInvoiceShortDate(inv.createdAt);
-                return (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.invoiceNumber}
-                    {dateStr ? ` · ${dateStr}` : ''}
-                    {inv.status === 'PARTIAL' ? ' · Parcial' : ''} — $
-                    {Math.round(Number(inv.pendingAmount)).toLocaleString('es-AR')}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-        )}
+        <AdminPaymentInvoiceSelector
+          pendingInvoices={paymentPendingInvoices}
+          selectedInvoiceIds={paymentSelectedInvoiceIds}
+          unbilledBalance={unbilledBalance}
+          includeUnbilledBalance={includeUnbilledBalance}
+          disabled={paymentLoading}
+          onToggleInvoice={handleToggleInvoice}
+          onToggleUnbilledBalance={handleToggleUnbilledBalance}
+          onToggleAll={handleToggleAllInvoices}
+        />
 
         <div className="form-group">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -282,7 +166,9 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
         <AdminPaymentAllocationPreview
           paymentAmount={paymentAmount}
           pendingInvoices={paymentPendingInvoices}
-          selectedInvoiceId={paymentSelectedInvoiceId}
+          selectedInvoiceIds={paymentSelectedInvoiceIds}
+          unbilledBalance={unbilledBalance}
+          includeUnbilledBalance={includeUnbilledBalance}
         />
 
         {showCreditToggle && (
@@ -340,16 +226,7 @@ export const AdminPaymentModal: React.FC<AdminPaymentModalProps> = ({
             name="paymentMethod"
             className="select"
             value={paymentMethod}
-            onChange={(e) => {
-              const next = e.target.value as ClientPaymentMethod;
-              setPaymentMethod(next);
-              if (next !== 'CHECK') {
-                setCheckNumber('');
-                setCheckBank('');
-                setCheckDueDate('');
-                setIsEcheq(false);
-              }
-            }}
+            onChange={(e) => handlePaymentMethodChange(e.target.value as ClientPaymentMethod)}
             disabled={paymentLoading}
           >
             <option value="CASH">Efectivo</option>

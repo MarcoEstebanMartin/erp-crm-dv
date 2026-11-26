@@ -216,4 +216,66 @@ describe('payment-allocation.engine (Motor Profesional de Imputaciones)', () => 
     expect(summary.totalAvailableCredit).toBe(0);
     expect(summary.netBalance).toBe(49836);
   });
+
+  it('imputa varias facturas puntuales elegidas (ej. las últimas 2) sin tocar la más vieja', () => {
+    const result = planPaymentAllocations({
+      paymentAmount: 409817,
+      preferredOrderIds: [2, 3],
+      orders: [
+        { id: 1, invoiceNumber: 'INT-00001', totalAmount: 356992, allocatedAmount: 0, creditNotesAmount: 0 },
+        { id: 2, invoiceNumber: 'INT-00002', totalAmount: 178496, allocatedAmount: 0, creditNotesAmount: 0 },
+        { id: 3, invoiceNumber: 'INT-00003', totalAmount: 231321, allocatedAmount: 0, creditNotesAmount: 0 },
+      ],
+    });
+
+    expect(result.totalAllocated).toBe(409817);
+    expect(result.unallocatedCredit).toBe(0);
+    expect(result.allocations).toEqual([
+      {
+        orderId: 2,
+        invoiceNumber: 'INT-00002',
+        amount: 178496,
+        previousPending: 178496,
+        newPending: 0,
+        newStatus: 'PAID',
+      },
+      {
+        orderId: 3,
+        invoiceNumber: 'INT-00003',
+        amount: 231321,
+        previousPending: 231321,
+        newPending: 0,
+        newStatus: 'PAID',
+      },
+    ]);
+  });
+
+  it('cubre parcialmente la última de las seleccionadas si el monto es menor y derrama a FIFO si es mayor', () => {
+    const orders = [
+      { id: 1, invoiceNumber: 'INT-00001', totalAmount: 356992, allocatedAmount: 0, creditNotesAmount: 0 },
+      { id: 2, invoiceNumber: 'INT-00002', totalAmount: 178496, allocatedAmount: 0, creditNotesAmount: 0 },
+      { id: 3, invoiceNumber: 'INT-00003', totalAmount: 231321, allocatedAmount: 0, creditNotesAmount: 0 },
+    ];
+
+    const partial = planPaymentAllocations({
+      paymentAmount: 300000,
+      preferredOrderIds: [2, 3],
+      orders,
+    });
+    expect(partial.allocations.map((a) => ({ id: a.orderId, amt: a.amount, status: a.newStatus }))).toEqual([
+      { id: 2, amt: 178496, status: 'PAID' },
+      { id: 3, amt: 121504, status: 'PARTIAL' },
+    ]);
+
+    const overflow = planPaymentAllocations({
+      paymentAmount: 500000,
+      preferredOrderIds: [2, 3],
+      orders,
+    });
+    expect(overflow.allocations.map((a) => ({ id: a.orderId, amt: a.amount, status: a.newStatus }))).toEqual([
+      { id: 2, amt: 178496, status: 'PAID' },
+      { id: 3, amt: 231321, status: 'PAID' },
+      { id: 1, amt: 90183, status: 'PARTIAL' },
+    ]);
+  });
 });

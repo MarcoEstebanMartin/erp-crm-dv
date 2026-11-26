@@ -74,7 +74,8 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
     : (selectedSellerObj?.username?.replace('_', ' ').toUpperCase() || selectedSellerFilter);
 
   return (
-    <div className="card" style={{ padding: '24px', marginBottom: '20px' }}>
+    <>
+      <div className="card no-print" style={{ padding: '24px', marginBottom: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>Deudores por localidad</h3>
         <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
@@ -289,11 +290,14 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
         </div>
       )}
 
+      </div>
+
       <DebtorsPrintSheet
         filteredDebtors={filteredDebtors}
         groups={groups}
         sellerLabel={sellerLabel}
+        selectedBranchFilter={selectedBranchFilter}
       />
-    </div>
+    </>
   );
 };

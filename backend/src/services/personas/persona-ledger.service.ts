@@ -154,9 +154,15 @@ export class PersonaLedgerSubService {
     }
 
     const summary = await paymentAllocationService.getClientPendingInvoicesWithAllocations(persona.id);
+    const outstandingBalance = roundToIntegerPeso(persona.outstandingBalance.toString()).toNumber();
+    const pendingOnInvoices = Math.round(Number(summary.totalPendingOnInvoices || 0));
+    const unbilledBalance = Math.max(0, outstandingBalance - pendingOnInvoices);
+    const realAvailableCredit = Math.max(0, pendingOnInvoices - outstandingBalance);
     return {
       ...summary,
-      outstandingBalance: roundToIntegerPeso(persona.outstandingBalance.toString()).toNumber(),
+      outstandingBalance,
+      unbilledBalance,
+      totalAvailableCredit: realAvailableCredit,
     };
   }
 

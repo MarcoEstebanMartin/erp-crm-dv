@@ -1,6 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Download, FileText, Plus, Save, Search, Trash2, Edit3 } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Download, FileText, Plus, Save, Search, Trash2, Edit3 } from 'lucide-react';
 import {
   catalogStudioApi,
   type CatalogBadgeType,
@@ -13,6 +13,8 @@ import { CatalogProductCard } from './CatalogProductCard';
 import { CatalogProductEditDialog } from './CatalogProductEditDialog';
 import { CatalogProductPhotoDialog } from './CatalogProductPhotoDialog';
 import { CatalogComboDialog } from './CatalogComboDialog';
+import { CatalogCategoryOrderDialog } from './CatalogCategoryOrderDialog';
+import { buildEffectiveCategoryOrder } from './catalogCategoryOrder.helper';
 import './catalogStudio.css';
 
 type FilterMode = 'all' | 'ofertones' | 'destacados' | 'no_photo' | 'hidden';
@@ -51,6 +53,7 @@ export default function CatalogStudioTab() {
   const [photoProduct, setPhotoProduct] = useState<CatalogStudioProduct | null>(null);
   const [comboDialogOpen, setComboDialogOpen] = useState(false);
   const [editingCombo, setEditingCombo] = useState<CatalogCombo | null>(null);
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const resumenMenuRef = useRef<HTMLDetailsElement>(null);
 
   const persistState = async (next: CatalogStudioState, silent = false) => {
@@ -162,6 +165,12 @@ export default function CatalogStudioTab() {
     persistState(nextState);
   };
 
+  const handleSaveCategoryOrder = (nextOrder: string[]) => {
+    const nextState = { ...state, categoryOrder: nextOrder };
+    setState(nextState);
+    persistState(nextState);
+  };
+
   const handleDownload = async (type: 'magazine' | 'resumen', resumenMode: CatalogResumenMode = 'all') => {
     if (resumenMenuRef.current) resumenMenuRef.current.open = false;
     setDownloadingPdf(type);
@@ -183,6 +192,26 @@ export default function CatalogStudioTab() {
   const deferredSearch = useDeferredValue(search);
 
   const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products]);
+
+  const defaultCategoryOrder = useMemo(
+    () => buildEffectiveCategoryOrder([], categories, activeProducts.map((p) => p.category)),
+    [categories, activeProducts],
+  );
+
+  const effectiveCategoryOrder = useMemo(
+    () => buildEffectiveCategoryOrder(state.categoryOrder, categories, activeProducts.map((p) => p.category)),
+    [state.categoryOrder, categories, activeProducts],
+  );
+
+  const countsByCategory = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of activeProducts) {
+      if (!p.catalogVisible) continue;
+      if (state.hideOutOfStock && p.stock <= 0) continue;
+      map.set(p.category, (map.get(p.category) ?? 0) + 1);
+    }
+    return map;
+  }, [activeProducts, state.hideOutOfStock]);
 
   const filteredProducts = useMemo(() => {
     const term = deferredSearch.trim().toLowerCase();
@@ -211,9 +240,8 @@ export default function CatalogStudioTab() {
       map.set(p.category, list);
     }
 
-    const order = state.categoryOrder.length > 0 ? state.categoryOrder : categories;
     const result: Array<{ name: string; items: CatalogStudioProduct[] }> = [];
-    for (const c of order) {
+    for (const c of effectiveCategoryOrder) {
       const items = map.get(c);
       if (items && items.length > 0) {
         result.push({ name: c, items });
@@ -224,7 +252,7 @@ export default function CatalogStudioTab() {
       result.push({ name, items });
     }
     return result;
-  }, [filteredProducts, categories, state.categoryOrder]);
+  }, [filteredProducts, effectiveCategoryOrder]);
 
   const { ofertonesCount, destacadosCount, highlightedCount } = useMemo(() => {
     let ofertones = 0;
@@ -277,6 +305,14 @@ export default function CatalogStudioTab() {
         </div>
 
         <div className="cs-actions">
+          <button
+            type="button"
+            className="cs-btn"
+            onClick={() => setOrderDialogOpen(true)}
+          >
+            <ArrowUpDown size={14} />
+            <span>Orden</span>
+          </button>
           <button
             type="button"
             className="cs-btn"
@@ -376,13 +412,11 @@ export default function CatalogStudioTab() {
           onChange={(e) => setSelectedCategory(e.target.value)}
         >
           <option value="">Todas las secciones</option>
-          {categories
-            .filter((c) => c !== 'COMBOS')
-            .map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+          {effectiveCategoryOrder.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
         </select>
 
         <div className="cs-segmented" role="group" aria-label="Filtro rápido">
@@ -512,6 +546,15 @@ export default function CatalogStudioTab() {
           setEditingCombo(null);
         }}
         onSave={handleSaveCombo}
+      />
+
+      <CatalogCategoryOrderDialog
+        open={orderDialogOpen}
+        currentOrder={effectiveCategoryOrder}
+        defaultOrder={defaultCategoryOrder}
+        countsByCategory={countsByCategory}
+        onClose={() => setOrderDialogOpen(false)}
+        onSave={handleSaveCategoryOrder}
       />
     </div>
   );

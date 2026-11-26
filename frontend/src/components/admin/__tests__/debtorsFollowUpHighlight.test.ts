@@ -138,6 +138,7 @@ describe('Deudores — Resaltado automático y etiquetas estilo fibrón/lapicera
     expect(html).toContain('A: Resto 5/11 y últimas 2 · X: Resto 12/11 y última');
     expect(html).toContain('12/11');
     expect(html).toContain('#FFF7ED');
+    expect(html).toContain('class="card no-print"');
   });
 
   it('imprime la hoja con resaltado exacto (print-color-adjust) y detalle separado por sucursal A y X', () => {
@@ -155,5 +156,57 @@ describe('Deudores — Resaltado automático y etiquetas estilo fibrón/lapicera
     expect(html).toContain('12/11');
     expect(html).toContain('#FED7AA');
     expect(html).toContain('print-color-adjust:exact');
+    expect(html).toContain('>Cliente (A)</th>');
+    expect(html).toContain('>Cliente</th>');
+    expect(html).toContain('>Dirección</th>');
+    expect(html).not.toContain('>Ruta</th>');
+    expect(html).toContain('(Alvear)');
+    expect(html).toContain('display:table-row-group');
+    expect(html.indexOf('>Cliente (A)</th>')).toBeLessThan(html.indexOf('>Cliente</th>'));
+    expect(html).not.toContain('margin-bottom:22px;break-inside:avoid');
+  });
+
+  it('oculta "Vendedor: Todos" en el encabezado de impresión', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(DebtorsPrintSheet, {
+        filteredDebtors: sampleDebtors,
+        groups: { Alvear: sampleDebtors },
+        sellerLabel: 'Todos',
+      }),
+    );
+
+    expect(html).not.toContain('Vendedor: Todos');
+    expect(html).toContain('Deudor de Alvear');
+    expect(html).toContain('(Alvear)');
+  });
+
+  it('respeta el filtro de sucursal al imprimir (solo A o solo X)', () => {
+    const htmlA = renderToStaticMarkup(
+      React.createElement(DebtorsPrintSheet, {
+        filteredDebtors: sampleDebtors,
+        groups: { Alvear: sampleDebtors },
+        sellerLabel: 'FABIAN',
+        selectedBranchFilter: 'A',
+      }),
+    );
+
+    expect(htmlA).toContain('>Cliente (A)</th>');
+    expect(htmlA).not.toContain('>Cliente</th>');
+    expect(htmlA).toContain('ANNARATONE SERGIO ADRIAN');
+    expect(htmlA).not.toContain('TERESA DENIS');
+
+    const htmlX = renderToStaticMarkup(
+      React.createElement(DebtorsPrintSheet, {
+        filteredDebtors: sampleDebtors,
+        groups: { Alvear: sampleDebtors },
+        sellerLabel: 'FABIAN',
+        selectedBranchFilter: 'X',
+      }),
+    );
+
+    expect(htmlX).toContain('>Cliente</th>');
+    expect(htmlX).not.toContain('>Cliente (A)</th>');
+    expect(htmlX).toContain('TERESA DENIS');
+    expect(htmlX).not.toContain('ANNARATONE SERGIO ADRIAN');
   });
 });

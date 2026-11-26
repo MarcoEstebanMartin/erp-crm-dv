@@ -28,8 +28,23 @@ export class PersonaPaymentSubService {
       type,
       supplierInvoiceId,
       orderId,
+      orderIds,
+      applyToUnbilledBalance,
       bankAccountId: reqBankAccountId,
     } = data;
+    const rawOrderIds: number[] = Array.isArray(orderIds)
+      ? Array.from(
+          new Set(
+            orderIds
+              .map((v: any) => Number(v))
+              .filter((n: number) => Number.isInteger(n) && n > 0),
+          ),
+        )
+      : [];
+    const singleOrderId = orderId ? Number(orderId) : null;
+    const preferredOrderIds =
+      rawOrderIds.length > 0 ? rawOrderIds : singleOrderId ? [singleOrderId] : undefined;
+    const prioritizeUnbilledBalance = Boolean(applyToUnbilledBalance);
     const selectedBranch = branch || 'X';
 
     const persona = await prisma.persona.findUnique({ where: { id } });
@@ -139,12 +154,47 @@ export class PersonaPaymentSubService {
       }
 
       let orderNumberDesc = '';
-      if (orderId) {
-        const targetOrder = await tx.order.findUnique({ where: { id: Number(orderId) } });
+      if (preferredOrderIds && preferredOrderIds.length > 1 && typeof tx.order?.findMany === 'function') {
+        const targetOrders = await tx.order.findMany({
+          where: { id: { in: preferredOrderIds }, personaId: persona.id },
+          select: { id: true, invoiceNumber: true },
+        });
+        const labelById = new Map(
+          targetOrders.map((o) => [
+            o.id,
+            o.invoiceNumber || `INT-${o.id.toString().padStart(5, '0')}`,
+          ]),
+        );
+        const orderedLabels = preferredOrderIds
+          .map((oid) => labelById.get(oid))
+          .filter((lbl): lbl is string => Boolean(lbl));
+        if (orderedLabels.length > 0) {
+          orderNumberDesc = orderedLabels.join(', ');
+        }
+      } else if (singleOrderId) {
+        const targetOrder = await tx.order.findUnique({ where: { id: singleOrderId } });
         if (targetOrder) {
           orderNumberDesc =
             targetOrder.invoiceNumber || `INT-${targetOrder.id.toString().padStart(5, '0')}`;
         }
+      }
+
+      let remainingUnbilledToCover = toDecimal(0);
+      if (
+        resolvedType === TransactionType.INCOME &&
+        persona.isClient &&
+        prioritizeUnbilledBalance &&
+        typeof tx.paymentAllocation?.createMany === 'function'
+      ) {
+        const currentSummary = await paymentAllocationService.getClientPendingInvoicesWithAllocations(
+          persona.id,
+          tx,
+        );
+        const currentOutstanding = roundToTwoDecimals(persona.outstandingBalance.toString());
+        const currentPendingOnOrders = roundToTwoDecimals(currentSummary.totalPendingOnInvoices);
+        remainingUnbilledToCover = currentOutstanding.gt(currentPendingOnOrders)
+          ? roundToTwoDecimals(currentOutstanding.minus(currentPendingOnOrders))
+          : toDecimal(0);
       }
 
       const createdTransactions = [];
@@ -196,9 +246,15 @@ export class PersonaPaymentSubService {
           item.description ||
           (supplierInvoiceId
             ? `Pago de Factura Nro ${invoiceNumberToLog}`
-            : orderId
-              ? `Cobro de Factura ${orderNumberDesc}`
-              : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`);
+            : prioritizeUnbilledBalance && orderNumberDesc
+              ? `Cobro de Saldo anterior + ${preferredOrderIds && preferredOrderIds.length > 1 ? 'Facturas' : 'Factura'} ${orderNumberDesc}`
+              : prioritizeUnbilledBalance
+                ? 'Cobro de Saldo anterior'
+                : orderNumberDesc
+                  ? preferredOrderIds && preferredOrderIds.length > 1
+                    ? `Cobro de Facturas ${orderNumberDesc}`
+                    : `Cobro de Factura ${orderNumberDesc}`
+                  : `${resolvedType === TransactionType.OUTCOME ? 'Pago' : 'Cobro'} en cuenta corriente de ${persona.name}`);
         const txDescription = checkDetailSuffix
           ? `${baseDescription} - ${checkDetailSuffix}`
           : baseDescription;
@@ -259,12 +315,25 @@ export class PersonaPaymentSubService {
 
         const isIncome = resolvedType === TransactionType.INCOME;
         if (isIncome && persona.isClient && typeof tx.paymentAllocation?.createMany === 'function') {
-          await paymentAllocationService.allocateTransactionToOrders(tx, {
-            transactionId: transaction.id,
-            personaId: persona.id,
-            amount: item.amount,
-            preferredOrderId: orderId ? Number(orderId) : null,
-          });
+          let amountForOrders = roundToTwoDecimals(item.amount);
+          if (prioritizeUnbilledBalance && remainingUnbilledToCover.gt(0)) {
+            const absorbedByUnbilled = amountForOrders.lte(remainingUnbilledToCover)
+              ? amountForOrders
+              : remainingUnbilledToCover;
+            remainingUnbilledToCover = roundToTwoDecimals(
+              remainingUnbilledToCover.minus(absorbedByUnbilled),
+            );
+            amountForOrders = roundToTwoDecimals(amountForOrders.minus(absorbedByUnbilled));
+          }
+          if (amountForOrders.gt(0)) {
+            await paymentAllocationService.allocateTransactionToOrders(tx, {
+              transactionId: transaction.id,
+              personaId: persona.id,
+              amount: amountForOrders.toNumber(),
+              preferredOrderId: singleOrderId,
+              preferredOrderIds,
+            });
+          }
         }
         const ledgerRes = await recordLedgerMovement(tx, {
           personaId: persona.id,

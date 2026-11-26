@@ -22,7 +22,9 @@ export interface PlanPaymentAllocationsInput {
   orders: AllocatableOrderInput[];
   /** Si el usuario eligió priorizar una factura específica. */
   preferredOrderId?: number | null;
-  /** Si es true (default), el sobrante tras cubrir preferredOrderId sigue en FIFO a las demás facturas. */
+  /** Si el usuario eligió priorizar varias facturas específicas (en orden de aplicación). */
+  preferredOrderIds?: number[];
+  /** Si es true (default), el sobrante tras cubrir las facturas preferidas sigue en FIFO a las demás. */
   allocateOverflowToFifo?: boolean;
   /** Asignación manual explícita por factura (opcional). */
   manualAllocations?: ManualAllocationInput[];
@@ -183,10 +185,22 @@ export function planPaymentAllocations(
   } else {
     const allocateOverflow = input.allocateOverflowToFifo !== false;
 
-    if (input.preferredOrderId) {
-      const preferred = pendingByOrderId.get(input.preferredOrderId);
-      if (preferred) {
-        applyToEntry(preferred);
+    const preferredIds: number[] = [];
+    if (Array.isArray(input.preferredOrderIds) && input.preferredOrderIds.length > 0) {
+      for (const id of input.preferredOrderIds) {
+        if (!preferredIds.includes(id)) preferredIds.push(id);
+      }
+    } else if (input.preferredOrderId) {
+      preferredIds.push(input.preferredOrderId);
+    }
+
+    if (preferredIds.length > 0) {
+      for (const prefId of preferredIds) {
+        if (remaining.lte(0)) break;
+        const preferred = pendingByOrderId.get(prefId);
+        if (preferred) {
+          applyToEntry(preferred);
+        }
       }
       if (!allocateOverflow) {
         return {
