@@ -159,7 +159,7 @@ describe('Auditoría en Español y Contexto Real (Paso 1)', () => {
     expect(formatAuditPesos('-1500.50')).toBe('-$1.501');
   });
 
-  it('incluye módulo Cambios de precios, botón rápido en AuditLogsFilterBar y diff completo de Lista A/B/C', () => {
+  it('incluye módulo Cambios de precios en el selector sin botón duplicado y diff completo de Lista A/B/C', () => {
     expect(AUDIT_MODULES.some((m) => m.value === 'PRICES' && m.label === 'Cambios de precios')).toBe(true);
 
     const msg = formatAuditMessage({
@@ -185,7 +185,7 @@ describe('Auditoría en Español y Contexto Real (Paso 1)', () => {
         onReset: noop,
       }),
     );
-    expect(html).toContain('Cambios de precios');
-    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('<option value="PRICES" selected="">Cambios de precios</option>');
+    expect(html).not.toContain('aria-pressed');
   });
 });
