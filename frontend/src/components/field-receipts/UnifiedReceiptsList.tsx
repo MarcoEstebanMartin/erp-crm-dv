@@ -24,6 +24,7 @@ import {
 } from './UnifiedReceiptRowItem';
 
 type ReceiptOriginFilter = 'ALL' | 'OFFICE' | 'SELLER' | 'DRIVER';
+type ReceiptBillingFilter = 'ALL' | 'OFFICIAL' | 'INTERNAL';
 
 interface FieldReceiptEntry {
   collectorName: string;
@@ -95,6 +96,7 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
   onClientWhatsAppSaved,
 }) => {
   const [originFilter, setOriginFilter] = useState<ReceiptOriginFilter>('ALL');
+  const [billingFilter, setBillingFilter] = useState<ReceiptBillingFilter>('ALL');
   const [search, setSearch] = useState('');
   const [busyPdfKey, setBusyPdfKey] = useState<string | null>(null);
   const [waTarget, setWaTarget] = useState<ReceiptWhatsAppTarget | null>(null);
@@ -151,6 +153,7 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
     const officeRows: UnifiedReceiptRow[] = officeReceipts.map((r) => ({
       key: `office-${r.id}`,
       origin: 'OFFICE',
+      billingType: r.billingType === 'INTERNAL' ? 'INTERNAL' : 'OFFICIAL',
       date: r.createdAt,
       receiptNumber: r.receiptNumber || `REC-${String(r.id).padStart(5, '0')}`,
       clientName: r.persona?.name || 'Cliente sin nombre',
@@ -175,6 +178,7 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
       return {
         key: `field-${receipt.id}`,
         origin: channel,
+        billingType: receipt.billingType === 'OFFICIAL' ? 'OFFICIAL' : 'INTERNAL',
         date: receipt.capturedAt,
         receiptNumber: receipt.receiptNumber || receipt.provisionalCode,
         clientName: receipt.persona?.name || 'Cliente sin nombre',
@@ -193,10 +197,15 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
     );
   }, [officeReceipts, fieldReceipts, userRole]);
 
+  const originFilteredRows = useMemo(
+    () => unifiedRows.filter((row) => originFilter === 'ALL' || row.origin === originFilter),
+    [unifiedRows, originFilter],
+  );
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return unifiedRows.filter((row) => {
-      if (originFilter !== 'ALL' && row.origin !== originFilter) return false;
+    return originFilteredRows.filter((row) => {
+      if (billingFilter !== 'ALL' && row.billingType !== billingFilter) return false;
       if (!q) return true;
       return (
         row.clientName.toLowerCase().includes(q) ||
@@ -205,7 +214,22 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
         row.paymentMethodLabel.toLowerCase().includes(q)
       );
     });
-  }, [unifiedRows, originFilter, search]);
+  }, [originFilteredRows, billingFilter, search]);
+
+  const officialCount = useMemo(
+    () => originFilteredRows.filter((r) => r.billingType === 'OFFICIAL').length,
+    [originFilteredRows],
+  );
+  const internalCount = useMemo(
+    () => originFilteredRows.filter((r) => r.billingType === 'INTERNAL').length,
+    [originFilteredRows],
+  );
+
+  const billingTabs: { id: ReceiptBillingFilter; label: string; count?: number }[] = [
+    { id: 'ALL', label: 'A + X' },
+    { id: 'OFFICIAL', label: 'Suc. A', count: officialCount },
+    { id: 'INTERNAL', label: 'Suc. X', count: internalCount },
+  ];
 
   const sellerCount = useMemo(
     () => fieldReceipts.filter((f) => f.channel === 'SELLER').length,
@@ -226,35 +250,69 @@ export const UnifiedReceiptsList: React.FC<UnifiedReceiptsListProps> = ({
   return (
     <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-        <div role="tablist" aria-label="Filtrar recibos por origen" style={{ display: 'inline-flex', gap: '4px', padding: '3px', background: '#f3f4f6', borderRadius: '8px' }}>
-          {filterTabs.map((tab) => {
-            const active = originFilter === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setOriginFilter(tab.id)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: active ? '#111827' : 'transparent',
-                  color: active ? '#fff' : '#4b5563',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                {tab.label}
-                <span style={{ opacity: active ? 0.85 : 0.65, fontVariantNumeric: 'tabular-nums' }}>{tab.count}</span>
-              </button>
-            );
-          })}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+          <div role="tablist" aria-label="Filtrar recibos por origen" style={{ display: 'inline-flex', gap: '4px', padding: '3px', background: '#f3f4f6', borderRadius: '8px' }}>
+            {filterTabs.map((tab) => {
+              const active = originFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setOriginFilter(tab.id)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: active ? '#111827' : 'transparent',
+                    color: active ? '#fff' : '#4b5563',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  {tab.label}
+                  <span style={{ opacity: active ? 0.85 : 0.65, fontVariantNumeric: 'tabular-nums' }}>{tab.count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div role="group" aria-label="Filtrar recibos por sucursal" style={{ display: 'inline-flex', gap: '4px', padding: '3px', background: '#f3f4f6', borderRadius: '8px' }}>
+            {billingTabs.map((tab) => {
+              const active = billingFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setBillingFilter(tab.id)}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: active ? '#111827' : 'transparent',
+                    color: active ? '#fff' : '#4b5563',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span style={{ opacity: active ? 0.85 : 0.65, fontVariantNumeric: 'tabular-nums' }}>{tab.count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: '340px' }}>

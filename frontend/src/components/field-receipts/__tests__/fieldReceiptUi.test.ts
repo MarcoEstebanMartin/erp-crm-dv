@@ -105,4 +105,19 @@ describe('Recibos de Vendedores (UI y PDF moderno)', () => {
     expect(cardSrc.split('\n').length).toBeLessThanOrEqual(450);
     expect(waModalSrc.split('\n').length).toBeLessThanOrEqual(450);
   });
+
+  it('muestra badge A/X y filtro por sucursal en UnifiedReceiptsList manteniendo archivos bajo 450 líneas', () => {
+    const dir = path.resolve(__dirname, '..');
+    const listSrc = fs.readFileSync(path.join(dir, 'UnifiedReceiptsList.tsx'), 'utf8');
+    const rowItemSrc = fs.readFileSync(path.join(dir, 'UnifiedReceiptRowItem.tsx'), 'utf8');
+
+    expect(listSrc).toContain('billingFilter');
+    expect(listSrc).toContain('Suc. A');
+    expect(listSrc).toContain('Suc. X');
+    expect(rowItemSrc).toContain('Sucursal A (Oficial)');
+    expect(rowItemSrc).toContain('Sucursal X (Interno)');
+
+    expect(listSrc.split('\n').length).toBeLessThanOrEqual(450);
+    expect(rowItemSrc.split('\n').length).toBeLessThanOrEqual(450);
+  });
 });

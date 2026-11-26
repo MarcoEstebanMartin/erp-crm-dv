@@ -8,6 +8,7 @@ import {
 export interface UnifiedReceiptRow {
   key: string;
   origin: 'OFFICE' | 'SELLER' | 'DRIVER';
+  billingType: 'OFFICIAL' | 'INTERNAL';
   date: string;
   receiptNumber: string;
   clientName: string;
@@ -77,6 +78,22 @@ export const UnifiedReceiptRowItem: React.FC<UnifiedReceiptRowItemProps> = ({
       <td style={{ padding: '10px', whiteSpace: 'nowrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{row.receiptNumber}</strong>
+          <span
+            title={row.billingType === 'OFFICIAL' ? 'Sucursal A (Oficial)' : 'Sucursal X (Interno)'}
+            aria-label={row.billingType === 'OFFICIAL' ? 'Sucursal A (Oficial)' : 'Sucursal X (Interno)'}
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              padding: '1px 6px',
+              borderRadius: '4px',
+              background: row.billingType === 'OFFICIAL' ? '#18181b' : '#f3f4f6',
+              color: row.billingType === 'OFFICIAL' ? '#ffffff' : '#4b5563',
+              border: row.billingType === 'OFFICIAL' ? '1px solid #18181b' : '1px solid #d1d5db',
+              lineHeight: 1.3,
+            }}
+          >
+            {row.billingType === 'OFFICIAL' ? 'A' : 'X'}
+          </span>
           <span
             style={{
               fontSize: '0.7rem',
