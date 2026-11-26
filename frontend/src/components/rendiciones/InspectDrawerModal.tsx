@@ -9,6 +9,55 @@ interface InspectDrawerModalProps {
   onClose: () => void;
 }
 
+function formatCompactTxDetail(t: any): { short: string; full: string; receiptUrl: string | null } {
+  const rawDesc = typeof t.description === 'string' ? t.description.trim() : '';
+  const isClientReceipt = t.type === 'INCOME' && Boolean(t.personaId || t.persona?.id);
+
+  if (isClientReceipt) {
+    const code = t.receiptNumber || `REC-${String(t.id).padStart(5, '0')}`;
+    const receiptUrl = t.verificationCode
+      ? `/recibo/${t.id}?v=${encodeURIComponent(t.verificationCode)}`
+      : `/recibo/${t.id}`;
+    return {
+      short: code,
+      full: rawDesc ? `${code} · ${rawDesc}` : code,
+      receiptUrl,
+    };
+  }
+
+  if (t.receiptNumber) {
+    return {
+      short: t.receiptNumber,
+      full: rawDesc ? `${t.receiptNumber} · ${rawDesc}` : t.receiptNumber,
+      receiptUrl: null,
+    };
+  }
+  if (t.orderId) {
+    return {
+      short: `Pedido #${t.orderId}`,
+      full: rawDesc || `Pedido #${t.orderId}`,
+      receiptUrl: null,
+    };
+  }
+  if (!rawDesc) {
+    return { short: 'Movimiento interno', full: 'Movimiento interno', receiptUrl: null };
+  }
+
+  const compact = rawDesc
+    .replace(/^(Cobro|Pago)\s+de\s+/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  return { short: compact || rawDesc, full: rawDesc, receiptUrl: null };
+}
+
+function formatPaymentMethodLabel(method: string): string {
+  if (method === 'CASH') return 'Efectivo';
+  if (method === 'CHECK') return 'Cheque';
+  if (method === 'BANK_TRANSFER') return 'Transf.';
+  return method;
+}
+
 export default function InspectDrawerModal({
   inspectDrawer,
   inspectTxs,
@@ -164,56 +213,97 @@ export default function InspectDrawerModal({
                 <table style={{ fontSize: '0.82rem' }}>
                   <thead>
                     <tr>
-                      <th scope="col">Hora</th>
-                      <th scope="col">Recibo / Pedido</th>
+                      <th scope="col" style={{ whiteSpace: 'nowrap' }}>Hora</th>
+                      <th scope="col">Detalle</th>
                       <th scope="col">Cliente</th>
-                      <th scope="col">Suc.</th>
-                      <th scope="col">Medio</th>
-                      <th scope="col" style={{ textAlign: 'right' }}>Monto</th>
+                      <th scope="col" style={{ whiteSpace: 'nowrap' }}>Suc.</th>
+                      <th scope="col" style={{ whiteSpace: 'nowrap' }}>Medio</th>
+                      <th scope="col" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Monto</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {inspectTxs.map((t) => (
-                      <tr key={t.id}>
-                        <td>{new Date(t.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
-                        <td style={{ fontWeight: 600 }}>
-                          {t.receiptNumber || (t.orderId ? `Pedido #${t.orderId}` : t.description || 'Movimiento interno')}
-                        </td>
-                        <td>{t.persona?.name || (t.orderId ? 'Consumidor Final' : '—')}</td>
-                        <td>{t.billingType === 'OFFICIAL' ? 'A' : 'X'}</td>
-                        <td>
-                          <span
+                    {inspectTxs.map((t) => {
+                      const detail = formatCompactTxDetail(t);
+                      const clientName = t.persona?.name || (t.orderId ? 'Consumidor Final' : '—');
+                      return (
+                        <tr key={t.id}>
+                          <td className="tabular-nums" style={{ whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                            {new Date(t.createdAt).toLocaleTimeString('es-AR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false,
+                            })}
+                          </td>
+                          <td
+                            title={detail.full}
                             style={{
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              fontSize: '0.7rem',
                               fontWeight: 600,
-                              backgroundColor: t.paymentMethod === 'CASH' ? '#ecfdf5' : t.paymentMethod === 'CHECK' ? '#eff6ff' : '#f1f5f9',
-                              color: t.paymentMethod === 'CASH' ? '#047857' : t.paymentMethod === 'CHECK' ? '#1d4ed8' : '#475569',
+                              maxWidth: '200px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
                             }}
                           >
-                            {t.paymentMethod === 'CASH'
-                              ? 'EFECTIVO'
-                              : t.paymentMethod === 'CHECK'
-                              ? 'CHEQUE'
-                              : t.paymentMethod === 'BANK_TRANSFER'
-                              ? 'TRANSFERENCIA'
-                              : t.paymentMethod}
-                          </span>
-                        </td>
-                        <td
-                          className="tabular-nums"
-                          style={{
-                            textAlign: 'right',
-                            fontWeight: 600,
-                            fontFamily: 'monospace',
-                            color: t.type === 'OUTCOME' ? '#c53030' : 'inherit',
-                          }}
-                        >
-                          {t.type === 'OUTCOME' ? '-' : ''}${Number(t.amount).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                        </td>
-                      </tr>
-                    ))}
+                            {detail.receiptUrl ? (
+                              <a
+                                href={detail.receiptUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  color: 'var(--text-primary)',
+                                  textDecoration: 'underline',
+                                  textDecorationColor: 'var(--border-color)',
+                                  textUnderlineOffset: '3px',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                {detail.short}
+                              </a>
+                            ) : (
+                              detail.short
+                            )}
+                          </td>
+                          <td
+                            title={clientName}
+                            style={{
+                              maxWidth: '210px',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {clientName}
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{t.billingType === 'OFFICIAL' ? 'A' : 'X'}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <span
+                              style={{
+                                padding: '2px 7px',
+                                borderRadius: '4px',
+                                fontSize: '0.74rem',
+                                fontWeight: 500,
+                                backgroundColor: t.paymentMethod === 'CASH' ? '#ecfdf5' : t.paymentMethod === 'CHECK' ? '#eff6ff' : '#f1f5f9',
+                                color: t.paymentMethod === 'CASH' ? '#047857' : t.paymentMethod === 'CHECK' ? '#1d4ed8' : '#475569',
+                              }}
+                            >
+                              {formatPaymentMethodLabel(t.paymentMethod)}
+                            </span>
+                          </td>
+                          <td
+                            className="tabular-nums"
+                            style={{
+                              textAlign: 'right',
+                              fontWeight: 600,
+                              fontFamily: 'monospace',
+                              whiteSpace: 'nowrap',
+                              color: t.type === 'OUTCOME' ? '#c53030' : 'inherit',
+                            }}
+                          >
+                            {t.type === 'OUTCOME' ? '-' : ''}${Number(t.amount).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
