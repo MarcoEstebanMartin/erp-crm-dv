@@ -10,6 +10,7 @@ import AppError from '../../utils/AppError';
 import { logAudit } from '../../utils/audit';
 import { emitirNotaCreditoAFIP } from '../afip.service';
 import {
+  calculateCreditNotePerceptions,
   calculateCreditNoteTotals,
   formatInternalCreditNoteNumber,
 } from '../../engines/credit-purchase.engine';
@@ -137,6 +138,27 @@ export const creditNoteService = {
 
     const isOfficial = finalBillingType === BillingType.OFFICIAL;
     const totals = calculateCreditNoteTotals(enrichedInputs, isOfficial);
+    const afipMeta = isOfficial
+      ? resolveCreditNoteAfipDocMeta(persona.cuit, (persona as any).taxCondition)
+      : null;
+
+    const cnPerceptions =
+      isOfficial && afipMeta?.isA && linkedOrder
+        ? calculateCreditNotePerceptions({
+            isFacturaA: true,
+            creditNoteNetAmount: totals.netAmount,
+            creditNoteTaxAmount: totals.taxAmount,
+            linkedOrderNetAmount: linkedOrder.netAmount?.toString() ?? 0,
+            linkedOrderPercepcionAmount: linkedOrder.percepcionAmount?.toString() ?? 0,
+            linkedOrderPercepcionIvaAmount: linkedOrder.percepcionIvaAmount?.toString() ?? 0,
+          })
+        : {
+            percepcionAmount: 0,
+            percepcionIvaAmount: 0,
+            totalAmount: totals.totalAmount,
+          };
+
+    const finalTotalAmount = cnPerceptions.totalAmount;
 
     if (resolvedOrderId && linkedOrder) {
       await validateCreditNoteAgainstLinkedOrder(prisma, {
@@ -148,7 +170,7 @@ export const creditNoteService = {
           quantity: l.quantity,
           weight: l.weight,
         })),
-        newTotalAmount: totals.totalAmount,
+        newTotalAmount: finalTotalAmount,
         preloadedLinkedOrder: linkedOrder,
       });
     }
@@ -161,8 +183,7 @@ export const creditNoteService = {
     let cae: string | null = null;
     let caeDueDate: Date | null = null;
 
-    if (isOfficial) {
-      const afipMeta = resolveCreditNoteAfipDocMeta(persona.cuit);
+    if (isOfficial && afipMeta) {
       creditNoteType = afipMeta.creditNoteType;
 
       if (isAdmin) {
@@ -171,9 +192,11 @@ export const creditNoteService = {
             clientCuit: afipMeta.cleanCuit,
             clientDocType: afipMeta.docType,
             invoiceType: afipMeta.isA ? 'A' : 'B',
-            total: totals.totalAmount,
+            total: finalTotalAmount,
             neto: afipMeta.isA ? totals.netAmount : undefined,
             iva: afipMeta.isA ? totals.taxAmount : undefined,
+            percepcionAmount: afipMeta.isA ? cnPerceptions.percepcionAmount : undefined,
+            percepcionIvaAmount: afipMeta.isA ? cnPerceptions.percepcionIvaAmount : undefined,
             associatedVoucher: linkedOrder
               ? {
                   invoiceNumber: linkedOrder.invoiceNumber,
@@ -205,7 +228,7 @@ export const creditNoteService = {
             quantity: l.quantity,
             weight: l.weight,
           })),
-          newTotalAmount: totals.totalAmount,
+          newTotalAmount: finalTotalAmount,
         });
       }
 
@@ -220,9 +243,11 @@ export const creditNoteService = {
           creditNoteNumber: afipNumber,
           cae,
           caeDueDate,
-          totalAmount: totals.totalAmount,
+          totalAmount: finalTotalAmount,
           netAmount: totals.netAmount,
           taxAmount: totals.taxAmount,
+          percepcionAmount: cnPerceptions.percepcionAmount,
+          percepcionIvaAmount: cnPerceptions.percepcionIvaAmount,
           reason: params.reason,
           comments: params.comments ?? null,
         },
@@ -266,7 +291,7 @@ export const creditNoteService = {
           entryType: LedgerEntryType.CREDIT,
           sourceType: LedgerSourceType.CREDIT_NOTE,
           billingType: finalBillingType,
-          amount: totals.totalAmount,
+          amount: finalTotalAmount,
           creditNoteId: note.id,
           orderId: resolvedOrderId,
           userId: params.userId,

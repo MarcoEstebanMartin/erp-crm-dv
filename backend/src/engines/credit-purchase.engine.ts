@@ -97,6 +97,67 @@ export function calculateCreditNoteTotals(
 }
 
 /**
+ * Calcula las percepciones proporcionales (IIBB e IVA RG 5329) a devolver en una Nota de Crédito A
+ * vinculada a una factura oficial que tuvo percepciones, garantizando ImpNeto + ImpIVA + ImpTrib === ImpTotal.
+ */
+export function calculateCreditNotePerceptions(params: {
+  isFacturaA: boolean;
+  creditNoteNetAmount: NumericInput;
+  creditNoteTaxAmount: NumericInput;
+  linkedOrderNetAmount?: NumericInput | null;
+  linkedOrderPercepcionAmount?: NumericInput | null;
+  linkedOrderPercepcionIvaAmount?: NumericInput | null;
+}): {
+  percepcionAmount: number;
+  percepcionIvaAmount: number;
+  totalAmount: number;
+} {
+  const cnNetDec = roundToTwoDecimals(params.creditNoteNetAmount || 0);
+  const cnTaxDec = roundToTwoDecimals(params.creditNoteTaxAmount || 0);
+
+  if (!params.isFacturaA) {
+    return {
+      percepcionAmount: 0,
+      percepcionIvaAmount: 0,
+      totalAmount: roundToTwoDecimals(cnNetDec.plus(cnTaxDec)).toNumber(),
+    };
+  }
+
+  const origNetDec = roundToTwoDecimals(params.linkedOrderNetAmount || 0);
+  const origIibbDec = roundToTwoDecimals(params.linkedOrderPercepcionAmount || 0);
+  const origIvaPercDec = roundToTwoDecimals(params.linkedOrderPercepcionIvaAmount || 0);
+
+  if (origNetDec.lte(0) || (origIibbDec.lte(0) && origIvaPercDec.lte(0))) {
+    return {
+      percepcionAmount: 0,
+      percepcionIvaAmount: 0,
+      totalAmount: roundToTwoDecimals(cnNetDec.plus(cnTaxDec)).toNumber(),
+    };
+  }
+
+  let iibbDec = toDecimal(0);
+  let ivaPercDec = toDecimal(0);
+
+  if (cnNetDec.gte(origNetDec)) {
+    iibbDec = origIibbDec;
+    ivaPercDec = origIvaPercDec;
+  } else {
+    const ratio = cnNetDec.dividedBy(origNetDec);
+    iibbDec = origIibbDec.gt(0) ? roundToTwoDecimals(origIibbDec.times(ratio)) : toDecimal(0);
+    ivaPercDec = origIvaPercDec.gt(0) ? roundToTwoDecimals(origIvaPercDec.times(ratio)) : toDecimal(0);
+    if (iibbDec.gt(origIibbDec)) iibbDec = origIibbDec;
+    if (ivaPercDec.gt(origIvaPercDec)) ivaPercDec = origIvaPercDec;
+  }
+
+  const totalDec = roundToTwoDecimals(cnNetDec.plus(cnTaxDec).plus(iibbDec).plus(ivaPercDec));
+  return {
+    percepcionAmount: iibbDec.toNumber(),
+    percepcionIvaAmount: ivaPercDec.toNumber(),
+    totalAmount: totalDec.toNumber(),
+  };
+}
+
+/**
  * Calcula los renglones y total de una Orden de Compra preservando los 2 decimales del costo de proveedor.
  */
 export function calculatePurchaseOrderTotals(

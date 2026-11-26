@@ -18,6 +18,29 @@ export function getJurisdictionCode(provinceOrAddress?: string | null): string {
   return 'AR-B';
 }
 
+export type ResolvedTaxCondition =
+  | 'RESPONSABLE_INSCRIPTO'
+  | 'MONOTRIBUTO'
+  | 'EXENTO'
+  | 'CONSUMIDOR_FINAL';
+
+export function resolvePersonaTaxCondition(persona?: {
+  cuit?: string | null;
+  taxCondition?: string | null;
+} | null): ResolvedTaxCondition {
+  const raw = String(persona?.taxCondition || '').trim().toUpperCase();
+  if (
+    raw === 'RESPONSABLE_INSCRIPTO' ||
+    raw === 'MONOTRIBUTO' ||
+    raw === 'EXENTO' ||
+    raw === 'CONSUMIDOR_FINAL'
+  ) {
+    return raw;
+  }
+  const cuitLimpio = persona?.cuit ? persona.cuit.replace(/\D/g, '') : '';
+  return cuitLimpio.length === 11 ? 'RESPONSABLE_INSCRIPTO' : 'CONSUMIDOR_FINAL';
+}
+
 export interface AfipOrderTaxBreakdown {
   net: number;
   tax: number;
@@ -28,25 +51,32 @@ export interface AfipOrderTaxBreakdown {
   docType: number;
   cuitLimpio: string;
   isFacturaAOfficial: boolean;
+  taxCondition: ResolvedTaxCondition;
 }
 
 /**
  * Calcula con Decimal.js el desglose fiscal interno para AFIP/ARCA o Presupuesto.
  * Garantiza que Neto + IVA + Percepciones === Total al centavo exacto (ROUND_HALF_UP).
+ * Regla RG 5329 (Percepción IVA 3%): aplica únicamente a Factura A oficial emitida a
+ * Responsable Inscripto cuando el Neto Gravado supera $100.000 (mínimo no imponible $3.000).
  */
 export async function computeInvoiceTaxBreakdown(
   baseCommercialTotal: number,
   billingType: BillingType,
-  persona: { cuit?: string | null; iibbAliquot?: any },
+  persona: { cuit?: string | null; iibbAliquot?: any; taxCondition?: string | null },
 ): Promise<AfipOrderTaxBreakdown> {
-  const cuitLimpio = persona.cuit ? persona.cuit.replace(/-/g, '') : '';
+  const cuitLimpio = persona.cuit ? persona.cuit.replace(/\D/g, '') : '';
+  const taxCondition = resolvePersonaTaxCondition(persona);
   let docType = 99;
   let finalInvoiceType: InvoiceType = InvoiceType.PRESUPUESTO;
 
   if (billingType === BillingType.OFFICIAL) {
     if (cuitLimpio.length === 11) {
       docType = 80;
-      finalInvoiceType = InvoiceType.FACTURA_A;
+      finalInvoiceType =
+        taxCondition === 'EXENTO' || taxCondition === 'CONSUMIDOR_FINAL'
+          ? InvoiceType.FACTURA_B
+          : InvoiceType.FACTURA_A;
     } else if (cuitLimpio.length === 7 || cuitLimpio.length === 8) {
       docType = 96;
       finalInvoiceType = InvoiceType.FACTURA_B;
@@ -71,7 +101,8 @@ export async function computeInvoiceTaxBreakdown(
       where: { code: 'IVA_5329' },
     });
 
-    const applyIvaPerc = totalBaseDec.greaterThan(100000);
+    const isResponsableInscripto = taxCondition === 'RESPONSABLE_INSCRIPTO';
+    const applyIvaPerc = isResponsableInscripto && netDec.greaterThan(100000);
     const ivaPercAliquot = applyIvaPerc
       ? perceptionIVA && perceptionIVA.aliquot
         ? toDecimal(perceptionIVA.aliquot.toString())
@@ -96,6 +127,7 @@ export async function computeInvoiceTaxBreakdown(
     docType,
     cuitLimpio,
     isFacturaAOfficial,
+    taxCondition,
   };
 }
 

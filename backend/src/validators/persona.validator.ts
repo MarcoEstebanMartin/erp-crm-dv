@@ -18,6 +18,7 @@ export const createPersonaSchema = z.object({
   body: z.object({
     name: z.string().min(1, 'El nombre o razón social es requerido'),
     cuit: z.string().optional().nullable(),
+    taxCondition: z.enum(['RESPONSABLE_INSCRIPTO', 'MONOTRIBUTO', 'EXENTO', 'CONSUMIDOR_FINAL']).optional().nullable(),
     address: z.string().optional().nullable(),
     city: z.string().optional().nullable(),
     barrio: z.string().optional().nullable(),
@@ -61,6 +62,7 @@ export const updatePersonaSchema = z.object({
   body: z.object({
     name: z.string().min(1).optional(),
     cuit: z.string().optional().nullable(),
+    taxCondition: z.enum(['RESPONSABLE_INSCRIPTO', 'MONOTRIBUTO', 'EXENTO', 'CONSUMIDOR_FINAL']).optional().nullable(),
     address: z.string().optional().nullable(),
     city: z.string().optional().nullable(),
     barrio: z.string().optional().nullable(),

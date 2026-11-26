@@ -114,10 +114,18 @@ enum ProviderType {
   SERVICIOS
 }
 
+enum TaxCondition {
+  RESPONSABLE_INSCRIPTO
+  MONOTRIBUTO
+  EXENTO
+  CONSUMIDOR_FINAL
+}
+
 model Persona {
   id        Int       @id @default(autoincrement())
   name      String
   cuit      String?
+  taxCondition TaxCondition?
   address   String?
   city      String?
   barrio    String?
@@ -704,9 +712,11 @@ model CreditNote {
   creditNoteNumber String? // Nro comprobante ej: "00001-00000124"
   cae              String?
   caeDueDate       DateTime?
-  totalAmount      Decimal          @db.Decimal(12, 2)
-  netAmount        Decimal          @default(0.00) @db.Decimal(12, 2)
-  taxAmount        Decimal          @default(0.00) @db.Decimal(12, 2)
+  totalAmount         Decimal          @db.Decimal(12, 2)
+  netAmount           Decimal          @default(0.00) @db.Decimal(12, 2)
+  taxAmount           Decimal          @default(0.00) @db.Decimal(12, 2)
+  percepcionAmount    Decimal          @default(0.00) @db.Decimal(12, 2)
+  percepcionIvaAmount Decimal          @default(0.00) @db.Decimal(12, 2)
   reason           String // "DEVOLUCION" | "DESCUENTO" | "ERROR_FACTURACION"
   comments         String?
   createdAt        DateTime         @default(now())

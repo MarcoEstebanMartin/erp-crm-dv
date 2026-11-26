@@ -17,6 +17,7 @@ import {
   parseInvoiceNumber,
   toFixedMoneyString,
 } from './billing/iva-afip-format.helper';
+import { resolvePersonaTaxCondition } from './orders/order-tax.helpers';
 
 export { formatAfipCurrency };
 
@@ -25,12 +26,39 @@ export interface IvaExportRow {
   tipo: string;
   numero: string;
   persona: any;
+  taxCondition?: string;
   neto: string;
   iva: string;
   percepciones: string;
   percepcionesIva: string;
   total: string;
   sign: 1 | -1;
+}
+
+export interface IvaRetencionRow {
+  fecha: Date;
+  tipo: string;
+  taxType: string;
+  jurisdiction: string | null;
+  numero: string;
+  persona: any;
+  taxCondition: string;
+  amount: string;
+  sign: -1;
+}
+
+function formatRetencionLabel(taxType: string, jurisdiction?: string | null): string {
+  const norm = String(taxType || '').trim().toUpperCase();
+  if (norm === 'GANANCIAS') return 'Retencion Ganancias';
+  if (norm === 'IVA') return 'Retencion IVA';
+  if (norm === 'IIBB') {
+    const jur = String(jurisdiction || '').trim().toUpperCase();
+    if (jur === 'AR-B' || jur === 'BSAS' || jur === 'BUENOS AIRES') return 'Retencion IIBB Bs As';
+    if (jur === 'AR-C' || jur === 'CABA') return 'Retencion IIBB CABA';
+    if (jur === 'AR-L' || jur === 'LA PAMPA') return 'Retencion IIBB La Pampa';
+    return jurisdiction ? `Retencion IIBB ${jurisdiction}` : 'Retencion IIBB';
+  }
+  return `Retencion ${taxType || ''}`.trim();
 }
 
 export const ivaExportService = {
@@ -74,6 +102,7 @@ export const ivaExportService = {
         tipo: order.invoiceType,
         numero: invNum,
         persona: order.persona,
+        taxCondition: resolvePersonaTaxCondition(order.persona),
         neto: toFixedMoneyString(order.netAmount),
         iva: toFixedMoneyString(order.taxAmount),
         percepciones: toFixedMoneyString(order.percepcionAmount),
@@ -94,10 +123,11 @@ export const ivaExportService = {
         tipo: cn.creditNoteType,
         numero: cnNum,
         persona: cn.persona,
+        taxCondition: resolvePersonaTaxCondition(cn.persona),
         neto: toFixedMoneyString(cn.netAmount),
         iva: toFixedMoneyString(cn.taxAmount),
-        percepciones: '0.00',
-        percepcionesIva: '0.00',
+        percepciones: toFixedMoneyString((cn as any).percepcionAmount ?? 0),
+        percepcionesIva: toFixedMoneyString((cn as any).percepcionIvaAmount ?? 0),
         total: toFixedMoneyString(cn.totalAmount),
         sign: -1,
       });
@@ -107,6 +137,35 @@ export const ivaExportService = {
       (a, b) => a.fecha.getTime() - b.fecha.getTime() || a.numero.localeCompare(b.numero),
     );
     return ventas;
+  },
+
+  async getRetencionesVentasData(month: number, year: number): Promise<IvaRetencionRow[]> {
+    if (typeof (prisma as any).taxWithholding?.findMany !== 'function') {
+      return [];
+    }
+    const { startDateStr, endDateStr } = buildMonthDateStrings(month, year);
+    const arRange = parseArgentinaTimestampRange(startDateStr, endDateStr);
+
+    const rows = await prisma.taxWithholding.findMany({
+      where: {
+        type: 'RETENCION_SUFRIDA',
+        date: arRange,
+      },
+      include: { persona: true },
+      orderBy: [{ date: 'asc' }, { number: 'asc' }],
+    });
+
+    return (rows || []).map((r): IvaRetencionRow => ({
+      fecha: new Date(r.date),
+      tipo: formatRetencionLabel(r.taxType, r.jurisdiction),
+      taxType: r.taxType,
+      jurisdiction: r.jurisdiction ?? null,
+      numero: String(r.number || '').trim(),
+      persona: r.persona,
+      taxCondition: resolvePersonaTaxCondition(r.persona),
+      amount: toFixedMoneyString(r.amount),
+      sign: -1,
+    }));
   },
 
   async getComprasData(month: number, year: number): Promise<IvaExportRow[]> {
@@ -127,6 +186,7 @@ export const ivaExportService = {
         tipo: c.invoiceType,
         numero: c.invoiceNumber,
         persona: c.persona,
+        taxCondition: resolvePersonaTaxCondition(c.persona),
         neto: toFixedMoneyString(c.netAmount),
         iva: toFixedMoneyString(c.taxAmount),
         percepciones: toFixedMoneyString(c.percepcionAmount),
@@ -140,6 +200,7 @@ export const ivaExportService = {
   async generateAFIPTxt(month: number, year: number) {
     const ventas = await this.getVentasData(month, year);
     const compras = await this.getComprasData(month, year);
+    const retenciones = await this.getRetencionesVentasData(month, year);
 
     let ventasTxt = '';
     let ventasAlicuotasTxt = '';
@@ -194,8 +255,9 @@ export const ivaExportService = {
       }
 
       if (absPercIva.greaterThan(0)) {
+        const percVoucherCode = v.sign === -1 ? '03' : '01';
         percepcionesIvaTxt +=
-          '01' +
+          percVoucherCode +
           formatArDateDDMMYYYY(v.fecha) +
           parsedInv.ptoVenta.padStart(15, '0') +
           parsedInv.cbte.substring(16) +
@@ -266,6 +328,7 @@ export const ivaExportService = {
     return {
       ventasData: ventas,
       comprasData: compras,
+      retencionesData: retenciones,
       txt: {
         'RegInformacionVentas.txt': ventasTxt,
         'RegInformacionVentas-.txt': ventasAlicuotasTxt,

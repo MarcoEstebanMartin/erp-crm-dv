@@ -87,7 +87,10 @@ export const creditNoteApprovalService = {
 
     if (isOfficial) {
       try {
-        const afipMeta = resolveCreditNoteAfipDocMeta(creditNote.persona.cuit);
+        const afipMeta = resolveCreditNoteAfipDocMeta(
+          creditNote.persona.cuit,
+          (creditNote.persona as any).taxCondition,
+        );
         const afipRes = await emitirNotaCreditoAFIP({
           clientCuit: afipMeta.cleanCuit,
           clientDocType: afipMeta.docType,
@@ -95,6 +98,8 @@ export const creditNoteApprovalService = {
           total: totalAmount,
           neto: afipMeta.isA ? Number(creditNote.netAmount) : undefined,
           iva: afipMeta.isA ? Number(creditNote.taxAmount) : undefined,
+          percepcionAmount: afipMeta.isA ? Number((creditNote as any).percepcionAmount || 0) : undefined,
+          percepcionIvaAmount: afipMeta.isA ? Number((creditNote as any).percepcionIvaAmount || 0) : undefined,
           associatedVoucher: linkedOrder
             ? {
                 invoiceNumber: linkedOrder.invoiceNumber,

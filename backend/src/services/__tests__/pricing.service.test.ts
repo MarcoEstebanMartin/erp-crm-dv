@@ -7,6 +7,7 @@ describe('PricingService Unit Tests (Motor de Precios y Reglas)', () => {
     id: 1,
     name: 'Cliente Lista A',
     cuit: '20123456789',
+    taxCondition: null,
     address: null,
     city: null,
     barrio: null,

@@ -3,15 +3,25 @@ import AppError from '../../utils/AppError';
 import { roundToTwoDecimals, toDecimal } from '../../core/money';
 import { lockProductsForUpdate } from '../../utils/db-locks.util';
 
-export function resolveCreditNoteAfipDocMeta(cuit?: string | null): {
+export function resolveCreditNoteAfipDocMeta(
+  cuit?: string | null,
+  taxCondition?: string | null,
+): {
   cleanCuit: string;
   docType: number;
   isA: boolean;
   creditNoteType: string;
 } {
-  const cleanCuit = cuit ? cuit.replace(/-/g, '').trim() : '';
+  const cleanCuit = cuit ? cuit.replace(/\D/g, '').trim() : '';
+  const normTax = String(taxCondition || '').trim().toUpperCase();
   if (cleanCuit.length === 11) {
-    return { cleanCuit, docType: 80, isA: true, creditNoteType: 'NOTA_CREDITO_A' };
+    const isBByCondition = normTax === 'EXENTO' || normTax === 'CONSUMIDOR_FINAL';
+    return {
+      cleanCuit,
+      docType: 80,
+      isA: !isBByCondition,
+      creditNoteType: isBByCondition ? 'NOTA_CREDITO_B' : 'NOTA_CREDITO_A',
+    };
   }
   if (cleanCuit.length === 7 || cleanCuit.length === 8) {
     return { cleanCuit, docType: 96, isA: false, creditNoteType: 'NOTA_CREDITO_B' };

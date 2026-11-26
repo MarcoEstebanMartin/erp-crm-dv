@@ -156,6 +156,7 @@ export class PersonaService {
       data: {
         name: standardizePersonaName(data.name),
         cuit: resolvedCuit,
+        taxCondition: data.taxCondition ?? null,
         address: data.address,
         city: data.city != null ? standardizeCityName(data.city) : data.city,
         barrio: data.barrio != null ? String(data.barrio).trim() : null,
@@ -238,6 +239,7 @@ export class PersonaService {
       data: {
         name: data.name !== undefined ? standardizePersonaName(data.name) : undefined,
         cuit: resolvedCuit,
+        taxCondition: data.taxCondition !== undefined ? (data.taxCondition || null) : undefined,
         address: data.address,
         city: data.city !== undefined ? (data.city !== null ? standardizeCityName(data.city) : null) : undefined,
         barrio: data.barrio !== undefined ? (data.barrio !== null ? String(data.barrio).trim() : null) : undefined,
