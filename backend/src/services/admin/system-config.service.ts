@@ -31,8 +31,8 @@ export const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   telefono: '+5493388526852',
   email: 'contacto@donvenancio.com.ar',
   puntoVenta: 1,
-  iibb: '',
-  inicioActividades: '',
+  iibb: 'C.M.N° 911-440570-8',
+  inicioActividades: '01/10/1996',
 };
 
 const COMPANY_PROFILE_KEY = 'company_profile';
@@ -112,8 +112,8 @@ function normalizeCompanyProfile(raw: unknown): CompanyProfile {
     telefono: sanitizeOptionalString(parsed.telefono, DEFAULT_COMPANY_PROFILE.telefono),
     email: sanitizeOptionalString(parsed.email, DEFAULT_COMPANY_PROFILE.email),
     puntoVenta,
-    iibb: sanitizeOptionalString(parsed.iibb, DEFAULT_COMPANY_PROFILE.iibb),
-    inicioActividades: sanitizeOptionalString(parsed.inicioActividades, DEFAULT_COMPANY_PROFILE.inicioActividades),
+    iibb: sanitizeRequiredString(parsed.iibb, DEFAULT_COMPANY_PROFILE.iibb),
+    inicioActividades: sanitizeRequiredString(parsed.inicioActividades, DEFAULT_COMPANY_PROFILE.inicioActividades),
   };
 }
 

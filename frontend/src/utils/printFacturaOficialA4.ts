@@ -31,7 +31,14 @@ export function printFacturaOficialA4(order: any): void {
 
   const client = resolveOrderPersona(order);
   const clientName = client?.name || order.clientName || 'CONSUMIDOR FINAL';
-  const clientCity = client?.city || 'GENERAL VILLEGAS - BUENOS AIRES';
+  const clientCity = (client?.city || '').trim();
+  const clientBarrio = (client?.barrio || '').trim();
+  const clientBarrioLabel = clientBarrio
+    ? /^(barrio|b°|b\.)\b/i.test(clientBarrio)
+      ? clientBarrio
+      : `Barrio ${clientBarrio}`
+    : '';
+  const clientLocation = [clientCity, clientBarrioLabel].filter(Boolean).join(' · ');
   const clientAddress = client?.address || 'Retira en local';
   const clientCuit = client?.cuit || 'Consumidor Final';
   const clientBalance = Math.round(Number(client?.outstandingBalance ?? 0));
@@ -154,7 +161,9 @@ export function printFacturaOficialA4(order: any): void {
                 <img src="${window.location.origin}/logo.png" alt="${company.nombreFantasia}" style="max-height: 78px; max-width: 285px; object-fit: contain; margin-bottom: 4px;" />
                 <div class="company-sub" style="font-size: 8.8px;"><strong>Razón Social:</strong> ${company.razonSocial}</div>
                 <div class="company-sub">${companyAddress}</div>
-                <div class="company-sub"><strong>CUIT:</strong> ${companyCuit}${companyIibb ? ` &nbsp;|&nbsp; <strong>IIBB:</strong> ${companyIibb}` : ''}</div>
+                <div class="company-sub"><strong>CUIT:</strong> ${companyCuit}</div>
+                ${companyIibb ? `<div class="company-sub"><strong>Ing. Brutos:</strong> ${companyIibb}</div>` : ''}
+                ${companyInitDate ? `<div class="company-sub"><strong>Fecha de Inicio de Actividades:</strong> ${companyInitDate}</div>` : ''}
                 <div class="company-sub"><strong>Condición IVA:</strong> RESPONSABLE INSCRIPTO</div>
               </div>
 
@@ -168,7 +177,6 @@ export function printFacturaOficialA4(order: any): void {
                 <div class="doc-meta"><strong>Punto de Venta:</strong> ${puntoVentaStr} &nbsp;|&nbsp; <strong>Comp. N°:</strong> ${invNumber}</div>
                 <div class="doc-meta"><strong>Fecha de Emisión:</strong> ${formattedDate}</div>
                 <div class="doc-meta"><strong>Vencimiento:</strong> ${formattedDueDate}</div>
-                ${companyInitDate ? `<div class="doc-meta"><strong>Inicio de Actividades:</strong> ${companyInitDate}</div>` : ''}
               </div>
             </div>
 
@@ -176,7 +184,8 @@ export function printFacturaOficialA4(order: any): void {
               <div class="client-block">
                 <div class="block-label">Cliente (Destinatario)</div>
                 <div class="client-title">${clientName}</div>
-                <div class="info-row"><span><strong>Dirección:</strong> ${clientAddress}</span><span><strong>Localidad:</strong> ${clientCity}</span></div>
+                ${clientLocation ? `<div class="info-row"><span>${clientLocation}</span></div>` : ''}
+                <div class="info-row"><span><strong>Dirección:</strong> ${clientAddress}</span></div>
                 <div class="info-row"><span><strong>Categoría IVA:</strong> ${clientIva}</span><span><strong>CUIT / DNI:</strong> ${clientCuit}</span></div>
               </div>
 

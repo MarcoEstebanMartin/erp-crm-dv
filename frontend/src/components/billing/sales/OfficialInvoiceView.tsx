@@ -54,6 +54,14 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
     : `${posStr}-${invoice.invoiceNumber || String(invoice.id || 0).padStart(8, '0')}`;
 
   const clientName = client?.name || invoice.clientName || 'Consumidor Final';
+  const clientCity = (client?.city || '').trim();
+  const clientBarrio = (client?.barrio || '').trim();
+  const clientBarrioLabel = clientBarrio
+    ? /^(barrio|b°|b\.)\b/i.test(clientBarrio)
+      ? clientBarrio
+      : `Barrio ${clientBarrio}`
+    : '';
+  const clientLocation = [clientCity, clientBarrioLabel].filter(Boolean).join(' · ');
   const clientAddress = client?.address || 'Retiro en Local';
   const clientCuit = client?.cuit || 'S/D';
   const clientIva = client?.taxCondition || (isFacturaA ? 'Responsable Inscripto' : 'Consumidor Final');
@@ -204,12 +212,12 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
             </div>
             {company.iibb && (
               <div>
-                <strong style={{ color: '#111827' }}>IIBB:</strong> {company.iibb}
+                <strong style={{ color: '#111827' }}>Ing. Brutos:</strong> {company.iibb}
               </div>
             )}
             {company.inicioActividades && (
               <div>
-                <strong style={{ color: '#111827' }}>Inicio Act.:</strong> {company.inicioActividades}
+                <strong style={{ color: '#111827' }}>Fecha de Inicio de Actividades:</strong> {company.inicioActividades}
               </div>
             )}
           </div>
@@ -245,6 +253,11 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
           <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#111827' }}>
             {clientName}
           </div>
+          {clientLocation && (
+            <div style={{ fontSize: '0.78rem', fontWeight: 500, color: '#374151', marginTop: '2px' }}>
+              {clientLocation}
+            </div>
+          )}
           <div style={{ fontSize: '0.78rem', color: '#4b5563', marginTop: '2px' }}>
             {clientAddress}
           </div>
