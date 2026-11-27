@@ -171,8 +171,10 @@ describe('Paso 4C - Barrel printHelpers, plantillas limpias y hooks postMessage'
 
     writtenHtml = '';
     printRemitoX(sampleOrder);
-    expect(writtenHtml).toContain('REMITO N°');
-    expect(writtenHtml).toContain('Cajas cerradas: 0'.length ? 'Unidades' : 'Cajas');
+    expect(writtenHtml).toContain('Presupuesto');
+    expect(writtenHtml).toContain('Documento no válido como factura');
+    expect(writtenHtml).toContain('Saldo CC:');
+    expect(writtenHtml).not.toContain('REMITO N°');
     expect(writtenHtml).not.toContain('NORBERTO');
 
     writtenHtml = '';

@@ -331,7 +331,7 @@ export function CreateCreditNoteModal({
                 value={creditNoteForm.billingType}
                 disabled
               >
-                <option value="INTERNAL">Remito</option>
+                <option value="INTERNAL">Presupuesto</option>
                 <option value="OFFICIAL">Oficial (AFIP · NC A/B)</option>
               </select>
             </div>

@@ -11,173 +11,170 @@ import {
 
 export { printFacturaOficialA4 } from '../printFacturaOficialA4';
 
-function formatRemitoBultosLabel(items: any[]): string {
-  let totalCajas = 0;
-  let totalSueltos = 0;
-
-  items.forEach((it: any) => {
-    const qty = Number(it.quantity || 0);
-    const unitsPerBox =
-      it.product?.unitsPerBox && Number(it.product.unitsPerBox) > 1
-        ? Number(it.product.unitsPerBox)
-        : 1;
-
-    if (unitsPerBox > 1) {
-      totalCajas += Math.floor(qty / unitsPerBox);
-      totalSueltos += qty % unitsPerBox;
-    } else {
-      totalSueltos += qty;
-    }
-  });
-
-  const formattedSueltos = totalSueltos % 1 === 0 ? totalSueltos : totalSueltos.toFixed(2);
-  if (totalCajas > 0 && totalSueltos > 0) {
-    return `Cajas: ${totalCajas} &nbsp;&bull;&nbsp; Unidades sueltas: ${formattedSueltos}`;
+function formatPresupuestoPaymentMethod(paymentMethod?: string): string {
+  switch (paymentMethod) {
+    case 'BANK_TRANSFER':
+      return 'Transferencia';
+    case 'CHECK':
+      return 'Cheque';
+    case 'CASH':
+      return 'Efectivo';
+    default:
+      return 'Cuenta Corriente';
   }
-  if (totalCajas > 0) return `Cajas cerradas: ${totalCajas}`;
-  return `Unidades: ${formattedSueltos}`;
 }
 
 export const printRemitoX = (order: any) => {
-  const { company, phone } = getPrintCompanyContext();
   const client = resolvePrintClientMeta(order);
-  const remitoDateValue = order.invoicedAt || order.createdAt;
-  const formattedDate = remitoDateValue
-    ? new Date(remitoDateValue).toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
+  const persona = client.persona;
+  const issueDateValue = order.invoicedAt || order.issueDate || order.createdAt;
+  const formattedDate = issueDateValue
+    ? new Date(issueDateValue).toLocaleDateString('es-AR')
     : new Date().toLocaleDateString('es-AR');
 
-  const formattedDueDate = order.dueDate
-    ? new Date(order.dueDate).toLocaleDateString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
-    : formattedDate;
+  const compNro = order.invoiceNumber
+    ? String(order.invoiceNumber)
+    : order.remitoNumber
+      ? String(order.remitoNumber)
+      : `INT-${String(order.id || 0).padStart(5, '0')}`;
 
-  const remitoNum = order.remitoNumber || `0001-${String(order.id).padStart(8, '0')}`;
+  const clientName = persona?.name || order.clientName || 'Consumidor Final';
+  const clientCity = (persona?.city || '').trim();
+  const clientBarrio = (persona?.barrio || '').trim();
+  const clientBarrioLabel = clientBarrio
+    ? /^(barrio|b°|b\.)\b/i.test(clientBarrio)
+      ? clientBarrio
+      : `Barrio ${clientBarrio}`
+    : '';
+  const clientLocation = [clientCity, clientBarrioLabel].filter(Boolean).join(' · ');
+  const clientAddress = persona?.address || 'Retiro en Local';
+  const rawCuit = persona?.cuit ? String(persona.cuit).trim() : '';
+  const clientCuit = rawCuit && rawCuit !== 'S/D' ? rawCuit : null;
+  const outstandingBalance = roundIntPesoPrint(client.outstandingBalance ?? 0);
+  const totalAmount = roundIntPesoPrint(order.totalAmount || 0);
   const items = order.items || order.orderItems || [];
-  const bultosLabel = formatRemitoBultosLabel(items);
 
   const rowsHtml =
     items.length > 0
       ? items
-          .map((it: any) => {
-            const cant = Number(it.quantity || 0);
-            const weightKg = Number(it.weight || 0);
+          .map((it: any, idx: number) => {
+            const isLast = idx === items.length - 1;
+            const sku = escapePrintHtml(it.product?.sku || 'S/D');
+            const name = escapePrintHtml(it.product?.name || it.productName || it.name || 'Artículo general');
+            const cant = escapePrintHtml(it.quantity ?? 0);
+            const weightDisplay = it.weight ? escapePrintHtml(it.weight) : '-';
             const price = roundIntPesoPrint(it.unitPrice ?? it.price ?? 0);
             const subtotal = computeFallbackItemSubtotalPrint(it);
-            const name = escapePrintHtml(it.product?.name || it.name || 'Producto');
-            const cantDisplay =
-              weightKg > 0
-                ? `${weightKg.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} kg`
-                : `${cant}`;
             return `
-              <tr>
-                <td class="text-center mono font-bold">${cantDisplay}</td>
-                <td><strong>${name}</strong></td>
-                <td class="text-right mono">$ ${formatArsPrint(price)}</td>
-                <td class="text-right mono font-bold">$ ${formatArsPrint(subtotal)}</td>
+              <tr style="border-bottom: ${isLast ? 'none' : '1px solid #f3f4f6'};">
+                <td class="col-sku">${sku}</td>
+                <td class="col-name">${name}</td>
+                <td class="col-num">${cant}</td>
+                <td class="col-num">${weightDisplay}</td>
+                <td class="col-num">$${formatArsPrint(price)}</td>
+                <td class="col-total">$${formatArsPrint(subtotal)}</td>
               </tr>`;
           })
           .join('')
-      : `<tr><td colspan="4" class="text-center" style="padding: 20px; color: #6b7280;">Sin ítems registrados</td></tr>`;
+      : `<tr><td colspan="6" style="padding: 16px; text-align: center; color: #6b7280;">Sin ítems registrados</td></tr>`;
 
   openPrintDocument(
     'width=900,height=1100',
     `<!DOCTYPE html>
     <html>
       <head>
-        <title>Remito X - N° ${escapePrintHtml(remitoNum)}</title>
+        <title>Presupuesto N° ${escapePrintHtml(compNro)}</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: ${PRINT_FONT_STACK}; color: #111827; background: #ffffff; padding: 24px; font-size: 12px; line-height: 1.4; }
-          .remito-card { border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; background: #ffffff; min-height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
-          .legal-banner { background: #f9fafb; border-bottom: 1px solid #d1d5db; padding: 6px 16px; text-align: center; font-weight: 700; font-size: 11px; letter-spacing: 0.05em; color: #111827; }
-          .header-main { display: flex; align-items: stretch; border-bottom: 1px solid #d1d5db; }
-          .header-left { flex: 1.2; padding: 16px 20px; border-right: 1px solid #d1d5db; }
-          .company-sub { font-size: 11px; color: #4b5563; margin-top: 4px; font-weight: 500; }
-          .header-right { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; justify-content: center; background: #ffffff; }
-          .doc-title { font-size: 16px; font-weight: 800; color: #111827; letter-spacing: 0.04em; }
-          .doc-meta { margin-top: 4px; font-size: 11px; color: #374151; }
-          .doc-meta strong { color: #111827; }
-          .info-grid { display: flex; border-bottom: 1px solid #d1d5db; }
-          .client-block { flex: 1.4; padding: 14px 20px; border-right: 1px solid #d1d5db; }
-          .sale-block { flex: 1; padding: 14px 20px; background: #f9fafb; }
-          .block-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 6px; }
-          .client-title { font-size: 14px; font-weight: 700; color: #111827; }
-          .info-row { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: #374151; }
-          .table-container { width: 100%; flex: 1; }
-          table { width: 100%; border-collapse: collapse; }
-          th { background: #f3f4f6; color: #111827; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 14px; text-align: left; border-bottom: 1px solid #d1d5db; }
-          td { padding: 10px 14px; border-bottom: 1px solid #e5e7eb; font-size: 11px; color: #111827; }
-          .text-right { text-align: right; }
-          .text-center { text-align: center; }
-          .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 500; }
-          .font-bold { font-weight: 700; }
-          .summary-bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background: #f9fafb; border-top: 1px solid #d1d5db; margin-top: auto; }
-          .bultos-badge { font-size: 11px; font-weight: 700; color: #374151; background: #e5e7eb; padding: 4px 12px; border-radius: 20px; }
-          .total-box { font-size: 16px; font-weight: 800; color: #111827; display: flex; align-items: center; gap: 12px; }
-          .total-amount { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 18px; font-weight: 700; color: #111827; }
+          body { font-family: ${PRINT_FONT_STACK}; color: #111827; background: #ffffff; padding: 20px; font-size: 12.8px; line-height: 1.38; }
+          .sheet { background: #ffffff; padding: 20px 24px; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 262mm; display: flex; flex-direction: column; justify-content: space-between; }
+          .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid #e5e7eb; }
+          .doc-title { font-size: 16.8px; font-weight: 700; letter-spacing: -0.01em; color: #111827; }
+          .doc-number { font-size: 14.7px; font-weight: 600; color: #111827; margin-top: 2px; font-variant-numeric: tabular-nums; }
+          .doc-date { text-align: right; font-size: 13.1px; color: #6b7280; font-variant-numeric: tabular-nums; }
+          .meta-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 14px; padding: 10px 14px; margin-bottom: 14px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; }
+          .meta-right { border-left: 1px solid #e5e7eb; padding-left: 18px; }
+          .meta-label { font-size: 10.4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; margin-bottom: 4px; }
+          .client-name { font-size: 15.2px; font-weight: 700; color: #111827; }
+          .client-location { font-size: 12.5px; font-weight: 500; color: #374151; margin-top: 2px; }
+          .client-sub { font-size: 12.5px; color: #4b5563; margin-top: 2px; }
+          .cond-value { font-size: 14.7px; font-weight: 600; color: #111827; }
+          .cond-sub { font-size: 12.5px; color: #6b7280; margin-top: 2px; font-variant-numeric: tabular-nums; }
+          .table-wrap { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+          thead tr { background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+          th { padding: 8px; font-size: 10.6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; text-align: left; }
+          th.r { text-align: right; }
+          td { padding: 6px 8px; }
+          .col-sku { padding-left: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.8px; color: #6b7280; }
+          .col-name { font-weight: 500; color: #111827; }
+          .col-num { text-align: right; font-variant-numeric: tabular-nums; color: #374151; }
+          .col-total { padding-right: 10px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: #111827; }
+          .footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; padding-top: 12px; }
+          .legal-note { font-size: 11.5px; color: #9ca3af; }
+          .totals-box { min-width: 250px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; }
+          .totals-row { display: flex; justify-content: space-between; font-size: 12.8px; color: #4b5563; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+          .totals-final { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid #e5e7eb; padding-top: 8px; font-size: 17.6px; font-weight: 700; color: #111827; font-variant-numeric: tabular-nums; }
           @media print {
-            body { padding: 0; background: #fff; }
-            .remito-card { border: 1px solid #000; border-radius: 0; min-height: 270mm; }
-            th { background: #f3f4f6 !important; color: #000 !important; }
+            body { padding: 0; background: #ffffff; }
+            .sheet { border: none; border-radius: 0; min-height: 270mm; }
             @page { size: A4 portrait; margin: 10mm; }
           }
         </style>
       </head>
       <body>
-        <div class="remito-card">
+        <div class="sheet">
           <div>
-            <div class="legal-banner">DOCUMENTO NO VÁLIDO COMO FACTURA</div>
-            <div class="header-main">
-              <div class="header-left">
-                <img src="${window.location.origin}/logo.png" alt="${escapePrintHtml(company.nombreFantasia)}" style="max-height: 52px; max-width: 190px; object-fit: contain; margin-bottom: 4px;" />
-                <div class="company-sub">${escapePrintHtml(company.razonSocial)}</div>
-                <div class="company-sub">${escapePrintHtml(company.direccion)}${phone ? ` &nbsp;|&nbsp; Tel: ${escapePrintHtml(phone)}` : ''}</div>
+            <div class="header">
+              <div>
+                <div class="doc-title">Presupuesto</div>
+                <div class="doc-number">N° ${escapePrintHtml(compNro)}</div>
               </div>
-              <div class="header-right">
-                <div class="doc-title">REMITO N° ${escapePrintHtml(remitoNum)}</div>
-                <div class="doc-meta"><strong>Fecha de Emisión:</strong> ${formattedDate}</div>
-                <div class="doc-meta"><strong>Vencimiento:</strong> ${formattedDueDate}</div>
+              <div class="doc-date">${escapePrintHtml(formattedDate)}</div>
+            </div>
+
+            <div class="meta-grid">
+              <div>
+                <div class="meta-label">Cliente</div>
+                <div class="client-name">${escapePrintHtml(clientName)}</div>
+                ${clientLocation ? `<div class="client-location">${escapePrintHtml(clientLocation)}</div>` : ''}
+                <div class="client-sub">${escapePrintHtml(clientAddress)}${clientCuit ? ` · CUIT/DNI ${escapePrintHtml(clientCuit)}` : ''}</div>
+              </div>
+              <div class="meta-right">
+                <div class="meta-label">Condición</div>
+                <div class="cond-value">${escapePrintHtml(formatPresupuestoPaymentMethod(order.paymentMethod))}</div>
+                <div class="cond-sub">Saldo CC: $${formatArsPrint(outstandingBalance)}</div>
               </div>
             </div>
-            <div class="info-grid">
-              <div class="client-block">
-                <div class="block-label">Cliente</div>
-                <div class="client-title">${escapePrintHtml(client.name)}</div>
-                <div class="info-row"><span><strong>Dirección:</strong> ${escapePrintHtml(client.address)}</span><span><strong>Localidad:</strong> ${escapePrintHtml(client.city || 'S/D')}</span></div>
-                <div class="info-row"><span><strong>Categoría IVA:</strong> ${escapePrintHtml(client.taxCondition)}</span><span><strong>CUIT / DNI:</strong> ${escapePrintHtml(client.cuit)}</span></div>
-              </div>
-              <div class="sale-block">
-                <div class="block-label">Condición Comercial</div>
-                <div class="info-row"><span><strong>Forma de Pago:</strong> ${escapePrintHtml(order.paymentMethod || 'CUENTA CORRIENTE')}</span></div>
-                <div class="info-row"><span><strong>Saldo Anterior:</strong> $ ${formatArsPrint(client.outstandingBalance)}</span></div>
-              </div>
-            </div>
-            <div class="table-container">
+
+            <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th style="width: 10%;" class="text-center">Cant.</th>
-                    <th style="width: 60%;">PRODUCTO / DETALLE</th>
-                    <th style="width: 15%;" class="text-right">Precio Unit.</th>
-                    <th style="width: 15%;" class="text-right">Subtotal</th>
+                    <th style="width: 56px; padding-left: 10px;">SKU</th>
+                    <th>Artículo</th>
+                    <th class="r" style="width: 48px;">Cant.</th>
+                    <th class="r" style="width: 54px;">Kilos</th>
+                    <th class="r" style="width: 90px;">P. Unit</th>
+                    <th class="r" style="width: 96px; padding-right: 10px;">Importe</th>
                   </tr>
                 </thead>
                 <tbody>${rowsHtml}</tbody>
               </table>
             </div>
           </div>
-          <div class="summary-bar">
-            <div class="bultos-badge">${bultosLabel}</div>
-            <div class="total-box">
-              <span>TOTAL:</span>
-              <span class="total-amount">$ ${formatArsPrint(order.totalAmount || 0)}</span>
+
+          <div class="footer">
+            <div class="legal-note">Documento no válido como factura</div>
+            <div class="totals-box">
+              <div class="totals-row">
+                <span>Subtotal</span>
+                <span>$${formatArsPrint(totalAmount)}</span>
+              </div>
+              <div class="totals-final">
+                <span>Total</span>
+                <span>$${formatArsPrint(totalAmount)}</span>
+              </div>
             </div>
           </div>
         </div>
