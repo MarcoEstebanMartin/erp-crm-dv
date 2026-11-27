@@ -24,6 +24,20 @@ import {
 } from './ReceiptWhatsAppSendModal';
 import { buildSearchIndex, filterIndexedItems } from '../vendedor/vendedorHelpers';
 
+export function filterFieldCollectionClients(
+  clients: OfflineBundleClient[],
+  indexedClients: ReturnType<typeof buildSearchIndex<OfflineBundleClient>>,
+  searchQuery: string,
+  limit = 60,
+): OfflineBundleClient[] {
+  if (!searchQuery.trim()) {
+    return clients
+      .filter((c) => Math.round(Number(c.outstandingBalance)) > 0)
+      .slice(0, limit);
+  }
+  return filterIndexedItems(indexedClients, searchQuery).slice(0, limit);
+}
+
 interface FieldCollectionPageProps {
   isActive?: boolean;
   initialClientId?: number | null;
@@ -142,10 +156,10 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
     [clients],
   );
 
-  const filteredClients = useMemo(() => {
-    if (!deferredSearch.trim()) return clients.slice(0, 60);
-    return filterIndexedItems(indexedClients, deferredSearch).slice(0, 60);
-  }, [clients, indexedClients, deferredSearch]);
+  const filteredClients = useMemo(
+    () => filterFieldCollectionClients(clients, indexedClients, deferredSearch),
+    [clients, indexedClients, deferredSearch],
+  );
 
   const openSettlement = settlements.find((s) => s.status === 'OPEN');
 
@@ -308,6 +322,11 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
         {loading && clients.length === 0 && (
           <div style={{ textAlign: 'center', padding: '24px', color: '#6b7280', fontSize: '0.88rem' }}>
             Cargando...
+          </div>
+        )}
+        {!loading && clients.length > 0 && filteredClients.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '24px', color: '#6b7280', fontSize: '0.88rem' }}>
+            {deferredSearch.trim() ? 'Sin resultados' : 'Sin clientes con saldo pendiente'}
           </div>
         )}
         {filteredClients.map((client, idx) => {

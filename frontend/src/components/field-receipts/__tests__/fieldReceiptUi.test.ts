@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fieldReceiptToPublicData } from '../FieldTodayReceiptsCard';
-import type { FieldReceiptDTO } from '../../../api/fieldReceipts.api';
+import { filterFieldCollectionClients } from '../FieldCollectionPage';
+import { buildSearchIndex } from '../../vendedor/vendedorHelpers';
+import type { FieldReceiptDTO, OfflineBundleClient } from '../../../api/fieldReceipts.api';
 
 const baseReceipt: FieldReceiptDTO = {
   id: 42,
@@ -119,5 +121,26 @@ describe('Recibos de Vendedores (UI y PDF moderno)', () => {
 
     expect(listSrc.split('\n').length).toBeLessThanOrEqual(450);
     expect(rowItemSrc.split('\n').length).toBeLessThanOrEqual(450);
+  });
+
+  it('muestra solo clientes con saldo > 0 en orden de ruta sin búsqueda y permite encontrar saldo 0 con la lupa', () => {
+    const sampleClients: OfflineBundleClient[] = [
+      { id: 1, name: 'BECERRA LAURA', cuit: null, city: 'INTENDENTE ALVEAR', address: 'LAPRIDA 752', phone: null, whatsappVerifiedAt: null, outstandingBalance: 0, openInvoices: [] },
+      { id: 2, name: 'DESPENSA ROMI', cuit: null, city: 'INTENDENTE ALVEAR', address: 'ISLA SOLEDAD', phone: null, whatsappVerifiedAt: null, outstandingBalance: 95997, openInvoices: [] },
+      { id: 3, name: 'ALMACEN FAVOR', cuit: null, city: 'INTENDENTE ALVEAR', address: 'MITRE 10', phone: null, whatsappVerifiedAt: null, outstandingBalance: -1500, openInvoices: [] },
+      { id: 4, name: 'KIOSCO CENTRAL', cuit: null, city: 'INTENDENTE ALVEAR', address: 'SAN MARTIN 20', phone: null, whatsappVerifiedAt: null, outstandingBalance: 12500, openInvoices: [] },
+    ];
+    const indexed = buildSearchIndex(sampleClients, (c) => [c.name, c.city, c.cuit, c.address]);
+
+    // Sin búsqueda: solo saldo > 0, respetando orden de ruta original (id 2 antes que id 4)
+    const defaultList = filterFieldCollectionClients(sampleClients, indexed, '');
+    expect(defaultList.map((c) => c.id)).toEqual([2, 4]);
+
+    // Con búsqueda en lupa: encuentra clientes con saldo 0 y saldo a favor
+    const searchZero = filterFieldCollectionClients(sampleClients, indexed, 'becerra');
+    expect(searchZero.map((c) => c.id)).toEqual([1]);
+
+    const searchCredit = filterFieldCollectionClients(sampleClients, indexed, 'favor');
+    expect(searchCredit.map((c) => c.id)).toEqual([3]);
   });
 });
