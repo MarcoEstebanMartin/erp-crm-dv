@@ -276,7 +276,7 @@ async function readVentas(filePath) {
       weight: isWeight ? absQty.toDecimalPlaces(3) : null,
       unitPrice,
       discountPct,
-      subtotal: total.abs().toDecimalPlaces(2),
+      subtotal: kind === 'Nota de Credito' ? total.abs().toDecimalPlaces(2) : total.toDecimalPlaces(2),
     });
   }
 
