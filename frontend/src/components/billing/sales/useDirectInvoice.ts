@@ -355,7 +355,7 @@ export function useDirectInvoice({
     setIsSubmitting(true);
     try {
       const res = await api.createDirectInvoice(payload);
-      setSuccessMsg(`Factura directa emitida. Comprobante: ${res?.invoiceNumber || 'Emitido'}`);
+      setSuccessMsg(res?.invoiceNumber ? `Comprobante emitido: ${res.invoiceNumber}` : 'Comprobante emitido.');
       setShowDirectInvoiceModal(false);
       setModalError(null);
       setDirectCart([]);
