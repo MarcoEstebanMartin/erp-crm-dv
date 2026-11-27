@@ -62,7 +62,7 @@ export const fieldReceiptsService = {
   /**
    * Descarga hoja de ruta, clientes con saldo real y bancos para operar sin señal (PWA).
    */
-  async getOfflineBundle(collectorUserId: number) {
+  async getOfflineBundle(collectorUserId: number, collectorRole?: string) {
     const [clients, bankAccounts, openSettlement] = await Promise.all([
       prisma.persona.findMany({
         where: { isClient: true, isActive: true },
@@ -76,6 +76,7 @@ export const fieldReceiptsService = {
           whatsappVerifiedAt: true,
           route: true,
           saleRouteId: true,
+          saleRoute: { select: { sellerId: true } },
           routeSequence: true,
           outstandingBalance: true,
           sellerId: true,
@@ -95,9 +96,11 @@ export const fieldReceiptsService = {
     return {
       generatedAt: new Date().toISOString(),
       collectorUserId,
+      collectorRole: collectorRole ?? null,
       openSettlementId: openSettlement?.id ?? null,
-      clients: clients.map((c) => ({
+      clients: clients.map(({ saleRoute, ...c }) => ({
         ...c,
+        saleRouteSellerId: saleRoute?.sellerId ?? null,
         outstandingBalance: Number(c.outstandingBalance),
       })),
       bankAccounts,

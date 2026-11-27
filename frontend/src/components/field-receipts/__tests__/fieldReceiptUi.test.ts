@@ -143,4 +143,42 @@ describe('Recibos de Vendedores (UI y PDF moderno)', () => {
     const searchCredit = filterFieldCollectionClients(sampleClients, indexed, 'favor');
     expect(searchCredit.map((c) => c.id)).toEqual([3]);
   });
+
+  it('para VENDEDOR muestra solo sus clientes por defecto y permite buscar clientes de otras rutas en la lupa', () => {
+    const sampleClients: OfflineBundleClient[] = [
+      { id: 10, name: 'ACUNA MARTA ALICIA', cuit: null, city: 'FORTÍN OLAVARRÍA', address: 'BVARD CORTELEZZI', phone: null, route: 'AMERICA Y FORTIN', saleRouteId: 124, saleRouteSellerId: 67, routeSequence: 1, outstandingBalance: 595599, sellerId: 67 },
+      { id: 11, name: 'AICARDI MERCEDES BEATRIZ', cuit: null, city: 'BANDERALÓ', address: 'CACIQUE CURUPOTRO', phone: null, route: 'BANDERALO Y LARROUDE', saleRouteId: 123, saleRouteSellerId: 66, routeSequence: 2, outstandingBalance: 1489329, sellerId: 66 },
+      { id: 12, name: 'ALAN CASTILLO', cuit: null, city: 'RIVADAVIA AMERICA', address: 'AMERICA 460', phone: null, route: 'AMERICA Y FORTIN', saleRouteId: 124, saleRouteSellerId: 67, routeSequence: 3, outstandingBalance: 1978190, sellerId: 67 },
+      { id: 13, name: 'LEIVA LEONARDO FLAVIO', cuit: null, city: 'GENERAL VILLEGAS', address: 'MITRE 100', phone: null, route: 'VILLEGAS DIEGO', saleRouteId: 116, saleRouteSellerId: 66, routeSequence: 4, outstandingBalance: 85000, sellerId: 70 },
+      { id: 14, name: 'DESPENSA ALVEAR', cuit: null, city: 'INTENDENTE ALVEAR', address: '9 DE JULIO 293', phone: null, route: 'ALVEAR', saleRouteId: 120, saleRouteSellerId: 69, routeSequence: 5, outstandingBalance: 120000, sellerId: 69 },
+    ];
+    const indexed = buildSearchIndex(sampleClients, (c) => [c.name, c.city, c.cuit, c.address]);
+
+    // Diego (id 66, VENDEDOR) sin búsqueda: solo sus clientes (por sellerId o por saleRouteSellerId)
+    const diegoDefault = filterFieldCollectionClients(sampleClients, indexed, '', 60, {
+      collectorUserId: 66,
+      collectorRole: 'VENDEDOR',
+    });
+    expect(diegoDefault.map((c) => c.id)).toEqual([11, 13]);
+
+    // Con búsqueda en lupa: puede encontrar y cobrar clientes de América o Alvear por excepción
+    const searchAmerica = filterFieldCollectionClients(sampleClients, indexed, 'alan castillo', 60, {
+      collectorUserId: 66,
+      collectorRole: 'VENDEDOR',
+    });
+    expect(searchAmerica.map((c) => c.id)).toEqual([12]);
+
+    const searchAlvear = filterFieldCollectionClients(sampleClients, indexed, 'alvear', 60, {
+      collectorUserId: 66,
+      collectorRole: 'VENDEDOR',
+    });
+    expect(searchAlvear.map((c) => c.id)).toEqual([14]);
+
+    // Para DEPOSITO / ADMIN: sin restricción de vendedor
+    const adminDefault = filterFieldCollectionClients(sampleClients, indexed, '', 60, {
+      collectorUserId: 73,
+      collectorRole: 'ADMIN',
+    });
+    expect(adminDefault.map((c) => c.id)).toEqual([10, 11, 12, 13, 14]);
+  });
 });

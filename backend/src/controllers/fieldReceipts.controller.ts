@@ -16,7 +16,7 @@ function handleFieldReceiptError(res: Response, error: unknown, fallback: string
 export const getOfflineBundle = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
   try {
-    const bundle = await fieldReceiptsService.getOfflineBundle(req.user.id);
+    const bundle = await fieldReceiptsService.getOfflineBundle(req.user.id, req.user.role);
     return res.json(bundle);
   } catch (error) {
     return handleFieldReceiptError(res, error, 'Error al descargar hoja de ruta offline');

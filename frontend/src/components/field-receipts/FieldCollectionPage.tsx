@@ -24,15 +24,46 @@ import {
 } from './ReceiptWhatsAppSendModal';
 import { buildSearchIndex, filterIndexedItems } from '../vendedor/vendedorHelpers';
 
+export interface FieldCollectionScope {
+  collectorUserId?: number;
+  collectorRole?: string | null;
+}
+
+function readStoredAuthUser(): { id: number; role: string | null } {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_user') : null;
+    if (!raw) return { id: 0, role: null };
+    const parsed = JSON.parse(raw) as { id?: unknown; role?: unknown };
+    return {
+      id: typeof parsed.id === 'number' ? parsed.id : 0,
+      role: typeof parsed.role === 'string' ? parsed.role : null,
+    };
+  } catch {
+    return { id: 0, role: null };
+  }
+}
+
 export function filterFieldCollectionClients(
   clients: OfflineBundleClient[],
   indexedClients: ReturnType<typeof buildSearchIndex<OfflineBundleClient>>,
   searchQuery: string,
   limit = 60,
+  scope?: FieldCollectionScope,
 ): OfflineBundleClient[] {
   if (!searchQuery.trim()) {
+    const restrictToOwnSeller =
+      scope?.collectorRole === 'VENDEDOR' &&
+      typeof scope.collectorUserId === 'number' &&
+      scope.collectorUserId > 0;
     return clients
-      .filter((c) => Math.round(Number(c.outstandingBalance)) > 0)
+      .filter((c) => {
+        if (Math.round(Number(c.outstandingBalance)) <= 0) return false;
+        if (!restrictToOwnSeller) return true;
+        return (
+          c.sellerId === scope.collectorUserId ||
+          c.saleRouteSellerId === scope.collectorUserId
+        );
+      })
       .slice(0, limit);
   }
   return filterIndexedItems(indexedClients, searchQuery).slice(0, limit);
@@ -52,7 +83,8 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
   const [online, setOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
   const [clients, setClients] = useState<OfflineBundleClient[]>([]);
   const [bankAccounts, setBankAccounts] = useState<OfflineBundleBankAccount[]>([]);
-  const [collectorUserId, setCollectorUserId] = useState<number>(0);
+  const [collectorUserId, setCollectorUserId] = useState<number>(() => readStoredAuthUser().id);
+  const [collectorRole, setCollectorRole] = useState<string | null>(() => readStoredAuthUser().role);
   const [pendingQueue, setPendingQueue] = useState<QueuedFieldReceipt[]>([]);
   const [settlements, setSettlements] = useState<CollectorSettlementDTO[]>([]);
   const [search, setSearch] = useState('');
@@ -75,11 +107,13 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
       setLoading(true);
     }
     try {
+      const storedUser = readStoredAuthUser();
       const cached = await loadOfflineBundle();
-      if (cached) {
+      if (cached && (!storedUser.id || cached.collectorUserId === storedUser.id)) {
         setClients(cached.clients);
         setBankAccounts(cached.bankAccounts);
         setCollectorUserId(cached.collectorUserId);
+        setCollectorRole(cached.collectorRole ?? storedUser.role);
       }
       if (navigator.onLine) {
         const flushResult = await flushOfflineReceiptQueue();
@@ -91,6 +125,7 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
         setClients(bundle.clients);
         setBankAccounts(bundle.bankAccounts);
         setCollectorUserId(bundle.collectorUserId);
+        setCollectorRole(bundle.collectorRole ?? storedUser.role);
         setSettlements(mySettlements);
         if (flushResult.syncedCount > 0) {
           const synced = flushResult.lastSyncedReceipt;
@@ -157,8 +192,12 @@ export const FieldCollectionPage: React.FC<FieldCollectionPageProps> = ({
   );
 
   const filteredClients = useMemo(
-    () => filterFieldCollectionClients(clients, indexedClients, deferredSearch),
-    [clients, indexedClients, deferredSearch],
+    () =>
+      filterFieldCollectionClients(clients, indexedClients, deferredSearch, 60, {
+        collectorUserId,
+        collectorRole,
+      }),
+    [clients, indexedClients, deferredSearch, collectorUserId, collectorRole],
   );
 
   const openSettlement = settlements.find((s) => s.status === 'OPEN');

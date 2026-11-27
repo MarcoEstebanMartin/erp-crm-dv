@@ -20,6 +20,7 @@ export interface OfflineBundleClient {
   whatsappVerifiedAt?: string | null;
   route: string | null;
   saleRouteId: number | null;
+  saleRouteSellerId?: number | null;
   routeSequence: number | null;
   outstandingBalance: number;
   sellerId: number | null;
@@ -34,6 +35,7 @@ export interface OfflineBundleBankAccount {
 export interface OfflineBundleResponse {
   generatedAt: string;
   collectorUserId: number;
+  collectorRole?: string | null;
   openSettlementId: number | null;
   clients: OfflineBundleClient[];
   bankAccounts: OfflineBundleBankAccount[];
