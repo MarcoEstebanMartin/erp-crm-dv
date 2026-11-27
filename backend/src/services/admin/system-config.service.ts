@@ -27,7 +27,7 @@ export const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   razonSocial: 'Pablo David Martin',
   nombreFantasia: 'Distribuidora Don Venancio',
   cuit: '20-16316505-9',
-  direccion: 'Pringles 116 - General Villegas - Pcia. Bs.As',
+  direccion: 'Pringles 116 - General Villegas - Pcia. Bs.As (6230)',
   telefono: '+5493388526852',
   email: 'contacto@donvenancio.com.ar',
   puntoVenta: 1,
@@ -51,6 +51,7 @@ const LEGACY_PLACEHOLDERS = new Set([
   '011-4567-8900',
   'dv distribuidora',
   'mayorista de alimentos & bebidas',
+  'pringles 116 - general villegas - pcia. bs.as',
 ]);
 
 let cachedSnapshot: { data: SystemConfigSnapshot; expiresAt: number } | null = null;

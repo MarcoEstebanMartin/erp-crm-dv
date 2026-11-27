@@ -151,8 +151,8 @@ export function printFacturaOficialA4(order: any): void {
 
             <div class="header-main">
               <div class="header-left">
-                <img src="${window.location.origin}/logo.png" alt="${company.nombreFantasia}" style="max-height: 52px; max-width: 190px; object-fit: contain; margin-bottom: 4px;" />
-                <div class="company-sub"><strong>Razón Social:</strong> ${company.razonSocial}</div>
+                <img src="${window.location.origin}/logo.png" alt="${company.nombreFantasia}" style="max-height: 78px; max-width: 285px; object-fit: contain; margin-bottom: 4px;" />
+                <div class="company-sub" style="font-size: 8.8px;"><strong>Razón Social:</strong> ${company.razonSocial}</div>
                 <div class="company-sub">${companyAddress}</div>
                 <div class="company-sub"><strong>CUIT:</strong> ${companyCuit}${companyIibb ? ` &nbsp;|&nbsp; <strong>IIBB:</strong> ${companyIibb}` : ''}</div>
                 <div class="company-sub"><strong>Condición IVA:</strong> RESPONSABLE INSCRIPTO</div>

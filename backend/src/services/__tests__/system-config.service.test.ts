@@ -67,7 +67,7 @@ describe('SystemConfigService — Identidad Fiscal y Reglas Operativas en Postgr
     expect(sanitized.company.razonSocial).toBe('Pablo David Martin');
     expect(sanitized.company.nombreFantasia).toBe('Distribuidora Don Venancio');
     expect(sanitized.company.cuit).toBe('20-16316505-9');
-    expect(sanitized.company.direccion).toBe('Pringles 116 - General Villegas - Pcia. Bs.As');
+    expect(sanitized.company.direccion).toBe('Pringles 116 - General Villegas - Pcia. Bs.As (6230)');
     expect(sanitized.company.telefono).toBe('+5493388526852');
     expect(sanitized.company.email).toBe('contacto@donvenancio.com.ar');
     expect(sanitized.company.puntoVenta).toBe(3);

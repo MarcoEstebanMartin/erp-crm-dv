@@ -98,14 +98,14 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
             src="/logo.png"
             alt={company.nombreFantasia}
             style={{
-              maxHeight: '46px',
-              maxWidth: '180px',
+              maxHeight: '69px',
+              maxWidth: '270px',
               objectFit: 'contain',
               marginBottom: '8px',
               display: 'block',
             }}
           />
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#111827' }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#111827' }}>
             {company.razonSocial}
           </div>
           {company.direccion && (

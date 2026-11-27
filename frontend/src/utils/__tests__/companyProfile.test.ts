@@ -56,6 +56,7 @@ describe('companyProfile — Fuente única oficial de Don Venancio', () => {
 
     const profile = getCompanyProfile(storage);
     expect(profile.nombreFantasia).toBe('Distribuidora Don Venancio');
+    expect(profile.direccion).toBe('Pringles 116 - General Villegas - Pcia. Bs.As (6230)');
     expect(profile.puntoVenta).toBe(4);
     expect(formatCompanyPhone(profile.telefono)).toBe('+54 9 3388 52-6852');
     expect(formatCompanyPhone('03388-421000')).toBe('03388-421000');
