@@ -33,6 +33,26 @@ const VARIANT_KEYWORDS = [
   'TINTO', 'BLANCO', 'ROSADO', 'MALBEC', 'CABERNET', 'CHARDONNAY', 'SYRAH',
 ];
 
+function resolveHistoricalUnitCostSnapshot(pr, billedUnitPrice) {
+  const baseCost = new Decimal(pr?.costPrice || 0);
+  if (baseCost.lte(0)) return new Decimal(0);
+
+  const listPrice = new Decimal(pr?.listPrice || 0);
+  const billed = new Decimal(billedUnitPrice || 0);
+  if (listPrice.gt(0) && billed.gt(0)) {
+    const ratio = billed.dividedBy(listPrice).toNumber();
+    if (ratio >= 2.2) {
+      const uBox = Number(pr?.unitsPerBox || 1);
+      const factor = uBox > 1 && ratio >= uBox * 0.75 && ratio <= uBox * 1.25
+        ? uBox
+        : Math.max(2, Math.round(ratio));
+      return baseCost.times(factor).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+    }
+  }
+
+  return baseCost.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+}
+
 function parseArgs(argv) {
   const args = {
     ventas: path.resolve(__dirname, '../../1.xlsx'),
@@ -294,7 +314,7 @@ async function main() {
 
   const [personas, products, users] = await Promise.all([
     prisma.persona.findMany({ select: { id: true, name: true, cuit: true, isClient: true } }),
-    prisma.product.findMany({ select: { id: true, sku: true, name: true, barcode: true, costPrice: true, listPrice: true } }),
+    prisma.product.findMany({ select: { id: true, sku: true, name: true, barcode: true, costPrice: true, listPrice: true, unitsPerBox: true } }),
     prisma.user.findMany({ select: { id: true, username: true, role: true, isActive: true } }),
   ]);
 
@@ -629,7 +649,7 @@ async function main() {
                 quantity: it.quantity,
                 weight: it.weight,
                 unitPrice: it.unitPrice,
-                unitCostSnapshot: pr.costPrice || new Decimal(0),
+                unitCostSnapshot: resolveHistoricalUnitCostSnapshot(pr, it.unitPrice),
                 listPriceSnapshot: it.unitPrice,
                 discountPctSnapshot: it.discountPct,
                 subtotal: it.subtotal,
