@@ -48,3 +48,25 @@ export function formatCleanExpirationDate(dateInput?: string | Date | null): str
   const year = parsed.getUTCFullYear();
   return `${day}/${month}/${year}`;
 }
+
+const STRUCTURED_WMS_LOC_REGEX = /^(D\d+)[·.\-]R(\d{1,2})-C?(\d{1,2})(?:-?([A-F]))?$/;
+
+/**
+ * Formatea códigos WMS estructurados al formato compacto minimalista `D1·R01-04C` (o `D1·R01-04` sin nivel).
+ * Respeta sin alterar códigos libres/legados y devuelve `S/U` para ubicaciones vacías.
+ */
+export function formatWmsLocationCode(location?: string | null): string {
+  if (!location || typeof location !== 'string') return 'S/U';
+  const clean = location.trim().toUpperCase().replace(/\s*·\s*/g, '·');
+  if (!clean || clean === 'S/U' || clean === 'SIN UBICAR' || clean === 'SIN-UBICAR') {
+    return 'S/U';
+  }
+
+  const match = STRUCTURED_WMS_LOC_REGEX.exec(clean);
+  if (!match) return clean;
+
+  const [, dep, rowStr, colStr, level] = match;
+  const row = rowStr.padStart(2, '0');
+  const col = colStr.padStart(2, '0');
+  return `${dep}·R${row}-${col}${level || ''}`;
+}

@@ -88,7 +88,7 @@ export default function StockInventoryTable({
           <tr>
             <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>SKU</th>
             <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>PRODUCTO</th>
-            <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>UBICACIÓN WMS / LOTES</th>
+            <th style={{ ...TH_BASE_STYLE, textAlign: 'left' }}>UBICACIONES</th>
             <th style={{ ...TH_BASE_STYLE, textAlign: 'center' }}>FÍSICO</th>
             {canViewCosts && <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>COSTO UNIT.</th>}
             {canViewCosts && canViewValuation && <th style={{ ...TH_BASE_STYLE, textAlign: 'right' }}>VALOR COSTO</th>}

@@ -59,6 +59,7 @@ export interface WmsRelocationPlan {
 }
 
 const STRUCTURED_SLOT_REGEX = /^(D\d+-R\d{2}-C\d{2})(?:-([A-F]))?$/;
+const COMPACT_SLOT_REGEX = /^(D\d+)[·.\-]R(\d{1,2})-C?(\d{1,2})(?:-?([A-F]))?$/;
 
 /**
  * Calcula la valorización financiera exacta de un artículo en stock.
@@ -150,12 +151,22 @@ export function verifyStockLedgerInvariant(
 }
 
 /**
- * Normaliza un código de ubicación física a mayúsculas limpias o 'S/U' ("Sin Ubicar").
+ * Normaliza un código de ubicación física a formato canónico interno (`D1-R01-C04-C` / `D1-R01-C04`) o 'S/U'.
+ * Acepta tanto el formato compacto (`D1·R01-04C`, `D1.R01-04C`, `D1-R01-04C`) como el formato completo.
  */
 export function normalizeWmsLocationCode(raw?: string | null): string {
   if (!raw || typeof raw !== 'string') return 'S/U';
-  const cleaned = raw.trim().toUpperCase().replace(/\s+/g, '-');
+  const trimmed = raw.trim().toUpperCase().replace(/\s*·\s*/g, '·');
+  const cleaned = trimmed.replace(/\s+/g, '-');
   if (!cleaned || cleaned === 'S/U' || cleaned === 'SIN-UBICAR') return 'S/U';
+
+  const compactMatch = COMPACT_SLOT_REGEX.exec(cleaned);
+  if (compactMatch) {
+    const [, dep, rowStr, colStr, level] = compactMatch;
+    const base = `${dep}-R${rowStr.padStart(2, '0')}-C${colStr.padStart(2, '0')}`;
+    return level ? `${base}-${level}` : base;
+  }
+
   return cleaned;
 }
 

@@ -6,6 +6,7 @@ import LotTransferForm from './LotTransferForm';
 import {
   extractCleanLotNumber,
   formatCleanExpirationDate,
+  formatWmsLocationCode,
   isSentinelExpiration
 } from './lotLabel';
 
@@ -122,7 +123,7 @@ export default function LotManagerModal({
                   spellCheck={false}
                   value={editLocation}
                   onChange={(e) => onEditLocationChange(e.target.value)}
-                  placeholder="D1-R01-C04-A o S/U"
+                  placeholder="D1·R01-04A o S/U"
                   style={{ borderRadius: '8px', width: '100%' }}
                 />
               </div>
@@ -193,7 +194,7 @@ export default function LotManagerModal({
                             )}
                           </td>
                           <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                            {lot.location || 'S/U'}
+                            {formatWmsLocationCode(lot.location)}
                           </td>
                           {canMutateStock && (
                             <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>

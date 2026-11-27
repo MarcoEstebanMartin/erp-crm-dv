@@ -1,4 +1,4 @@
-import { parseWmsLocationScope } from './stock.engine';
+import { normalizeWmsLocationCode, parseWmsLocationScope } from './stock.engine';
 
 export const VALID_WAREHOUSE_IDS = ['D1', 'D2', 'D3'] as const;
 export type WarehouseDepId = (typeof VALID_WAREHOUSE_IDS)[number];
@@ -145,7 +145,7 @@ export function validateRequestedWmsLocationFormat(requestedLocationCode: string
   baseSlotCode?: string;
   isSlotLike: boolean;
 } {
-  const clean = String(requestedLocationCode || '').trim().toUpperCase();
+  const clean = normalizeWmsLocationCode(requestedLocationCode);
   if (!clean || clean === 'S/U') {
     return { allowed: true, isSlotLike: false };
   }

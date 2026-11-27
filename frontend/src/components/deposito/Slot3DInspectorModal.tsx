@@ -9,7 +9,7 @@ import { Slot3DRackIsometricView } from './Slot3DRackIsometricView';
 import { Slot3DLoadStockForm } from './Slot3DLoadStockForm';
 import { Slot3DMoveSlotBar } from './Slot3DMoveSlotBar';
 import { extractSlotLevels, type MergedDepositSlot } from './warehouseLayoutMerger';
-import { extractCleanLotNumber, formatCleanExpirationDate } from '../stock/lotLabel';
+import { extractCleanLotNumber, formatCleanExpirationDate, formatWmsLocationCode } from '../stock/lotLabel';
 import { computeProductWmsBreakdown } from './wmsStockBreakdown';
 import { WMS_LOCATION_GROUPS } from './depositoHelpers';
 import { formatCompactSlotLevels, type RackLevel, type UnassignedTrayItem } from './wmsMapHelpers';
@@ -233,7 +233,7 @@ const Slot3DInspectorInner: React.FC<Slot3DInspectorInnerProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 id="wms-slot-3d-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>{slot.code}</h3>
+                <h3 id="wms-slot-3d-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{formatWmsLocationCode(slot.code)}</h3>
                 <span className={`badge ${totalStockInSlot > 0 ? 'badge-success' : 'badge-secondary'}`} style={{ fontSize: '0.72rem', padding: '2px 8px', fontVariantNumeric: 'tabular-nums' }}>
                   {totalStockInSlot > 0 ? `${totalStockInSlot} u.` : 'Vacío'}
                 </span>

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MapPin, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import { RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import type { Product } from '../../types';
 import { computeProductWmsBreakdown } from './wmsStockBreakdown';
 import {
   extractCleanLotNumber,
   formatCleanExpirationDate,
+  formatWmsLocationCode,
   isGenericUntrackedLot,
   isSentinelExpiration,
 } from '../stock/lotLabel';
@@ -166,29 +167,33 @@ export const DepositoStockListTab: React.FC<DepositoStockListTabProps> = ({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {(wms.slotEntries.length > 0 || wms.unassignedUnits > 0) && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                        {wms.slotEntries.map((entry) => (
-                          <button
-                            key={entry.location}
-                            type="button"
-                            onClick={() => onJumpToMapLocation?.(entry.location)}
-                            disabled={!onJumpToMapLocation}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: '4px',
-                              fontSize: '0.74rem', fontWeight: 700, fontFamily: 'monospace',
-                              padding: '3px 8px', borderRadius: '6px',
-                              backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0',
-                              cursor: onJumpToMapLocation ? 'pointer' : 'default',
-                              touchAction: 'manipulation',
-                            }}
-                            title={onJumpToMapLocation ? `Ver ${entry.location} en el Mapa` : entry.location}
-                          >
-                            <MapPin size={12} aria-hidden="true" />
-                            <span>{entry.location} · {entry.units} u.</span>
-                          </button>
-                        ))}
+                        {wms.slotEntries.map((entry) => {
+                          const displayLoc = formatWmsLocationCode(entry.location);
+                          return (
+                            <button
+                              key={entry.location}
+                              type="button"
+                              onClick={() => onJumpToMapLocation?.(entry.location)}
+                              disabled={!onJumpToMapLocation}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                fontSize: '0.74rem', fontVariantNumeric: 'tabular-nums',
+                                padding: '3px 8px', borderRadius: '6px',
+                                backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+                                cursor: onJumpToMapLocation ? 'pointer' : 'default',
+                                touchAction: 'manipulation',
+                              }}
+                              title={onJumpToMapLocation ? `Ver ${displayLoc} en el Mapa` : displayLoc}
+                            >
+                              <span aria-hidden="true" style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: '#16a34a', flexShrink: 0 }} />
+                              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{displayLoc}</span>
+                              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{entry.units}</span>
+                            </button>
+                          );
+                        })}
                         {wms.unassignedUnits > 0 && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.73rem', padding: '3px 8px', borderRadius: '6px', backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', fontWeight: 600 }}>
-                            Sin ubicar · {wms.unassignedUnits} u.
+                          <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.73rem', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px dashed var(--border-color)', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                            Sin ubicar · {wms.unassignedUnits}
                           </span>
                         )}
                       </div>

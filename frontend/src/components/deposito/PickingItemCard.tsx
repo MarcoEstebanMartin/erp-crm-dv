@@ -4,6 +4,7 @@ import { detectWeightAnomaly, getProductLocation } from './depositoHelpers';
 import {
   extractCleanLotNumber,
   formatCleanExpirationDate,
+  formatWmsLocationCode,
   isGenericUntrackedLot,
   isSentinelExpiration,
 } from '../stock/lotLabel';
@@ -92,11 +93,11 @@ export const PickingItemCard: React.FC<PickingItemCardProps> = ({
                   title="Ver ubicación en el mapa"
                 >
                   <MapPin size={12} aria-hidden="true" />
-                  <span>{primaryLocation}</span>
+                  <span>{formatWmsLocationCode(primaryLocation)}</span>
                 </button>
               ) : (
                 <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.74rem', fontFamily: 'monospace', fontWeight: 700, background: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1' }}>
-                  {primaryLocation}
+                  {formatWmsLocationCode(primaryLocation)}
                 </span>
               )
             )}

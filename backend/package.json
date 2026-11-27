@@ -15,6 +15,8 @@
     "test:concurrency": "node scripts/stress_test_orders.js",
     "db:reset-movements": "node scripts/reset_movements.js",
     "db:import-opening-balances": "node scripts/import_opening_balances.js",
+    "db:import-iduo-history": "node scripts/import_iduo_history.js",
+    "db:import-iduo-purchases": "node scripts/import_iduo_purchases.js",
     "db:backup-master": "node scripts/backup_master_data.js",
     "db:backup-sql": "node scripts/backup_database_sql.js",
     "db:backup-encrypted": "ts-node scripts/encrypted_backup_cli.ts",

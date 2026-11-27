@@ -304,6 +304,36 @@ export default function StockDashboard({
         .hover-bg-muted:hover {
           background-color: var(--bg-app) !important;
         }
+        .wms-loc-chip {
+          transition: border-color 150ms ease-out, background-color 150ms ease-out, transform 150ms ease-out;
+        }
+        .wms-loc-chip:hover {
+          border-color: var(--text-muted) !important;
+          background-color: var(--bg-app) !important;
+        }
+        .wms-loc-chip:active {
+          transform: scale(0.98);
+        }
+        .wms-loc-chip:focus-visible {
+          outline: 2px solid CanvasText;
+          outline-offset: 2px;
+        }
+        .wms-loc-arrow {
+          color: var(--text-muted);
+          font-size: 0.72rem;
+          line-height: 1;
+          opacity: 0;
+          transition: opacity 150ms ease-out;
+        }
+        .wms-loc-chip:hover .wms-loc-arrow,
+        .wms-loc-chip:focus-visible .wms-loc-arrow {
+          opacity: 0.85;
+        }
+        @media (hover: none) {
+          .wms-loc-arrow {
+            opacity: 0.7;
+          }
+        }
       `}</style>
     </div>
   );

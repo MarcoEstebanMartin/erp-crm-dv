@@ -41,6 +41,7 @@ export default function ProductsList({
   const [visibleCount, setVisibleCount] = useState<number>(INITIAL_PRODUCTS_BATCH);
   const [editingCell, setEditingCell] = useState<{ id: number; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [failedImages, setFailedImages] = useState<Record<number, string>>({});
   const [previewModal, setPreviewModal] = useState<{
     open: boolean;
     imageUrl: string;
@@ -240,6 +241,8 @@ export default function ProductsList({
                 const precioFinal = Number(p.listPrice) || 0;
                 const precioSinIva = precioFinal / 1.21;
                 const catDetails = getProductCategoryInfo(p);
+                const resolvedImageUrl = p.imageUrl ? resolveProductImageUrl(p.imageUrl, '3.5') : '';
+                const hasValidImage = Boolean(resolvedImageUrl) && failedImages[p.id] !== resolvedImageUrl;
 
                 const handleOpenEdit = () => setProductModal({
                   open: true, mode: 'edit',
@@ -263,9 +266,8 @@ export default function ProductsList({
                           style={{ position: 'relative', cursor: 'pointer' }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (p.imageUrl) {
-                              const fullUrl = resolveProductImageUrl(p.imageUrl, '3.5');
-                              setPreviewModal({ open: true, imageUrl: fullUrl, name: p.name, sku: p.sku, productId: p.id, categoryName: catDetails.name, categoryIcon: catDetails.icon });
+                            if (hasValidImage) {
+                              setPreviewModal({ open: true, imageUrl: resolvedImageUrl, name: p.name, sku: p.sku, productId: p.id, categoryName: catDetails.name, categoryIcon: catDetails.icon });
                             } else if (onUploadImage) {
                               const input = document.createElement('input');
                               input.type = 'file'; input.accept = 'image/*';
@@ -274,10 +276,39 @@ export default function ProductsList({
                             }
                           }}
                         >
-                          {p.imageUrl ? (
-                            <img src={resolveProductImageUrl(p.imageUrl, '3.5')} alt={p.name} width={40} height={40} loading="lazy" decoding="async" style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }} />
+                          {hasValidImage ? (
+                            <img
+                              src={resolvedImageUrl}
+                              alt={p.name}
+                              width={40}
+                              height={40}
+                              loading="lazy"
+                              decoding="async"
+                              onError={() => setFailedImages((prev) => ({ ...prev, [p.id]: resolvedImageUrl }))}
+                              style={{ width: '40px', height: '40px', minWidth: '40px', objectFit: 'contain', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: '#fff', padding: '2px' }}
+                            />
                           ) : (
-                            <div style={{ width: '40px', height: '40px', minWidth: '40px', borderRadius: '6px', border: '1px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-muted)', color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: 600 }}>S/F</div>
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                minWidth: '40px',
+                                borderRadius: '6px',
+                                border: '1px dashed var(--border-color)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: 'var(--bg-muted)',
+                                color: 'var(--text-muted)',
+                                fontSize: '0.55rem',
+                                fontWeight: 700,
+                                letterSpacing: '0.02em',
+                                lineHeight: 1,
+                                textAlign: 'center',
+                              }}
+                            >
+                              S/FOTO
+                            </div>
                           )}
                           {onUploadImage && (
                             <div title="Cambiar imagen" onClick={(ev) => { ev.stopPropagation(); const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = (e: any) => { if (e.target.files?.[0]) onUploadImage(p.id, e.target.files[0]); }; input.click(); }} style={{ position: 'absolute', bottom: -5, right: -5, backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '50%', padding: '2px', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3, cursor: 'pointer' }}>

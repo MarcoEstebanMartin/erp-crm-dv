@@ -1,7 +1,7 @@
 import React from 'react';
 import { DEPOSITO_SLOTS, SECTORS_INFO } from './depositomapaData';
 import { extractSlotLevels } from './warehouseLayoutMerger';
-import { isSentinelExpiration } from '../stock/lotLabel';
+import { formatWmsLocationCode, isSentinelExpiration } from '../stock/lotLabel';
 
 export const playBeep = (type: 'success' | 'error') => {
   try {
@@ -41,7 +41,7 @@ export interface WmsSlotMeta {
   col: number;
 }
 
-const STRUCTURED_WMS_REGEX = /^(D\d+-R(\d{2})-C(\d{2}))(?:-([A-F]))?$/;
+const STRUCTURED_WMS_REGEX = /^(D\d+)[·.\-]R(\d{1,2})-C?(\d{1,2})(?:-?([A-F]))?$/;
 
 const SECTOR_ROUTE_WEIGHT: Record<string, number> = {
   RACK_ENTRADA: 10,
@@ -74,7 +74,7 @@ export const WMS_LOCATION_GROUPS: Array<{
     const list = grouped.get(slot.chamber) || [];
     for (const lvl of extractSlotLevels(slot.nivel)) {
       const value = `${slot.code}-${lvl}`;
-      list.push({ value, label: `${value} (${slot.deposito} · Nivel ${lvl})` });
+      list.push({ value, label: `${formatWmsLocationCode(value)} (${slot.deposito} · Nivel ${lvl})` });
     }
     grouped.set(slot.chamber, list);
   }
@@ -123,7 +123,9 @@ export function resolveWmsSlotMeta(locCode?: string | null): WmsSlotMeta {
 
   const structured = STRUCTURED_WMS_REGEX.exec(cleanCode);
   if (structured) {
-    const [, baseCode, rowStr, colStr, level] = structured;
+    const [, dep, rowStr, colStr, level] = structured;
+    const baseCode = `${dep}-R${rowStr.padStart(2, '0')}-C${colStr.padStart(2, '0')}`;
+    const canonicalCode = level ? `${baseCode}-${level}` : baseCode;
     const baseSlot = BASE_SLOT_BY_CODE.get(baseCode);
     if (baseSlot) {
       const chamber = baseSlot.chamber || 'GENERAL';
@@ -132,7 +134,7 @@ export function resolveWmsSlotMeta(locCode?: string | null): WmsSlotMeta {
         SECTOR_ROUTE_WEIGHT[chamber] ??
         (baseSlot.dep_id === 'D2' ? 60 : baseSlot.dep_id === 'D3' ? 70 : 55);
       return {
-        code: cleanCode,
+        code: canonicalCode,
         baseCode,
         level: level || null,
         chamber,
@@ -148,18 +150,18 @@ export function resolveWmsSlotMeta(locCode?: string | null): WmsSlotMeta {
 
     const row = Number(rowStr);
     const col = Number(colStr);
-    const chamber = cleanCode.startsWith('D2-') ? 'D2_GENERAL' : cleanCode.startsWith('D3-') ? 'D3_GENERAL' : 'GENERAL';
+    const chamber = canonicalCode.startsWith('D2-') ? 'D2_GENERAL' : canonicalCode.startsWith('D3-') ? 'D3_GENERAL' : 'GENERAL';
     const sector = SECTORS_INFO[chamber] || SECTORS_INFO.GENERAL;
     const weight = chamber === 'D2_GENERAL' ? 60 : chamber === 'D3_GENERAL' ? 70 : 55;
     return {
-      code: cleanCode,
+      code: canonicalCode,
       baseCode,
       level: level || null,
       chamber,
       sectorLabel: chamber === 'GENERAL' ? 'Depósito 1' : sector.label,
       color: sector.color,
       bg: sector.bg,
-      description: level ? `${baseCode} · Nivel ${level}` : baseCode,
+      description: level ? `${formatWmsLocationCode(baseCode)} · Nivel ${level}` : formatWmsLocationCode(baseCode),
       weight,
       row: Number.isFinite(row) ? row : 999,
       col: Number.isFinite(col) ? col : 999,
@@ -249,7 +251,7 @@ export const renderLocationTag = (locCode: string) => {
       }}
       title={meta.description}
     >
-      {meta.code === 'S/U' ? 'Sin Ubicación' : meta.code}
+      {meta.code === 'S/U' ? 'Sin ubicar' : formatWmsLocationCode(meta.code)}
     </span>
   );
 };

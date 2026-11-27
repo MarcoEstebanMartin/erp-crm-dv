@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractCleanLotNumber,
   formatCleanExpirationDate,
+  formatWmsLocationCode,
   isGenericUntrackedLot,
   isSentinelExpiration
 } from '../lotLabel';
@@ -63,6 +64,18 @@ describe('Stock Minimalism — Etiquetas limpias de Lote/WMS y Verdad Operativa 
     expect(formatCleanExpirationDate('2036-12-31T00:00:00.000Z')).toBe('Sin vencimiento');
     expect(formatCleanExpirationDate(null)).toBe('Sin vencimiento');
     expect(formatCleanExpirationDate('2027-03-05T00:00:00.000Z')).toBe('05/03/2027');
+  });
+
+  it('formatWmsLocationCode compacta ubicaciones WMS al formato D1·R01-04C respetando depósito', () => {
+    expect(formatWmsLocationCode('D1-R01-C04-C')).toBe('D1·R01-04C');
+    expect(formatWmsLocationCode('D1-R01-C10-A')).toBe('D1·R01-10A');
+    expect(formatWmsLocationCode('D2-R03-C07')).toBe('D2·R03-07');
+    expect(formatWmsLocationCode('D1·R01-04C')).toBe('D1·R01-04C');
+    expect(formatWmsLocationCode('d1.r1-4c')).toBe('D1·R01-04C');
+    expect(formatWmsLocationCode('S/U')).toBe('S/U');
+    expect(formatWmsLocationCode('')).toBe('S/U');
+    expect(formatWmsLocationCode(null)).toBe('S/U');
+    expect(formatWmsLocationCode('CAMARA-1')).toBe('CAMARA-1');
   });
 
   it('computeStockStats usa comparación estricta (< minStock) e ignora minStock = 0', () => {

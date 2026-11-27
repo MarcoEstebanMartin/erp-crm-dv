@@ -1,10 +1,11 @@
-import { History, Layers, MapPin } from 'lucide-react';
+import { History, Layers } from 'lucide-react';
 import { extractRubroLabel, getDisplayedStock, hasProductPendingAdjustment } from './types';
 import { computeProductWmsBreakdown } from '../deposito/wmsStockBreakdown';
 import { resolveProductRowValuation } from '../../utils/exactStockMath';
 import {
   extractCleanLotNumber,
   formatCleanExpirationDate,
+  formatWmsLocationCode,
   isGenericUntrackedLot,
   isSentinelExpiration
 } from './lotLabel';
@@ -87,7 +88,7 @@ export default function StockInventoryRow({
               .map((lot: any) => {
                 const val = pendingAdjustments[`lot-${lot.id}`] !== undefined ? pendingAdjustments[`lot-${lot.id}`] : lot.stock;
                 const cleanLot = extractCleanLotNumber(lot.lotNumber);
-                const locTag = lot.location && lot.location !== 'S/U' ? ` · ${lot.location}` : '';
+                const locTag = lot.location && lot.location !== 'S/U' ? ` · ${formatWmsLocationCode(lot.location)}` : '';
                 return (
                   <div key={lot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '10px' }}>
                     <span>
@@ -145,42 +146,74 @@ export default function StockInventoryRow({
           )}
 
           {displayedStock > 0 ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
-              {wms.slotEntries.map((entry) => (
-                <button
-                  key={entry.location}
-                  type="button"
-                  onClick={() => onJumpToMapLocation && onJumpToMapLocation(entry.location)}
-                  disabled={!onJumpToMapLocation}
-                  title={onJumpToMapLocation ? `Ver ${entry.location} en Mapa de Depósito` : entry.location}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+              {wms.slotEntries.map((entry) => {
+                const displayLoc = formatWmsLocationCode(entry.location);
+                return (
+                  <button
+                    key={entry.location}
+                    type="button"
+                    className={onJumpToMapLocation ? 'wms-loc-chip' : undefined}
+                    onClick={() => onJumpToMapLocation && onJumpToMapLocation(entry.location)}
+                    disabled={!onJumpToMapLocation}
+                    title={onJumpToMapLocation ? `Ver ${displayLoc} en Mapa de Depósito` : displayLoc}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.73rem',
+                      fontVariantNumeric: 'tabular-nums',
+                      whiteSpace: 'nowrap',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--border-color)',
+                      cursor: onJumpToMapLocation ? 'pointer' : 'default'
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '9999px',
+                        backgroundColor: '#16a34a',
+                        flexShrink: 0
+                      }}
+                    />
+                    <span style={{ fontFamily: 'monospace', fontWeight: 600, letterSpacing: '-0.01em' }}>
+                      {displayLoc}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
+                      {entry.units}
+                    </span>
+                    {onJumpToMapLocation && (
+                      <span className="wms-loc-arrow" aria-hidden="true">↗</span>
+                    )}
+                  </button>
+                );
+              })}
+
+              {wms.unassignedUnits > 0 && (
+                <span
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    fontFamily: 'monospace',
+                    fontSize: '0.72rem',
+                    fontWeight: 500,
                     fontVariantNumeric: 'tabular-nums',
                     whiteSpace: 'nowrap',
-                    padding: '2px 7px',
-                    borderRadius: '4px',
-                    backgroundColor: '#f0fdf4',
-                    color: '#15803d',
-                    border: '1px solid #bbf7d0',
-                    cursor: onJumpToMapLocation ? 'pointer' : 'default'
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-muted)',
+                    border: '1px dashed var(--border-color)'
                   }}
-                >
-                  <MapPin size={12} />
-                  <span>{entry.location} · {entry.units} u.{onJumpToMapLocation ? ' ↗' : ''}</span>
-                </button>
-              ))}
-
-              {wms.unassignedUnits > 0 && (
-                <span
-                  style={{ display: 'inline-flex', alignItems: 'center', fontSize: '0.7rem', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', padding: '2px 7px', borderRadius: '4px', backgroundColor: 'var(--bg-app)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }}
                   title="Mercadería disponible pendiente de asignar a un estante físico"
                 >
-                  Sin ubicar · {wms.unassignedUnits} u.
+                  Sin ubicar · {wms.unassignedUnits}
                 </span>
               )}
             </div>

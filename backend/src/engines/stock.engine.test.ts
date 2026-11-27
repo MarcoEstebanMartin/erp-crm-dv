@@ -4,6 +4,7 @@ import {
   doesLotMatchWmsScope,
   evaluateLotFefoStatus,
   extractBaseLotNumber,
+  normalizeWmsLocationCode,
   planWmsSafeRelocation,
   resolveAdjustmentLot,
   resolveTargetLotNumberForLocation,
@@ -105,10 +106,21 @@ describe('StockEngine - Valorización Financiera Exacta, FEFO y WMS Seguro', () 
 
   it('Valida alcance exacto de Slots WMS sin falsos positivos por substring (anti-contains)', () => {
     expect(doesLotMatchWmsScope('D1-R01-C04-A', 'D1-R01-C04')).toBe(true);
+    expect(doesLotMatchWmsScope('D1·R01-04A', 'D1·R01-04')).toBe(true);
     expect(doesLotMatchWmsScope('D1-R01-C04', 'D1-R01-C04')).toBe(true);
     expect(doesLotMatchWmsScope('D1-R01-C04-B', 'D1-R01-C04-A')).toBe(false);
     expect(doesLotMatchWmsScope('D1-R01-C040', 'D1-R01-C04')).toBe(false);
     expect(doesLotMatchWmsScope('XD1-R01-C04', 'D1-R01-C04')).toBe(false);
+  });
+
+  it('Normaliza códigos compactos D1·R01-04C al formato canónico interno D1-R01-C04-C', () => {
+    expect(normalizeWmsLocationCode('D1·R01-04C')).toBe('D1-R01-C04-C');
+    expect(normalizeWmsLocationCode('d1·r1-4c')).toBe('D1-R01-C04-C');
+    expect(normalizeWmsLocationCode('D1.R01-10A')).toBe('D1-R01-C10-A');
+    expect(normalizeWmsLocationCode('D2-R03-07')).toBe('D2-R03-C07');
+    expect(normalizeWmsLocationCode('D1-R01-C04-C')).toBe('D1-R01-C04-C');
+    expect(normalizeWmsLocationCode('Sin ubicar')).toBe('S/U');
+    expect(normalizeWmsLocationCode('')).toBe('S/U');
   });
 
   it('Partir un lote en múltiples racks conserva SIEMPRE el código limpio (clave única productId+lotNumber+location)', () => {
