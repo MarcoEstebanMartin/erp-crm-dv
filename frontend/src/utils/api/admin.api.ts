@@ -115,6 +115,27 @@ export const adminApi = {
     return res.data?.report;
   },
 
+  getWeeklyPulse: async (weekStart?: string) => {
+    const qs = weekStart ? `?weekStart=${encodeURIComponent(weekStart)}` : '';
+    const res = await request(`/admin/reports/weekly-pulse${qs}`);
+    return res.pulse;
+  },
+
+  saveWeeklyPulse: async (payload: {
+    weekStart: string;
+    resultBuffer: number;
+    manualOpeningCredit?: number | null;
+    manualPurchases: Array<{ id: string; company: string; date: string; amount: number }>;
+    manualSales: Array<{ id: string; locality: string; date: string; amountA: number; amountX: number }>;
+    excludedSourceKeys: string[];
+  }) => {
+    const res = await request('/admin/reports/weekly-pulse', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return res.pulse;
+  },
+
   getAuditLogs: async (page = 1, limit = 50, filters?: AuditLogQueryFilters) => {
     const params = new URLSearchParams({
       page: String(page),

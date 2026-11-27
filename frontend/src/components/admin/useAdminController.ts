@@ -100,7 +100,7 @@ export function useAdminController(activeTab: string) {
   const [summaryCardModal, setSummaryCardModal] = useState<{ open: boolean; cardKey: string; cardLabel: string } | null>(null);
 
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('ALL');
-  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'field-receipts' | 'transferencias' | 'gastos' | 'reportes'>(() =>
+  const [cajasSubTab, setCajasSubTab] = useState<'general' | 'rendiciones' | 'field-receipts' | 'transferencias' | 'gastos' | 'reportes' | 'pulso'>(() =>
     api.getCurrentUser()?.role === 'ADMIN' ? 'general' : 'rendiciones',
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -110,7 +110,7 @@ export function useAdminController(activeTab: string) {
     const isAdmin = api.getCurrentUser()?.role === 'ADMIN';
     if ((activeTab === 'reportes' || activeTab === 'reports') && isAdmin) {
       setCajasSubTab('reportes');
-    } else if (!isAdmin && (cajasSubTab === 'general' || cajasSubTab === 'gastos' || cajasSubTab === 'reportes')) {
+    } else if (!isAdmin && (cajasSubTab === 'general' || cajasSubTab === 'gastos' || cajasSubTab === 'reportes' || cajasSubTab === 'pulso')) {
       setCajasSubTab('rendiciones');
     }
   }, [activeTab, cajasSubTab]);

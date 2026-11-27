@@ -25,6 +25,7 @@ import {
   getTripProfitabilityReport,
   updateRouteTripCosts,
 } from '../controllers/trip-profitability.controller';
+import { getWeeklyPulse, saveWeeklyPulse } from '../controllers/weekly-pulse.controller';
 import { authenticateJWT, requireRole } from '../middlewares/auth';
 import { idempotencyGuard } from '../middlewares/idempotency.middleware';
 import { Role } from '@prisma/client';
@@ -48,6 +49,10 @@ import {
   getTripProfitabilityQuerySchema,
   updateRouteTripCostsSchema,
 } from '../validators/reports.validator';
+import {
+  getWeeklyPulseQuerySchema,
+  saveWeeklyPulseSchema,
+} from '../validators/weekly-pulse.validator';
 
 const router = Router();
 
@@ -72,6 +77,8 @@ router.get('/reports/zones', validateRequest(getZoneReportsQuerySchema), getZone
 router.get('/reports/opportunities', validateRequest(getOpportunitiesReportQuerySchema), getCommercialOpportunities);
 router.get('/reports/trips', validateRequest(getTripProfitabilityQuerySchema), getTripProfitabilityReport);
 router.patch('/reports/trips/:routeId/costs', validateRequest(updateRouteTripCostsSchema), updateRouteTripCosts);
+router.get('/reports/weekly-pulse', validateRequest(getWeeklyPulseQuerySchema), getWeeklyPulse);
+router.put('/reports/weekly-pulse', validateRequest(saveWeeklyPulseSchema), saveWeeklyPulse);
 
 router.get('/audit-logs', validateRequest(getAuditLogsQuerySchema), getAuditLogs);
 router.get('/sensitive-events', getSensitiveEvents);

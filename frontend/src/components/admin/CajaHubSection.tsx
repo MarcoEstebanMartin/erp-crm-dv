@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react';
-import { ArrowLeftRight, DollarSign, Receipt, TrendingUp } from 'lucide-react';
+import { Activity, ArrowLeftRight, DollarSign, Receipt, TrendingUp } from 'lucide-react';
 import type { Order, Persona, Product, User } from '../../types';
 
 const UnifiedReportsDashboard = lazy(() => import('../UnifiedReportsDashboard'));
+const WeeklyPulseTab = lazy(() => import('../finanzas/WeeklyPulseTab'));
 const RendicionesDashboard = lazy(() => import('../RendicionesDashboard'));
 const FieldSettlementsTab = lazy(() =>
   import('../field-receipts/FieldSettlementsTab').then((m) => ({ default: m.FieldSettlementsTab })),
@@ -17,7 +18,8 @@ export type CajasSubTab =
   | 'field-receipts'
   | 'transferencias'
   | 'gastos'
-  | 'reportes';
+  | 'reportes'
+  | 'pulso';
 
 interface CajaHubSectionProps {
   isAdmin: boolean;
@@ -49,6 +51,7 @@ export function CajaHubSection({
     { id: 'transferencias', label: 'Transferencias', icon: <ArrowLeftRight size={15} aria-hidden="true" />, adminOnly: false },
     { id: 'gastos', label: 'Gastos', icon: <DollarSign size={15} aria-hidden="true" />, adminOnly: true },
     { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={15} aria-hidden="true" />, adminOnly: true },
+    { id: 'pulso', label: 'Pulso Semanal', icon: <Activity size={15} aria-hidden="true" />, adminOnly: true },
   ];
 
   return (
@@ -90,6 +93,8 @@ export function CajaHubSection({
             products={products}
             financialReport={financialReport}
           />
+        ) : isAdmin && cajasSubTab === 'pulso' ? (
+          <WeeklyPulseTab />
         ) : isAdmin ? (
           <FinanzasDashboard />
         ) : (
