@@ -131,8 +131,8 @@ export function WeeklySalesByCityModal({
       onClose={onClose}
       ariaLabelledBy="weekly-sales-modal-title"
       style={{
-        width: 'min(760px, calc(100vw - 24px))',
-        maxHeight: 'min(86vh, 760px)',
+        width: 'min(820px, calc(100vw - 24px))',
+        maxHeight: 'min(94dvh, 960px)',
         padding: 0,
         borderRadius: '14px',
         border: '1px solid var(--border-color, #e5e7eb)',
@@ -141,14 +141,14 @@ export function WeeklySalesByCityModal({
         overflow: 'hidden',
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 'min(86vh, 760px)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 'min(94dvh, 960px)' }}>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             gap: '12px',
-            padding: '16px 20px',
+            padding: '12px 20px',
             borderBottom: '1px solid var(--border-color, #e5e7eb)',
           }}
         >
@@ -264,7 +264,7 @@ export function WeeklySalesByCityModal({
             display: 'grid',
             gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
             gap: '10px',
-            padding: '14px 20px',
+            padding: '10px 20px',
             borderBottom: '1px solid var(--border-color, #e5e7eb)',
             backgroundColor: '#fafafa',
           }}
@@ -280,7 +280,7 @@ export function WeeklySalesByCityModal({
                 backgroundColor: '#ffffff',
                 border: '1px solid var(--border-color, #e5e7eb)',
                 borderRadius: '10px',
-                padding: '12px 14px',
+                padding: '10px 14px',
               }}
             >
               <div style={{ fontSize: '0.74rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
@@ -321,11 +321,11 @@ export function WeeklySalesByCityModal({
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr>
-                <th scope="col" style={{ textAlign: 'left', padding: '10px 20px' }}>Localidad</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '10px 14px' }}>Sucursal A</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '10px 14px' }}>Sucursal X</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '10px 14px' }}>Total</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '10px 20px' }}>Pedidos</th>
+                <th scope="col" style={{ textAlign: 'left', padding: '8px 20px' }}>Localidad</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '8px 14px' }}>Sucursal A</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '8px 14px' }}>Sucursal X</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '8px 14px' }}>Total</th>
+                <th scope="col" style={{ textAlign: 'right', padding: '8px 20px' }}>Pedidos</th>
               </tr>
             </thead>
             <tbody>
@@ -348,7 +348,7 @@ export function WeeklySalesByCityModal({
                       scope="row"
                       style={{
                         textAlign: 'left',
-                        padding: '10px 20px',
+                        padding: '7px 20px',
                         fontWeight: 600,
                         color: 'var(--text-primary)',
                         background: 'transparent',
@@ -360,7 +360,7 @@ export function WeeklySalesByCityModal({
                       className="tabular-nums"
                       style={{
                         textAlign: 'right',
-                        padding: '10px 14px',
+                        padding: '7px 14px',
                         color: row.official !== 0 ? 'var(--text-primary)' : 'var(--text-muted, #94a3b8)',
                       }}
                     >
@@ -370,7 +370,7 @@ export function WeeklySalesByCityModal({
                       className="tabular-nums"
                       style={{
                         textAlign: 'right',
-                        padding: '10px 14px',
+                        padding: '7px 14px',
                         color: row.internal !== 0 ? 'var(--text-primary)' : 'var(--text-muted, #94a3b8)',
                       }}
                     >
@@ -380,7 +380,7 @@ export function WeeklySalesByCityModal({
                       className="tabular-nums"
                       style={{
                         textAlign: 'right',
-                        padding: '10px 14px',
+                        padding: '7px 14px',
                         fontWeight: 700,
                         color: 'var(--text-primary)',
                       }}
@@ -391,7 +391,7 @@ export function WeeklySalesByCityModal({
                       className="tabular-nums"
                       style={{
                         textAlign: 'right',
-                        padding: '10px 20px',
+                        padding: '7px 20px',
                         color: 'var(--text-secondary)',
                       }}
                     >
@@ -406,20 +406,20 @@ export function WeeklySalesByCityModal({
                 <tr style={{ borderTop: '1px solid var(--border-color, #e5e7eb)', backgroundColor: '#f8fafc' }}>
                   <th
                     scope="row"
-                    style={{ textAlign: 'left', padding: '11px 20px', fontWeight: 700, color: 'var(--text-primary)' }}
+                    style={{ textAlign: 'left', padding: '9px 20px', fontWeight: 700, color: 'var(--text-primary)' }}
                   >
                     Total
                   </th>
-                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '11px 14px', fontWeight: 700 }}>
+                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '9px 14px', fontWeight: 700 }}>
                     {formatPeso(officialSales)}
                   </td>
-                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '11px 14px', fontWeight: 700 }}>
+                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '9px 14px', fontWeight: 700 }}>
                     {formatPeso(internalSales)}
                   </td>
-                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '11px 14px', fontWeight: 700 }}>
+                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '9px 14px', fontWeight: 700 }}>
                     {formatPeso(totalSales)}
                   </td>
-                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '11px 20px', fontWeight: 700 }}>
+                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '9px 20px', fontWeight: 700 }}>
                     {totalOrders}
                   </td>
                 </tr>
