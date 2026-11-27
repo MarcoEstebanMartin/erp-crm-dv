@@ -196,7 +196,20 @@ export function parseArcaCertStatusFromPem(
   }
 }
 
+function decodeBase64Pem(raw: string | undefined): string {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '';
+  try {
+    return Buffer.from(trimmed, 'base64').toString('utf8').trim();
+  } catch {
+    return '';
+  }
+}
+
 function resolveArcaCertPemForInspection(): string | null {
+  const envCertB64 = decodeBase64Pem(process.env.ARCA_PADRON_CERT_B64 || process.env.AFIP_CERT_B64);
+  if (envCertB64) return envCertB64;
+
   const envCertPem = (process.env.ARCA_PADRON_CERT_PEM || process.env.AFIP_CERT_PEM || '').trim();
   if (envCertPem) return envCertPem.replace(/\\n/g, '\n');
 
@@ -232,10 +245,23 @@ export function getArcaCertStatus(
 }
 
 export function resolveArcaCertAndKey(): { certPem: string; keyPem: string; isProduction: boolean } | null {
-  const isPadronProd =
-    process.env.ARCA_PADRON_PRODUCTION !== undefined
-      ? process.env.ARCA_PADRON_PRODUCTION === 'true'
-      : true;
+  const isProd =
+    process.env.AFIP_PRODUCTION !== undefined
+      ? process.env.AFIP_PRODUCTION === 'true'
+      : process.env.ARCA_PADRON_PRODUCTION !== undefined
+        ? process.env.ARCA_PADRON_PRODUCTION === 'true'
+        : true;
+
+  const envCertB64 = decodeBase64Pem(process.env.AFIP_CERT_B64 || process.env.ARCA_PADRON_CERT_B64);
+  const envKeyB64 = decodeBase64Pem(process.env.AFIP_KEY_B64 || process.env.ARCA_PADRON_KEY_B64);
+  if (envCertB64 && envKeyB64) {
+    return {
+      certPem: envCertB64,
+      keyPem: envKeyB64,
+      isProduction: isProd,
+    };
+  }
+
   const envCertPem = (process.env.ARCA_PADRON_CERT_PEM || process.env.AFIP_CERT_PEM || '').trim();
   const envKeyPem = (process.env.ARCA_PADRON_KEY_PEM || process.env.AFIP_KEY_PEM || '').trim();
 
@@ -243,7 +269,7 @@ export function resolveArcaCertAndKey(): { certPem: string; keyPem: string; isPr
     return {
       certPem: envCertPem.replace(/\\n/g, '\n'),
       keyPem: envKeyPem.replace(/\\n/g, '\n'),
-      isProduction: isPadronProd,
+      isProduction: isProd,
     };
   }
 
@@ -253,7 +279,7 @@ export function resolveArcaCertAndKey(): { certPem: string; keyPem: string; isPr
     return {
       certPem: fs.readFileSync(dedicatedCert, 'utf8'),
       keyPem: fs.readFileSync(dedicatedKey, 'utf8'),
-      isProduction: isPadronProd,
+      isProduction: isProd,
     };
   }
 
@@ -321,7 +347,7 @@ export async function getArcaWsaaTicket(serviceName: string): Promise<WsaaCreden
       method: 'POST',
       headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: '""' },
       body: soapEnvelope,
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(20000),
     });
 
     const xml = await response.text();

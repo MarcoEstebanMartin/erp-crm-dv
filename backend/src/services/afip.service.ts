@@ -1,22 +1,17 @@
-import fs from 'fs';
-import path from 'path';
-// @ts-ignore
-import Afip from '@afipsdk/afip.js';
 import { roundToTwoDecimals, toDecimal } from '../core/money';
 import prisma from '../utils/prisma';
+import { resolveArcaCertAndKey } from '../utils/arca-wsaa-cms.util';
 import { getSystemConfigSnapshot } from './admin/system-config.service';
+import { createArcaVoucher, getArcaLastVoucher } from './billing/arca-wsfe.client';
 
 const isTestEnv = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
 const envAfipMock = process.env.AFIP_MOCK === 'true';
-const isProduction = process.env.AFIP_PRODUCTION === 'true' && !isTestEnv && !envAfipMock;
 const cuit = process.env.AFIP_CUIT || '20409378472';
-const certPath = path.resolve(process.env.AFIP_CERT_PATH || './certs/homo.crt');
-const keyPath = path.resolve(process.env.AFIP_KEY_PATH || './certs/homo.key');
 
-const certsExist = fs.existsSync(certPath) && fs.existsSync(keyPath);
-const useMock = isTestEnv || envAfipMock || (!certsExist && !isProduction);
+const initialCreds = isTestEnv ? null : resolveArcaCertAndKey();
+const isProduction = Boolean(initialCreds?.isProduction) && !isTestEnv && !envAfipMock;
+const useMock = isTestEnv || envAfipMock || !initialCreds;
 
-let afipClient: any = null;
 const activeAfipVoucherLocks = new Map<string, Promise<unknown>>();
 
 /**
@@ -40,22 +35,11 @@ export async function withAfipVoucherLock<T>(
 }
 
 if (!useMock) {
-  try {
-    afipClient = new Afip({
-      CUIT: Number(cuit),
-      production: isProduction,
-      cert: certPath,
-      key: keyPath,
-    } as any);
-    console.log(`🔒 AFIP SDK Inicializado en modo ${isProduction ? 'PRODUCCIÓN' : 'HOMOLOGACIÓN'}.`);
-  } catch (err: any) {
-    console.error('❌ Error inicializando el SDK de AFIP:', err.message);
-    console.log('⚠️ Se activará el modo MOCK debido a error de inicialización.');
-  }
+  console.log(`🔒 ARCA WSFEv1 Directo Inicializado en modo ${isProduction ? 'PRODUCCIÓN' : 'HOMOLOGACIÓN'}.`);
 } else if (envAfipMock && !isTestEnv) {
-  console.log('🧪 AFIP SDK en MODO SIMULACRO FISCAL (AFIP_MOCK=true — Cero emisiones reales en ARCA).');
+  console.log('🧪 ARCA WSFEv1 en MODO SIMULACRO FISCAL (AFIP_MOCK=true — Cero emisiones reales en ARCA).');
 } else if (!isTestEnv) {
-  console.log('⚠️ Certificados no encontrados en ./certs/. Corriendo AFIP en MODO MOCK para desarrollo.');
+  console.log('⚠️ Certificados ARCA no encontrados. Corriendo WSFE en MODO MOCK para desarrollo.');
 }
 
 export interface InvoiceRequest {
@@ -333,12 +317,14 @@ function generateMockAfipResult(
 export async function emitirFacturaAFIP(request: InvoiceRequest): Promise<InvoiceResult> {
   const sysCfg = await getSystemConfigSnapshot();
   const puntoDeVenta = sysCfg.company.puntoVenta || 1;
+  const emitterCuit = sysCfg.company.cuit || cuit;
   const cbteTipo: 1 | 6 = request.invoiceType === 'A' ? 1 : 6;
   const lockKey = `${puntoDeVenta}:${cbteTipo}`;
 
   return withAfipVoucherLock(lockKey, async () => {
+    const creds = isTestEnv ? null : resolveArcaCertAndKey();
     const isSimulacro =
-      useMock || process.env.AFIP_MOCK === 'true' || Boolean(sysCfg.afipMockMode) || !afipClient;
+      useMock || process.env.AFIP_MOCK === 'true' || Boolean(sysCfg.afipMockMode) || !creds;
 
     if (isSimulacro) {
       const nextVoucher = await resolveNextMockVoucherNumber(puntoDeVenta, cbteTipo);
@@ -346,10 +332,10 @@ export async function emitirFacturaAFIP(request: InvoiceRequest): Promise<Invoic
     }
 
     try {
-      const lastVoucher = await afipClient.ElectronicBilling.getLastVoucher(puntoDeVenta, cbteTipo);
+      const lastVoucher = await getArcaLastVoucher(puntoDeVenta, cbteTipo, emitterCuit);
       const nextVoucherNumber = lastVoucher + 1;
       const data = buildAfipInvoicePayload({ puntoDeVenta, nextVoucherNumber, request });
-      const res = await afipClient.ElectronicBilling.createVoucher(data);
+      const res = await createArcaVoucher(data, emitterCuit);
       const formattedInvoiceNumber = `${puntoDeVenta.toString().padStart(5, '0')}-${nextVoucherNumber
         .toString()
         .padStart(8, '0')}`;
@@ -361,10 +347,7 @@ export async function emitirFacturaAFIP(request: InvoiceRequest): Promise<Invoic
         puntoVenta: puntoDeVenta,
       };
     } catch (error: any) {
-      console.error('❌ Error llamando a los Web Services de AFIP:', error);
-      if (!isProduction) {
-        return generateMockAfipResult(puntoDeVenta, '1');
-      }
+      console.error('❌ Error llamando a los Web Services de ARCA:', error);
       throw new Error(`Error AFIP: ${error.message || error}`);
     }
   });
@@ -400,8 +383,9 @@ export async function emitirNotaCreditoAFIP(
   const lockKey = `${puntoDeVenta}:${cbteTipo}`;
 
   return withAfipVoucherLock(lockKey, async () => {
+    const creds = isTestEnv ? null : resolveArcaCertAndKey();
     const isSimulacro =
-      useMock || process.env.AFIP_MOCK === 'true' || Boolean(sysCfg.afipMockMode) || !afipClient;
+      useMock || process.env.AFIP_MOCK === 'true' || Boolean(sysCfg.afipMockMode) || !creds;
 
     if (isSimulacro) {
       const nextVoucher = await resolveNextMockVoucherNumber(puntoDeVenta, cbteTipo);
@@ -409,7 +393,7 @@ export async function emitirNotaCreditoAFIP(
     }
 
     try {
-      const lastVoucher = await afipClient.ElectronicBilling.getLastVoucher(puntoDeVenta, cbteTipo);
+      const lastVoucher = await getArcaLastVoucher(puntoDeVenta, cbteTipo, emitterCuit);
       const nextVoucherNumber = lastVoucher + 1;
       const data = buildAfipCreditNotePayload({
         puntoDeVenta,
@@ -417,7 +401,7 @@ export async function emitirNotaCreditoAFIP(
         emitterCuit,
         request,
       });
-      const res = await afipClient.ElectronicBilling.createVoucher(data);
+      const res = await createArcaVoucher(data, emitterCuit);
       const formattedInvoiceNumber = `${puntoDeVenta.toString().padStart(5, '0')}-${nextVoucherNumber
         .toString()
         .padStart(8, '0')}`;
@@ -429,7 +413,7 @@ export async function emitirNotaCreditoAFIP(
         puntoVenta: puntoDeVenta,
       };
     } catch (error: any) {
-      console.error('❌ Error llamando a los Web Services de AFIP para Nota de Crédito:', error);
+      console.error('❌ Error llamando a los Web Services de ARCA para Nota de Crédito:', error);
       throw new Error(`Error AFIP Nota de Crédito: ${error.message || error}`);
     }
   });
