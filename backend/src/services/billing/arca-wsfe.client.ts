@@ -1,3 +1,4 @@
+import https from 'https';
 import {
   extractRepresentedCuitFromCert,
   getArcaWsaaTicket,
@@ -27,6 +28,7 @@ export interface WsfeVoucherPayload {
   ImpTrib: number;
   MonId: string;
   MonCotiz: number;
+  CondicionIVAReceptorId?: number;
   Iva?: Array<{ Id: number; BaseImp: number; Importe: number }>;
   Tributos?: Array<{ Id: number; Desc: string; BaseImp: number; Alic: number; Importe: number }>;
   CbtesAsoc?: Array<{ Tipo: number; PtoVta: number; Nro: number; Cuit?: string; CbteFch?: string }>;
@@ -121,6 +123,11 @@ export function buildWsfeCreateVoucherSoapEnvelope(params: {
     ? `<ar:PeriodoAsoc><ar:FchDesde>${escapeXml(payload.PeriodoAsoc.FchDesde)}</ar:FchDesde><ar:FchHasta>${escapeXml(payload.PeriodoAsoc.FchHasta)}</ar:FchHasta></ar:PeriodoAsoc>`
     : '';
 
+  const condicionIvaXml =
+    payload.CondicionIVAReceptorId !== undefined
+      ? `<ar:CondicionIVAReceptorId>${payload.CondicionIVAReceptorId}</ar:CondicionIVAReceptorId>`
+      : '';
+
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ar="${WSFE_NAMESPACE}">` +
@@ -145,7 +152,7 @@ export function buildWsfeCreateVoucherSoapEnvelope(params: {
     `<ar:ImpIVA>${payload.ImpIVA}</ar:ImpIVA>` +
     `<ar:MonId>${escapeXml(payload.MonId)}</ar:MonId>` +
     `<ar:MonCotiz>${payload.MonCotiz}</ar:MonCotiz>` +
-    `${cbtesAsocXml}${periodoAsocXml}${tributosXml}${ivaXml}` +
+    `${condicionIvaXml}${cbtesAsocXml}${periodoAsocXml}${tributosXml}${ivaXml}` +
     `</ar:FECAEDetRequest></ar:FeDetReq>` +
     `</ar:FeCAEReq>` +
     `</ar:FECAESolicitar>` +
@@ -176,23 +183,59 @@ export function parseWsfeCaeResponseXml(xml: string): WsfeCaeResponse {
   return { CAE: cae, CAEFchVto: caeFchVto, CbteDesde: cbteDesde };
 }
 
+function postArcaHttps(urlStr: string, headers: Record<string, string>, body: string): Promise<{ status: number; text: string }> {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(urlStr);
+    const req = https.request(
+      {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port || 443,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Length': String(Buffer.byteLength(body, 'utf8')),
+        },
+        // OpenSSL 3 (Node 20+) rechaza DH keys antiguas de servicios1.afip.gov.ar sin SECLEVEL=1
+        ciphers: 'DEFAULT:@SECLEVEL=1',
+        timeout: WSFE_TIMEOUT_MS,
+      },
+      (res) => {
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          resolve({ status: res.statusCode || 0, text: data });
+        });
+      },
+    );
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy(new Error(`Timeout conectando con ARCA WSFE (${WSFE_TIMEOUT_MS}ms)`));
+    });
+    req.write(body, 'utf8');
+    req.end();
+  });
+}
+
 async function callWsfeSoap(soapAction: string, bodyXml: string): Promise<string> {
   const creds = resolveArcaCertAndKey();
   if (!creds) {
     throw new Error('Certificados ARCA/AFIP no configurados.');
   }
   const url = creds.isProduction ? WSFE_PROD_URL : WSFE_HOMO_URL;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
+  const response = await postArcaHttps(
+    url,
+    {
       'Content-Type': 'text/xml; charset=utf-8',
       SOAPAction: `${WSFE_NAMESPACE}${soapAction}`,
     },
-    body: bodyXml,
-    signal: AbortSignal.timeout(WSFE_TIMEOUT_MS),
-  });
-  const xml = await response.text();
-  if (!response.ok && !extractXmlTag(xml, 'faultstring')) {
+    bodyXml,
+  );
+  const xml = response.text;
+  if ((response.status < 200 || response.status >= 300) && !extractXmlTag(xml, 'faultstring')) {
     throw new Error(`ARCA WSFE HTTP ${response.status}`);
   }
   return xml;

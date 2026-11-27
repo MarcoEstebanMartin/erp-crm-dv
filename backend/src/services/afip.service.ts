@@ -45,6 +45,7 @@ if (!useMock) {
 export interface InvoiceRequest {
   clientCuit: string;
   clientDocType: number; // 80: CUIT, 96: DNI, 99: Consumidor Final
+  clientTaxCondition?: string | null;
   invoiceType: 'A' | 'B';
   total: number;
   neto?: number;
@@ -146,6 +147,20 @@ function parseCaeDueDateAR(rawCaeDue?: string): Date {
   return fallback;
 }
 
+/**
+ * Resuelve `CondicionIVAReceptorId` obligatorio según RG 5616 ARCA (vigente obligatorio desde 01/12/2026).
+ * Códigos oficiales WSFE: 1=RI, 4=Exento, 5=Consumidor Final, 6=Monotributo.
+ */
+function resolveCondicionIvaReceptorId(request: InvoiceRequest): number {
+  const normalized = (request.clientTaxCondition || '').toUpperCase().trim();
+  if (normalized === 'RESPONSABLE_INSCRIPTO') return 1;
+  if (normalized === 'EXENTO') return 4;
+  if (normalized === 'MONOTRIBUTO') return 6;
+  if (normalized === 'CONSUMIDOR_FINAL') return 5;
+  if (request.invoiceType === 'A') return 1;
+  return 5;
+}
+
 function buildBaseVoucherPayload(params: {
   puntoDeVenta: number;
   cbteTipo: number;
@@ -174,6 +189,7 @@ function buildBaseVoucherPayload(params: {
     ImpTrib: taxes.impTrib,
     MonId: 'PES',
     MonCotiz: 1,
+    CondicionIVAReceptorId: resolveCondicionIvaReceptorId(request),
   };
 
   if (taxes.iva > 0) {

@@ -32,6 +32,7 @@ describe('ARCA WSFEv1 Direct SOAP Client', () => {
     expect(xml).toContain('<ar:FECAESolicitar>');
     expect(xml).toContain('<ar:Cuit>20163165059</ar:Cuit>');
     expect(xml).toContain('<ar:CbteTipo>1</ar:CbteTipo>');
+    expect(xml).toContain('<ar:CondicionIVAReceptorId>1</ar:CondicionIVAReceptorId>');
     expect(xml).toContain('<ar:ImpTotal>12400</ar:ImpTotal>');
     expect(xml).toContain('<ar:AlicIva><ar:Id>5</ar:Id><ar:BaseImp>10000</ar:BaseImp><ar:Importe>2100</ar:Importe></ar:AlicIva>');
     expect(xml).toContain('<ar:Tributo><ar:Id>9</ar:Id><ar:Desc>Percepcion de IIBB</ar:Desc>');
