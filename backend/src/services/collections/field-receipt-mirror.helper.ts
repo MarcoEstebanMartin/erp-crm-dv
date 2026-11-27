@@ -10,7 +10,10 @@ import {
 } from '@prisma/client';
 import { type NumericInput, roundToIntegerPeso } from '../../core/money';
 import { generateUniqueVerificationCode } from '../../core/receiptToken';
-import { paymentAllocationService } from '../finance/payment-allocation.service';
+import {
+  allocateFieldReceiptTransaction,
+  parseAllocationPreference,
+} from './field-receipt-allocation.helper';
 import {
   type FieldPaymentMethod,
   type MirrorTransactionSyncAction,
@@ -54,6 +57,7 @@ export interface ApplyTransferClearParams {
     collectorUserId: number;
     billingType: BillingType;
     status: FieldReceiptStatus;
+    allocationPreference?: unknown;
     payments: Array<{ id: number; paymentMethod: PaymentMethod; amount: Prisma.Decimal | string | number; status: PaymentVerificationStatus }>;
   };
   targetBankId: number;
@@ -162,13 +166,13 @@ export async function applyTransferClearAndIssueReceipt(
     },
   });
 
-  if (typeof tx.paymentAllocation?.createMany === 'function') {
-    await paymentAllocationService.allocateTransactionToOrders(tx, {
-      transactionId: createdTx.id,
-      personaId: params.receipt.personaId,
-      amount: params.amountNum,
-    });
-  }
+  const preference = parseAllocationPreference(params.receipt.allocationPreference);
+  await allocateFieldReceiptTransaction(tx, {
+    transactionId: createdTx.id,
+    personaId: params.receipt.personaId,
+    amount: params.amountNum,
+    preference,
+  });
 
   await recordLedgerMovement(tx, {
     personaId: params.receipt.personaId,

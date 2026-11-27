@@ -112,6 +112,34 @@ describe('fieldReceipts.schema + validateRequest', () => {
     expect(status).toHaveBeenCalledWith(400);
   });
 
+  it('acepta preferencias opcionales de imputación (orderId, orderIds, applyToUnbilledBalance)', async () => {
+    const middleware = validateRequest(syncFieldReceiptSchema);
+    const req = {
+      body: {
+        provisionalCode: 'PROV-12-1732046409-ALLOC',
+        personaId: 42,
+        billingType: 'INTERNAL',
+        capturedAt: '2026-11-27T17:00:00.000Z',
+        orderId: 202,
+        orderIds: [202, 205],
+        applyToUnbilledBalance: true,
+        payments: [{ paymentMethod: 'CASH', amount: 30000 }],
+      },
+      query: {},
+      params: {},
+    } as unknown as Request;
+    const { res, status } = createMockRes();
+    const next = vi.fn() as unknown as NextFunction;
+
+    await middleware(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(status).not.toHaveBeenCalled();
+    expect(req.body.orderId).toBe(202);
+    expect(req.body.orderIds).toEqual([202, 205]);
+    expect(req.body.applyToUnbilledBalance).toBe(true);
+  });
+
   it('valida los schemas de rendición, verificación de transferencia, rechazo de cheque y anulación', async () => {
     const cases = [
       { schema: approveSettlementSchema, body: { declaredCash: 15000, notes: 'OK' } },

@@ -32,6 +32,28 @@ export interface OfflineBundleBankAccount {
   accountNumber: string | null;
 }
 
+export interface FieldPendingInvoiceItem {
+  id: number;
+  invoiceNumber: string;
+  billingType?: string;
+  invoiceType?: string;
+  totalAmount: number;
+  paidAmount: number;
+  creditNotesAmount: number;
+  pendingAmount: number;
+  status: 'PENDING' | 'PARTIAL' | 'PAID';
+  createdAt: string;
+}
+
+export interface FieldClientPendingInvoicesResponse {
+  invoices: FieldPendingInvoiceItem[];
+  totalPendingOnInvoices: number;
+  totalAvailableCredit: number;
+  netBalance: number;
+  outstandingBalance: number;
+  unbilledBalance: number;
+}
+
 export interface OfflineBundleResponse {
   generatedAt: string;
   collectorUserId: number;
@@ -66,6 +88,9 @@ export interface SyncFieldReceiptPayload {
   gpsLng?: number | null;
   capturedAt: string;
   allowCreditOnAccount?: boolean;
+  orderId?: number | null;
+  orderIds?: number[];
+  applyToUnbilledBalance?: boolean;
   payments: SyncFieldReceiptPaymentPayload[];
 }
 
@@ -191,6 +216,9 @@ export const fieldReceiptsApi = {
   },
   getOfflineBundle(): Promise<OfflineBundleResponse> {
     return apiClient.get('/field-receipts/offline-bundle');
+  },
+  getClientPendingInvoices(personaId: number): Promise<FieldClientPendingInvoicesResponse> {
+    return apiClient.get(`/field-receipts/clients/${personaId}/pending-invoices`);
   },
   syncReceipt(payload: SyncFieldReceiptPayload) {
     return apiClient.post<{ receipt: FieldReceiptDTO; alreadySynced: boolean; whatsapp: any }>(

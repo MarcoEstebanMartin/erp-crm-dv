@@ -23,6 +23,20 @@ export const getOfflineBundle = async (req: AuthenticatedRequest, res: Response)
   }
 };
 
+export const getClientPendingInvoices = async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
+  const personaId = Number(req.params.personaId);
+  if (!Number.isInteger(personaId) || personaId <= 0) {
+    return res.status(400).json({ error: 'Cliente inválido' });
+  }
+  try {
+    const summary = await fieldReceiptsService.getClientPendingInvoices(personaId);
+    return res.json(summary);
+  } catch (error) {
+    return handleFieldReceiptError(res, error, 'Error al consultar comprobantes pendientes');
+  }
+};
+
 export const syncFieldReceipt = async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user?.id) return res.status(401).json({ error: 'No autorizado' });
   try {

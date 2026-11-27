@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Role } from '@prisma/client';
 import {
   approveSettlement,
+  getClientPendingInvoices,
   getOfflineBundle,
   getWhatsAppCoverage,
   listAllSettlements,
@@ -32,6 +33,12 @@ const TREASURY_ROLES = [Role.ADMIN, Role.FACTURACION];
 
 // Rutas operativas en calle (vendedores y repartidores)
 router.get('/offline-bundle', authenticateJWT, requireRole(COLLECTOR_ROLES), getOfflineBundle);
+router.get(
+  '/clients/:personaId/pending-invoices',
+  authenticateJWT,
+  requireRole(COLLECTOR_ROLES),
+  getClientPendingInvoices,
+);
 router.post(
   '/sync',
   authenticateJWT,

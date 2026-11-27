@@ -5,7 +5,6 @@ import {
   type FieldReceiptDTO,
   type OfflineBundleBankAccount,
   type OfflineBundleClient,
-  type SyncFieldReceiptPaymentPayload,
   type SyncFieldReceiptPayload,
 } from '../../api/fieldReceipts.api';
 import {
@@ -18,11 +17,19 @@ import {
   warmUpGpsSilently,
 } from '../../utils/geoUtils';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
+import { AdminPaymentAllocationPreview } from '../admin/AdminPaymentAllocationPreview';
+import { AdminPaymentInvoiceSelector } from '../admin/AdminPaymentInvoiceSelector';
 import {
   createEmptyPayment,
   FieldCollectPaymentRow,
   type PaymentDraft,
 } from './FieldCollectPaymentRow';
+import {
+  buildFieldAllocationPayload,
+  compressFieldReceiptImage,
+  useFieldCollectReceivables,
+  validateAndMapFieldPayments,
+} from './useFieldCollectReceivables';
 
 export interface FieldCollectSuccessInfo {
   offline: boolean;
@@ -43,30 +50,6 @@ interface FieldCollectModalProps {
   onSuccess: (info: FieldCollectSuccessInfo) => void;
 }
 
-async function compressImageFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Formato de imagen inválido'));
-      img.onload = () => {
-        const maxDim = 960;
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return resolve(String(reader.result));
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7));
-      };
-      img.src = String(reader.result);
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   client,
   collectorUserId,
@@ -77,6 +60,9 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   onSuccess,
 }) => {
   const submittingRef = useRef(false);
+  const userEditedAmountRef = useRef(false);
+  const suggestedAmountRef = useRef(suggestedAmount);
+  suggestedAmountRef.current = suggestedAmount;
   const [payments, setPayments] = useState<PaymentDraft[]>([]);
   const [notes, setNotes] = useState('');
   const [allowCreditOnAccount, setAllowCreditOnAccount] = useState(false);
@@ -84,8 +70,29 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const receivables = useFieldCollectReceivables({
+    client,
+    onApplySuggestedAmount: (amount, fromUserToggle) => {
+      if (
+        !fromUserToggle &&
+        (userEditedAmountRef.current ||
+          (suggestedAmountRef.current !== null &&
+            suggestedAmountRef.current !== undefined &&
+            suggestedAmountRef.current > 0))
+      ) {
+        return;
+      }
+      setPayments((prev) => {
+        if (prev.length !== 1) return prev;
+        return [{ ...prev[0], amount: amount > 0 ? String(amount) : '' }];
+      });
+      if (fromUserToggle) setError(null);
+    },
+  });
+
   useEffect(() => {
     if (!client) return;
+    userEditedAmountRef.current = false;
     const realBalance = Math.max(0, Math.round(client.outstandingBalance));
     const preferred =
       suggestedAmount !== null && suggestedAmount !== undefined && suggestedAmount > 0
@@ -107,14 +114,19 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
     return sum + (n > 0 ? n : 0);
   }, 0);
 
-  const balanceAfter = Math.round(client.outstandingBalance) - totalAmount;
-  const effectiveLocalDebt = Math.max(0, Math.round(client.outstandingBalance));
+  const effectiveOutstandingBalance =
+    receivables.outstandingBalance ?? Math.round(client.outstandingBalance);
+  const balanceAfter = effectiveOutstandingBalance - totalAmount;
+  const effectiveLocalDebt = Math.max(0, effectiveOutstandingBalance);
   const excessAmount = totalAmount > effectiveLocalDebt ? totalAmount - effectiveLocalDebt : 0;
   const isOverpaying = totalAmount > 0 && excessAmount > 0;
   const showCreditToggle = isOverpaying || needsCreditOverride;
   const blockedByOverpayment = showCreditToggle && !allowCreditOnAccount;
 
   const updatePayment = (id: string, patch: Partial<PaymentDraft>) => {
+    if ('amount' in patch) {
+      userEditedAmountRef.current = true;
+    }
     setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   };
 
@@ -125,7 +137,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
   ) => {
     if (!file) return;
     try {
-      const compressed = await compressImageFile(file);
+      const compressed = await compressFieldReceiptImage(file);
       updatePayment(id, { [field]: compressed });
     } catch {
       setError('No se pudo procesar la foto seleccionada.');
@@ -142,36 +154,25 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
       return;
     }
 
-    const mappedPayments: SyncFieldReceiptPaymentPayload[] = [];
-    for (const p of payments) {
-      const amt = Math.round(Number(p.amount) || 0);
-      if (amt <= 0) {
-        setError('Todos los medios de pago deben tener importe mayor a $0.');
-        return;
-      }
-      if (p.paymentMethod === 'CHECK' && (!p.checkBank.trim() || !p.checkNumber.trim() || !p.checkDueDate)) {
-        setError('Completá banco, número y fecha de vencimiento del cheque.');
-        return;
-      }
-      mappedPayments.push({
-        paymentMethod: p.paymentMethod,
-        amount: amt,
-        bankAccountId: p.bankAccountId ? Number(p.bankAccountId) : null,
-        transferReference: p.transferReference.trim() || null,
-        proofImageUrl: p.proofImageUrl || null,
-        checkBank: p.checkBank.trim() || null,
-        checkNumber: p.checkNumber.trim() || null,
-        checkDueDate: p.checkDueDate || null,
-        checkFrontImageUrl: p.checkFrontImageUrl || null,
-        isEcheq: p.isEcheq,
-      });
+    const mappedResult = validateAndMapFieldPayments(payments);
+    if (!mappedResult.ok) {
+      setError(mappedResult.error);
+      return;
     }
+    const { mappedPayments } = mappedResult;
 
     submittingRef.current = true;
     const provisionalCode = generateProvisionalCode(collectorUserId);
     setSubmitting(true);
     try {
       const gps = getFreshCachedGps() ?? (await captureCurrentGpsSilently(450));
+      const allocationPayload = buildFieldAllocationPayload({
+        hasUnbilled: receivables.hasUnbilled,
+        includeUnbilledBalance: receivables.includeUnbilledBalance,
+        selectedInvoiceIds: receivables.selectedInvoiceIds,
+        selectedInvoicesTotal: receivables.selectedInvoicesTotal,
+        totalAmount,
+      });
       const payload: SyncFieldReceiptPayload = {
         provisionalCode,
         personaId: client.id,
@@ -182,6 +183,7 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
         gpsLng: gps?.lng ?? null,
         capturedAt: new Date().toISOString(),
         allowCreditOnAccount: showCreditToggle ? allowCreditOnAccount : false,
+        ...allocationPayload,
         payments: mappedPayments,
       };
       if (navigator.onLine) {
@@ -233,8 +235,8 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
       ariaLabelledBy="field-collect-modal-title"
       style={{
         width: 'min(520px, 95vw)',
-        height: 'min(560px, 88dvh)',
-        maxHeight: '88dvh',
+        height: 'min(640px, 90dvh)',
+        maxHeight: '90dvh',
         borderRadius: '14px',
         padding: 0,
       }}
@@ -249,7 +251,10 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
               {client.name}
             </h3>
             <span className="tabular-nums" style={{ fontSize: '0.84rem', color: '#6b7280' }}>
-              Saldo: <strong style={{ color: client.outstandingBalance > 0 ? '#dc2626' : '#059669' }}>${Math.round(client.outstandingBalance).toLocaleString('es-AR')}</strong>
+              Saldo: <strong style={{ color: effectiveOutstandingBalance > 0 ? '#dc2626' : '#059669' }}>${effectiveOutstandingBalance.toLocaleString('es-AR')}</strong>
+              {receivables.availableCredit > 0 && effectiveOutstandingBalance >= 0 && (
+                <> · A favor: <strong style={{ color: '#059669' }}>${receivables.availableCredit.toLocaleString('es-AR')}</strong></>
+              )}
             </span>
           </div>
           <button
@@ -269,6 +274,23 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
               <span>Sin señal: se guarda provisorio y se sincroniza al volver internet.</span>
             </div>
           )}
+
+          {receivables.loading && (
+            <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>Cargando comprobantes...</div>
+          )}
+
+          <AdminPaymentInvoiceSelector
+            idPrefix="field-collect-invoice"
+            rowMinHeight="44px"
+            pendingInvoices={receivables.pendingInvoices}
+            selectedInvoiceIds={receivables.selectedInvoiceIds}
+            unbilledBalance={receivables.unbilledBalance}
+            includeUnbilledBalance={receivables.includeUnbilledBalance}
+            disabled={submitting}
+            onToggleInvoice={receivables.handleToggleInvoice}
+            onToggleUnbilledBalance={receivables.handleToggleUnbilledBalance}
+            onToggleAll={receivables.handleToggleAllInvoices}
+          />
 
           {payments.map((p, idx) => (
             <FieldCollectPaymentRow
@@ -304,6 +326,14 @@ export const FieldCollectModal: React.FC<FieldCollectModalProps> = ({
             <Plus size={15} aria-hidden="true" />
             <span>Agregar otro medio</span>
           </button>
+
+          <AdminPaymentAllocationPreview
+            paymentAmount={String(totalAmount)}
+            pendingInvoices={receivables.pendingInvoices}
+            selectedInvoiceIds={receivables.selectedInvoiceIds}
+            unbilledBalance={receivables.unbilledBalance}
+            includeUnbilledBalance={receivables.includeUnbilledBalance}
+          />
 
           <input
             type="text"

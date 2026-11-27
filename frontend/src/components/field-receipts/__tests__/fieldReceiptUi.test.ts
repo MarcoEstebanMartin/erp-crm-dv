@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fieldReceiptToPublicData } from '../FieldTodayReceiptsCard';
 import { filterFieldCollectionClients } from '../FieldCollectionPage';
+import { buildFieldAllocationPayload } from '../useFieldCollectReceivables';
 import { buildSearchIndex } from '../../vendedor/vendedorHelpers';
 import type { FieldReceiptDTO, OfflineBundleClient } from '../../../api/fieldReceipts.api';
 
@@ -84,12 +85,15 @@ describe('Recibos de Vendedores (UI y PDF moderno)', () => {
   it('usa NativeModalDialog centrado en FieldCollectModal y mantiene todos los archivos bajo 450 líneas', () => {
     const dir = path.resolve(__dirname, '..');
     const modalSrc = fs.readFileSync(path.join(dir, 'FieldCollectModal.tsx'), 'utf8');
+    const hookSrc = fs.readFileSync(path.join(dir, 'useFieldCollectReceivables.ts'), 'utf8');
     const pageSrc = fs.readFileSync(path.join(dir, 'FieldCollectionPage.tsx'), 'utf8');
     const rowSrc = fs.readFileSync(path.join(dir, 'FieldCollectPaymentRow.tsx'), 'utf8');
     const cardSrc = fs.readFileSync(path.join(dir, 'FieldTodayReceiptsCard.tsx'), 'utf8');
     const waModalSrc = fs.readFileSync(path.join(dir, 'ReceiptWhatsAppSendModal.tsx'), 'utf8');
 
     expect(modalSrc).toContain('NativeModalDialog');
+    expect(modalSrc).toContain('AdminPaymentInvoiceSelector');
+    expect(modalSrc).toContain('AdminPaymentAllocationPreview');
     expect(modalSrc).not.toMatch(/<dialog\b/);
 
     // El vendedor solo puede enviar por WhatsApp (sin botón de descarga PDF directo) para capturar números
@@ -102,10 +106,68 @@ describe('Recibos de Vendedores (UI y PDF moderno)', () => {
     expect(pageSrc.indexOf('<FieldTodayReceiptsCard')).toBeLessThan(pageSrc.indexOf('<search'));
 
     expect(modalSrc.split('\n').length).toBeLessThanOrEqual(450);
+    expect(hookSrc.split('\n').length).toBeLessThanOrEqual(450);
     expect(pageSrc.split('\n').length).toBeLessThanOrEqual(450);
     expect(rowSrc.split('\n').length).toBeLessThanOrEqual(450);
     expect(cardSrc.split('\n').length).toBeLessThanOrEqual(450);
     expect(waModalSrc.split('\n').length).toBeLessThanOrEqual(450);
+  });
+
+  it('buildFieldAllocationPayload arma orderId, orderIds y applyToUnbilledBalance según la selección', () => {
+    // a) Solo Saldo anterior
+    expect(
+      buildFieldAllocationPayload({
+        hasUnbilled: true,
+        includeUnbilledBalance: true,
+        selectedInvoiceIds: [],
+        selectedInvoicesTotal: 0,
+        totalAmount: 50000,
+      }),
+    ).toEqual({ applyToUnbilledBalance: true });
+
+    // b) 1 factura con monto menor o igual al pendiente -> incluye orderId y orderIds
+    expect(
+      buildFieldAllocationPayload({
+        hasUnbilled: false,
+        includeUnbilledBalance: false,
+        selectedInvoiceIds: [202],
+        selectedInvoicesTotal: 30000,
+        totalAmount: 30000,
+      }),
+    ).toEqual({ orderId: 202, orderIds: [202] });
+
+    // c) 1 factura con monto mayor -> omite orderId y conserva orderIds
+    expect(
+      buildFieldAllocationPayload({
+        hasUnbilled: false,
+        includeUnbilledBalance: false,
+        selectedInvoiceIds: [202],
+        selectedInvoicesTotal: 30000,
+        totalAmount: 45000,
+      }),
+    ).toEqual({ orderIds: [202] });
+
+    // d) Múltiples facturas + Saldo anterior
+    expect(
+      buildFieldAllocationPayload({
+        hasUnbilled: true,
+        includeUnbilledBalance: true,
+        selectedInvoiceIds: [201, 202],
+        selectedInvoicesTotal: 60000,
+        totalAmount: 110000,
+      }),
+    ).toEqual({ orderIds: [201, 202], applyToUnbilledBalance: true });
+
+    // e) Sin comprobantes (offline)
+    expect(
+      buildFieldAllocationPayload({
+        hasUnbilled: false,
+        includeUnbilledBalance: false,
+        selectedInvoiceIds: [],
+        selectedInvoicesTotal: 0,
+        totalAmount: 15000,
+      }),
+    ).toEqual({});
   });
 
   it('muestra badge A/X y filtro por sucursal en UnifiedReceiptsList manteniendo archivos bajo 450 líneas', () => {

@@ -7,6 +7,8 @@ interface AdminPaymentInvoiceSelectorProps {
   unbilledBalance: number;
   includeUnbilledBalance: boolean;
   disabled?: boolean;
+  idPrefix?: string;
+  rowMinHeight?: string;
   onToggleInvoice: (invoiceId: number) => void;
   onToggleUnbilledBalance: () => void;
   onToggleAll: () => void;
@@ -18,6 +20,8 @@ export const AdminPaymentInvoiceSelector: React.FC<AdminPaymentInvoiceSelectorPr
   unbilledBalance,
   includeUnbilledBalance,
   disabled = false,
+  idPrefix = 'payment-invoice',
+  rowMinHeight,
   onToggleInvoice,
   onToggleUnbilledBalance,
   onToggleAll,
@@ -85,13 +89,15 @@ export const AdminPaymentInvoiceSelector: React.FC<AdminPaymentInvoiceSelectorPr
       >
         {hasUnbilled && (
           <label
-            htmlFor="payment-invoice-unbilled"
+            htmlFor={`${idPrefix}-unbilled`}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '10px',
               padding: '8px 10px',
+              minHeight: rowMinHeight,
+              touchAction: 'manipulation',
               cursor: disabled ? 'not-allowed' : 'pointer',
               background: includeUnbilledBalance ? 'var(--bg-subtle, #f8fafc)' : 'transparent',
               fontSize: '0.82rem',
@@ -100,7 +106,7 @@ export const AdminPaymentInvoiceSelector: React.FC<AdminPaymentInvoiceSelectorPr
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
               <input
-                id="payment-invoice-unbilled"
+                id={`${idPrefix}-unbilled`}
                 type="checkbox"
                 checked={includeUnbilledBalance}
                 disabled={disabled}
@@ -141,7 +147,7 @@ export const AdminPaymentInvoiceSelector: React.FC<AdminPaymentInvoiceSelectorPr
           const checked = selectedSet.has(inv.id);
           const dateStr = formatInvoiceShortDate(inv.createdAt);
           const pending = Math.round(Number(inv.pendingAmount));
-          const inputId = `payment-invoice-${inv.id}`;
+          const inputId = `${idPrefix}-${inv.id}`;
 
           return (
             <label
@@ -153,6 +159,8 @@ export const AdminPaymentInvoiceSelector: React.FC<AdminPaymentInvoiceSelectorPr
                 justifyContent: 'space-between',
                 gap: '10px',
                 padding: '8px 10px',
+                minHeight: rowMinHeight,
+                touchAction: 'manipulation',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 background: checked ? 'var(--bg-subtle, #f8fafc)' : 'transparent',
                 borderTop: hasUnbilled || idx > 0 ? '1px solid var(--border-color)' : 'none',

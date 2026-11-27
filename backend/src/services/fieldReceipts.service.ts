@@ -15,7 +15,11 @@ import {
 } from '../engines/fieldReceipts.engine';
 import { recordLedgerMovement } from './ledger/account-ledger.service';
 import { assertCollectionAllowed } from './collections/collection-guard.service';
-import { paymentAllocationService } from './finance/payment-allocation.service';
+import {
+  allocateFieldReceiptTransaction,
+  getCollectorClientPendingInvoices,
+  normalizeAllocationPreference,
+} from './collections/field-receipt-allocation.helper';
 import {
   applyTransferClearAndIssueReceipt,
   createSettlementCashDrawerAndLinkMirrors,
@@ -108,6 +112,13 @@ export const fieldReceiptsService = {
   },
 
   /**
+   * Consulta facturas pendientes y saldo anterior (sin comprobante) de un cliente para cobradores en calle.
+   */
+  async getClientPendingInvoices(personaId: number) {
+    return getCollectorClientPendingInvoices(personaId);
+  },
+
+  /**
    * Sincroniza un cobro emitido en calle (online u offline) de forma 100% idempotente.
    * Asigna número oficial, asienta CREDIT en AccountLedger y suma a la rendición en tránsito.
    */
@@ -115,6 +126,11 @@ export const fieldReceiptsService = {
     const breakdown = computeReceiptBreakdown(
       input.payments.map((p) => ({ paymentMethod: p.paymentMethod, amount: p.amount })),
     );
+    const allocationPreference = normalizeAllocationPreference({
+      orderId: input.orderId,
+      orderIds: input.orderIds,
+      applyToUnbilledBalance: input.applyToUnbilledBalance,
+    });
 
     return prisma.$transaction(async (tx) => {
       const existing = await tx.fieldReceipt.findUnique({
@@ -140,6 +156,7 @@ export const fieldReceiptsService = {
         amount: totalNum,
         deliveryRouteId: input.deliveryRouteId ?? null,
         allowCreditOnAccount: Boolean(input.allowCreditOnAccount),
+        orderId: allocationPreference?.orderId ?? null,
       });
 
       let settlement = await tx.collectorSettlement.findFirst({
@@ -168,6 +185,7 @@ export const fieldReceiptsService = {
           totalAmount: split.hasImmediate ? immediateNum : totalNum,
           status: split.hasImmediate ? breakdown.initialReceiptStatus : 'PENDING_VERIFICATION',
           notes: input.notes ?? null,
+          ...(allocationPreference ? { allocationPreference: allocationPreference as any } : {}),
           gpsLat: input.gpsLat ?? null,
           gpsLng: input.gpsLng ?? null,
           capturedAt: new Date(input.capturedAt),
@@ -208,18 +226,19 @@ export const fieldReceiptsService = {
             amount: immediateNum,
             receiptNumber,
             verificationCode: generateUniqueVerificationCode(),
+            ...(allocationPreference?.orderId ? { orderId: allocationPreference.orderId } : {}),
             description: `Cobro digital en calle (${receiptNumber})`,
             verified: false,
           },
         });
 
-        if (typeof tx.paymentAllocation?.createMany === 'function') {
-          await paymentAllocationService.allocateTransactionToOrders(tx, {
-            transactionId: transaction.id,
-            personaId: input.personaId,
-            amount: immediateNum,
-          });
-        }
+        await allocateFieldReceiptTransaction(tx, {
+          transactionId: transaction.id,
+          personaId: input.personaId,
+          personaOutstandingBalance: persona.outstandingBalance.toString(),
+          amount: immediateNum,
+          preference: allocationPreference,
+        });
 
         await recordLedgerMovement(tx, {
           personaId: input.personaId,

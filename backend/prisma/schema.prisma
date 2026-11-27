@@ -1578,6 +1578,7 @@ model FieldReceipt {
   totalAmount       Decimal                @db.Decimal(12, 2)
   status            FieldReceiptStatus     @default(ISSUED)
   notes             String?                @db.Text
+  allocationPreference Json?
   voidReason        String?
   voidedByUserId    Int?
   voidedBy          User?                  @relation("FieldReceiptVoidedBy", fields: [voidedByUserId], references: [id], onDelete: SetNull)
