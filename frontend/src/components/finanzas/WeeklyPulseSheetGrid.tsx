@@ -286,7 +286,7 @@ export function WeeklyPulseSheetGrid({
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderTop: '1px solid #cbd5e1', backgroundColor: '#ffffff', fontSize: '0.8rem', gap: '12px', flexWrap: 'wrap' }}>
         <span style={{ color: 'var(--text-secondary)' }}>
-          Crédito próxima semana ({summary.status === 'OVERBOUGHT' ? 'sobre-compra' : summary.status === 'AVAILABLE' ? 'a favor' : 'equilibrado'})
+          Próximo crédito
         </span>
         <span className="tabular-nums" style={{ fontWeight: 700, color: summary.closingCredit > 0 ? '#E30613' : summary.closingCredit < 0 ? '#15803d' : 'var(--text-primary)' }}>
           {formatPeso(summary.closingCredit)}
