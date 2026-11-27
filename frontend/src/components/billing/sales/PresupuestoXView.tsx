@@ -2,6 +2,7 @@ import { resolveOrderPersona } from '../../../utils/orderSearchAndStatus.helper'
 
 interface PresupuestoXViewProps {
   invoice: any;
+  documentKind?: 'INVOICE' | 'CREDIT_NOTE';
 }
 
 const WHOLE_PESO_FORMAT: Intl.NumberFormatOptions = {
@@ -22,7 +23,8 @@ function formatPaymentMethodLabel(paymentMethod?: string): string {
   }
 }
 
-export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
+export function PresupuestoXView({ invoice, documentKind = 'INVOICE' }: PresupuestoXViewProps) {
+  const isCreditNote = documentKind === 'CREDIT_NOTE';
   const client = resolveOrderPersona(invoice);
   const issueDateStr = invoice.invoicedAt || invoice.issueDate || invoice.createdAt;
   const formattedDate = issueDateStr
@@ -31,7 +33,7 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
 
   const compNro = invoice.invoiceNumber
     ? String(invoice.invoiceNumber)
-    : `INT-${String(invoice.id || 0).padStart(5, '0')}`;
+    : `${isCreditNote ? 'NCI' : 'INT'}-${String(invoice.id || 0).padStart(5, '0')}`;
 
   const clientName = client?.name || invoice.clientName || 'Consumidor Final';
   const clientCity = (client?.city || '').trim();
@@ -88,7 +90,7 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
               color: '#111827',
             }}
           >
-            Presupuesto
+            {isCreditNote ? 'Nota de Crédito' : 'Presupuesto'}
           </div>
           <div
             style={{
@@ -159,10 +161,12 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
               marginBottom: '4px',
             }}
           >
-            Condición
+            {isCreditNote ? 'Motivo' : 'Condición'}
           </div>
           <div style={{ fontSize: '0.92rem', fontWeight: 600, color: '#111827' }}>
-            {formatPaymentMethodLabel(invoice.paymentMethod)}
+            {isCreditNote
+              ? invoice.reason || 'Nota de Crédito'
+              : formatPaymentMethodLabel(invoice.paymentMethod)}
           </div>
           <div
             style={{
@@ -172,6 +176,7 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
               fontVariantNumeric: 'tabular-nums',
             }}
           >
+            {isCreditNote && invoice.orderId ? `Pedido #${invoice.orderId} · ` : ''}
             Saldo CC: ${outstandingBalance.toLocaleString('es-AR', WHOLE_PESO_FORMAT)}
           </div>
         </div>

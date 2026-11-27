@@ -4,6 +4,7 @@ import { InvoicePreviewFooter } from './InvoicePreviewFooter';
 
 interface OfficialInvoiceViewProps {
   invoice: any;
+  documentKind?: 'INVOICE' | 'CREDIT_NOTE';
 }
 
 function formatPaymentMethodLabel(paymentMethod?: string): string {
@@ -19,7 +20,7 @@ function formatPaymentMethodLabel(paymentMethod?: string): string {
   }
 }
 
-export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
+export function OfficialInvoiceView({ invoice, documentKind = 'INVOICE' }: OfficialInvoiceViewProps) {
   const company = getCompanyProfile();
   const phoneDisplay = formatCompanyPhone(company.telefono);
   const client = resolveOrderPersona(invoice);
@@ -28,25 +29,29 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
     ? new Date(issueDateStr).toLocaleDateString('es-AR')
     : new Date().toLocaleDateString('es-AR');
 
-  const isFacturaA = invoice.invoiceType === 'FACTURA_A';
+  const isCreditNote = documentKind === 'CREDIT_NOTE';
+  const rawType = String(invoice.invoiceType || invoice.creditNoteType || '');
+  const isFacturaA = rawType === 'FACTURA_A' || rawType.includes('_A');
+  const isFacturaB = rawType === 'FACTURA_B' || rawType.includes('_B');
+  const isFacturaC = rawType === 'FACTURA_C' || rawType.includes('_C');
   const isFacturaAOfficial = invoice.billingType === 'OFFICIAL' && isFacturaA;
   const decimalOptions: { minimumFractionDigits: number; maximumFractionDigits: number } = isFacturaAOfficial
     ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
     : { minimumFractionDigits: 0, maximumFractionDigits: 0 };
 
-  const letter = isFacturaA
-    ? 'A'
-    : invoice.invoiceType === 'FACTURA_B'
-      ? 'B'
-      : invoice.invoiceType === 'FACTURA_C'
-        ? 'C'
-        : 'A';
-
-  const code = isFacturaA
-    ? 'COD. 001'
-    : invoice.invoiceType === 'FACTURA_B'
-      ? 'COD. 006'
-      : 'COD. 011';
+  const letter = isFacturaA ? 'A' : isFacturaB ? 'B' : isFacturaC ? 'C' : 'A';
+  const code = isCreditNote
+    ? letter === 'A'
+      ? 'COD. 003'
+      : letter === 'B'
+        ? 'COD. 008'
+        : 'COD. 013'
+    : letter === 'A'
+      ? 'COD. 001'
+      : letter === 'B'
+        ? 'COD. 006'
+        : 'COD. 011';
+  const docTitle = isCreditNote ? `Nota de Crédito ${letter}` : `Factura ${letter}`;
 
   const posStr = String(invoice.puntoVenta || company.puntoVenta || 1).padStart(4, '0');
   const compNro = invoice.invoiceNumber?.includes('-')
@@ -183,7 +188,7 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
               color: '#111827',
             }}
           >
-            Factura {letter}
+            {docTitle}
           </div>
           <div
             style={{
@@ -277,10 +282,12 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
               marginBottom: '4px',
             }}
           >
-            Condición de Venta
+            {isCreditNote ? 'Motivo' : 'Condición de Venta'}
           </div>
           <div style={{ fontSize: '0.92rem', fontWeight: 600, color: '#111827' }}>
-            {formatPaymentMethodLabel(invoice.paymentMethod)}
+            {isCreditNote
+              ? invoice.reason || 'Nota de Crédito'
+              : formatPaymentMethodLabel(invoice.paymentMethod)}
           </div>
           <div
             style={{
@@ -290,6 +297,7 @@ export function OfficialInvoiceView({ invoice }: OfficialInvoiceViewProps) {
               fontVariantNumeric: 'tabular-nums',
             }}
           >
+            {isCreditNote && invoice.orderId ? `Pedido #${invoice.orderId} · ` : ''}
             Saldo CC: ${outstandingBalance.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </div>
