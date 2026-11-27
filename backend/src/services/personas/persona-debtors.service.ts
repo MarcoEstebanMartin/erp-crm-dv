@@ -65,6 +65,8 @@ export class PersonaDebtorsSubService {
           totalAmount: true,
           deliveredAt: true,
           createdAt: true,
+          clientRequestId: true,
+          notes: true,
         },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       }),
@@ -79,6 +81,10 @@ export class PersonaDebtorsSubService {
           personaId: { in: debtorIds },
           orderId: null,
           status: CreditNoteStatus.APPROVED,
+          OR: [
+            { comments: null },
+            { NOT: { comments: { startsWith: 'Importado historial Iduo' } } },
+          ],
         },
         _sum: { totalAmount: true },
       }),
@@ -159,6 +165,9 @@ export class PersonaDebtorsSubService {
         directIncomeSum: directIncomeByOrderId.get(order.id) ?? '0',
         directCreditNoteSum: directCnByOrderId.get(order.id) ?? '0',
         date: order.deliveredAt ?? order.createdAt ?? null,
+        isHistorical:
+          Boolean(order.clientRequestId?.startsWith('IDUO-HIST-')) ||
+          Boolean(order.notes?.startsWith('Importado historial Iduo')),
       });
       ordersByPersona.set(order.personaId, list);
     }

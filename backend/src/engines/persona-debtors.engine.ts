@@ -18,6 +18,7 @@ export interface DebtorOrderFifoInput {
   directIncomeSum: NumericInput;
   directCreditNoteSum: NumericInput;
   date?: Date | string | null;
+  isHistorical?: boolean;
 }
 
 export interface DebtorFifoInput {
@@ -224,7 +225,8 @@ export function calculateBranchFifo(
       remainingDebt = remainingDebt.plus(debt);
 
       const paidAgainstOrder = totalDec.minus(debt);
-      const isPartial = paidAgainstOrder.gt('0.5');
+      const partialThreshold = order.isHistorical ? '5' : '0.5';
+      const isPartial = paidAgainstOrder.gt(partialThreshold);
       const parsedDate = parseOrderDate(order.date);
       let shortDate: string | null = null;
       let daysOld: number | null = null;
@@ -286,13 +288,44 @@ export function computeDebtorFifoMetrics(input: DebtorFifoInput): DebtorFifoMetr
   const unallocOfficialDec = Decimal.max(0, toDecimal(input.unallocatedOfficialCredit));
   const unallocInternalDec = Decimal.max(0, toDecimal(input.unallocatedInternalCredit));
 
-  const usedOnOpeningOfficial = Decimal.min(openingOfficialDec, unallocOfficialDec);
-  const remainingOpeningOfficial = openingOfficialDec.minus(usedOnOpeningOfficial);
-  const creditForOfficialOrders = Decimal.max(0, unallocOfficialDec.minus(usedOnOpeningOfficial));
+  const resolveBranchPool = (
+    branchOrders: DebtorOrderFifoInput[],
+    openingDebt: Decimal,
+    unallocCredit: Decimal,
+  ) => {
+    const historicalTotal = branchOrders
+      .filter((o) => o.isHistorical)
+      .reduce((acc, o) => {
+        const net = Decimal.max(
+          0,
+          toDecimal(o.totalAmount)
+            .minus(toDecimal(o.directIncomeSum))
+            .minus(toDecimal(o.directCreditNoteSum)),
+        );
+        return acc.plus(net);
+      }, new Decimal(0));
 
-  const usedOnOpeningInternal = Decimal.min(openingInternalDec, unallocInternalDec);
-  const remainingOpeningInternal = openingInternalDec.minus(usedOnOpeningInternal);
-  const creditForInternalOrders = Decimal.max(0, unallocInternalDec.minus(usedOnOpeningInternal));
+    // Las boletas históricas importadas de Iduo no impactan AccountLedger: su deuda viva
+    // ya está reflejada en openingDebt. La diferencia ya fue saldada antes del corte.
+    const impliedHistoricalPaid = Decimal.max(0, historicalTotal.minus(openingDebt));
+    const unmatchedOpeningDebt = Decimal.max(0, openingDebt.minus(historicalTotal));
+    const usedOnOpening = Decimal.min(unmatchedOpeningDebt, unallocCredit);
+    const remainingOpening = unmatchedOpeningDebt.minus(usedOnOpening);
+    const creditForOrders = impliedHistoricalPaid.plus(
+      Decimal.max(0, unallocCredit.minus(usedOnOpening)),
+    );
+    return { remainingOpening, creditForOrders };
+  };
+
+  const {
+    remainingOpening: remainingOpeningOfficial,
+    creditForOrders: creditForOfficialOrders,
+  } = resolveBranchPool(officialOrders, openingOfficialDec, unallocOfficialDec);
+
+  const {
+    remainingOpening: remainingOpeningInternal,
+    creditForOrders: creditForInternalOrders,
+  } = resolveBranchPool(internalOrders, openingInternalDec, unallocInternalDec);
 
   const officialResult = calculateBranchFifo(
     officialOrders,

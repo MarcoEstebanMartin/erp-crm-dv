@@ -396,5 +396,68 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       expect(openingAWithPartialPaymentAndNewOrderX.debtX).toBe(50000);
       expect(openingAWithPartialPaymentAndNewOrderX.debtA + openingAWithPartialPaymentAndNewOrderX.debtX).toBe(1079582);
     });
+
+    it('descuenta boletas históricas de Iduo ya pagadas antes del corte usando el OPENING_BALANCE real (caso Utello)', () => {
+      const refNov27 = new Date('2026-11-27T18:00:00-03:00');
+      const utello = computeDebtorFifoMetrics({
+        outstandingBalance: 558146,
+        referenceDate: refNov27,
+        openingOfficialDebt: 0,
+        openingInternalDebt: 558146,
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        orders: [
+          { id: 615, billingType: 'INTERNAL', totalAmount: 445772.27, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-03T15:00:00Z', isHistorical: true },
+          { id: 483, billingType: 'INTERNAL', totalAmount: 1351560, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-03T15:00:00Z', isHistorical: true },
+          { id: 112, billingType: 'INTERNAL', totalAmount: 95952, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-07T15:00:00Z', isHistorical: true },
+          { id: 352, billingType: 'INTERNAL', totalAmount: 772980, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-10T15:00:00Z', isHistorical: true },
+          { id: 126, billingType: 'INTERNAL', totalAmount: 257042.24, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-17T15:00:00Z', isHistorical: true },
+          { id: 130, billingType: 'INTERNAL', totalAmount: 558146.28, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-24T15:00:00Z', isHistorical: true },
+        ],
+      });
+
+      expect(utello.debtA).toBe(0);
+      expect(utello.debtX).toBe(558146);
+      expect(utello.pendingInvoicesCount).toBe(1);
+      expect(utello.hasMultiplePendingInvoices).toBe(false);
+      expect(utello.needsFollowUp).toBe(false);
+      expect(utello.followUpLabel).toBeNull();
+      expect(utello.branchX.followUpReason).toBe('CURRENT');
+
+      // Si realmente debe las últimas 2 del historial Iduo, marca "Últimas 2"
+      const owesLastTwo = computeDebtorFifoMetrics({
+        outstandingBalance: 815188,
+        referenceDate: refNov27,
+        openingOfficialDebt: 0,
+        openingInternalDebt: 815188,
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        orders: [
+          { id: 112, billingType: 'INTERNAL', totalAmount: 95952, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-07T15:00:00Z', isHistorical: true },
+          { id: 126, billingType: 'INTERNAL', totalAmount: 257042.24, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-17T15:00:00Z', isHistorical: true },
+          { id: 130, billingType: 'INTERNAL', totalAmount: 558146.28, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-24T15:00:00Z', isHistorical: true },
+        ],
+      });
+      expect(owesLastTwo.pendingInvoicesCount).toBe(2);
+      expect(owesLastTwo.needsFollowUp).toBe(true);
+      expect(owesLastTwo.followUpLabel).toBe('Últimas 2');
+
+      // Si luego se suma un pedido nuevo en Kilate sin pagar el anterior, marca "Últimas 2"
+      const withNewKilateOrder = computeDebtorFifoMetrics({
+        outstandingBalance: 858146,
+        referenceDate: refNov27,
+        openingOfficialDebt: 0,
+        openingInternalDebt: 558146,
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        orders: [
+          { id: 126, billingType: 'INTERNAL', totalAmount: 257042.24, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-17T15:00:00Z', isHistorical: true },
+          { id: 130, billingType: 'INTERNAL', totalAmount: 558146.28, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-24T15:00:00Z', isHistorical: true },
+          { id: 900, billingType: 'INTERNAL', totalAmount: 300000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-27T15:00:00Z', isHistorical: false },
+        ],
+      });
+      expect(withNewKilateOrder.pendingInvoicesCount).toBe(2);
+      expect(withNewKilateOrder.followUpLabel).toBe('Últimas 2');
+    });
   });
 });
