@@ -95,6 +95,7 @@ export const PurchaseScannerModal: FC<PurchaseScannerModalProps> = ({ isOpen, on
                   productSearchResults={s.productSearchResults}
                   onProductSearch={s.handleProductSearch}
                   onSelectProduct={s.handleSelectProduct}
+                  onUpdateItemField={s.handleUpdateItemField}
                   onToggleNonStock={s.handleToggleNonStock}
                   onMarkAllNonStock={s.handleMarkAllNonStock}
                 />

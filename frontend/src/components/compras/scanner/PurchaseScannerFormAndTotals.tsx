@@ -126,6 +126,7 @@ export const PurchaseScannerGeneralSection: FC<GeneralSectionProps> = ({
             <label htmlFor="scanner-issue-date" style={fieldLabelStyle}>Fecha de Emisión</label>
             <input
               id="scanner-issue-date"
+              name="issueDate"
               type="date"
               className="input tabular-nums"
               value={extractedData.issueDate || ''}
@@ -133,9 +134,21 @@ export const PurchaseScannerGeneralSection: FC<GeneralSectionProps> = ({
             />
           </div>
           <div>
+            <label htmlFor="scanner-due-date" style={fieldLabelStyle}>Vencimiento</label>
+            <input
+              id="scanner-due-date"
+              name="dueDate"
+              type="date"
+              className="input tabular-nums"
+              value={extractedData.dueDate || ''}
+              onChange={(e) => onDocMetaChange({ dueDate: e.target.value })}
+            />
+          </div>
+          <div style={{ gridColumn: 'span 2' }}>
             <label htmlFor="scanner-billing-type" style={fieldLabelStyle}>Sucursal</label>
             <select
               id="scanner-billing-type"
+              name="billingType"
               className="select"
               value={extractedData.billingType || 'OFFICIAL'}
               onChange={(e) => onDocMetaChange({ billingType: e.target.value })}

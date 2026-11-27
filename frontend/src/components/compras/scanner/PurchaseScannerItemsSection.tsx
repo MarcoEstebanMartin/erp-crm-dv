@@ -9,6 +9,7 @@ interface PurchaseScannerItemsSectionProps {
   productSearchResults: Record<number, any[]>;
   onProductSearch: (idx: number, query: string) => void;
   onSelectProduct: (idx: number, product: any) => void;
+  onUpdateItemField: (idx: number, field: 'unitsPerPack' | 'quantity' | 'unitPrice', rawVal: string) => void;
   onToggleNonStock: (idx: number) => void;
   onMarkAllNonStock: (nonStock: boolean) => void;
 }
@@ -28,7 +29,7 @@ function getMatchBadge(item: any): { label: string; bg: string; color: string } 
 
 export const PurchaseScannerItemsSection: FC<PurchaseScannerItemsSectionProps> = ({
   items, activeSearchIndex, setActiveSearchIndex, productSearchQueries,
-  productSearchResults, onProductSearch, onSelectProduct, onToggleNonStock, onMarkAllNonStock,
+  productSearchResults, onProductSearch, onSelectProduct, onUpdateItemField, onToggleNonStock, onMarkAllNonStock,
 }) => {
   const allNonStock = items.length > 0 && items.every((i) => i.isNonStock);
 
@@ -55,23 +56,91 @@ export const PurchaseScannerItemsSection: FC<PurchaseScannerItemsSectionProps> =
             <div key={idx} style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1px solid var(--border-color)', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span className="tabular-nums" style={{ fontSize: '0.7rem', fontFamily: 'monospace', backgroundColor: 'var(--accent-bg-light)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>
                       {item.code || 'S/C'}
                     </span>
+                    {item.ean && item.ean !== item.code && (
+                      <span className="tabular-nums" style={{ fontSize: '0.68rem', fontFamily: 'monospace', backgroundColor: 'var(--bg-app)', color: 'var(--text-muted)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)', whiteSpace: 'nowrap' }}>
+                        EAN {item.ean}
+                      </span>
+                    )}
                     <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-primary)' }}>{item.description}</span>
                   </div>
-                  <div className="tabular-nums" style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                    Cant: <strong>{item.quantity}</strong> · P.U: <strong>${item.unitPrice}</strong>
-                  </div>
+                  {!item.isNonStock && Number(item.unitsPerPack || 1) > 1 && (
+                    <div className="tabular-nums" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                      {item.billedQuantity ?? item.quantity} {item.unitOfMeasure || 'bultos'} × {item.unitsPerPack} u.
+                    </div>
+                  )}
                 </div>
                 <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                  <span className="tabular-nums" style={{ fontSize: '0.88rem', fontWeight: 700 }}>${item.subtotal}</span>
+                  <span className="tabular-nums" style={{ fontSize: '0.88rem', fontWeight: 700 }}>
+                    ${Number(item.subtotal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                   <span style={{ fontSize: '0.68rem', fontWeight: 600, backgroundColor: badge.bg, color: badge.color, padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                     {badge.label}
                   </span>
                 </div>
               </div>
+
+              {!item.isNonStock && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 82px 1fr', gap: '8px' }}>
+                  <div>
+                    <label htmlFor={`scanner-qty-${idx}`} style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                      Cantidad ({item.unitOfMeasure === 'KG' ? 'kg' : 'u.'})
+                    </label>
+                    <input
+                      id={`scanner-qty-${idx}`}
+                      name={`items[${idx}].quantity`}
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      min="0"
+                      className="input tabular-nums"
+                      style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                      value={item.quantity ?? ''}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => onUpdateItemField(idx, 'quantity', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`scanner-pack-${idx}`} style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                      u/Bulto
+                    </label>
+                    <input
+                      id={`scanner-pack-${idx}`}
+                      name={`items[${idx}].unitsPerPack`}
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      min="1"
+                      className="input tabular-nums"
+                      style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                      value={item.unitsPerPack ?? 1}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => onUpdateItemField(idx, 'unitsPerPack', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={`scanner-cost-${idx}`} style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '3px' }}>
+                      Costo U. ($)
+                    </label>
+                    <input
+                      id={`scanner-cost-${idx}`}
+                      name={`items[${idx}].unitPrice`}
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      className="input tabular-nums"
+                      style={{ padding: '6px 8px', fontSize: '0.8rem' }}
+                      value={item.unitPrice ?? ''}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => onUpdateItemField(idx, 'unitPrice', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
                 {item.isNonStock ? (

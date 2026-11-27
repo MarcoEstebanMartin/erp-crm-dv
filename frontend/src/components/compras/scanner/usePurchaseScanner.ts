@@ -152,11 +152,70 @@ export function usePurchaseScanner({ isOpen, file, onSuccess, onClose }: UsePurc
 
   const handleSelectProduct = (index: number, product: any) => {
     const newItems = [...extractedData.items];
-    newItems[index] = { ...newItems[index], matchedProductId: product.id, matchedProductName: product.name, matchMethod: 'MANUAL', isNonStock: false };
+    newItems[index] = {
+      ...newItems[index],
+      matchedProductId: product.id,
+      matchedProductName: product.name,
+      matchedProductUnitsPerBox: product.unitsPerBox || 1,
+      matchMethod: 'MANUAL',
+      isNonStock: false,
+    };
     setExtractedData({ ...extractedData, items: newItems });
     if (receptionMode === 'NONE') setReceptionMode('IN_TRANSIT');
     setActiveSearchIndex(null);
     setProductSearchResults((prev) => ({ ...prev, [index]: [] }));
+  };
+
+  const handleUpdateItemField = (
+    index: number,
+    field: 'unitsPerPack' | 'quantity' | 'unitPrice',
+    rawVal: string,
+  ) => {
+    setExtractedData((prev: any) => {
+      if (!prev || !Array.isArray(prev.items) || !prev.items[index]) return prev;
+      const newItems = [...prev.items];
+      const current = newItems[index];
+      const parsed = Number(rawVal);
+      const val = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+
+      if (field === 'unitsPerPack') {
+        const nextPack = Math.max(1, Math.trunc(val || 1));
+        const baseBilled = Number(current.billedQuantity ?? current.quantity ?? 0);
+        const nextQty = Number((baseBilled * nextPack).toFixed(2));
+        const currentSubtotal = Number(current.subtotal || 0);
+        const nextUnitPrice =
+          nextQty > 0 && currentSubtotal > 0
+            ? Number((currentSubtotal / nextQty).toFixed(2))
+            : Number(current.unitPrice || 0);
+        newItems[index] = {
+          ...current,
+          billedQuantity: baseBilled,
+          unitsPerPack: nextPack,
+          quantity: nextQty,
+          unitPrice: nextUnitPrice,
+        };
+      } else if (field === 'quantity') {
+        const pack = Math.max(1, Math.trunc(Number(current.unitsPerPack || 1)));
+        const nextBilled = pack > 1 ? Number((val / pack).toFixed(2)) : val;
+        const nextSubtotal = Number((val * Number(current.unitPrice || 0)).toFixed(2));
+        newItems[index] = {
+          ...current,
+          billedQuantity: nextBilled,
+          quantity: val,
+          subtotal: nextSubtotal,
+        };
+      } else if (field === 'unitPrice') {
+        const qty = Number(current.quantity || 0);
+        const nextSubtotal = Number((qty * val).toFixed(2));
+        newItems[index] = {
+          ...current,
+          unitPrice: val,
+          subtotal: nextSubtotal,
+        };
+      }
+
+      return { ...prev, items: newItems };
+    });
   };
 
   const handleToggleNonStock = (index: number) => {
@@ -222,6 +281,6 @@ export function usePurchaseScanner({ isOpen, file, onSuccess, onClose }: UsePurc
     loading, errorMsg, extractedData, setExtractedData, receptionMode, setReceptionMode, previewUrl, isPdf,
     productSearchResults, productSearchQueries, activeSearchIndex, setActiveSearchIndex,
     processUploadedDocument, updateDocMeta, updateExtractedField, handleProductSearch,
-    handleSelectProduct, handleToggleNonStock, handleMarkAllNonStock, handleConfirm,
+    handleSelectProduct, handleUpdateItemField, handleToggleNonStock, handleMarkAllNonStock, handleConfirm,
   };
 }
