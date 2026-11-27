@@ -95,5 +95,6 @@ export function formatInvoiceShortCode(order: {
     const prefix = type === 'FACTURA_A' ? 'FA' : type === 'FACTURA_B' ? 'FB' : 'FC';
     return num ? `${prefix} ${num}` : `${prefix} #${order.id}`;
   }
-  return num ? `INT ${num}` : `INT #${order.id}`;
+  if (!num) return `INT #${order.id}`;
+  return /^INT\b/i.test(num) ? num : `INT ${num}`;
 }

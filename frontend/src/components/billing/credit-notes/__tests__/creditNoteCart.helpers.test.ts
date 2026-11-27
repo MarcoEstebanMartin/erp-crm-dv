@@ -84,5 +84,13 @@ describe('creditNoteCart.helpers', () => {
         billingType: 'INTERNAL',
       }),
     ).toBe('INT #77');
+    expect(
+      formatInvoiceShortCode({
+        id: 3,
+        invoiceNumber: 'INT-00003',
+        invoiceType: 'PRESUPUESTO',
+        billingType: 'INTERNAL',
+      }),
+    ).toBe('INT-00003');
   });
 });
