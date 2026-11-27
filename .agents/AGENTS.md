@@ -52,7 +52,7 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 - **Stack Único de Producción**: Código en **GitHub**, datos e imágenes maestras en **Supabase** (`sa-east-1`) y despliegue unificado 24/7 (Frontend SPA + Backend API bajo el mismo origen HTTPS, sin `ngrok` ni plataformas extra) en **Railway**.
 - **Mapa de Servicios en Railway (Proyecto `don-venancio`)**:
   - **Web Oficial + Chatbot + Catálogo + Ofertas**: servicio `don-venancio` (`https://donvenancio.com.ar`, repo `MarcoEstebanMartin/chatbot-08-10-2026`). **No tocar** desde este repo.
-  - **ERP-CRM DV (este proyecto, en pruebas)**: servicio `erp-dv-prueba` (`https://erp-dv-prueba-production.up.railway.app`). Despliegue con `railway.cmd up --detach -p fa70da17-b02f-4a41-b9ed-686161c04e07 -e 3ea8d1cb-d06d-4368-8f6f-ade2665e0ae8 -s f8b7a8df-aa9d-405d-b685-0aad665050f0`.
+  - **ERP-CRM DV (este proyecto)**: servicio `erp-dv-prueba` (`https://erp.donvenancio.com.ar`). Despliegue con `railway.cmd up --detach -p fa70da17-b02f-4a41-b9ed-686161c04e07 -e 3ea8d1cb-d06d-4368-8f6f-ade2665e0ae8 -s f8b7a8df-aa9d-405d-b685-0aad665050f0`.
 - **Comando "abri" / "abrir" / "abre todo" (Inicio Seguro de Jornada)**:
   1. Ejecutar `git status -sb` y `git pull --ff-only origin main` para bajar automáticamente cualquier avance hecho desde otra PC.
   2. Ejecutar `ipconfig` para obtener la IPv4 local activa.
@@ -62,7 +62,7 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
   1. Verificar compilación y tests (`tsc --noEmit` + `vitest run`) si hay cambios pendientes.
   2. Revisar `git status` (garantizando cero archivos `.env` expuestos), ejecutar `git add -A`, `git commit` descriptivo y `git push origin main`.
   3. Desplegar el servicio **`erp-dv-prueba`** en Railway ejecutando `railway.cmd up --detach -p fa70da17-b02f-4a41-b9ed-686161c04e07 -e 3ea8d1cb-d06d-4368-8f6f-ade2665e0ae8 -s f8b7a8df-aa9d-405d-b685-0aad665050f0` (sin tocar nunca el servicio `don-venancio`).
-  4. Confirmar que el árbol quedó 100% limpio (`main...origin/main`) y que el despliegue en Railway (`https://erp-dv-prueba-production.up.railway.app`) quedó en curso o activo.
+  4. Confirmar que el árbol quedó 100% limpio (`main...origin/main`) y que el despliegue en Railway (`https://erp.donvenancio.com.ar`) quedó en curso o activo.
 - **Auditorías de Integridad disponibles (Pre-Producción / Control bajo demanda, desde `backend/`)**:
   - `npm run db:audit-receipts` (9 controles de recibos de calle/oficina, rendiciones, cajas y `AccountLedger`; soporta `-- --fix` para estados seguros).
   - `npm run db:audit-balances` (integridad de saldos de cuentas corrientes; soporta `-- --fix`).

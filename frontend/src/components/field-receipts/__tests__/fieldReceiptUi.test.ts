@@ -125,10 +125,10 @@ describe('Recibos de Vendedores (UI y PDF moderno)', () => {
 
   it('muestra solo clientes con saldo > 0 en orden de ruta sin búsqueda y permite encontrar saldo 0 con la lupa', () => {
     const sampleClients: OfflineBundleClient[] = [
-      { id: 1, name: 'BECERRA LAURA', cuit: null, city: 'INTENDENTE ALVEAR', address: 'LAPRIDA 752', phone: null, whatsappVerifiedAt: null, outstandingBalance: 0, openInvoices: [] },
-      { id: 2, name: 'DESPENSA ROMI', cuit: null, city: 'INTENDENTE ALVEAR', address: 'ISLA SOLEDAD', phone: null, whatsappVerifiedAt: null, outstandingBalance: 95997, openInvoices: [] },
-      { id: 3, name: 'ALMACEN FAVOR', cuit: null, city: 'INTENDENTE ALVEAR', address: 'MITRE 10', phone: null, whatsappVerifiedAt: null, outstandingBalance: -1500, openInvoices: [] },
-      { id: 4, name: 'KIOSCO CENTRAL', cuit: null, city: 'INTENDENTE ALVEAR', address: 'SAN MARTIN 20', phone: null, whatsappVerifiedAt: null, outstandingBalance: 12500, openInvoices: [] },
+      { id: 1, name: 'BECERRA LAURA', cuit: null, city: 'INTENDENTE ALVEAR', address: 'LAPRIDA 752', phone: null, whatsappVerifiedAt: null, outstandingBalance: 0, route: null, saleRouteId: null, routeSequence: null, sellerId: null },
+      { id: 2, name: 'DESPENSA ROMI', cuit: null, city: 'INTENDENTE ALVEAR', address: 'ISLA SOLEDAD', phone: null, whatsappVerifiedAt: null, outstandingBalance: 95997, route: null, saleRouteId: null, routeSequence: null, sellerId: null },
+      { id: 3, name: 'ALMACEN FAVOR', cuit: null, city: 'INTENDENTE ALVEAR', address: 'MITRE 10', phone: null, whatsappVerifiedAt: null, outstandingBalance: -1500, route: null, saleRouteId: null, routeSequence: null, sellerId: null },
+      { id: 4, name: 'KIOSCO CENTRAL', cuit: null, city: 'INTENDENTE ALVEAR', address: 'SAN MARTIN 20', phone: null, whatsappVerifiedAt: null, outstandingBalance: 12500, route: null, saleRouteId: null, routeSequence: null, sellerId: null },
     ];
     const indexed = buildSearchIndex(sampleClients, (c) => [c.name, c.city, c.cuit, c.address]);
 
