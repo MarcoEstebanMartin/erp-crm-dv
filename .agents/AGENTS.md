@@ -78,3 +78,15 @@ Este archivo define las reglas innegociables de comportamiento, arquitectura mod
 
 ## 9. Nombres Limpios en Pruebas y Datos de Demo
 - **Prohibido usar siglas técnicas (`qa_`, `E2E`, `test_`) en datos visibles**: Cada vez que se creen usuarios, vendedores, choferes o rutas para pruebas o demostraciones en el sistema, usar siempre nombres claros y prolijos: **`Gemini`** (Admin), **`Gemini Ventas`** (Vendedor) y **`Gemini Reparto`** (Chofer/Reparto).
+
+## 10. Transición Iduo → Kilate (Identidad, Sucursales y Migración)
+- **Identidad de sistemas**: Este ERP nuevo se denomina **Kilate**; el ERP anterior desde el cual se realiza la transición se denomina **Iduo**.
+- **Mapa oficial de Puntos de Venta / Sucursales**:
+  - **`0005` — Sucursal A (Fiscal / `OFFICIAL`)**: Facturación oficial con IVA 21% y Percepción IVA 3% (RG 5329). Entra en Subdiario IVA Ventas y TXT AFIP.
+  - **`0006` — Sucursal Inmobiliaria (Fiscal / `OFFICIAL`)**: Alquiler mensual de local (ej. Camuzzi Gas Pampeana SA). Pertenece al mismo CUIT (`20-16316505-9`) y entra en Subdiario IVA Ventas y TXT AFIP junto con `0005`.
+  - **`9999` — Sucursal X (Interna / `INTERNAL`)**: Comprobantes internos (IVA 0%, clientes con asterisco `*`). Solo alimentan historial comercial y estadísticas; **nunca** entran en Subdiario IVA Ventas ni TXT AFIP.
+- **Regla de Oro de Migración Histórica**:
+  - Los scripts de historial (`db:import-iduo-history` para Ventas + Subdiario y `db:import-iduo-purchases` para Subdiario Compras) importan en **modo histórico puro**: alimentan estadísticas, rankings y Subdiarios IVA, marcan `deliveredAt` para no saturar la cola de reparto y **jamás tocan `AccountLedger`, Stock ni Caja**.
+  - Los saldos reales de cuentas corrientes al cierre se cargan exclusivamente con `db:import-opening-balances` (clientes) y luego se auditan con `db:audit-balances`.
+  - **Cruce de productos Iduo → Kilate**: Prohibido cruzar por código interno corto de Iduo (no coincide con los SKU de Kilate); cruzar siempre por código de barras largo (EAN ≥ 8 dígitos) o nombre normalizado.
+  - Durante la etapa en espejo contra Iduo, mantener `afip_mock_mode = 'true'` para no duplicar facturas legales en AFIP productivo hasta el corte definitivo.

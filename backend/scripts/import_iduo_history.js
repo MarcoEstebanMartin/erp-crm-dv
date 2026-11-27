@@ -582,53 +582,67 @@ async function main() {
     }
   }
 
-  // Grabación idempotente (SIN AccountLedger, SIN StockMovement, SIN CashDrawer)
-  let insertedOrders = 0, skippedOrders = 0;
-  for (const entry of preparedOrders) {
-    const clientRequestId = `IDUO-HIST-${entry.doc.key}`;
-    const exists = await prisma.order.findUnique({ where: { clientRequestId }, select: { id: true } });
-    if (exists) { skippedOrders++; continue; }
+  // Grabación idempotente en lotes paralelos (SIN AccountLedger, SIN StockMovement, SIN CashDrawer)
+  const existingOrders = await prisma.order.findMany({
+    where: { clientRequestId: { startsWith: 'IDUO-HIST-' } },
+    select: { clientRequestId: true },
+  });
+  const existingReqSet = new Set(existingOrders.map(o => o.clientRequestId));
 
-    const persona = entry.persona || matchClient(entry.doc.personaRaw, entry.doc.cuit, entry.doc.dni)?.db;
-    const invoiceType = entry.doc.letter === 'A' ? 'FACTURA_A' : 'FACTURA_B';
+  const toInsertOrders = preparedOrders.filter(entry => !existingReqSet.has(`IDUO-HIST-${entry.doc.key}`));
+  const skippedOrders = preparedOrders.length - toInsertOrders.length;
+  let insertedOrders = 0;
 
-    await prisma.order.create({
-      data: {
-        personaId: persona.id,
-        sellerId: entry.sellerId,
-        billingType: entry.doc.isOfficial ? 'OFFICIAL' : 'INTERNAL',
-        invoiceType,
-        invoiceNumber: entry.doc.formattedNumber,
-        invoicedAt: entry.doc.fecha,
-        cae: entry.doc.isOfficial ? `HIST-IDUO-${entry.doc.formattedNumber}` : null,
-        status: 'DELIVERED',
-        totalAmount: entry.totalAmount,
-        netAmount: entry.netAmount,
-        taxAmount: entry.taxAmount,
-        percepcionAmount: new Decimal(0),
-        percepcionIvaAmount: entry.percepcionIvaAmount,
-        salesChannel: entry.doc.vendorRaw ? 'PREVENTA_RUTA' : 'MOSTRADOR',
-        notes: 'Importado historial Iduo (sin impacto en Cta. Cte. ni Stock)',
-        clientRequestId,
-        createdAt: entry.doc.fecha,
-        items: {
-          create: entry.items.map(it => {
-            const pr = it.product || prodByName.get(normText(it.prodName));
-            return {
-              productId: pr.id,
-              quantity: it.quantity,
-              weight: it.weight,
-              unitPrice: it.unitPrice,
-              unitCostSnapshot: pr.costPrice || new Decimal(0),
-              listPriceSnapshot: it.unitPrice,
-              discountPctSnapshot: it.discountPct,
-              subtotal: it.subtotal,
-            };
-          }),
+  const CONCURRENCY = 10;
+  for (let i = 0; i < toInsertOrders.length; i += CONCURRENCY) {
+    const chunk = toInsertOrders.slice(i, i + CONCURRENCY);
+    await Promise.all(chunk.map(async (entry) => {
+      const clientRequestId = `IDUO-HIST-${entry.doc.key}`;
+      const persona = entry.persona || matchClient(entry.doc.personaRaw, entry.doc.cuit, entry.doc.dni)?.db;
+      const invoiceType = entry.doc.letter === 'A' ? 'FACTURA_A' : 'FACTURA_B';
+
+      await prisma.order.create({
+        data: {
+          personaId: persona.id,
+          sellerId: entry.sellerId,
+          billingType: entry.doc.isOfficial ? 'OFFICIAL' : 'INTERNAL',
+          invoiceType,
+          invoiceNumber: entry.doc.formattedNumber,
+          invoicedAt: entry.doc.fecha,
+          deliveredAt: entry.doc.fecha,
+          cae: entry.doc.isOfficial ? `HIST-IDUO-${entry.doc.formattedNumber}` : null,
+          status: 'DELIVERED',
+          totalAmount: entry.totalAmount,
+          netAmount: entry.netAmount,
+          taxAmount: entry.taxAmount,
+          percepcionAmount: new Decimal(0),
+          percepcionIvaAmount: entry.percepcionIvaAmount,
+          salesChannel: entry.doc.vendorRaw ? 'PREVENTA_RUTA' : 'MOSTRADOR',
+          notes: 'Importado historial Iduo (sin impacto en Cta. Cte. ni Stock)',
+          clientRequestId,
+          createdAt: entry.doc.fecha,
+          items: {
+            create: entry.items.map(it => {
+              const pr = it.product || prodByName.get(normText(it.prodName));
+              return {
+                productId: pr.id,
+                quantity: it.quantity,
+                weight: it.weight,
+                unitPrice: it.unitPrice,
+                unitCostSnapshot: pr.costPrice || new Decimal(0),
+                listPriceSnapshot: it.unitPrice,
+                discountPctSnapshot: it.discountPct,
+                subtotal: it.subtotal,
+              };
+            }),
+          },
         },
-      },
-    });
-    insertedOrders++;
+      });
+    }));
+    insertedOrders += chunk.length;
+    if (insertedOrders % 200 === 0 || insertedOrders === toInsertOrders.length) {
+      console.log(`  ... Facturas grabadas: ${insertedOrders}/${toInsertOrders.length} (omitidas: ${skippedOrders})`);
+    }
   }
 
   let insertedCNs = 0, skippedCNs = 0;

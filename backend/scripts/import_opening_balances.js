@@ -176,11 +176,17 @@ async function run() {
   const toCreate = [];
   const usedPersonaIds = new Set();
 
+  const NAME_ALIASES = {
+    'POLLERIA LA PINY (CICLON)': 'POLLERIA EL PINY (CICLON)',
+    'DAI WEN RONG (CENTRO 1)': 'DAI WEN RONG',
+  };
+
   for (const r of rows) {
     let target = null;
     let matchMode = '';
 
-    const nList = byNorm.get(normName(r.rawName)) || [];
+    const rawNorm = normName(r.rawName);
+    const nList = byNorm.get(rawNorm) || byNorm.get(NAME_ALIASES[rawNorm] || '') || [];
     if (nList.length === 1) {
       target = nList[0];
       matchMode = 'NAME';
