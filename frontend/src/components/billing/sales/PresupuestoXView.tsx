@@ -34,6 +34,14 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
     : `INT-${String(invoice.id || 0).padStart(5, '0')}`;
 
   const clientName = client?.name || invoice.clientName || 'Consumidor Final';
+  const clientCity = (client?.city || '').trim();
+  const clientBarrio = (client?.barrio || '').trim();
+  const clientBarrioLabel = clientBarrio
+    ? /^(barrio|b°|b\.)\b/i.test(clientBarrio)
+      ? clientBarrio
+      : `Barrio ${clientBarrio}`
+    : '';
+  const clientLocation = [clientCity, clientBarrioLabel].filter(Boolean).join(' · ');
   const clientAddress = client?.address || 'Retiro en Local';
   const clientCuit = client?.cuit && client.cuit !== 'S/D' ? client.cuit : null;
   const outstandingBalance = Math.round(Number(client?.outstandingBalance ?? 0));
@@ -71,16 +79,28 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
           borderBottom: '1px solid #e5e7eb',
         }}
       >
-        <div
-          style={{
-            fontSize: '1.05rem',
-            fontWeight: 700,
-            letterSpacing: '-0.01em',
-            color: '#111827',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          N° {compNro}
+        <div>
+          <div
+            style={{
+              fontSize: '1.05rem',
+              fontWeight: 700,
+              letterSpacing: '-0.01em',
+              color: '#111827',
+            }}
+          >
+            Presupuesto
+          </div>
+          <div
+            style={{
+              fontSize: '0.92rem',
+              fontWeight: 600,
+              color: '#111827',
+              marginTop: '2px',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            N° {compNro}
+          </div>
         </div>
 
         <div style={{ textAlign: 'right', fontSize: '0.82rem', color: '#6b7280' }}>
@@ -117,6 +137,11 @@ export function PresupuestoXView({ invoice }: PresupuestoXViewProps) {
           <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#111827' }}>
             {clientName}
           </div>
+          {clientLocation && (
+            <div style={{ fontSize: '0.78rem', fontWeight: 500, color: '#374151', marginTop: '2px' }}>
+              {clientLocation}
+            </div>
+          )}
           <div style={{ fontSize: '0.78rem', color: '#4b5563', marginTop: '2px' }}>
             {clientAddress}
             {clientCuit ? ` · CUIT/DNI ${clientCuit}` : ''}
