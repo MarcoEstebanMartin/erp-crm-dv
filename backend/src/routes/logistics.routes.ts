@@ -10,6 +10,7 @@ import {
   getLogisticsResources,
   transferRouteCustody,
   recordRouteGpsPing,
+  recordUserGpsPings,
   getRouteGpsHistory,
   getLiveMap,
 } from '../controllers/logistics.controller';
@@ -20,6 +21,7 @@ import {
   createDeliveryRouteSchema,
   liveMapQuerySchema,
   recordRouteGpsPingSchema,
+  recordUserGpsPingsSchema,
   routeIdParamSchema,
   settleDeliveryRouteSchema,
   transferRouteCustodySchema,
@@ -40,6 +42,7 @@ const canSettleOrDeleteRoutes = requireRole([Role.ADMIN, Role.FACTURACION]);
 
 router.get('/resources', getLogisticsResources);
 router.get('/live-map', canManageRoutes, validateRequest(liveMapQuerySchema), getLiveMap);
+router.post('/user-gps', validateRequest(recordUserGpsPingsSchema), recordUserGpsPings);
 router.get('/', getDeliveryRoutes);
 router.post('/', canManageRoutes, validateRequest(createDeliveryRouteSchema), idempotencyGuard, createDeliveryRoute);
 router.patch(

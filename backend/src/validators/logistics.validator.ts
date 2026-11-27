@@ -125,11 +125,38 @@ export const recordRouteGpsPingSchema = z.object({
   }),
 });
 
+const userGpsPingItemSchema = z.object({
+  latitude: z.coerce.number().min(-90, 'Latitud inválida.').max(90, 'Latitud inválida.'),
+  longitude: z.coerce.number().min(-180, 'Longitud inválida.').max(180, 'Longitud inválida.'),
+  accuracy: nullableNumber,
+  speed: nullableNumber,
+  heading: nullableNumber,
+  source: z.enum(['ERP_APP', 'TRACCAR', 'OTHER']).optional().default('ERP_APP'),
+  recordedAt: z.string().datetime().optional().nullable(),
+});
+
+export const recordUserGpsPingsSchema = z.object({
+  body: z.object({
+    pings: z
+      .array(userGpsPingItemSchema)
+      .min(1, 'Debe enviar al menos un punto GPS.')
+      .max(50, 'Máximo 50 puntos GPS por envío.'),
+  }),
+});
+
 export const liveMapQuerySchema = z.object({
   query: z.object({
     date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido (YYYY-MM-DD).')
+      .optional(),
+    fromTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Hora desde inválida (HH:mm).')
+      .optional(),
+    toTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Hora hasta inválida (HH:mm).')
       .optional(),
   }),
 });

@@ -17,6 +17,8 @@ const AUTO_REFRESH_MS = 60_000;
 
 export default function LiveMapTab() {
   const [date, setDate] = useState<string>(() => getTodayArgentinaDateInput());
+  const [fromTime, setFromTime] = useState<string>('00:00');
+  const [toTime, setToTime] = useState<string>('23:59');
   const [data, setData] = useState<LiveMapPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -30,11 +32,15 @@ export default function LiveMapTab() {
     pending: false,
   });
 
-  const fetchLiveMap = useCallback(async (targetDate: string) => {
+  const fetchLiveMap = useCallback(async (targetDate: string, targetFrom: string, targetTo: string) => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const payload = (await api.getLogisticsLiveMap(targetDate)) as LiveMapPayload;
+      const payload = (await api.getLogisticsLiveMap(
+        targetDate,
+        targetFrom || undefined,
+        targetTo || undefined,
+      )) as LiveMapPayload;
       setData(payload);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Error al cargar el mapa.');
@@ -45,18 +51,18 @@ export default function LiveMapTab() {
 
   useEffect(() => {
     setSelection(null);
-    void fetchLiveMap(date);
-  }, [date, fetchLiveMap]);
+    void fetchLiveMap(date, fromTime, toTime);
+  }, [date, fromTime, toTime, fetchLiveMap]);
 
   useEffect(() => {
     if (!data?.isToday) return;
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
-        void fetchLiveMap(date);
+        void fetchLiveMap(date, fromTime, toTime);
       }
     }, AUTO_REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [data?.isToday, date, fetchLiveMap]);
+  }, [data?.isToday, date, fromTime, toTime, fetchLiveMap]);
 
   const toggleLayer = (key: keyof LiveMapLayers) => {
     setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -68,7 +74,7 @@ export default function LiveMapTab() {
     setErrorMsg(null);
     try {
       await api.updatePersona(ev.clientId, { latitude: ev.lat, longitude: ev.lng });
-      await fetchLiveMap(date);
+      await fetchLiveMap(date, fromTime, toTime);
     } catch (err: any) {
       setErrorMsg(err?.message || 'No se pudo guardar la ubicación del cliente.');
     } finally {
@@ -116,7 +122,25 @@ export default function LiveMapTab() {
             className="input"
             value={date}
             onChange={(e) => setDate(e.target.value || getTodayArgentinaDateInput())}
-            style={{ width: '155px', height: '34px', padding: '4px 10px', fontSize: '0.84rem' }}
+            style={{ width: '150px', height: '34px', padding: '4px 10px', fontSize: '0.84rem' }}
+          />
+
+          <input
+            type="time"
+            aria-label="Hora desde"
+            className="input tabular-nums"
+            value={fromTime}
+            onChange={(e) => setFromTime(e.target.value || '00:00')}
+            style={{ width: '104px', height: '34px', padding: '4px 8px', fontSize: '0.82rem' }}
+          />
+
+          <input
+            type="time"
+            aria-label="Hora hasta"
+            className="input tabular-nums"
+            value={toTime}
+            onChange={(e) => setToTime(e.target.value || '23:59')}
+            style={{ width: '104px', height: '34px', padding: '4px 8px', fontSize: '0.82rem' }}
           />
 
           <div role="group" aria-label="Capas del mapa" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -158,7 +182,7 @@ export default function LiveMapTab() {
         <button
           type="button"
           className="btn btn-secondary"
-          onClick={() => void fetchLiveMap(date)}
+          onClick={() => void fetchLiveMap(date, fromTime, toTime)}
           disabled={loading}
           style={{ height: '34px', padding: '0 12px', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
@@ -226,7 +250,7 @@ export default function LiveMapTab() {
       <LiveMapClientLocationModal
         event={editingLocationEvent}
         onClose={() => setEditingLocationEvent(null)}
-        onSaved={() => fetchLiveMap(date)}
+        onSaved={() => fetchLiveMap(date, fromTime, toTime)}
       />
     </div>
   );

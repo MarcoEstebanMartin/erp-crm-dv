@@ -189,6 +189,24 @@ export const billingLogisticsApi = {
     return res;
   },
 
+  recordUserGpsPings: async (
+    pings: Array<{
+      latitude: number;
+      longitude: number;
+      accuracy?: number | null;
+      speed?: number | null;
+      heading?: number | null;
+      source?: 'ERP_APP' | 'TRACCAR' | 'OTHER';
+      recordedAt?: string;
+    }>,
+  ) => {
+    const res = await request('/logistics/user-gps', {
+      method: 'POST',
+      body: JSON.stringify({ pings }),
+    });
+    return res;
+  },
+
   getRouteGpsHistory: async (id: number) => {
     const res = await request(`/logistics/${id}/gps-history`);
     return res;
@@ -215,8 +233,12 @@ export const billingLogisticsApi = {
     return res;
   },
 
-  getLogisticsLiveMap: async (date?: string) => {
-    const qs = date ? `?date=${encodeURIComponent(date)}` : '';
+  getLogisticsLiveMap: async (date?: string, fromTime?: string, toTime?: string) => {
+    const params = new URLSearchParams();
+    if (date) params.set('date', date);
+    if (fromTime) params.set('fromTime', fromTime);
+    if (toTime) params.set('toTime', toTime);
+    const qs = params.toString() ? `?${params.toString()}` : '';
     const res = await request(`/logistics/live-map${qs}`);
     return res;
   },

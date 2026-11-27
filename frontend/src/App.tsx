@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { api } from './utils/api';
 import Sidebar from './components/Sidebar';
 import Login from './components/Login';
+import { useUserGpsTracker } from './hooks/useUserGpsTracker';
 
 const ReceiptView = lazy(() => import('./components/ReceiptView'));
 const QuickPriceSearchModal = lazy(() => import('./components/modals/QuickPriceSearchModal'));
@@ -39,6 +40,9 @@ function App() {
 
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Telemetría GPS automática al abrir la app (VENDEDOR y choferes con canDeliver)
+  useUserGpsTracker(user);
 
   // Atajo de teclado global Ctrl + Q para consulta de precios
   useEffect(() => {

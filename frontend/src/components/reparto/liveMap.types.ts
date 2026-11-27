@@ -5,6 +5,38 @@ import type {
 
 export type LiveMapDistanceStatus = 'OK' | 'FAR' | 'CLIENT_NO_GPS' | 'EVENT_NO_GPS';
 export type LiveMapEventType = 'ORDER_VISIT' | 'NO_BUY_VISIT' | 'RECEIPT';
+export type LiveMapLocationSourceType = LiveMapEventType | 'GPS_PING';
+
+export interface GpsTrackStop {
+  stopNumber: number;
+  lat: number;
+  lng: number;
+  arrivedAt: string;
+  departedAt: string;
+  durationSec: number;
+  durationLabel: string;
+  nearestClient: {
+    clientId: number;
+    name: string;
+    address: string | null;
+    distanceMeters: number;
+  } | null;
+}
+
+export interface GpsTrackAnalysis {
+  pointCount: number;
+  totalDistanceKm: number;
+  totalDurationSec: number;
+  movingDurationSec: number;
+  stoppedDurationSec: number;
+  maxSpeedKmh: number | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  startPoint: { lat: number; lng: number } | null;
+  endPoint: { lat: number; lng: number } | null;
+  trail: [number, number][];
+  stops: GpsTrackStop[];
+}
 
 export interface LiveMapEventItem {
   id: string;
@@ -32,7 +64,7 @@ export interface LiveMapSellerSummary {
     lat: number;
     lng: number;
     at: string;
-    eventType: LiveMapEventType;
+    eventType: LiveMapLocationSourceType;
     clientName: string;
   } | null;
   lastActivityAt: string | null;
@@ -47,6 +79,7 @@ export interface LiveMapSellerSummary {
   };
   events: LiveMapEventItem[];
   trail: [number, number][];
+  track?: GpsTrackAnalysis;
 }
 
 export interface LiveMapVehicleSummary {
@@ -64,6 +97,7 @@ export interface LiveMapVehicleSummary {
     at: string | null;
   } | null;
   trail: [number, number][];
+  track?: GpsTrackAnalysis;
   stopsCount: number;
   deliveredCount: number;
 }
@@ -84,6 +118,8 @@ export interface LiveMapPendingClient {
 
 export interface LiveMapPayload {
   date: string;
+  fromTime?: string;
+  toTime?: string;
   dayOfWeek: string;
   isToday: boolean;
   sellers: LiveMapSellerSummary[];
@@ -150,10 +186,33 @@ export function formatDistanceEs(meters: number | null): string {
   return `a ${(Math.round(meters / 100) / 10).toFixed(1).replace('.', ',')} km`;
 }
 
-export function eventTypeLabel(type: LiveMapEventType): string {
+export function eventTypeLabel(type: LiveMapLocationSourceType): string {
   if (type === 'ORDER_VISIT') return 'Venta';
   if (type === 'NO_BUY_VISIT') return 'No compró';
+  if (type === 'GPS_PING') return 'GPS';
   return 'Cobro';
+}
+
+export function formatDurationCompactEs(seconds: number): string {
+  const sec = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(sec / 3600);
+  const mins = Math.floor((sec % 3600) / 60);
+  if (hours > 0) return mins > 0 ? `${hours} h ${mins} min` : `${hours} h`;
+  if (mins > 0) return `${mins} min`;
+  return `${sec} s`;
+}
+
+function buildStopMarkers(stops: GpsTrackStop[] | undefined): OfficialMapMarker[] {
+  if (!stops || stops.length === 0) return [];
+  return stops.map((stop) => ({
+    id: `stop-${stop.stopNumber}`,
+    lat: stop.lat,
+    lng: stop.lng,
+    title: `Parada ${stop.stopNumber} · ${stop.durationLabel}`,
+    subtitle: `${formatEventTimeEs(stop.arrivedAt)}–${formatEventTimeEs(stop.departedAt)}${stop.nearestClient ? ` · ${stop.nearestClient.name}` : ''}`,
+    color: 'slate',
+    stopOrder: stop.stopNumber,
+  }));
 }
 
 export function buildLiveMapScene(params: {
@@ -188,16 +247,34 @@ export function buildLiveMapScene(params: {
         }
       : null;
     return {
-      markers: [],
+      markers: buildStopMarkers(vehicle.track?.stops),
       showMarkersPolyline: false,
       gpsLocation,
-      gpsTrail: vehicle.trail,
+      gpsTrail: vehicle.track?.trail?.length ? vehicle.track.trail : vehicle.trail,
     };
   }
 
   if (selection?.kind === 'seller') {
     const seller = data.sellers.find((s) => s.sellerId === selection.id);
+    let sellerTrail: [number, number][] = [];
+    let sellerGpsLoc: LiveVehicleGpsPoint | null = null;
+
     if (seller) {
+      sellerTrail = seller.track?.trail?.length ? seller.track.trail : seller.trail;
+
+      if (seller.lastLocation && sellerTrail.length > 0) {
+        sellerGpsLoc = {
+          lat: seller.lastLocation.lat,
+          lng: seller.lastLocation.lng,
+          speed: seller.track?.maxSpeedKmh ?? null,
+          lastUpdate: seller.lastLocation.at,
+          vehiclePlate: seller.sellerName,
+        };
+      }
+
+      const stopMarkers = buildStopMarkers(seller.track?.stops);
+      markers.push(...stopMarkers);
+
       let seq = 0;
       for (const ev of seller.events) {
         if (ev.lat === null || ev.lng === null) continue;
@@ -222,7 +299,7 @@ export function buildLiveMapScene(params: {
                 : ev.type === 'RECEIPT'
                   ? 'blue'
                   : 'slate',
-          stopOrder: seq,
+          stopOrder: stopMarkers.length === 0 ? seq : undefined,
         });
       }
 
@@ -241,11 +318,12 @@ export function buildLiveMapScene(params: {
       }
     }
 
+    const hasRealGpsTrail = sellerTrail.length > 1;
     return {
       markers,
-      showMarkersPolyline: markers.some((m) => typeof m.stopOrder === 'number'),
-      gpsLocation: null,
-      gpsTrail: [],
+      showMarkersPolyline: !hasRealGpsTrail && markers.some((m) => typeof m.stopOrder === 'number'),
+      gpsLocation: sellerGpsLoc,
+      gpsTrail: hasRealGpsTrail ? sellerTrail : [],
     };
   }
 

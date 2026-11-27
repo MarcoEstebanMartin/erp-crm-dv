@@ -5,6 +5,7 @@ import { deliveryRouteService } from '../services/logistics/delivery-route.servi
 import { routeSettlementService } from '../services/logistics/route-settlement.service';
 import { routeCustodyGpsService } from '../services/logistics/route-custody-gps.service';
 import { liveMapService } from '../services/logistics/live-map.service';
+import { userGpsService } from '../services/logistics/user-gps.service';
 
 function handleLogisticsError(res: Response, error: unknown, fallbackMessage: string): void {
   if (error instanceof AppError) {
@@ -193,9 +194,24 @@ export async function getRouteGpsHistory(req: AuthenticatedRequest, res: Respons
 export async function getLiveMap(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const date = typeof req.query.date === 'string' ? req.query.date : undefined;
-    const data = await liveMapService.getLiveMap(date);
+    const fromTime = typeof req.query.fromTime === 'string' ? req.query.fromTime : undefined;
+    const toTime = typeof req.query.toTime === 'string' ? req.query.toTime : undefined;
+    const data = await liveMapService.getLiveMap(date, fromTime, toTime);
     res.status(200).json({ status: 'success', data });
   } catch (error) {
     handleLogisticsError(res, error, 'Error al obtener el mapa en vivo.');
+  }
+}
+
+export async function recordUserGpsPings(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ status: 'error', message: 'Usuario no autenticado.' });
+      return;
+    }
+    const data = await userGpsService.recordUserGpsPings(req.user.id, req.body.pings);
+    res.status(200).json({ status: 'success', data });
+  } catch (error) {
+    handleLogisticsError(res, error, 'Error al registrar puntos GPS del usuario.');
   }
 }

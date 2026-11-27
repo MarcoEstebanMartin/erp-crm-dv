@@ -157,17 +157,26 @@ export function renderOfficialMapScene(params: RenderOfficialMapSceneParams): {
   });
 
   validMarkers.forEach((m) => {
+    const hasOrder = typeof m.stopOrder === 'number';
     const marker = new gmaps.Marker({
       position: { lat: m.lat, lng: m.lng },
       map,
       title: m.title,
+      label: hasOrder
+        ? {
+            text: String(m.stopOrder),
+            color: '#FFFFFF',
+            fontWeight: '700',
+            fontSize: '11px',
+          }
+        : undefined,
       icon: {
         path: gmaps.SymbolPath.CIRCLE,
         fillColor: MAP_PIN_HEX[m.color ?? 'red'],
         fillOpacity: 1,
         strokeColor: '#FFFFFF',
         strokeWeight: 2,
-        scale: 8,
+        scale: hasOrder ? 11 : 8,
       },
     });
     marker.addListener('click', () => {
@@ -193,15 +202,57 @@ export function renderOfficialMapScene(params: RenderOfficialMapSceneParams): {
   }
 
   if (gpsTrail && gpsTrail.length > 1) {
+    const trailPath = gpsTrail.map((p) => ({ lat: p[0], lng: p[1] }));
+    const arrowSymbol = gmaps.SymbolPath?.FORWARD_CLOSED_ARROW
+      ? {
+          path: gmaps.SymbolPath.FORWARD_CLOSED_ARROW,
+          scale: 2.8,
+          strokeColor: '#E30613',
+          fillColor: '#E30613',
+          fillOpacity: 1,
+        }
+      : null;
+
     const trailLine = new gmaps.Polyline({
-      path: gpsTrail.map((p) => ({ lat: p[0], lng: p[1] })),
+      path: trailPath,
       geodesic: true,
-      strokeColor: '#059669',
-      strokeOpacity: 0.85,
-      strokeWeight: 3,
+      strokeColor: '#2563eb',
+      strokeOpacity: 0.88,
+      strokeWeight: 3.5,
+      icons: arrowSymbol
+        ? [
+            {
+              icon: arrowSymbol,
+              offset: '24px',
+              repeat: '70px',
+            },
+          ]
+        : undefined,
     });
     trailLine.setMap(map);
     overlays.push(trailLine);
+
+    const startPoint = trailPath[0];
+    const startMarker = new gmaps.Marker({
+      position: startPoint,
+      map,
+      title: 'Inicio del recorrido',
+      zIndex: 900,
+      icon: {
+        path: gmaps.SymbolPath.CIRCLE,
+        fillColor: '#059669',
+        fillOpacity: 1,
+        strokeColor: '#FFFFFF',
+        strokeWeight: 2.5,
+        scale: 7,
+      },
+    });
+    overlays.push(startMarker);
+
+    trailPath.forEach((pt) => {
+      bounds.extend(pt);
+    });
+    hasBounds = true;
   }
 
   if (gpsLocation && Number.isFinite(gpsLocation.lat) && Number.isFinite(gpsLocation.lng)) {

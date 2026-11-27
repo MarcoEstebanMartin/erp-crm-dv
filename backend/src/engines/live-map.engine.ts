@@ -1,7 +1,9 @@
 import { toDecimal } from '../core/money';
+import { analyzeGpsTrack, type RawGpsTrackPing } from './gps-track.engine';
 import {
   ARGENTINA_DAYS_ES,
   type ArgentinaDateWindow,
+  type LiveMapClientGpsRef,
   type LiveMapDistanceStatus,
   type LiveMapEventItem,
   type LiveMapEventType,
@@ -12,6 +14,7 @@ import {
   type RawLiveMapDeliveryRoute,
   type RawLiveMapPlannedRoute,
   type RawLiveMapReceipt,
+  type RawLiveMapUserGpsPing,
   type RawLiveMapVisit,
 } from './live-map.types';
 
@@ -99,12 +102,26 @@ export function parseArgentinaDateWindow(dateStr?: string, now = new Date()): Ar
 
 export function buildLiveMapPayload(input: {
   window: ArgentinaDateWindow;
+  fromTime?: string;
+  toTime?: string;
   visits: RawLiveMapVisit[];
   receipts: RawLiveMapReceipt[];
   deliveryRoutes: RawLiveMapDeliveryRoute[];
   plannedRoutes: RawLiveMapPlannedRoute[];
+  userGpsPings?: RawLiveMapUserGpsPing[];
+  clientsWithGps?: LiveMapClientGpsRef[];
 }): LiveMapPayload {
-  const { window, visits, receipts, deliveryRoutes, plannedRoutes } = input;
+  const {
+    window,
+    fromTime = '00:00',
+    toTime = '23:59',
+    visits,
+    receipts,
+    deliveryRoutes,
+    plannedRoutes,
+    userGpsPings = [],
+    clientsWithGps = [],
+  } = input;
 
   const sellerMap = new Map<
     number,
@@ -112,6 +129,7 @@ export function buildLiveMapPayload(input: {
       sellerId: number;
       sellerName: string;
       events: LiveMapEventItem[];
+      rawPings: RawGpsTrackPing[];
       visitedClientIds: Set<number>;
       plannedClientIds: Set<number>;
       ordered: number;
@@ -128,6 +146,7 @@ export function buildLiveMapPayload(input: {
         sellerId,
         sellerName,
         events: [],
+        rawPings: [],
         visitedClientIds: new Set<number>(),
         plannedClientIds: new Set<number>(),
         ordered: 0,
@@ -139,6 +158,18 @@ export function buildLiveMapPayload(input: {
     }
     return entry;
   };
+
+  for (const ping of userGpsPings) {
+    if (!isValidCoord(ping.latitude, ping.longitude)) continue;
+    const entry = ensureSeller(ping.user.id, ping.user.username);
+    entry.rawPings.push({
+      latitude: ping.latitude,
+      longitude: ping.longitude,
+      speed: ping.speed,
+      heading: ping.heading,
+      recordedAt: ping.recordedAt,
+    });
+  }
 
   for (const route of plannedRoutes) {
     if (!route.seller) continue;
@@ -231,12 +262,12 @@ export function buildLiveMapPayload(input: {
   const sellers: LiveMapSellerSummary[] = Array.from(sellerMap.values())
     .map((entry) => {
       entry.events.sort((a, b) => a.at.localeCompare(b.at));
-      const trail: [number, number][] = [];
+      const eventTrail: [number, number][] = [];
       let lastLocation: LiveMapSellerSummary['lastLocation'] = null;
 
       for (const ev of entry.events) {
         if (ev.lat !== null && ev.lng !== null) {
-          trail.push([ev.lat, ev.lng]);
+          eventTrail.push([ev.lat, ev.lng]);
           lastLocation = {
             lat: ev.lat,
             lng: ev.lng,
@@ -247,8 +278,46 @@ export function buildLiveMapPayload(input: {
         }
       }
 
-      const lastActivityAt =
+      // Si hay pings GPS continuos los usamos para trazo y paradas; si no, usamos las coords de eventos
+      const trackSourcePings: RawGpsTrackPing[] =
+        entry.rawPings.length > 0
+          ? entry.rawPings
+          : entry.events
+              .filter((ev) => ev.lat !== null && ev.lng !== null)
+              .map((ev) => ({
+                latitude: ev.lat as number,
+                longitude: ev.lng as number,
+                recordedAt: ev.at,
+              }));
+
+      const track = analyzeGpsTrack({
+        pings: trackSourcePings,
+        clients: clientsWithGps,
+      });
+
+      if (
+        entry.rawPings.length > 0 &&
+        track.endPoint &&
+        track.endedAt &&
+        (!lastLocation || track.endedAt > lastLocation.at)
+      ) {
+        lastLocation = {
+          lat: track.endPoint.lat,
+          lng: track.endPoint.lng,
+          at: track.endedAt,
+          eventType: 'GPS_PING',
+          clientName: 'GPS activo',
+        };
+      }
+
+      const lastEventAt =
         entry.events.length > 0 ? entry.events[entry.events.length - 1].at : null;
+      const lastActivityAt =
+        lastEventAt && track.endedAt
+          ? lastEventAt >= track.endedAt
+            ? lastEventAt
+            : track.endedAt
+          : lastEventAt ?? track.endedAt;
 
       return {
         sellerId: entry.sellerId,
@@ -265,7 +334,8 @@ export function buildLiveMapPayload(input: {
           farAlerts: entry.farAlerts,
         },
         events: entry.events,
-        trail,
+        trail: track.trail.length > 0 ? track.trail : eventTrail,
+        track,
       };
     })
     .sort((a, b) => {
@@ -280,7 +350,18 @@ export function buildLiveMapPayload(input: {
       .filter((p) => isValidCoord(p.latitude, p.longitude))
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-    const trail: [number, number][] = validPings.map((p) => [p.latitude, p.longitude]);
+    const track = analyzeGpsTrack({
+      pings: validPings.map((p) => ({
+        latitude: p.latitude,
+        longitude: p.longitude,
+        speed: p.speed ?? null,
+        recordedAt: p.createdAt,
+      })),
+      clients: clientsWithGps,
+    });
+
+    const trail: [number, number][] =
+      track.trail.length > 0 ? track.trail : validPings.map((p) => [p.latitude, p.longitude]);
 
     let lastLocation: LiveMapVehicleSummary['lastLocation'] = null;
     if (isValidCoord(route.currentLat, route.currentLng)) {
@@ -295,7 +376,7 @@ export function buildLiveMapPayload(input: {
       lastLocation = {
         lat: last.latitude,
         lng: last.longitude,
-        speed: null,
+        speed: last.speed ?? null,
         at: last.createdAt.toISOString(),
       };
     }
@@ -314,6 +395,7 @@ export function buildLiveMapPayload(input: {
       custodyStatus: route.custodyStatus,
       lastLocation,
       trail,
+      track,
       stopsCount: route.orders.length,
       deliveredCount,
     };
@@ -350,7 +432,7 @@ export function buildLiveMapPayload(input: {
   let activeSellers = 0;
 
   for (const s of sellers) {
-    if (s.counts.totalEvents > 0) activeSellers += 1;
+    if (s.counts.totalEvents > 0 || s.track.pointCount > 0) activeSellers += 1;
     totalOrdered += s.counts.ordered;
     totalNoBuy += s.counts.noBuy;
     totalReceipts += s.counts.receipts;
@@ -359,6 +441,8 @@ export function buildLiveMapPayload(input: {
 
   return {
     date: window.dateKey,
+    fromTime,
+    toTime,
     dayOfWeek: window.dayOfWeekEs,
     isToday: window.isToday,
     sellers,

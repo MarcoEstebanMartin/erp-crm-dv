@@ -106,6 +106,7 @@ model User {
   collectorSettlements   CollectorSettlement[] @relation("SettlementCollector")
   approvedSettlements    CollectorSettlement[] @relation("SettlementApprovedBy")
   personaNotes           PersonaNote[]         @relation("PersonaNoteAuthor")
+  gpsPings               UserGpsPing[]
 }
 
 enum ProviderType {
@@ -661,6 +662,23 @@ model RouteGpsPing {
 
   @@index([deliveryRouteId])
   @@index([createdAt])
+}
+
+model UserGpsPing {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  latitude   Float
+  longitude  Float
+  accuracy   Float?
+  speed      Float?
+  heading    Float?
+  source     String   @default("ERP_APP")
+  recordedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId, recordedAt])
+  @@index([recordedAt])
 }
 
 model PurchaseOrder {

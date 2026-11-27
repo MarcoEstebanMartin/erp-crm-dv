@@ -156,27 +156,73 @@ describe('liveMapHelpers', () => {
     expect(withPending.markers.map((m) => m.id)).toEqual(['pending-12']);
   });
 
-  it('enfoca un vendedor mostrando su recorrido secuencial y alerta de distancia', () => {
+  it('enfoca un vendedor mostrando su estela GPS, paradas y alerta de distancia', () => {
     const scene = buildLiveMapScene({
       data: SAMPLE_PAYLOAD,
       layers: { sellers: true, vehicles: true, visits: true, pending: true },
       selection: { kind: 'seller', id: 2 },
     });
 
-    expect(scene.showMarkersPolyline).toBe(true);
+    expect(scene.gpsTrail).toHaveLength(2);
+    expect(scene.showMarkersPolyline).toBe(false);
     expect(scene.markers.map((m) => m.id)).toEqual(['visit-1', 'visit-2', 'pending-12']);
     expect(scene.markers[0].stopOrder).toBe(1);
     expect(scene.markers[1].color).toBe('red');
   });
 
-  it('enfoca un vehículo mostrando su ubicación en vivo y estela GPS', () => {
+  it('enfoca un vehículo mostrando su ubicación en vivo, estela GPS y pines numerados de paradas', () => {
+    const payloadWithStops: LiveMapPayload = {
+      ...SAMPLE_PAYLOAD,
+      vehicles: [
+        {
+          ...SAMPLE_PAYLOAD.vehicles[0],
+          track: {
+            pointCount: 3,
+            totalDistanceKm: 4.2,
+            totalDurationSec: 3600,
+            movingDurationSec: 557,
+            stoppedDurationSec: 3043,
+            maxSpeedKmh: 45,
+            startedAt: '2026-11-20T12:15:01.000Z',
+            endedAt: '2026-11-20T13:15:01.000Z',
+            startPoint: { lat: -35.0322, lng: -63.0134 },
+            endPoint: { lat: -35.04, lng: -63.02 },
+            trail: [
+              [-35.0322, -63.0134],
+              [-35.04, -63.02],
+            ],
+            stops: [
+              {
+                stopNumber: 1,
+                lat: -35.033,
+                lng: -63.012,
+                arrivedAt: '2026-11-20T12:15:01.000Z',
+                departedAt: '2026-11-20T13:05:44.000Z',
+                durationSec: 3043,
+                durationLabel: '50 min 43 s',
+                nearestClient: {
+                  clientId: 10,
+                  name: 'Almacén El Sol',
+                  address: 'Pringles 116',
+                  distanceMeters: 18,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
     const scene = buildLiveMapScene({
-      data: SAMPLE_PAYLOAD,
+      data: payloadWithStops,
       layers: { sellers: true, vehicles: true, visits: true, pending: false },
       selection: { kind: 'vehicle', id: 7 },
     });
 
-    expect(scene.markers).toHaveLength(0);
+    expect(scene.markers).toHaveLength(1);
+    expect(scene.markers[0].id).toBe('stop-1');
+    expect(scene.markers[0].stopOrder).toBe(1);
+    expect(scene.markers[0].title).toContain('50 min 43 s');
     expect(scene.gpsLocation?.vehiclePlate).toBe('AF123CD · Gemini Reparto');
     expect(scene.gpsTrail).toHaveLength(2);
   });

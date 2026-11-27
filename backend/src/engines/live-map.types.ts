@@ -1,3 +1,5 @@
+import type { GpsTrackAnalysis, GpsTrackClientRef } from './gps-track.engine';
+
 export const ARGENTINA_DAYS_ES = [
   'DOMINGO',
   'LUNES',
@@ -11,6 +13,19 @@ export const ARGENTINA_DAYS_ES = [
 export type ArgentinaDayOfWeek = (typeof ARGENTINA_DAYS_ES)[number];
 export type LiveMapDistanceStatus = 'OK' | 'FAR' | 'CLIENT_NO_GPS' | 'EVENT_NO_GPS';
 export type LiveMapEventType = 'ORDER_VISIT' | 'NO_BUY_VISIT' | 'RECEIPT';
+export type LiveMapLocationSourceType = LiveMapEventType | 'GPS_PING';
+
+export interface RawLiveMapUserGpsPing {
+  userId: number;
+  user: { id: number; username: string };
+  latitude: number;
+  longitude: number;
+  speed: number | null;
+  heading: number | null;
+  recordedAt: Date;
+}
+
+export type LiveMapClientGpsRef = GpsTrackClientRef;
 
 export interface ArgentinaDateWindow {
   dateKey: string;
@@ -69,7 +84,7 @@ export interface RawLiveMapDeliveryRoute {
   currentLng: number | null;
   currentSpeed: number | null;
   lastGpsUpdate: Date | null;
-  gpsPings: Array<{ latitude: number; longitude: number; createdAt: Date }>;
+  gpsPings: Array<{ latitude: number; longitude: number; speed?: number | null; createdAt: Date }>;
   orders: Array<{ id: number; status: string }>;
 }
 
@@ -114,7 +129,7 @@ export interface LiveMapSellerSummary {
     lat: number;
     lng: number;
     at: string;
-    eventType: LiveMapEventType;
+    eventType: LiveMapLocationSourceType;
     clientName: string;
   } | null;
   lastActivityAt: string | null;
@@ -129,6 +144,7 @@ export interface LiveMapSellerSummary {
   };
   events: LiveMapEventItem[];
   trail: [number, number][];
+  track: GpsTrackAnalysis;
 }
 
 export interface LiveMapVehicleSummary {
@@ -146,6 +162,7 @@ export interface LiveMapVehicleSummary {
     at: string | null;
   } | null;
   trail: [number, number][];
+  track: GpsTrackAnalysis;
   stopsCount: number;
   deliveredCount: number;
 }
@@ -166,6 +183,8 @@ export interface LiveMapPendingClient {
 
 export interface LiveMapPayload {
   date: string;
+  fromTime: string;
+  toTime: string;
   dayOfWeek: ArgentinaDayOfWeek;
   isToday: boolean;
   sellers: LiveMapSellerSummary[];

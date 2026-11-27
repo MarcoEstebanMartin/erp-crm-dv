@@ -223,5 +223,70 @@ describe('live-map.engine', () => {
       expect(payload.pendingClients).toHaveLength(1);
       expect(payload.pendingClients[0].clientId).toBe(103);
     });
+
+    it('incorpora pings continuos UserGpsPing para trazo, paradas y posición viva aun sin visitas', () => {
+      const window = parseArgentinaDateWindow('2026-11-27', new Date('2026-11-27T15:00:00Z'));
+      const baseMs = new Date('2026-11-27T12:15:00.000Z').getTime();
+
+      const payload = buildLiveMapPayload({
+        window,
+        fromTime: '09:15',
+        toTime: '18:00',
+        visits: [],
+        receipts: [],
+        deliveryRoutes: [],
+        plannedRoutes: [],
+        clientsWithGps: [
+          {
+            id: 201,
+            name: 'Autoservicio Castelli',
+            address: 'Castelli 1360',
+            latitude: -35.03302,
+            longitude: -63.01202,
+          },
+        ],
+        userGpsPings: [
+          {
+            userId: 9,
+            user: { id: 9, username: 'Gemini Ventas' },
+            latitude: -35.033,
+            longitude: -63.012,
+            speed: 0,
+            heading: 0,
+            recordedAt: new Date(baseMs),
+          },
+          {
+            userId: 9,
+            user: { id: 9, username: 'Gemini Ventas' },
+            latitude: -35.03301,
+            longitude: -63.01201,
+            speed: 0,
+            heading: 0,
+            recordedAt: new Date(baseMs + 10 * 60_000),
+          },
+          {
+            userId: 9,
+            user: { id: 9, username: 'Gemini Ventas' },
+            latitude: -35.025,
+            longitude: -63.012,
+            speed: 38,
+            heading: 0,
+            recordedAt: new Date(baseMs + 15 * 60_000),
+          },
+        ],
+      });
+
+      expect(payload.fromTime).toBe('09:15');
+      expect(payload.toTime).toBe('18:00');
+      expect(payload.summary.activeSellers).toBe(1);
+      expect(payload.sellers).toHaveLength(1);
+
+      const seller = payload.sellers[0];
+      expect(seller.lastLocation?.eventType).toBe('GPS_PING');
+      expect(seller.track.stops).toHaveLength(1);
+      expect(seller.track.stops[0].durationLabel).toBe('10 min');
+      expect(seller.track.stops[0].nearestClient?.name).toBe('Autoservicio Castelli');
+      expect(seller.track.totalDistanceKm).toBeGreaterThan(0.5);
+    });
   });
 });

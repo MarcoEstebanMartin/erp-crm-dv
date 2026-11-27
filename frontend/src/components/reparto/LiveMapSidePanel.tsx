@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { ArrowLeft, Check, LocateFixed, MapPin, Truck, User } from 'lucide-react';
+import { LiveMapTrackSummary } from './LiveMapTrackSummary';
 import {
   eventTypeLabel,
   formatDistanceEs,
@@ -40,6 +42,8 @@ export function LiveMapSidePanel({
   onFixClientCoords,
   onEditClientLocation,
 }: LiveMapSidePanelProps) {
+  const [sellerDetailTab, setSellerDetailTab] = useState<'stops' | 'events'>('stops');
+
   const selectedSeller =
     selection?.kind === 'seller'
       ? data?.sellers.find((s) => s.sellerId === selection.id) ?? null
@@ -51,6 +55,9 @@ export function LiveMapSidePanel({
       : null;
 
   if (selectedSeller) {
+    const hasTrack = Boolean(selectedSeller.track && selectedSeller.track.pointCount > 0);
+    const activeSubTab = !hasTrack && selectedSeller.events.length > 0 ? 'events' : sellerDetailTab;
+
     return (
       <aside
         aria-label={`Recorrido de ${selectedSeller.sellerName}`}
@@ -88,7 +95,46 @@ export function LiveMapSidePanel({
           </span>
         </div>
 
-        {selectedSeller.events.length === 0 ? (
+        {hasTrack && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => setSellerDetailTab('stops')}
+              style={{
+                height: '30px',
+                borderRadius: '7px',
+                border: activeSubTab === 'stops' ? '1px solid #111827' : '1px solid var(--border-color)',
+                backgroundColor: activeSubTab === 'stops' ? '#111827' : 'transparent',
+                color: activeSubTab === 'stops' ? '#fff' : 'var(--text-secondary)',
+                fontSize: '0.76rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Paradas ({selectedSeller.track?.stops.length ?? 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSellerDetailTab('events')}
+              style={{
+                height: '30px',
+                borderRadius: '7px',
+                border: activeSubTab === 'events' ? '1px solid #111827' : '1px solid var(--border-color)',
+                backgroundColor: activeSubTab === 'events' ? '#111827' : 'transparent',
+                color: activeSubTab === 'events' ? '#fff' : 'var(--text-secondary)',
+                fontSize: '0.76rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Eventos ({selectedSeller.events.length})
+            </button>
+          </div>
+        )}
+
+        {activeSubTab === 'stops' && hasTrack ? (
+          <LiveMapTrackSummary track={selectedSeller.track} showTimeline />
+        ) : selectedSeller.events.length === 0 ? (
           <div style={{ padding: '20px 8px', textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
             Sin eventos registrados
           </div>
@@ -216,7 +262,7 @@ export function LiveMapSidePanel({
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '8px', borderBottom: '1px solid var(--border-color)' }}>
           <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
             {selectedVehicle.vehiclePlate} · {selectedVehicle.driverName}
           </strong>
@@ -231,6 +277,8 @@ export function LiveMapSidePanel({
             <span>{formatRelativeTimeEs(selectedVehicle.lastLocation?.at ?? null)}</span>
           </div>
         </div>
+
+        <LiveMapTrackSummary track={selectedVehicle.track} showTimeline />
       </aside>
     );
   }
