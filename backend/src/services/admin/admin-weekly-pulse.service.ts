@@ -75,11 +75,10 @@ export class AdminWeeklyPulseService {
       }
     }
 
-    const defaultHistoryStart = addDaysIso(targetWeekStart, -7 * 7);
-    const chainStart =
-      anchorWeekStart && anchorWeekStart < defaultHistoryStart
-        ? anchorWeekStart
-        : defaultHistoryStart;
+    // Si hay ancla manual, encadenar desde esa semana; si no hay ancla, arrancar desde la semana actual
+    // (o la primera semana guardada) para no acumular $20M fantasmas en semanas históricas vacías.
+    const firstSavedWeek = savedReports.length > 0 ? savedReports[0].weekStart : null;
+    const chainStart = anchorWeekStart ?? firstSavedWeek ?? targetWeekStart;
 
     const weekStarts = listWeekStartsBetween(chainStart, targetWeekStart);
     const fullRange = parseArgentinaTimestampRange(weekStarts[0], targetWeekEnd);
