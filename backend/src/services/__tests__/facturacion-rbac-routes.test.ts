@@ -11,8 +11,10 @@ import collectionRoutes from '../../routes/collection.routes';
 import orderRoutes from '../../routes/order.routes';
 import personaRoutes from '../../routes/persona.routes';
 import productRoutes from '../../routes/product.routes';
+import catalogStudioRoutes from '../../routes/catalog-studio.routes';
 import * as adminController from '../../controllers/admin.controller';
 import * as collectionController from '../../controllers/collection.controller';
+import { CatalogStudioService } from '../catalog/catalog-studio.service';
 
 function makeStaffCookie(id: number, role: Role): string {
   const pwdVer = `ver_${role.toLowerCase()}`;
@@ -60,6 +62,7 @@ describe('Alineación RBAC del Rol FACTURACION y Cierre de Brechas de Rutas — 
     testApp.use('/api/orders', orderRoutes);
     testApp.use('/api/personas', personaRoutes);
     testApp.use('/api/products', productRoutes);
+    testApp.use('/api/catalog-studio', catalogStudioRoutes);
 
     await new Promise<void>((resolve) => {
       server = testApp.listen(0, '127.0.0.1', () => {
@@ -146,5 +149,31 @@ describe('Alineación RBAC del Rol FACTURACION y Cierre de Brechas de Rutas — 
     expect(await sendRequest(baseUrl, 'GET', '/api/admin/reports', factCookie)).toBe(403);
     expect(await sendRequest(baseUrl, 'POST', '/api/products/stock/reconcile', factCookie, {})).toBe(403);
     expect(await sendRequest(baseUrl, 'DELETE', '/api/personas/1', factCookie)).toBe(403);
+  });
+
+  it('Catalog Studio (/api/catalog-studio) permite ADMIN y FACTURACION y bloquea (403) a VENDEDOR y DEPOSITO', async () => {
+    vi.spyOn(CatalogStudioService, 'getStudioData').mockResolvedValue({
+      state: {
+        title: 'OFERTAS SEMANALES',
+        subtitle: '',
+        hideOutOfStock: true,
+        categoryOrder: [],
+        itemOrder: [],
+        combos: [],
+        updatedAt: null,
+      },
+      products: [],
+      canonicalCategories: [],
+    });
+
+    const adminCookie = makeStaffCookie(1, Role.ADMIN);
+    const factCookie = makeStaffCookie(2, Role.FACTURACION);
+    const vendCookie = makeStaffCookie(3, Role.VENDEDOR);
+    const depCookie = makeStaffCookie(4, Role.DEPOSITO);
+
+    expect(await sendRequest(baseUrl, 'GET', '/api/catalog-studio', adminCookie)).toBe(200);
+    expect(await sendRequest(baseUrl, 'GET', '/api/catalog-studio', factCookie)).toBe(200);
+    expect(await sendRequest(baseUrl, 'GET', '/api/catalog-studio', vendCookie)).toBe(403);
+    expect(await sendRequest(baseUrl, 'GET', '/api/catalog-studio', depCookie)).toBe(403);
   });
 });

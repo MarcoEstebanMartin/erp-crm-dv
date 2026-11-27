@@ -125,7 +125,7 @@ export default function AdminDashboard({ activeTab, setActiveTab }: AdminDashboa
         </Suspense>
       )}
 
-      {activeTab === 'catalogo' && isAdmin && (
+      {activeTab === 'catalogo' && (
         <Suspense fallback={<LoadingDashboard />}>
           <CatalogStudioTab />
         </Suspense>

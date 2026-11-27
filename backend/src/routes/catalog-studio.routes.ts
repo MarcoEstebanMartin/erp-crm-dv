@@ -17,7 +17,7 @@ import {
 const router = Router();
 
 router.use(authenticateJWT);
-router.use(requireRole([Role.ADMIN]));
+router.use(requireRole([Role.ADMIN, Role.FACTURACION]));
 
 router.get('/', getCatalogStudio);
 router.put('/state', validateRequest(updateCatalogStudioStateSchema), saveCatalogStudioState);

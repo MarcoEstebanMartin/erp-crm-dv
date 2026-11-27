@@ -76,21 +76,16 @@ export default function Sidebar({
 
   const getMenuItems = () => {
     if (role === 'ADMIN' || role === 'FACTURACION') {
-      const adminItems = [
+      return [
         { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard size={18} aria-hidden="true" /> },
         { id: 'products', label: 'Productos', icon: <Package size={18} aria-hidden="true" /> },
-      ];
-      if (role === 'ADMIN') {
-        adminItems.push({ id: 'catalogo', label: 'Catálogo', icon: <BookOpen size={18} aria-hidden="true" /> });
-      }
-      adminItems.push(
+        { id: 'catalogo', label: 'Catálogo', icon: <BookOpen size={18} aria-hidden="true" /> },
         { id: 'clients', label: 'Personas', icon: <Users size={18} aria-hidden="true" /> },
         { id: 'fulfillment', label: 'Pedidos', icon: <Warehouse size={18} aria-hidden="true" /> },
         { id: 'logistica', label: 'Logística', icon: <Truck size={18} aria-hidden="true" /> },
         { id: 'rendiciones', label: 'Caja', icon: <DollarSign size={18} aria-hidden="true" /> },
         { id: 'config', label: 'Configuración', icon: <Building2 size={18} aria-hidden="true" /> },
-      );
-      return adminItems;
+      ];
     }
     if (role === 'DEPOSITO') {
       const depositoItems = [

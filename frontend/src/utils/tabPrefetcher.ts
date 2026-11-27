@@ -7,6 +7,7 @@ type ChunkLoader = () => Promise<unknown>;
 
 const ADMIN_TAB_LOADERS: Record<string, ChunkLoader> = {
   products: () => import('../components/admin/ProductsTab'),
+  catalogo: () => import('../components/admin/catalog-studio/CatalogStudioTab'),
   clients: () => import('../components/admin/ClientsTab'),
   fulfillment: () => import('../components/admin/FulfillmentDashboard'),
   orders: () => import('../components/admin/OrdersTab'),
