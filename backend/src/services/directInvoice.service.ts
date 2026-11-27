@@ -98,16 +98,57 @@ export class DirectInvoiceService {
       }
     }
 
-    const persona = await prisma.persona.findUnique({ where: { id: personaId } });
+    const productIds = items.map((item) => item.productId);
+
+    const resolvePrePaymentCheck = async (): Promise<{
+      checkedCash: boolean;
+      hasCashDrawer: boolean;
+      checkedBank: boolean;
+      hasBankAccount: boolean;
+    }> => {
+      if (paymentMethod === 'CASH' && typeof (prisma as any)?.cashDrawer?.findFirst === 'function') {
+        const preDrawer = data.cashDrawerId
+          ? await prisma.cashDrawer.findFirst({ where: { id: data.cashDrawerId, status: 'OPEN' } })
+          : (await prisma.cashDrawer.findFirst({
+              where: {
+                status: 'OPEN',
+                OR: [{ branch: 'DEPOSITO' }, { drawerType: 'DEPOSITO' }],
+              },
+              orderBy: { openedAt: 'desc' },
+            })) ||
+            (await prisma.cashDrawer.findFirst({
+              where: { userId: adminId, status: 'OPEN', drawerType: { not: 'CENTRAL' } },
+              orderBy: { openedAt: 'desc' },
+            })) ||
+            (await prisma.cashDrawer.findFirst({
+              where: { status: 'OPEN', drawerType: { not: 'CENTRAL' } },
+              orderBy: { openedAt: 'desc' },
+            }));
+        return { checkedCash: true, hasCashDrawer: Boolean(preDrawer), checkedBank: false, hasBankAccount: true };
+      }
+      if (
+        paymentMethod === 'BANK_TRANSFER' &&
+        !bankAccountId &&
+        typeof (prisma as any)?.bankAccount?.findFirst === 'function'
+      ) {
+        const preBank = await prisma.bankAccount.findFirst({ select: { id: true } });
+        return { checkedCash: false, hasCashDrawer: true, checkedBank: true, hasBankAccount: Boolean(preBank) };
+      }
+      return { checkedCash: false, hasCashDrawer: true, checkedBank: false, hasBankAccount: true };
+    };
+
+    const [persona, dbProducts, prePaymentCheck] = await Promise.all([
+      prisma.persona.findUnique({ where: { id: personaId } }),
+      prisma.product.findMany({
+        where: { id: { in: productIds } },
+        include: { rubro: true },
+      }),
+      resolvePrePaymentCheck(),
+    ]);
+
     if (!persona) {
       throw new Error('Cliente no encontrado.');
     }
-
-    const productIds = items.map((item) => item.productId);
-    const dbProducts = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      include: { rubro: true },
-    });
 
     const dbRules =
       typeof (prisma as any)?.discountRule?.findMany === 'function'
@@ -217,43 +258,16 @@ export class DirectInvoiceService {
     let finalCaeDueDate: Date | null = null;
 
     // Pre-validar disponibilidad de Caja abierta / Cuenta Bancaria ANTES de emitir CAE en AFIP
-    if (paymentMethod === 'CASH' && typeof (prisma as any)?.cashDrawer?.findFirst === 'function') {
-      const preDrawer = data.cashDrawerId
-        ? await prisma.cashDrawer.findFirst({ where: { id: data.cashDrawerId, status: 'OPEN' } })
-        : (await prisma.cashDrawer.findFirst({
-            where: {
-              status: 'OPEN',
-              OR: [{ branch: 'DEPOSITO' }, { drawerType: 'DEPOSITO' }],
-            },
-            orderBy: { openedAt: 'desc' },
-          })) ||
-          (await prisma.cashDrawer.findFirst({
-            where: { userId: adminId, status: 'OPEN', drawerType: { not: 'CENTRAL' } },
-            orderBy: { openedAt: 'desc' },
-          })) ||
-          (await prisma.cashDrawer.findFirst({
-            where: { status: 'OPEN', drawerType: { not: 'CENTRAL' } },
-            orderBy: { openedAt: 'desc' },
-          }));
-
-      if (!preDrawer) {
-        throw new Error(
-          'No hay una Caja Oficina abierta. Abrí la Caja Oficina antes de registrar cobros en efectivo.',
-        );
-      }
+    if (prePaymentCheck.checkedCash && !prePaymentCheck.hasCashDrawer) {
+      throw new Error(
+        'No hay una Caja Oficina abierta. Abrí la Caja Oficina antes de registrar cobros en efectivo.',
+      );
     }
 
-    if (
-      paymentMethod === 'BANK_TRANSFER' &&
-      !bankAccountId &&
-      typeof (prisma as any)?.bankAccount?.findFirst === 'function'
-    ) {
-      const preBank = await prisma.bankAccount.findFirst({ select: { id: true } });
-      if (!preBank) {
-        throw new Error(
-          'No hay cuentas bancarias configuradas para registrar la transferencia.',
-        );
-      }
+    if (prePaymentCheck.checkedBank && !prePaymentCheck.hasBankAccount) {
+      throw new Error(
+        'No hay cuentas bancarias configuradas para registrar la transferencia.',
+      );
     }
 
     if (billingType === BillingType.OFFICIAL) {
@@ -427,7 +441,7 @@ export class DirectInvoiceService {
         });
       });
 
-      await logAudit({
+      void logAudit({
         userId: adminId,
         action: 'CREATE_DIRECT_INVOICE',
         entityType: 'Order',

@@ -138,3 +138,27 @@ export function calculateFulfillmentOrderTotalInt(
   }
   return total;
 }
+
+/**
+ * Determina si es necesario ejecutar `confirmOrderArmado` antes de facturar.
+ * Si el pedido ya está en estado PREPARED y todos los ítems pesables no bonificados
+ * ya tienen persistido exactamente el mismo peso que muestra la pantalla,
+ * se puede facturar directo sin un viaje HTTP + transacción redundante.
+ */
+export function needsArmadoConfirmationBeforeInvoice(
+  order: { status?: string; items?: any[] } | null | undefined,
+  pesableWeights: Record<number, number>,
+): boolean {
+  if (!order || order.status !== 'PREPARED') return true;
+
+  for (const item of order.items || []) {
+    if (!isOrderItemWeighable(item) || isBonusOrderItem(item)) continue;
+    const savedWeight = normalizeWeightKg3(item?.weight);
+    const currentWeight = normalizeWeightKg3(pesableWeights[item.id]);
+    if (savedWeight <= 0 || savedWeight !== currentWeight) {
+      return true;
+    }
+  }
+
+  return false;
+}

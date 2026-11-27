@@ -6,6 +6,7 @@ import {
   computeSuggestedItemWeightKg,
   detectFulfillmentWeightAnomalies,
   isOrderItemWeighable,
+  needsArmadoConfirmationBeforeInvoice,
 } from '../orderFulfillmentMath';
 import {
   calculateDirectBillingTotals,
@@ -120,5 +121,50 @@ describe('Paso 1 Frontend — Rigor BigInt en Balanza, Armado y Facturación Dir
     expect(computeClientUnitPrice(prod, clientB, rules, 'OFFICIAL')).toBe(1620);
     // En canal INTERNAL la regla OFFICIAL no aplica y cae a la regla de rubro+lista B (5% => 1800 * 0.95 = 1710)
     expect(computeClientUnitPrice(prod, clientB, rules, 'INTERNAL')).toBe(1710);
+  });
+
+  it('needsArmadoConfirmationBeforeInvoice omite confirmOrderArmado solo cuando PREPARED ya tiene los mismos pesos guardados', () => {
+    const pesableItemSaved = {
+      id: 1,
+      quantity: 1,
+      weight: 4.25,
+      product: { id: 10, isPesable: true, approximateWeight: 4 },
+    };
+    const pesableItemUnsaved = {
+      id: 2,
+      quantity: 1,
+      weight: null,
+      product: { id: 11, isPesable: true, approximateWeight: 3 },
+    };
+    const unitItem = {
+      id: 3,
+      quantity: 2,
+      weight: null,
+      product: { id: 12, isPesable: false },
+    };
+
+    // PENDING o PREPARING siempre requieren confirmar armado
+    expect(
+      needsArmadoConfirmationBeforeInvoice({ status: 'PENDING', items: [unitItem] }, {}),
+    ).toBe(true);
+    expect(
+      needsArmadoConfirmationBeforeInvoice({ status: 'PREPARING', items: [pesableItemSaved] }, { 1: 4.25 }),
+    ).toBe(true);
+
+    // PREPARED sin pesables o con pesos exactos ya guardados -> saltea confirmOrderArmado
+    expect(
+      needsArmadoConfirmationBeforeInvoice({ status: 'PREPARED', items: [unitItem] }, {}),
+    ).toBe(false);
+    expect(
+      needsArmadoConfirmationBeforeInvoice({ status: 'PREPARED', items: [pesableItemSaved, unitItem] }, { 1: 4.25 }),
+    ).toBe(false);
+
+    // PREPARED pero peso modificado en pantalla o sin peso guardado en DB -> requiere confirmOrderArmado
+    expect(
+      needsArmadoConfirmationBeforeInvoice({ status: 'PREPARED', items: [pesableItemSaved] }, { 1: 4.5 }),
+    ).toBe(true);
+    expect(
+      needsArmadoConfirmationBeforeInvoice({ status: 'PREPARED', items: [pesableItemUnsaved] }, { 2: 3 }),
+    ).toBe(true);
   });
 });

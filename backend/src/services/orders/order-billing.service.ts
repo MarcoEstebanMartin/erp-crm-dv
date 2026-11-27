@@ -69,19 +69,45 @@ export class OrderBillingService {
       }
 
       const productIds = order.items.map((item) => item.productId);
-      const [dbProducts, dbRules] = await Promise.all([
+      const rubroIds = Array.from(
+        new Set(order.items.map((i) => i.product.rubroId).filter((id) => id !== null)),
+      ) as number[];
+
+      const resolvePaymentDestination = async (): Promise<{
+        activeDrawerId?: number;
+        selectedBankId?: number;
+      }> => {
+        if (paymentMethod === PaymentMethod.CASH) {
+          const drawer =
+            (await prisma.cashDrawer.findFirst({
+              where: { userId: adminId, status: 'OPEN' },
+              orderBy: { openedAt: 'desc' },
+            })) ||
+            (await prisma.cashDrawer.findFirst({
+              where: { status: 'OPEN' },
+              orderBy: { openedAt: 'desc' },
+            }));
+          return { activeDrawerId: drawer?.id };
+        }
+        if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
+          const bankId = reqBankAccountId
+            ? Number(reqBankAccountId)
+            : (await prisma.bankAccount.findFirst())?.id;
+          return { selectedBankId: bankId };
+        }
+        return {};
+      };
+
+      const [dbProducts, dbRules, splitConfigs, paymentDest] = await Promise.all([
         prisma.product.findMany({ where: { id: { in: productIds } }, include: { rubro: true } }),
         prisma.discountRule.findMany({
           where: { OR: [{ personaId: order.personaId }, { priceList: order.persona.priceList }] },
         }),
+        prisma.splitBillingConfig.findMany({
+          where: { personaId: order.personaId, rubroId: { in: rubroIds } },
+        }),
+        resolvePaymentDestination(),
       ]);
-
-      const rubroIds = Array.from(
-        new Set(order.items.map((i) => i.product.rubroId).filter((id) => id !== null)),
-      ) as number[];
-      const splitConfigs = await prisma.splitBillingConfig.findMany({
-        where: { personaId: order.personaId, rubroId: { in: rubroIds } },
-      });
 
       const { hasSplit, oficialItemsData, internoItemsData } = prepareInvoiceSplitItems({
         orderItems: order.items,
@@ -98,33 +124,15 @@ export class OrderBillingService {
         : 0;
       let officialOrderTotal = sumIntegerAmounts(oficialItemsData.map((i) => i.subtotal)).toNumber();
 
-      let activeDrawerId: number | undefined;
-      let selectedBankId: number | undefined;
+      const { activeDrawerId, selectedBankId } = paymentDest;
 
-      if (paymentMethod === PaymentMethod.CASH) {
-        const drawer =
-          (await prisma.cashDrawer.findFirst({
-            where: { userId: adminId, status: 'OPEN' },
-            orderBy: { openedAt: 'desc' },
-          })) ||
-          (await prisma.cashDrawer.findFirst({
-            where: { status: 'OPEN' },
-            orderBy: { openedAt: 'desc' },
-          }));
-
-        if (!drawer) {
-          throw new Error(
-            'No hay ninguna Caja de Efectivo abierta. Debe abrir la caja diaria/depósito en el módulo de Cajas antes de facturar un cobro en efectivo.',
-          );
-        }
-        activeDrawerId = drawer.id;
-      } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
-        selectedBankId = reqBankAccountId
-          ? Number(reqBankAccountId)
-          : (await prisma.bankAccount.findFirst())?.id;
-        if (!selectedBankId) {
-          throw new Error('No se encontró ninguna cuenta bancaria configurada en el sistema.');
-        }
+      if (paymentMethod === PaymentMethod.CASH && !activeDrawerId) {
+        throw new Error(
+          'No hay ninguna Caja de Efectivo abierta. Debe abrir la caja diaria/depósito en el módulo de Cajas antes de facturar un cobro en efectivo.',
+        );
+      }
+      if (paymentMethod === PaymentMethod.BANK_TRANSFER && !selectedBankId) {
+        throw new Error('No se encontró ninguna cuenta bancaria configurada en el sistema.');
       }
 
       const taxInfo = await computeInvoiceTaxBreakdown(officialOrderTotal, billingType, order.persona);
@@ -175,7 +183,7 @@ export class OrderBillingService {
           }),
         );
 
-        await logAudit({
+        void logAudit({
           userId: adminId,
           action: 'INVOICE_ORDER',
           entityType: 'Order',

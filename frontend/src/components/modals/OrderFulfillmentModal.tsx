@@ -13,6 +13,7 @@ import {
   calculateFulfillmentOrderTotalInt,
   detectFulfillmentWeightAnomalies,
   isOrderItemWeighable,
+  needsArmadoConfirmationBeforeInvoice,
 } from './orderFulfillmentMath';
 
 interface OrderFulfillmentModalProps {
@@ -114,16 +115,18 @@ export default function OrderFulfillmentModal({
     setLoading(true);
     setErrorMsg(null);
     try {
-      const weighableIds = new Set<number>(
-        (activeOrder?.items || [])
-          .filter((item: any) => isOrderItemWeighable(item) && !isBonusOrderItem(item))
-          .map((item: any) => Number(item.id)),
-      );
-      const weightItems = Object.entries(pesableWeights)
-        .filter(([id, w]) => weighableIds.has(Number(id)) && Number(w) > 0)
-        .map(([id, w]) => ({ orderItemId: Number(id), weight: Number(w) }));
+      if (needsArmadoConfirmationBeforeInvoice(activeOrder, pesableWeights)) {
+        const weighableIds = new Set<number>(
+          (activeOrder?.items || [])
+            .filter((item: any) => isOrderItemWeighable(item) && !isBonusOrderItem(item))
+            .map((item: any) => Number(item.id)),
+        );
+        const weightItems = Object.entries(pesableWeights)
+          .filter(([id, w]) => weighableIds.has(Number(id)) && Number(w) > 0)
+          .map(([id, w]) => ({ orderItemId: Number(id), weight: Number(w) }));
 
-      await api.confirmOrderArmado(activeOrder.id, weightItems);
+        await api.confirmOrderArmado(activeOrder.id, weightItems);
+      }
       const paymentDesc =
         paymentMethod === 'CHECK' && checkNumber.trim() ? `Cheque N° ${checkNumber.trim()}` : undefined;
       await api.invoiceOrder(
