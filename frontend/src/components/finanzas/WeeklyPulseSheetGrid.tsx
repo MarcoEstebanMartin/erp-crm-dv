@@ -93,7 +93,7 @@ export function WeeklyPulseSheetGrid({
       aria-label="Planilla semanal de compras y ventas"
       style={{ backgroundColor: '#fff', border: CELL_BORDER, borderRadius: '8px', overflowX: 'auto' }}
     >
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '880px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '840px' }}>
         <thead>
           <tr style={{ backgroundColor: HEADER_BG, borderBottom: CELL_BORDER }}>
             <th colSpan={3} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.02em', borderRight: '2px solid #cbd5e1' }}>
@@ -128,14 +128,14 @@ export function WeeklyPulseSheetGrid({
             </th>
           </tr>
           <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>
-            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, borderRight: CELL_BORDER }}>EMPRESAS</th>
-            <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600, width: '68px', borderRight: CELL_BORDER }}>FECHA</th>
-            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '130px', borderRight: '2px solid #cbd5e1' }}>$</th>
-            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, borderRight: CELL_BORDER }}>LOCALIDADES</th>
-            <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600, width: '68px', borderRight: CELL_BORDER }}>FECHA</th>
-            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '120px', borderRight: CELL_BORDER }}>IMPORTE A</th>
-            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '120px', borderRight: CELL_BORDER }}>IMPORTE X</th>
-            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '125px' }}>TOTAL</th>
+            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, width: '215px', borderRight: CELL_BORDER }}>EMPRESAS</th>
+            <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600, width: '62px', borderRight: CELL_BORDER }}>FECHA</th>
+            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '118px', borderRight: '2px solid #cbd5e1' }}>$</th>
+            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, width: '215px', borderRight: CELL_BORDER }}>LOCALIDADES</th>
+            <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600, width: '62px', borderRight: CELL_BORDER }}>FECHA</th>
+            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '108px', borderRight: CELL_BORDER }}>IMPORTE A</th>
+            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '108px', borderRight: CELL_BORDER }}>IMPORTE X</th>
+            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '112px' }}>TOTAL</th>
           </tr>
         </thead>
 
@@ -145,9 +145,9 @@ export function WeeklyPulseSheetGrid({
               {addingPurchase ? (
                 <td colSpan={3} style={{ padding: '6px 8px', borderRight: '2px solid #cbd5e1' }}>
                   <form onSubmit={submitPurchase} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    <input type="text" className="input" placeholder="Ej. COMISION M.PAGO" value={pCompany} onChange={(e) => setPCompany(e.target.value)} autoFocus style={{ fontSize: '0.78rem', padding: '4px 6px', flex: 1 }} />
-                    <input type="date" className="input" value={pDate} onChange={(e) => setPDate(e.target.value)} style={{ fontSize: '0.74rem', padding: '4px', width: '110px' }} />
-                    <input type="number" step="1" className="input tabular-nums" placeholder="$" value={pAmount} onChange={(e) => setPAmount(e.target.value)} style={{ fontSize: '0.78rem', padding: '4px 6px', width: '95px', textAlign: 'right' }} />
+                    <input type="text" className="input" placeholder="Ej. COMISION M.PAGO" value={pCompany} onChange={(e) => setPCompany(e.target.value)} autoFocus style={{ fontSize: '0.78rem', padding: '4px 6px', flex: 1, minWidth: 0 }} />
+                    <input type="date" className="input" value={pDate} onChange={(e) => setPDate(e.target.value)} style={{ fontSize: '0.74rem', padding: '4px', width: '106px' }} />
+                    <input type="number" step="1" className="input tabular-nums" placeholder="$" value={pAmount} onChange={(e) => setPAmount(e.target.value)} style={{ fontSize: '0.78rem', padding: '4px 6px', width: '84px', textAlign: 'right' }} />
                     <button type="submit" className="btn btn-primary" disabled={saving} style={{ padding: '4px 8px', fontSize: '0.74rem', minHeight: 'auto' }}>OK</button>
                     <button type="button" className="btn btn-ghost" onClick={() => setAddingPurchase(false)} style={{ padding: '4px 6px', fontSize: '0.74rem', minHeight: 'auto' }}>×</button>
                   </form>
@@ -157,9 +157,9 @@ export function WeeklyPulseSheetGrid({
               {addingSale ? (
                 <td colSpan={5} style={{ padding: '6px 8px' }}>
                   <form onSubmit={submitSale} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    <input type="text" className="input" placeholder="Localidad" value={sLocality} onChange={(e) => setSLocality(e.target.value)} autoFocus style={{ fontSize: '0.78rem', padding: '4px 6px', flex: 1 }} />
-                    <input type="number" step="1" className="input tabular-nums" placeholder="Importe A" value={sAmountA} onChange={(e) => setSAmountA(e.target.value)} style={{ fontSize: '0.78rem', padding: '4px 6px', width: '95px', textAlign: 'right' }} />
-                    <input type="number" step="1" className="input tabular-nums" placeholder="Importe X" value={sAmountX} onChange={(e) => setSAmountX(e.target.value)} style={{ fontSize: '0.78rem', padding: '4px 6px', width: '95px', textAlign: 'right' }} />
+                    <input type="text" className="input" placeholder="Localidad" value={sLocality} onChange={(e) => setSLocality(e.target.value)} autoFocus style={{ fontSize: '0.78rem', padding: '4px 6px', flex: 1, minWidth: 0 }} />
+                    <input type="number" step="1" className="input tabular-nums" placeholder="Importe A" value={sAmountA} onChange={(e) => setSAmountA(e.target.value)} style={{ fontSize: '0.78rem', padding: '4px 6px', width: '92px', textAlign: 'right' }} />
+                    <input type="number" step="1" className="input tabular-nums" placeholder="Importe X" value={sAmountX} onChange={(e) => setSAmountX(e.target.value)} style={{ fontSize: '0.78rem', padding: '4px 6px', width: '92px', textAlign: 'right' }} />
                     <button type="submit" className="btn btn-primary" disabled={saving} style={{ padding: '4px 8px', fontSize: '0.74rem', minHeight: 'auto' }}>OK</button>
                     <button type="button" className="btn btn-ghost" onClick={() => setAddingSale(false)} style={{ padding: '4px 6px', fontSize: '0.74rem', minHeight: 'auto' }}>×</button>
                   </form>
