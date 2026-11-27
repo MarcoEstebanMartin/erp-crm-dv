@@ -3,6 +3,7 @@ import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { geminiService } from '../gemini.service';
 import { calculateSupplierInvoiceBreakdown } from '../../engines/credit-purchase.engine';
+import { normalizeExtractedInvoiceItems } from '../../engines/purchase-invoice-extraction.engine';
 import { recordSupplierInvoicePerceptions } from '../billing/supplier-tax.helper';
 import { findMatchedProduct } from './purchase-matcher.helper';
 import { createLinkedPurchaseReceptionInTx } from './purchase-stock-tx.helper';
@@ -63,8 +64,21 @@ export const purchaseDocumentService = {
       isOfficialInvoice && matchesCompany ? 'OFFICIAL' : 'INTERNAL';
 
     const providerId = matchedProvider ? matchedProvider.id : null;
+    const normalizedItems = normalizeExtractedInvoiceItems({
+      items: extractedData.items,
+      netAmount: extractedData.netAmount,
+    });
     const enrichedItems = await Promise.all(
-      extractedData.items.map(async (item) => {
+      normalizedItems.map(async (item) => {
+        if (item.isNonStock) {
+          return {
+            ...item,
+            matchedProductId: null,
+            matchedProductName: null,
+            matchedProductUnitsPerBox: 1,
+            matchMethod: 'NON_STOCK',
+          };
+        }
         const { matchedProduct, matchMethod } = await findMatchedProduct(
           providerId,
           item,
@@ -74,6 +88,7 @@ export const purchaseDocumentService = {
           ...item,
           matchedProductId: matchedProduct ? matchedProduct.id : null,
           matchedProductName: matchedProduct ? matchedProduct.name : null,
+          matchedProductUnitsPerBox: matchedProduct?.unitsPerBox ?? 1,
           matchMethod,
         };
       }),

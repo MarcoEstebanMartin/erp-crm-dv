@@ -14,22 +14,38 @@ export const INVOICE_EXTRACTION_JSON_SCHEMA: Record<string, any> = {
     },
     documentNumber: { type: 'string' },
     issueDate: { type: 'string' },
+    dueDate: { type: ['string', 'null'] },
     items: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
           code: { type: ['string', 'null'] },
+          ean: { type: ['string', 'null'] },
           description: { type: 'string' },
           quantity: { type: 'number' },
+          unitOfMeasure: { type: ['string', 'null'] },
+          unitsPerPack: { type: 'number' },
           unitPrice: { type: 'number' },
           subtotal: { type: 'number' },
+          isNonStock: { type: 'boolean' },
         },
-        required: ['code', 'description', 'quantity', 'unitPrice', 'subtotal'],
+        required: [
+          'code',
+          'ean',
+          'description',
+          'quantity',
+          'unitOfMeasure',
+          'unitsPerPack',
+          'unitPrice',
+          'subtotal',
+          'isNonStock',
+        ],
       },
     },
     netAmount: { type: 'number' },
     taxAmount: { type: 'number' },
+    impuestosInternos: { type: 'number' },
     percepcionAmount: { type: 'number' },
     percepcionIIBBAmount: { type: 'number' },
     percepcionIvaAmount: { type: 'number' },
@@ -45,9 +61,11 @@ export const INVOICE_EXTRACTION_JSON_SCHEMA: Record<string, any> = {
     'documentType',
     'documentNumber',
     'issueDate',
+    'dueDate',
     'items',
     'netAmount',
     'taxAmount',
+    'impuestosInternos',
     'percepcionAmount',
     'percepcionIIBBAmount',
     'percepcionIvaAmount',
@@ -73,6 +91,14 @@ const safeQuantity = z
     return num;
   });
 
+const safePackUnits = z
+  .union([z.number(), z.string(), z.null(), z.undefined()])
+  .transform((val) => {
+    const num = Math.trunc(Number(val ?? 1));
+    if (!Number.isFinite(num) || num < 1) return 1;
+    return num;
+  });
+
 export const extractedInvoiceValidator = z.object({
   supplierName: z.string().trim().default('Proveedor Sin Nombre'),
   cuit: z.string().trim().nullable().optional().transform((v) => (v ? v : null)),
@@ -81,19 +107,39 @@ export const extractedInvoiceValidator = z.object({
   documentType: z.string().trim().default('FACTURA_A'),
   documentNumber: z.string().trim().default('0000-00000000'),
   issueDate: z.string().trim().default(() => new Date().toISOString().slice(0, 10)),
+  dueDate: z.string().trim().nullable().optional().transform((v) => (v && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null)),
   items: z
     .array(
       z.object({
         code: z.string().trim().nullable().optional().transform((v) => (v ? v : null)),
+        ean: z
+          .string()
+          .trim()
+          .nullable()
+          .optional()
+          .transform((v) => {
+            if (!v) return null;
+            const digits = v.replace(/\D/g, '');
+            return digits.length >= 8 ? digits : null;
+          }),
         description: z.string().trim().default('Artículo'),
         quantity: safeQuantity,
+        unitOfMeasure: z
+          .string()
+          .trim()
+          .nullable()
+          .optional()
+          .transform((v) => (v ? v.toUpperCase() : null)),
+        unitsPerPack: safePackUnits.default(1),
         unitPrice: safeNonNegativeMoney,
         subtotal: safeNonNegativeMoney,
+        isNonStock: z.coerce.boolean().default(false),
       }),
     )
     .default([]),
   netAmount: safeNonNegativeMoney,
   taxAmount: safeNonNegativeMoney,
+  impuestosInternos: safeNonNegativeMoney.default(0),
   percepcionAmount: safeNonNegativeMoney,
   percepcionIIBBAmount: safeNonNegativeMoney,
   percepcionIvaAmount: safeNonNegativeMoney,

@@ -17,6 +17,7 @@ function getMatchBadge(item: any): { label: string; bg: string; color: string } 
   if (item.isNonStock) return { label: 'Gasto (Sin Stock)', bg: 'var(--accent-bg-light)', color: 'var(--text-secondary)' };
   switch (item.matchMethod) {
     case 'PREVIOUS_MAPPING': return { label: 'Mapeo Recordado', bg: 'var(--color-success-bg)', color: 'var(--color-success)' };
+    case 'EAN_MATCH': return { label: 'Código EAN', bg: 'var(--color-success-bg)', color: 'var(--color-success)' };
     case 'CODE_MATCH': return { label: 'Código SKU/Barras', bg: 'var(--color-info-bg)', color: 'var(--color-info)' };
     case 'DESCRIPTION_EXACT': return { label: 'Nombre Exacto', bg: 'var(--color-info-bg)', color: 'var(--color-info)' };
     case 'DESCRIPTION_PARTIAL': return { label: 'Nombre Parcial', bg: 'var(--color-warning-bg)', color: 'var(--color-warning)' };

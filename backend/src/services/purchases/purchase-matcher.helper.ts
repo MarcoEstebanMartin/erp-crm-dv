@@ -52,7 +52,7 @@ export function normalizeCatalogMatchText(text: string): string {
 
 export async function findMatchedProduct(
   providerId: number | null,
-  item: { code: string | null; description: string },
+  item: { code: string | null; ean?: string | null; description: string },
   providerName: string | null,
 ): Promise<{ matchedProduct: any; matchMethod: string }> {
   if (providerId && item.code) {
@@ -62,6 +62,18 @@ export async function findMatchedProduct(
     });
     if (mapping) {
       return { matchedProduct: mapping.product, matchMethod: 'PREVIOUS_MAPPING' };
+    }
+  }
+
+  if (item.ean) {
+    const cleanEan = String(item.ean).replace(/\D/g, '');
+    if (cleanEan.length >= 8) {
+      const eanProduct = await prisma.product.findFirst({
+        where: { OR: [{ barcode: cleanEan }, { sku: cleanEan }] },
+      });
+      if (eanProduct) {
+        return { matchedProduct: eanProduct, matchMethod: 'EAN_MATCH' };
+      }
     }
   }
 

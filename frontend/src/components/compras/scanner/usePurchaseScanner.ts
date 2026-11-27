@@ -45,14 +45,18 @@ const initExtractedData = (response: any) => {
   const billingType = ext.billingType === 'INTERNAL' ? 'INTERNAL' : 'OFFICIAL';
   const rawDate = String(ext.issueDate || '').trim();
   const issueDate = /^\d{4}-\d{2}-\d{2}/.test(rawDate) ? rawDate.slice(0, 10) : new Date().toISOString().split('T')[0];
+  const rawDueDate = String(ext.dueDate || '').trim();
+  const dueDate = /^\d{4}-\d{2}-\d{2}/.test(rawDueDate) ? rawDueDate.slice(0, 10) : '';
 
   const percepcionPampa = isPampa ? (rawIIBB || rawPerc) : 0;
   const percepcionBsAs = isBsAs ? (rawIIBB || rawPerc) : 0;
   const percepcionIva = rawIva || 0;
+  const percepcionIva5329 = Number(ext.percepcionIva5329Amount || 0);
+  const impuestosInternos = Number(ext.impuestosInternos || 0);
   const netAmount = Number(ext.netAmount || 0);
   const taxAmount = allowsVat21(documentType, billingType) ? Number(ext.taxAmount || 0) : 0;
 
-  const draft = { ...ext, documentType, billingType, issueDate, netAmount, taxAmount, percepcionPampa, percepcionBsAs, percepcionIva, percepcionIva5329: 0, impuestosInternos: 0 };
+  const draft = { ...ext, documentType, billingType, issueDate, dueDate, netAmount, taxAmount, percepcionPampa, percepcionBsAs, percepcionIva, percepcionIva5329, impuestosInternos };
   const calcCents = sumTaxTotalCents(draft);
   const extCents = parseExactCents(ext.totalAmount);
   const totalAmount = Number(((calcCents > extCents ? calcCents : extCents > 0 ? extCents : calcCents) / 100).toFixed(2));
@@ -192,6 +196,7 @@ export function usePurchaseScanner({ isOpen, file, onSuccess, onClose }: UsePurc
         documentType: extractedData.documentType,
         documentNumber: extractedData.documentNumber,
         issueDate: extractedData.issueDate,
+        dueDate: extractedData.dueDate || null,
         billingType: extractedData.billingType || 'OFFICIAL',
         receptionMode,
         items: extractedData.items.map((item: any) => ({

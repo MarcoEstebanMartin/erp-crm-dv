@@ -23,15 +23,21 @@ export interface ExtractedInvoiceData {
   documentType: string;
   documentNumber: string;
   issueDate: string;
+  dueDate: string | null;
   items: Array<{
     code: string | null;
+    ean: string | null;
     description: string;
     quantity: number;
+    unitOfMeasure: string | null;
+    unitsPerPack: number;
     unitPrice: number;
     subtotal: number;
+    isNonStock: boolean;
   }>;
   netAmount: number;
   taxAmount: number;
+  impuestosInternos: number;
   percepcionAmount: number;
   percepcionIIBBAmount: number;
   percepcionIvaAmount: number;
@@ -42,16 +48,34 @@ export interface ExtractedInvoiceData {
 
 const INVOICE_SYSTEM_INSTRUCTION = `
 Eres un contador auditor experto en facturación y remitos mayoristas de Argentina (AFIP/ARCA).
-Extrae con precisión quirúrgica los datos del comprobante adjunto (imagen o PDF):
-- supplierName: Razón social del emisor/proveedor (ej: SODECAR S.A.).
+Extrae con precisión quirúrgica los datos del comprobante adjunto (imagen o PDF). Ignora bordes o encabezados de otras hojas que puedan asomarse detrás del comprobante principal:
+- supplierName: Razón social del emisor/proveedor (ej: CAFÉS LA VIRGINIA S.A., FRATELLI BRANCA DESTILERÍAS S.A.).
 - cuit: CUIT del emisor/proveedor sin inventar dígitos (o null si no figura).
 - receiverCuit: CUIT del receptor/comprador (o null si no figura).
 - receiverName: Razón social o nombre del receptor/comprador (o null si no figura).
 - documentType: "FACTURA_A", "FACTURA_B", "FACTURA_C", "NOTA_CREDITO_A", "NOTA_CREDITO_B", "NOTA_CREDITO_C" o "REMITO".
-- documentNumber: Número en formato XXXX-XXXXXXXX.
+- documentNumber: Número en formato XXXX-XXXXXXXX o XXXXX-XXXXXXXX.
 - issueDate: Fecha de emisión en formato YYYY-MM-DD.
-- items: Lista de renglones con code (código de artículo del proveedor o null), description, quantity (priorizar kilogramos si el precio unitario está expresado por kg), unitPrice y subtotal.
-- netAmount, taxAmount (IVA), percepcionAmount (suma total de percepciones), percepcionIIBBAmount, percepcionIvaAmount (RG 3337), percepcionIva5329Amount (RG 5329), percepcionJurisdiction (provincia de IIBB o null) y totalAmount.
+- dueDate: Fecha de vencimiento en formato YYYY-MM-DD si figura explícitamente (o null si no figura).
+- items: Lista de renglones del comprobante:
+  * code: Código de artículo del proveedor (o null).
+  * ean: Código de barras EAN-13 / DUN (solo dígitos, 8 a 14 dígitos) si aparece en columna EAN o descripción; si el código principal ya es un EAN-13, repítelo aquí; si no figura, null.
+  * description: Descripción del artículo o servicio.
+  * quantity: Cantidad facturada tal como figura en la columna Cantidad (priorizar kilogramos si el precio está expresado por kg).
+  * unitOfMeasure: Unidad de medida impresa (ej: "CAJ", "CA", "BTO", "UN", "CU", "KG") o null.
+  * unitsPerPack: Cantidad de unidades por bulto/caja indicada en Contenido o Descripción (ej: "6/100G" -> 6, "12/75 CL" -> 12, "12X500" -> 12). Si se factura por unidad suelta o kilogramo, devolver 1.
+  * unitPrice: Precio unitario neto del renglón (ya descontando bonificaciones de línea si las hay).
+  * subtotal: Importe neto final del renglón (descontando bonificaciones de línea).
+  * isNonStock: true si el renglón es un servicio o gasto sin mercadería (ej: FLETE, ENVÍO, TRANSPORTE, LOGÍSTICA, DESPACHO); false para mercadería física.
+- netAmount: Importe Neto Gravado final (después de descuentos/bonificaciones globales al pie).
+- taxAmount: IVA total (21% / 10.5%).
+- impuestosInternos: Impuestos Internos (ej: bebidas alcohólicas, gaseosas). Devolver 0 si no figura. Nunca mezclarlos con netAmount ni percepciones.
+- percepcionIIBBAmount: Percepción de Ingresos Brutos (IIBB).
+- percepcionIvaAmount: Percepción de IVA (RG 3337 o RG 2408).
+- percepcionIva5329Amount: Percepción de IVA RG 5329.
+- percepcionAmount: Suma total de percepciones (IIBB + IVA RG 3337/2408 + IVA RG 5329).
+- percepcionJurisdiction: Provincia de IIBB si figura (ej: "Buenos Aires", "La Pampa") o null.
+- totalAmount: Total final del comprobante.
 Si algún importe impositivo no existe en el documento (ej. en un remito), devuélvelo como 0.
 `.trim();
 
