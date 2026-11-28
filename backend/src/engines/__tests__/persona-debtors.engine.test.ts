@@ -172,7 +172,7 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       expect(result.branchA.oldestPendingDays).toBe(6);
     });
 
-    it('marca "Últimas 2" y "Últimas 4" cuando debe más de 1 boleta redonda en la misma sucursal', () => {
+    it('marca "2 viajes" y "4 viajes" cuando debe más de 1 viaje redondo en la misma sucursal', () => {
       const twoFull = computeDebtorFifoMetrics({
         outstandingBalance: 372717,
         referenceDate: refDate,
@@ -199,7 +199,7 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       });
 
       expect(twoFull.needsFollowUp).toBe(true);
-      expect(twoFull.followUpLabel).toBe('Últimas 2');
+      expect(twoFull.followUpLabel).toBe('2 viajes');
       expect(twoFull.branchA.followUpReason).toBe('MULTIPLE_FULL');
       expect(twoFull.branchA.fullPendingCount).toBe(2);
 
@@ -217,10 +217,10 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       });
 
       expect(fourFull.needsFollowUp).toBe(true);
-      expect(fourFull.followUpLabel).toBe('Últimas 4');
+      expect(fourFull.followUpLabel).toBe('4 viajes');
     });
 
-    it('marca "Resto 12/11 y última" y "Resto 5/11 y últimas 2" cuando quedó resto parcial + boletas nuevas', () => {
+    it('marca "1 + resto 12/11" y "2 + resto 5/11" cuando quedó resto parcial + viajes nuevos', () => {
       const restoAndLast = computeDebtorFifoMetrics({
         outstandingBalance: 529075,
         referenceDate: refDate,
@@ -247,7 +247,7 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       });
 
       expect(restoAndLast.needsFollowUp).toBe(true);
-      expect(restoAndLast.followUpLabel).toBe('Resto 12/11 y última');
+      expect(restoAndLast.followUpLabel).toBe('1 + resto 12/11');
       expect(restoAndLast.branchX.followUpReason).toBe('PARTIAL_AND_MORE');
       expect(restoAndLast.branchX.hasPartialRemainder).toBe(true);
 
@@ -264,7 +264,7 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       });
 
       expect(restoAndTwo.needsFollowUp).toBe(true);
-      expect(restoAndTwo.followUpLabel).toBe('Resto 5/11 y últimas 2');
+      expect(restoAndTwo.followUpLabel).toBe('2 + resto 5/11');
     });
 
     it('marca "Resto 5/11" cuando solo quedó un resto impago', () => {
@@ -365,9 +365,9 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       });
 
       expect(bothBranchesFlagged.needsFollowUp).toBe(true);
-      expect(bothBranchesFlagged.branchA.followUpLabel).toBe('Últimas 2');
-      expect(bothBranchesFlagged.branchX.followUpLabel).toBe('Resto 12/11 y última');
-      expect(bothBranchesFlagged.followUpLabel).toBe('A: Últimas 2 · X: Resto 12/11 y última');
+      expect(bothBranchesFlagged.branchA.followUpLabel).toBe('2 viajes');
+      expect(bothBranchesFlagged.branchX.followUpLabel).toBe('1 + resto 12/11');
+      expect(bothBranchesFlagged.followUpLabel).toBe('A: 2 viajes · X: 1 + resto 12/11');
     });
 
     it('respeta saldos iniciales (OPENING_BALANCE) por sucursal A y X incluso sin pedidos previos y absorbe pagos a cuenta FIFO', () => {
@@ -424,7 +424,7 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       expect(utello.followUpLabel).toBeNull();
       expect(utello.branchX.followUpReason).toBe('CURRENT');
 
-      // Si realmente debe las últimas 2 del historial Iduo, marca "Últimas 2"
+      // Si realmente debe los últimos 2 viajes del historial Iduo, marca "2 viajes"
       const owesLastTwo = computeDebtorFifoMetrics({
         outstandingBalance: 815188,
         referenceDate: refNov27,
@@ -440,9 +440,9 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       });
       expect(owesLastTwo.pendingInvoicesCount).toBe(2);
       expect(owesLastTwo.needsFollowUp).toBe(true);
-      expect(owesLastTwo.followUpLabel).toBe('Últimas 2');
+      expect(owesLastTwo.followUpLabel).toBe('2 viajes');
 
-      // Si luego se suma un pedido nuevo en Kilate sin pagar el anterior, marca "Últimas 2"
+      // Si luego se suma un pedido nuevo en Kilate sin pagar el anterior, marca "2 viajes"
       const withNewKilateOrder = computeDebtorFifoMetrics({
         outstandingBalance: 858146,
         referenceDate: refNov27,
@@ -457,7 +457,104 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
         ],
       });
       expect(withNewKilateOrder.pendingInvoicesCount).toBe(2);
-      expect(withNewKilateOrder.followUpLabel).toBe('Últimas 2');
+      expect(withNewKilateOrder.followUpLabel).toBe('2 viajes');
+    });
+
+    it('agrupa múltiples facturas del mismo día como 1 solo viaje (caso real MARTINEZ LUCAS)', () => {
+      const refNov27 = new Date('2026-11-27T23:00:00-03:00');
+      const martinez = computeDebtorFifoMetrics({
+        outstandingBalance: 575569,
+        referenceDate: refNov27,
+        openingOfficialDebt: 0,
+        openingInternalDebt: 575569,
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        orders: [
+          { id: 1990, billingType: 'INTERNAL', totalAmount: '471051.11', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-10-15T15:00:00Z', isHistorical: true },
+          { id: 3605, billingType: 'INTERNAL', totalAmount: '35592', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-10-15T15:00:00Z', isHistorical: true },
+          { id: 2599, billingType: 'INTERNAL', totalAmount: '18598', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-10-26T15:00:00Z', isHistorical: true },
+          { id: 1814, billingType: 'INTERNAL', totalAmount: '611733.63', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-10-28T15:00:00Z', isHistorical: true },
+          { id: 1175, billingType: 'INTERNAL', totalAmount: '22910', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-25T15:00:00Z', isHistorical: true },
+          { id: 1012, billingType: 'INTERNAL', totalAmount: '394664.66', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-26T15:00:00Z', isHistorical: true },
+          { id: 1182, billingType: 'INTERNAL', totalAmount: '40512', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-26T15:00:00Z', isHistorical: true },
+        ],
+      });
+
+      expect(martinez.debtA).toBe(0);
+      expect(martinez.debtX).toBe(575569);
+      expect(martinez.branchX.pendingCount).toBe(3);
+      expect(martinez.branchX.fullPendingCount).toBe(2);
+      expect(martinez.branchX.hasPartialRemainder).toBe(true);
+      expect(martinez.branchX.oldestPendingShortDate).toBe('28/10');
+      expect(martinez.needsFollowUp).toBe(true);
+      expect(martinez.followUpLabel).toBe('2 + resto 28/10');
+    });
+
+    it('cuenta 2 facturas del mismo día como 1 solo viaje (sin marca si es reciente, y "Resto" si tuvo pago parcial)', () => {
+      const sameDayRecent = computeDebtorFifoMetrics({
+        outstandingBalance: 150000,
+        referenceDate: refDate,
+        orders: [
+          { id: 1, billingType: 'INTERNAL', totalAmount: 100000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-20T10:00:00-03:00' },
+          { id: 2, billingType: 'INTERNAL', totalAmount: 50000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-20T14:00:00-03:00' },
+        ],
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+      });
+
+      expect(sameDayRecent.pendingInvoicesCount).toBe(1);
+      expect(sameDayRecent.needsFollowUp).toBe(false);
+      expect(sameDayRecent.followUpLabel).toBeNull();
+      expect(sameDayRecent.branchX.followUpReason).toBe('CURRENT');
+
+      const sameDayPartial = computeDebtorFifoMetrics({
+        outstandingBalance: 100000,
+        referenceDate: refDate,
+        orders: [
+          { id: 1, billingType: 'INTERNAL', totalAmount: 100000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-20T10:00:00-03:00' },
+          { id: 2, billingType: 'INTERNAL', totalAmount: 50000, directIncomeSum: 50000, directCreditNoteSum: 0, date: '2026-11-20T14:00:00-03:00' },
+        ],
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+      });
+
+      expect(sameDayPartial.pendingInvoicesCount).toBe(1);
+      expect(sameDayPartial.needsFollowUp).toBe(true);
+      expect(sameDayPartial.followUpLabel).toBe('Resto 20/11');
+      expect(sameDayPartial.branchX.followUpReason).toBe('PARTIAL_REMAINDER');
+    });
+
+    it('marca "Saldo ant." o "N + saldo ant." cuando el saldo inicial supera al historial importado', () => {
+      const onlyOldDebt = computeDebtorFifoMetrics({
+        outstandingBalance: 1401206,
+        referenceDate: refDate,
+        openingOfficialDebt: 0,
+        openingInternalDebt: 1401206,
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        orders: [],
+      });
+
+      expect(onlyOldDebt.pendingInvoicesCount).toBe(1);
+      expect(onlyOldDebt.needsFollowUp).toBe(true);
+      expect(onlyOldDebt.followUpLabel).toBe('Saldo ant.');
+
+      const oldDebtPlusTwoTrips = computeDebtorFifoMetrics({
+        outstandingBalance: 400000,
+        referenceDate: refDate,
+        openingOfficialDebt: 0,
+        openingInternalDebt: 300000,
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        orders: [
+          { id: 1, billingType: 'INTERNAL', totalAmount: 100000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-10T10:00:00-03:00', isHistorical: true },
+          { id: 2, billingType: 'INTERNAL', totalAmount: 100000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-18T10:00:00-03:00', isHistorical: false },
+        ],
+      });
+
+      expect(oldDebtPlusTwoTrips.pendingInvoicesCount).toBe(3);
+      expect(oldDebtPlusTwoTrips.needsFollowUp).toBe(true);
+      expect(oldDebtPlusTwoTrips.followUpLabel).toBe('2 + saldo ant.');
     });
   });
 });

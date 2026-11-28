@@ -1,15 +1,21 @@
 import { Decimal } from 'decimal.js';
 import { roundToIntegerPeso, toDecimal, type NumericInput } from '../core/money';
+import {
+  buildBranchFollowUpSummary,
+  createEmptyBranchFollowUp,
+  type DebtorBranchFollowUp,
+  type DebtorFollowUpReason,
+  type PendingInvoiceFifoDetail,
+} from './persona-debtors-followup';
+
+export {
+  createEmptyBranchFollowUp,
+  type DebtorBranchFollowUp,
+  type DebtorFollowUpReason,
+  type PendingInvoiceFifoDetail,
+};
 
 export const DEFAULT_OVERDUE_SINGLE_INVOICE_DAYS = 10;
-
-export type DebtorFollowUpReason =
-  | 'NONE'
-  | 'CURRENT'
-  | 'MULTIPLE_FULL'
-  | 'PARTIAL_AND_MORE'
-  | 'PARTIAL_REMAINDER'
-  | 'OVERDUE_SINGLE';
 
 export interface DebtorOrderFifoInput {
   id: number;
@@ -30,25 +36,6 @@ export interface DebtorFifoInput {
   openingInternalDebt?: NumericInput;
   referenceDate?: Date;
   overdueDaysThreshold?: number;
-}
-
-export interface PendingInvoiceFifoDetail {
-  orderId: number;
-  shortDate: string | null;
-  daysOld: number | null;
-  remainingAmount: number;
-  isPartial: boolean;
-}
-
-export interface DebtorBranchFollowUp {
-  pendingCount: number;
-  fullPendingCount: number;
-  hasPartialRemainder: boolean;
-  oldestPendingShortDate: string | null;
-  oldestPendingDays: number | null;
-  needsFollowUp: boolean;
-  followUpReason: DebtorFollowUpReason;
-  followUpLabel: string | null;
 }
 
 export interface DebtorFifoMetrics {
@@ -89,126 +76,81 @@ function parseOrderDate(raw: Date | string | null | undefined): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function createEmptyBranchFollowUp(): DebtorBranchFollowUp {
-  return {
-    pendingCount: 0,
-    fullPendingCount: 0,
-    hasPartialRemainder: false,
-    oldestPendingShortDate: null,
-    oldestPendingDays: null,
-    needsFollowUp: false,
-    followUpReason: 'NONE',
-    followUpLabel: null,
-  };
-}
-
-function buildBranchFollowUpSummary(
-  pendingInvoices: PendingInvoiceFifoDetail[],
-  overdueDaysThreshold: number,
-): DebtorBranchFollowUp {
-  const count = pendingInvoices.length;
-  if (count === 0) {
-    return createEmptyBranchFollowUp();
-  }
-
-  const oldest = pendingInvoices[0];
-  const fullPendingCount = pendingInvoices.filter((inv) => !inv.isPartial).length;
-  const hasPartialRemainder = pendingInvoices.some((inv) => inv.isPartial);
-  const oldestPendingShortDate = oldest.shortDate;
-  const oldestPendingDays = oldest.daysOld;
-
-  if (count === 1) {
-    if (oldest.isPartial) {
-      return {
-        pendingCount: 1,
-        fullPendingCount: 0,
-        hasPartialRemainder: true,
-        oldestPendingShortDate,
-        oldestPendingDays,
-        needsFollowUp: true,
-        followUpReason: 'PARTIAL_REMAINDER',
-        followUpLabel: oldestPendingShortDate ? `Resto ${oldestPendingShortDate}` : 'Resto',
-      };
-    }
-
-    if (oldestPendingDays !== null && oldestPendingDays > overdueDaysThreshold) {
-      return {
-        pendingCount: 1,
-        fullPendingCount: 1,
-        hasPartialRemainder: false,
-        oldestPendingShortDate,
-        oldestPendingDays,
-        needsFollowUp: true,
-        followUpReason: 'OVERDUE_SINGLE',
-        followUpLabel: oldestPendingShortDate ?? `+${overdueDaysThreshold}d`,
-      };
-    }
-
-    return {
-      pendingCount: 1,
-      fullPendingCount: 1,
-      hasPartialRemainder: false,
-      oldestPendingShortDate,
-      oldestPendingDays,
-      needsFollowUp: false,
-      followUpReason: 'CURRENT',
-      followUpLabel: null,
-    };
-  }
-
-  // count >= 2
-  if (oldest.isPartial) {
-    const newerCount = count - 1;
-    const restoPart = oldestPendingShortDate ? `Resto ${oldestPendingShortDate}` : 'Resto';
-    const tailPart = newerCount === 1 ? 'y última' : `y últimas ${newerCount}`;
-    return {
-      pendingCount: count,
-      fullPendingCount,
-      hasPartialRemainder: true,
-      oldestPendingShortDate,
-      oldestPendingDays,
-      needsFollowUp: true,
-      followUpReason: 'PARTIAL_AND_MORE',
-      followUpLabel: `${restoPart} ${tailPart}`,
-    };
-  }
-
-  return {
-    pendingCount: count,
-    fullPendingCount,
-    hasPartialRemainder,
-    oldestPendingShortDate,
-    oldestPendingDays,
-    needsFollowUp: true,
-    followUpReason: 'MULTIPLE_FULL',
-    followUpLabel: `Últimas ${count}`,
-  };
+interface GroupedTripFifo {
+  representativeOrderId: number;
+  firstIndex: number;
+  dayNumber: number | null;
+  shortDate: string | null;
+  totalAmount: Decimal;
+  initialDebt: Decimal;
+  hasHistorical: boolean;
 }
 
 /**
- * Ejecuta imputación cronológica FIFO sobre los comprobantes de una sucursal (A o X)
- * usando Decimal.js puro (precisión bancaria, cero Float) y clasifica restos/boletas/atrasos.
+ * Agrupa boletas de una misma sucursal por día calendario argentino (1 día = 1 viaje).
+ * Las órdenes sin fecha conservan clave única por id para preservar compatibilidad FIFO.
+ */
+function groupOrdersIntoTrips(orders: DebtorOrderFifoInput[]): GroupedTripFifo[] {
+  const tripMap = new Map<string, GroupedTripFifo>();
+
+  orders.forEach((order, index) => {
+    const parsedDate = parseOrderDate(order.date);
+    const dayInfo = parsedDate ? toArCalendarDayNumber(parsedDate) : null;
+    const key = dayInfo ? `day:${dayInfo.dayNumber}` : `id:${order.id}`;
+
+    const totalDec = Decimal.max(0, toDecimal(order.totalAmount));
+    const orderInitialDebt = Decimal.max(
+      0,
+      totalDec
+        .minus(toDecimal(order.directIncomeSum))
+        .minus(toDecimal(order.directCreditNoteSum)),
+    );
+
+    const existing = tripMap.get(key);
+    if (existing) {
+      existing.totalAmount = existing.totalAmount.plus(totalDec);
+      existing.initialDebt = existing.initialDebt.plus(orderInitialDebt);
+      existing.hasHistorical = existing.hasHistorical || Boolean(order.isHistorical);
+    } else {
+      tripMap.set(key, {
+        representativeOrderId: order.id,
+        firstIndex: index,
+        dayNumber: dayInfo ? dayInfo.dayNumber : null,
+        shortDate: dayInfo ? dayInfo.shortDate : null,
+        totalAmount: totalDec,
+        initialDebt: orderInitialDebt,
+        hasHistorical: Boolean(order.isHistorical),
+      });
+    }
+  });
+
+  return Array.from(tripMap.values()).sort((a, b) => {
+    if (a.dayNumber !== null && b.dayNumber !== null && a.dayNumber !== b.dayNumber) {
+      return a.dayNumber - b.dayNumber;
+    }
+    return a.firstIndex - b.firstIndex;
+  });
+}
+
+/**
+ * Ejecuta imputación cronológica FIFO agrupada por viaje (mismo día = 1 viaje)
+ * sobre los comprobantes de una sucursal (A o X) usando Decimal.js puro.
  */
 export function calculateBranchFifo(
   orders: DebtorOrderFifoInput[],
   unallocatedCredit: NumericInput,
   referenceDate: Date = new Date(),
   overdueDaysThreshold: number = DEFAULT_OVERDUE_SINGLE_INVOICE_DAYS,
+  remainingOpeningDebt: NumericInput = 0,
 ): BranchFifoResult {
   let pool = Decimal.max(0, toDecimal(unallocatedCredit));
-  let pendingInvoicesCount = 0;
   let remainingDebt = new Decimal(0);
-  const pendingInvoices: PendingInvoiceFifoDetail[] = [];
+  const pendingTrips: PendingInvoiceFifoDetail[] = [];
   const refDay = toArCalendarDayNumber(referenceDate).dayNumber;
+  const trips = groupOrdersIntoTrips(orders);
 
-  for (const order of orders) {
-    const totalDec = Decimal.max(0, toDecimal(order.totalAmount));
-    let debt = Decimal.max(
-      0,
-      totalDec
-        .minus(toDecimal(order.directIncomeSum))
-        .minus(toDecimal(order.directCreditNoteSum)),
-    );
+  for (const trip of trips) {
+    let debt = trip.initialDebt;
 
     if (pool.gt(0)) {
       if (debt.lte(pool)) {
@@ -221,25 +163,16 @@ export function calculateBranchFifo(
     }
 
     if (debt.gt('0.5')) {
-      pendingInvoicesCount += 1;
       remainingDebt = remainingDebt.plus(debt);
 
-      const paidAgainstOrder = totalDec.minus(debt);
-      const partialThreshold = order.isHistorical ? '5' : '0.5';
-      const isPartial = paidAgainstOrder.gt(partialThreshold);
-      const parsedDate = parseOrderDate(order.date);
-      let shortDate: string | null = null;
-      let daysOld: number | null = null;
+      const paidAgainstTrip = trip.totalAmount.minus(debt);
+      const partialThreshold = trip.hasHistorical ? '5' : '0.5';
+      const isPartial = paidAgainstTrip.gt(partialThreshold);
+      const daysOld = trip.dayNumber !== null ? Math.max(0, refDay - trip.dayNumber) : null;
 
-      if (parsedDate) {
-        const orderDay = toArCalendarDayNumber(parsedDate);
-        shortDate = orderDay.shortDate;
-        daysOld = Math.max(0, refDay - orderDay.dayNumber);
-      }
-
-      pendingInvoices.push({
-        orderId: order.id,
-        shortDate,
+      pendingTrips.push({
+        orderId: trip.representativeOrderId,
+        shortDate: trip.shortDate,
         daysOld,
         remainingAmount: roundToIntegerPeso(debt).toNumber(),
         isPartial,
@@ -247,11 +180,14 @@ export function calculateBranchFifo(
     }
   }
 
+  const hasUnmatchedOpening = Decimal.max(0, toDecimal(remainingOpeningDebt)).gt('0.5');
+  const pendingInvoicesCount = pendingTrips.length + (hasUnmatchedOpening ? 1 : 0);
+
   return {
     remainingDebt,
     pendingInvoicesCount,
-    pendingInvoices,
-    summary: buildBranchFollowUpSummary(pendingInvoices, overdueDaysThreshold),
+    pendingInvoices: pendingTrips,
+    summary: buildBranchFollowUpSummary(pendingTrips, overdueDaysThreshold, hasUnmatchedOpening),
   };
 }
 
@@ -332,12 +268,14 @@ export function computeDebtorFifoMetrics(input: DebtorFifoInput): DebtorFifoMetr
     creditForOfficialOrders,
     referenceDate,
     overdueDaysThreshold,
+    remainingOpeningOfficial,
   );
   const internalResult = calculateBranchFifo(
     internalOrders,
     creditForInternalOrders,
     referenceDate,
     overdueDaysThreshold,
+    remainingOpeningInternal,
   );
 
   const officialTotalRemaining = remainingOpeningOfficial.plus(officialResult.remainingDebt);

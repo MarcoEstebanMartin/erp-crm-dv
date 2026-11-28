@@ -53,7 +53,7 @@ const sampleDebtors = [
     pendingInvoicesCount: 5,
     hasMultiplePendingInvoices: true,
     needsFollowUp: true,
-    followUpLabel: 'A: Resto 5/11 y últimas 2 · X: Resto 12/11 y última',
+    followUpLabel: 'A: 2 + resto 5/11 · X: 1 + resto 12/11',
     branchA: {
       pendingCount: 3,
       fullPendingCount: 2,
@@ -62,7 +62,7 @@ const sampleDebtors = [
       oldestPendingDays: 19,
       needsFollowUp: true,
       followUpReason: 'PARTIAL_AND_MORE',
-      followUpLabel: 'Resto 5/11 y últimas 2',
+      followUpLabel: '2 + resto 5/11',
     },
     branchX: {
       pendingCount: 2,
@@ -72,7 +72,7 @@ const sampleDebtors = [
       oldestPendingDays: 12,
       needsFollowUp: true,
       followUpReason: 'PARTIAL_AND_MORE',
-      followUpLabel: 'Resto 12/11 y última',
+      followUpLabel: '1 + resto 12/11',
     },
     sellerId: 1,
     sellerName: 'FABIAN',
@@ -135,7 +135,7 @@ describe('Deudores — Resaltado automático y etiquetas estilo fibrón/lapicera
     );
 
     expect(html).toContain('A reclamar (2)');
-    expect(html).toContain('A: Resto 5/11 y últimas 2 · X: Resto 12/11 y última');
+    expect(html).toContain('A: 2 + resto 5/11 · X: 1 + resto 12/11');
     expect(html).toContain('12/11');
     expect(html).toContain('#FFF7ED');
     expect(html).toContain('class="card no-print"');
@@ -151,8 +151,8 @@ describe('Deudores — Resaltado automático y etiquetas estilo fibrón/lapicera
     );
 
     expect(html).toContain('A reclamar: 2');
-    expect(html).toContain('Resto 5/11 y últimas 2');
-    expect(html).toContain('Resto 12/11 y última');
+    expect(html).toContain('2 + resto 5/11');
+    expect(html).toContain('1 + resto 12/11');
     expect(html).toContain('12/11');
     expect(html).toContain('#FED7AA');
     expect(html).toContain('print-color-adjust:exact');
