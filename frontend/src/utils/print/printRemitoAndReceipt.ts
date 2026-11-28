@@ -46,8 +46,9 @@ export const printRemitoX = (order: any) => {
       ? clientBarrio
       : `Barrio ${clientBarrio}`
     : '';
-  const clientLocation = [clientCity, clientBarrioLabel].filter(Boolean).join(' · ');
-  const clientAddress = persona?.address || 'Retiro en Local';
+  const clientLocation = clientCity;
+  const clientAddressBase = (persona?.address || '').trim() || 'Retiro en Local';
+  const clientAddress = [clientAddressBase, clientBarrioLabel].filter(Boolean).join(' · ');
   const rawCuit = persona?.cuit ? String(persona.cuit).trim() : '';
   const clientCuit = rawCuit && rawCuit !== 'S/D' ? rawCuit : null;
   const outstandingBalance = roundIntPesoPrint(client.outstandingBalance ?? 0);

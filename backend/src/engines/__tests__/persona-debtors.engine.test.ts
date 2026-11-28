@@ -556,5 +556,66 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       expect(oldDebtPlusTwoTrips.needsFollowUp).toBe(true);
       expect(oldDebtPlusTwoTrips.followUpLabel).toBe('2 + saldo ant.');
     });
+
+    it('detecta factura anterior impaga cuando el cliente pagó la última (caso real BERNETCHE ANTONELLA)', () => {
+      const refNov28 = new Date('2026-11-28T10:00:00-03:00');
+      const bernetche = computeDebtorFifoMetrics({
+        outstandingBalance: 134993,
+        referenceDate: refNov28,
+        openingOfficialDebt: 0,
+        openingInternalDebt: 134993,
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        orders: [
+          { id: 762, billingType: 'INTERNAL', totalAmount: 234676, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-09T15:00:00Z', isHistorical: true },
+          { id: 415, billingType: 'INTERNAL', totalAmount: 134993, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-16T15:00:00Z', isHistorical: true },
+          { id: 578, billingType: 'INTERNAL', totalAmount: 251141, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-24T15:00:00Z', isHistorical: true },
+        ],
+      });
+
+      expect(bernetche.pendingInvoicesCount).toBe(1);
+      expect(bernetche.needsFollowUp).toBe(true);
+      expect(bernetche.followUpLabel).toBe('16/11');
+      expect(bernetche.branchX.followUpReason).toBe('OVERDUE_SINGLE');
+      expect(bernetche.branchX.hasPartialRemainder).toBe(false);
+      expect(bernetche.branchX.oldestPendingShortDate).toBe('16/11');
+      expect(bernetche.branchX.oldestPendingDays).toBe(12);
+
+      // Incluso si la factura anterior salteada tiene <= 10 días (ej. 7 días), marca la fecha
+      const skippedRecent = computeDebtorFifoMetrics({
+        outstandingBalance: 150000,
+        referenceDate: refNov28,
+        orders: [
+          { id: 1, billingType: 'INTERNAL', totalAmount: 150000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-21T15:00:00Z' },
+          { id: 2, billingType: 'INTERNAL', totalAmount: 220000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-28T10:00:00-03:00' },
+        ],
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 220000,
+      });
+
+      expect(skippedRecent.needsFollowUp).toBe(true);
+      expect(skippedRecent.followUpLabel).toBe('21/11');
+      expect(skippedRecent.branchX.followUpReason).toBe('OVERDUE_SINGLE');
+
+      // Cuando debe la última + una anterior salteada (ej. pagó la del medio), marca "2 viajes"
+      const skippedPlusLatest = computeDebtorFifoMetrics({
+        outstandingBalance: 503252,
+        referenceDate: refNov28,
+        openingOfficialDebt: 503252,
+        openingInternalDebt: 0,
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+        orders: [
+          { id: 1157, billingType: 'OFFICIAL', totalAmount: '256859.33', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-13T15:00:00Z', isHistorical: true },
+          { id: 258, billingType: 'OFFICIAL', totalAmount: '385168.06', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-19T15:00:00Z', isHistorical: true },
+          { id: 1131, billingType: 'OFFICIAL', totalAmount: '246392.98', directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-27T15:00:00Z', isHistorical: true },
+        ],
+      });
+
+      expect(skippedPlusLatest.needsFollowUp).toBe(true);
+      expect(skippedPlusLatest.followUpLabel).toBe('2 viajes');
+      expect(skippedPlusLatest.branchA.followUpReason).toBe('MULTIPLE_FULL');
+      expect(skippedPlusLatest.branchA.oldestPendingShortDate).toBe('13/11');
+    });
   });
 });

@@ -146,10 +146,12 @@ export function calculateBranchFifo(
   let pool = Decimal.max(0, toDecimal(unallocatedCredit));
   let remainingDebt = new Decimal(0);
   const pendingTrips: PendingInvoiceFifoDetail[] = [];
+  const pendingTripMeta: Array<{ tripIndex: number; debt: Decimal }> = [];
   const refDay = toArCalendarDayNumber(referenceDate).dayNumber;
   const trips = groupOrdersIntoTrips(orders);
 
-  for (const trip of trips) {
+  for (let tripIndex = 0; tripIndex < trips.length; tripIndex++) {
+    const trip = trips[tripIndex];
     let debt = trip.initialDebt;
 
     if (pool.gt(0)) {
@@ -177,6 +179,43 @@ export function calculateBranchFifo(
         remainingAmount: roundToIntegerPeso(debt).toNumber(),
         isPartial,
       });
+      pendingTripMeta.push({ tripIndex, debt });
+    }
+  }
+
+  // Detección de factura anterior salteada: si el crédito sin imputar (FIFO) dejó un
+  // "resto parcial" en la boleta más vieja pendiente, pero ese importe coincide exactamente
+  // con un viaje anterior completo (ej. el cliente pagó el viaje de hoy y dejó impago el de
+  // la semana pasada), se atribuye a ese viaje anterior completo.
+  if (pendingTrips.length > 0 && pendingTrips[0].isPartial) {
+    const oldestMeta = pendingTripMeta[0];
+    const oldestTrip = trips[oldestMeta.tripIndex];
+    const oldestTol = oldestTrip.hasHistorical ? '5' : '0.5';
+    const hasDirectPaymentOnOldest = oldestTrip.totalAmount
+      .minus(oldestTrip.initialDebt)
+      .gt(oldestTol);
+
+    if (!hasDirectPaymentOnOldest && oldestMeta.tripIndex > 0) {
+      for (let prevIdx = oldestMeta.tripIndex - 1; prevIdx >= 0; prevIdx--) {
+        const candidate = trips[prevIdx];
+        const candTol = candidate.hasHistorical || oldestTrip.hasHistorical ? '5' : '0.5';
+        const candidateIsFull = candidate.totalAmount.minus(candidate.initialDebt).lte(candTol);
+        if (!candidateIsFull) continue;
+
+        if (candidate.initialDebt.minus(oldestMeta.debt).abs().lte(candTol)) {
+          const daysOld =
+            candidate.dayNumber !== null ? Math.max(0, refDay - candidate.dayNumber) : null;
+          pendingTrips[0] = {
+            orderId: candidate.representativeOrderId,
+            shortDate: candidate.shortDate,
+            daysOld,
+            remainingAmount: roundToIntegerPeso(oldestMeta.debt).toNumber(),
+            isPartial: false,
+            isSkippedPrevious: true,
+          };
+          break;
+        }
+      }
     }
   }
 

@@ -38,8 +38,9 @@ export function printFacturaOficialA4(order: any): void {
       ? clientBarrio
       : `Barrio ${clientBarrio}`
     : '';
-  const clientLocation = [clientCity, clientBarrioLabel].filter(Boolean).join(' · ');
-  const clientAddress = client?.address || 'Retira en local';
+  const clientLocation = clientCity;
+  const clientAddressBase = (client?.address || '').trim() || 'Retira en local';
+  const clientAddress = [clientAddressBase, clientBarrioLabel].filter(Boolean).join(' · ');
   const clientCuit = client?.cuit || 'Consumidor Final';
   const clientBalance = Math.round(Number(client?.outstandingBalance ?? 0));
 

@@ -319,7 +319,7 @@ async function main() {
   console.log('============================================================\n');
 
   const [personas, products, users] = await Promise.all([
-    prisma.persona.findMany({ select: { id: true, name: true, cuit: true, isClient: true } }),
+    prisma.persona.findMany({ where: { isActive: true }, select: { id: true, name: true, cuit: true, isClient: true } }),
     prisma.product.findMany({ select: { id: true, sku: true, name: true, barcode: true, costPrice: true, listPrice: true, unitsPerBox: true } }),
     prisma.user.findMany({ select: { id: true, username: true, role: true, isActive: true } }),
   ]);
@@ -327,11 +327,14 @@ async function main() {
   const userByUsername = new Map(users.map(u => [u.username.toUpperCase(), u]));
   const fallbackUser = userByUsername.get('OFICINA') || users.find(u => u.role === 'ADMIN') || users[0];
 
-  const personaByCuit = new Map();
+  const personasByCuit = new Map();
   const personaByName = new Map();
   for (const p of personas) {
     const c = normDigits(p.cuit);
-    if (c && c.length >= 7) personaByCuit.set(c, p);
+    if (c && c.length >= 7) {
+      if (!personasByCuit.has(c)) personasByCuit.set(c, []);
+      personasByCuit.get(c).push(p);
+    }
     personaByName.set(normText(p.name), p);
   }
 
@@ -350,13 +353,27 @@ async function main() {
     });
   }
 
+  const BARRIO_SUFFIX_RE = /\s*\((CENTRO\s*[1-4]|C[12]|FONAVI|PARQUE|TROCHA|CICLON|PLAN\s+FEDERAL|FEDERAL|PROVINCIA|CARDAL|CRUCE|PROGRESO|PROGR|HOSPITAL|FERIA|FEDERAL-HOSPITAL)\)\s*$/i;
+
   function matchClient(personaRaw, cuit, dni) {
-    if (cuit && personaByCuit.has(cuit)) return { db: personaByCuit.get(cuit), by: 'CUIT' };
-    if (dni && personaByCuit.has(dni)) return { db: personaByCuit.get(dni), by: 'DNI' };
-    const n = normText(personaRaw);
-    if (personaByName.has(n)) return { db: personaByName.get(n), by: 'NAME' };
-    if (CLIENT_ALIASES[n] && personaByName.has(CLIENT_ALIASES[n])) {
+    // 1. Nombre exacto o alias primero: evita cruzar sucursales con mismo CUIT (ej. Narpe Enrique 2 vs PROGR)
+    const rawClean = String(personaRaw || '').trim().replace(/\s*\*+$/, '').trim();
+    const n = normText(rawClean);
+    if (n && personaByName.has(n)) return { db: personaByName.get(n), by: 'NAME' };
+    if (n && CLIENT_ALIASES[n] && personaByName.has(CLIENT_ALIASES[n])) {
       return { db: personaByName.get(CLIENT_ALIASES[n]), by: 'ALIAS' };
+    }
+    // 1b. Nombre limpio sin sufijo de barrio (ej. "DUFOURC MARCOS DANIEL (C1)" -> "DUFOURC MARCOS DANIEL")
+    const withoutBarrio = normText(rawClean.replace(BARRIO_SUFFIX_RE, '').trim());
+    if (withoutBarrio && withoutBarrio !== n && personaByName.has(withoutBarrio)) {
+      return { db: personaByName.get(withoutBarrio), by: 'NAME_NO_BARRIO' };
+    }
+    // 2. CUIT / DNI solo si es único en la base (no compartido por varias sucursales)
+    if (cuit && personasByCuit.get(cuit)?.length === 1) {
+      return { db: personasByCuit.get(cuit)[0], by: 'CUIT' };
+    }
+    if (dni && personasByCuit.get(dni)?.length === 1) {
+      return { db: personasByCuit.get(dni)[0], by: 'DNI' };
     }
     return null;
   }

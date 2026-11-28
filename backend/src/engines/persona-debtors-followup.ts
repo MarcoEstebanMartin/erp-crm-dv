@@ -12,6 +12,7 @@ export interface PendingInvoiceFifoDetail {
   daysOld: number | null;
   remainingAmount: number;
   isPartial: boolean;
+  isSkippedPrevious?: boolean;
 }
 
 export interface DebtorBranchFollowUp {
@@ -97,7 +98,10 @@ export function buildBranchFollowUpSummary(
       };
     }
 
-    if (oldestPendingDays !== null && oldestPendingDays > overdueDaysThreshold) {
+    if (
+      oldest.isSkippedPrevious ||
+      (oldestPendingDays !== null && oldestPendingDays > overdueDaysThreshold)
+    ) {
       return {
         pendingCount: 1,
         fullPendingCount: 1,
