@@ -53,7 +53,7 @@ export const ZoneAnalysisCopilotAndTables: FC<ZoneAnalysisCopilotAndTablesProps>
                   <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', fontSize: '0.78rem' }}>
                     <th scope="col" style={{ padding: '8px 6px', color: 'var(--text-secondary)' }}>Rubro</th>
                     <th scope="col" style={{ padding: '8px 6px', color: 'var(--text-secondary)', textAlign: 'right' }}>Ventas</th>
-                    <th scope="col" style={{ padding: '8px 6px', color: 'var(--text-secondary)', textAlign: 'center' }}>Share</th>
+                    <th scope="col" style={{ padding: '8px 6px', color: 'var(--text-secondary)', textAlign: 'center' }}>%</th>
                     <th scope="col" style={{ padding: '8px 6px', color: 'var(--text-secondary)', textAlign: 'right' }}>Tendencia</th>
                   </tr>
                 </thead>
