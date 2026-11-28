@@ -267,12 +267,22 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
                             <td className="tabular-nums" style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-corp-red)' }}>
                               ${Math.round(d.outstandingBalance).toLocaleString('es-AR')}
                             </td>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                {waLink && (
-                                  <a href={waLink} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ padding: '6px', color: '#166534' }} aria-label={`WhatsApp a ${d.name}`} title="WhatsApp">
+                            <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-grid', gridTemplateColumns: '28px auto auto', alignItems: 'center', gap: '6px' }}>
+                                {waLink ? (
+                                  <a
+                                    href={waLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-ghost"
+                                    style={{ padding: '6px', width: '28px', height: '28px', justifyContent: 'center', color: '#166534' }}
+                                    aria-label={`WhatsApp a ${d.name}`}
+                                    title="WhatsApp"
+                                  >
                                     <MessageCircle size={15} />
                                   </a>
+                                ) : (
+                                  <span aria-hidden="true" style={{ width: '28px', height: '28px', display: 'inline-block' }} />
                                 )}
                                 <button type="button" className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.78rem' }} onClick={() => setShowResumenModal(d)}>Cuenta</button>
                                 <button type="button" className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.78rem', color: '#137333' }} onClick={() => setPaymentModal({ open: true, clientId: d.id, clientName: d.name })}>Cobrar</button>
