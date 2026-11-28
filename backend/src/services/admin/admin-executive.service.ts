@@ -9,7 +9,11 @@ import {
   normalizeCity,
   resolveItemHistoricalMetrics,
 } from '../../engines/reports-core.engine';
-import { resolveReportDateRange } from './admin-report.helpers';
+import {
+  buildOperatingCreditNoteWhere,
+  buildOperatingOrderWhere,
+  resolveReportDateRange,
+} from './admin-report.helpers';
 
 export class AdminExecutiveSubService {
   /**
@@ -31,15 +35,27 @@ export class AdminExecutiveSubService {
     const [currentOrders, prevOrders, currentCreditNotes, prevCreditNotes, collections, debtors, expenses] =
       await Promise.all([
         prisma.order.findMany({
-          where: { status: OrderStatus.DELIVERED, createdAt: { gte: start, lte: end } },
+          where: {
+            status: OrderStatus.DELIVERED,
+            createdAt: { gte: start, lte: end },
+            AND: [buildOperatingOrderWhere()],
+          },
           include: { persona: true, items: { include: { product: { include: { rubro: true } } } } },
         }),
         prisma.order.findMany({
-          where: { status: OrderStatus.DELIVERED, createdAt: { gte: prevStart, lte: prevEnd } },
+          where: {
+            status: OrderStatus.DELIVERED,
+            createdAt: { gte: prevStart, lte: prevEnd },
+            AND: [buildOperatingOrderWhere()],
+          },
           select: { totalAmount: true },
         }),
         prisma.creditNote.findMany({
-          where: { status: CreditNoteStatus.APPROVED, createdAt: { gte: start, lte: end } },
+          where: {
+            status: CreditNoteStatus.APPROVED,
+            createdAt: { gte: start, lte: end },
+            AND: [buildOperatingCreditNoteWhere()],
+          },
           include: {
             persona: true,
             order: { select: { items: { select: { productId: true, unitCostSnapshot: true } } } },
@@ -47,7 +63,11 @@ export class AdminExecutiveSubService {
           },
         }),
         prisma.creditNote.findMany({
-          where: { status: CreditNoteStatus.APPROVED, createdAt: { gte: prevStart, lte: prevEnd } },
+          where: {
+            status: CreditNoteStatus.APPROVED,
+            createdAt: { gte: prevStart, lte: prevEnd },
+            AND: [buildOperatingCreditNoteWhere()],
+          },
           select: { totalAmount: true },
         }),
         prisma.transaction.groupBy({

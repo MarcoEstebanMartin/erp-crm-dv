@@ -11,6 +11,7 @@ import {
   REPORT_OPPORTUNITIES_TTL_SECONDS,
   withReportCache,
 } from './admin-report-cache.helper';
+import { buildOperatingOrderWhere } from './admin-report.helpers';
 
 const STAGNANT_LOOKBACK_DAYS = 180;
 const CLIENT_BEHAVIOR_LOOKBACK_DAYS = 90;
@@ -47,12 +48,14 @@ export async function getCommercialOpportunitiesReport(
 
       const [lastSoldRows, rawOrders, rawProducts, rawLots] = await Promise.all([
         typeof (prisma as any).$queryRaw === 'function'
-          ? prisma.$queryRaw<ProductLastSoldRow[]>`
+            ? prisma.$queryRaw<ProductLastSoldRow[]>`
               SELECT oi."productId" AS "productId", MAX(o."createdAt") AS "lastSoldAt"
               FROM "OrderItem" oi
               INNER JOIN "Order" o ON o."id" = oi."orderId"
               WHERE o."status" <> 'CANCELLED'
                 AND o."createdAt" >= ${stagnantHistoryStart}
+                AND COALESCE(o."invoiceNumber", '') NOT LIKE '00006-%'
+                AND COALESCE(o."invoiceNumber", '') NOT LIKE '0006-%'
               GROUP BY oi."productId"
             `
           : Promise.resolve([] as ProductLastSoldRow[]),
@@ -61,6 +64,7 @@ export async function getCommercialOpportunitiesReport(
             status: { not: OrderStatus.CANCELLED },
             createdAt: { gte: clientBehaviorStart },
             persona: { isClient: true, isActive: true },
+            AND: [buildOperatingOrderWhere()],
           },
           select: {
             id: true,

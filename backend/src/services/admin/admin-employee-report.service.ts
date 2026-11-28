@@ -8,7 +8,11 @@ import {
 import prisma from '../../utils/prisma';
 import AppError from '../../utils/AppError';
 import { computeEmployeeReportMetrics } from '../../engines/reports-employee.engine';
-import { resolveReportDateRange } from './admin-report.helpers';
+import {
+  buildOperatingCreditNoteWhere,
+  buildOperatingOrderWhere,
+  resolveReportDateRange,
+} from './admin-report.helpers';
 
 export class AdminEmployeeReportSubService {
   /**
@@ -76,6 +80,7 @@ export class AdminEmployeeReportSubService {
           sellerId: userId,
           status: OrderStatus.DELIVERED,
           createdAt: { gte: start, lte: end },
+          AND: [buildOperatingOrderWhere()],
         },
         include: {
           persona: true,
@@ -87,6 +92,7 @@ export class AdminEmployeeReportSubService {
           status: CreditNoteStatus.APPROVED,
           createdAt: { gte: start, lte: end },
           OR: [{ order: { sellerId: userId } }, { orderId: null, persona: { sellerId: userId } }],
+          AND: [buildOperatingCreditNoteWhere()],
         },
         include: {
           persona: true,

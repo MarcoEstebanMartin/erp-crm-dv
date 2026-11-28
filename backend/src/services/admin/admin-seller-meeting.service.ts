@@ -9,7 +9,11 @@ import {
   normalizeCity,
   resolveItemHistoricalMetrics,
 } from '../../engines/reports-core.engine';
-import { resolveReportDateRange } from './admin-report.helpers';
+import {
+  buildOperatingCreditNoteWhere,
+  buildOperatingOrderWhere,
+  resolveReportDateRange,
+} from './admin-report.helpers';
 
 export class AdminSellerMeetingSubService {
   /**
@@ -39,7 +43,12 @@ export class AdminSellerMeetingSubService {
     const [assignedClients, sellerOrders, sellerCreditNotes] = await Promise.all([
       prisma.persona.findMany({ where: { sellerId }, include: { saleRoute: true } }),
       prisma.order.findMany({
-        where: { sellerId, status: OrderStatus.DELIVERED, createdAt: { gte: start, lte: end } },
+        where: {
+          sellerId,
+          status: OrderStatus.DELIVERED,
+          createdAt: { gte: start, lte: end },
+          AND: [buildOperatingOrderWhere()],
+        },
         include: { persona: true, items: { include: { product: { include: { rubro: true } } } } },
       }),
       prisma.creditNote.findMany({
@@ -47,6 +56,7 @@ export class AdminSellerMeetingSubService {
           status: CreditNoteStatus.APPROVED,
           createdAt: { gte: start, lte: end },
           OR: [{ order: { sellerId } }, { orderId: null, persona: { sellerId } }],
+          AND: [buildOperatingCreditNoteWhere()],
         },
         include: {
           order: { select: { items: { select: { productId: true, unitCostSnapshot: true } } } },

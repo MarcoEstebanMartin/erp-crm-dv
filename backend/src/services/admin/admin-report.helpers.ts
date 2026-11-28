@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { parseArgentinaTimestampRange } from '../billing/billing-date-range.helper';
 import {
   MAIN_CITIES,
@@ -7,6 +8,65 @@ import {
 } from '../../engines/reports-core.engine';
 
 export { MAIN_CITIES, normalizeCity };
+
+/**
+ * Prefijos de comprobantes pertenecientes a la Sucursal 0006 (Inmobiliaria / Alquileres).
+ * Pertenecen al mismo CUIT fiscal (entran en Subdiario IVA Ventas y TXT AFIP),
+ * pero NO corresponden a la operación comercial de la distribuidora y se excluyen
+ * de rentabilidad, rankings, pulso semanal y analítica comercial.
+ */
+export const NON_OPERATING_POS_PREFIXES = ['00006-', '0006-'] as const;
+
+export function isNonOperatingInvoiceNumber(invoiceNumber: string | null | undefined): boolean {
+  if (!invoiceNumber) return false;
+  const trimmed = invoiceNumber.trim();
+  const dashIdx = trimmed.indexOf('-');
+  if (dashIdx === -1) return false;
+  const posDigits = trimmed.slice(0, dashIdx).replace(/\D/g, '');
+  if (!posDigits) return false;
+  return Number.parseInt(posDigits, 10) === 6;
+}
+
+/**
+ * Filtro Prisma que excluye pedidos no operativos (PV 0006 - Inmobiliaria)
+ * preservando comprobantes internos con `invoiceNumber` nulo.
+ */
+export function buildOperatingOrderWhere(): Prisma.OrderWhereInput {
+  return {
+    OR: [
+      { invoiceNumber: null },
+      {
+        AND: NON_OPERATING_POS_PREFIXES.map((prefix) => ({
+          NOT: { invoiceNumber: { startsWith: prefix } },
+        })),
+      },
+    ],
+  };
+}
+
+/**
+ * Filtro Prisma que excluye Notas de Crédito no operativas (PV 0006 - Inmobiliaria),
+ * ya sea por su propio número o por el pedido asociado.
+ */
+export function buildOperatingCreditNoteWhere(): Prisma.CreditNoteWhereInput {
+  return {
+    AND: [
+      {
+        OR: [
+          { creditNoteNumber: null },
+          {
+            AND: NON_OPERATING_POS_PREFIXES.map((prefix) => ({
+              NOT: { creditNoteNumber: { startsWith: prefix } },
+            })),
+          },
+        ],
+      },
+      {
+        OR: [{ orderId: null }, { order: buildOperatingOrderWhere() }],
+      },
+    ],
+  };
+}
 
 export function resolveOrderItemHistoricalCost(item: ReportLineItemInput): {
   qtyOrWeight: number;

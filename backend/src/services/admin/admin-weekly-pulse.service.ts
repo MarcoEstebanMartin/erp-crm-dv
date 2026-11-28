@@ -12,7 +12,11 @@ import {
   type WeeklyPulseSummary,
 } from '../../engines/weekly-pulse.engine';
 import { parseArgentinaTimestampRange } from '../billing/billing-date-range.helper';
-import { getArgentinaTodayParts } from './admin-report.helpers';
+import {
+  buildOperatingCreditNoteWhere,
+  buildOperatingOrderWhere,
+  getArgentinaTodayParts,
+} from './admin-report.helpers';
 import {
   accumulateCitySaleBucket,
   formatIsoAr,
@@ -86,7 +90,11 @@ export class AdminWeeklyPulseService {
     const [deliveredOrders, approvedCreditNotes, receivedInvoices, standalonePOs] =
       await Promise.all([
         prisma.order.findMany({
-          where: { status: OrderStatus.DELIVERED, ...(fullRange ? { createdAt: fullRange } : {}) },
+          where: {
+            status: OrderStatus.DELIVERED,
+            ...(fullRange ? { createdAt: fullRange } : {}),
+            AND: [buildOperatingOrderWhere()],
+          },
           select: {
             id: true,
             billingType: true,
@@ -96,7 +104,11 @@ export class AdminWeeklyPulseService {
           },
         }),
         prisma.creditNote.findMany({
-          where: { status: CreditNoteStatus.APPROVED, ...(fullRange ? { createdAt: fullRange } : {}) },
+          where: {
+            status: CreditNoteStatus.APPROVED,
+            ...(fullRange ? { createdAt: fullRange } : {}),
+            AND: [buildOperatingCreditNoteWhere()],
+          },
           select: {
             id: true,
             billingType: true,

@@ -1,7 +1,11 @@
 import prisma from '../../utils/prisma';
 import { CreditNoteStatus, OrderStatus, TransactionType } from '@prisma/client';
 import { computeFinancialSummaryMetrics } from '../../engines/reports-core.engine';
-import { resolveReportDateRange } from './admin-report.helpers';
+import {
+  buildOperatingCreditNoteWhere,
+  buildOperatingOrderWhere,
+  resolveReportDateRange,
+} from './admin-report.helpers';
 import { REPORT_FINANCE_TTL_SECONDS, withReportCache } from './admin-report-cache.helper';
 
 export class AdminFinanceSubService {
@@ -34,7 +38,11 @@ export class AdminFinanceSubService {
         const [deliveredOrders, creditNotes, transactionsGrouped, paymentMethodsGrouped, expenses] =
           await Promise.all([
             prisma.order.findMany({
-              where: { status: OrderStatus.DELIVERED, ...(range ? { createdAt: range } : {}) },
+              where: {
+                status: OrderStatus.DELIVERED,
+                ...(range ? { createdAt: range } : {}),
+                AND: [buildOperatingOrderWhere()],
+              },
               include: {
                 persona: { select: { city: true } },
                 items: {
@@ -45,7 +53,11 @@ export class AdminFinanceSubService {
               },
             }),
             prisma.creditNote.findMany({
-              where: { status: CreditNoteStatus.APPROVED, ...(range ? { createdAt: range } : {}) },
+              where: {
+                status: CreditNoteStatus.APPROVED,
+                ...(range ? { createdAt: range } : {}),
+                AND: [buildOperatingCreditNoteWhere()],
+              },
               include: {
                 persona: { select: { city: true } },
                 order: {

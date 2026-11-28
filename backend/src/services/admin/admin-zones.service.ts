@@ -10,7 +10,12 @@ import {
   resolveItemHistoricalMetrics,
   resolveOrderCommercialRevenueDec,
 } from '../../engines/reports-core.engine';
-import { getArgentinaWeekMondayIso, resolveReportDateRange } from './admin-report.helpers';
+import {
+  buildOperatingCreditNoteWhere,
+  buildOperatingOrderWhere,
+  getArgentinaWeekMondayIso,
+  resolveReportDateRange,
+} from './admin-report.helpers';
 import { REPORT_ZONES_TTL_SECONDS, withReportCache } from './admin-report-cache.helper';
 
 export class AdminZonesSubService {
@@ -82,7 +87,11 @@ export class AdminZonesSubService {
         orderBy: { city: 'asc' },
       }),
       prisma.order.findMany({
-        where: { status: OrderStatus.DELIVERED, ...commonWhere },
+        where: {
+          status: OrderStatus.DELIVERED,
+          ...commonWhere,
+          AND: [buildOperatingOrderWhere()],
+        },
         include: {
           persona: {
             select: {
@@ -113,7 +122,11 @@ export class AdminZonesSubService {
         orderBy: { createdAt: 'desc' },
       }),
       prisma.creditNote.findMany({
-        where: { status: CreditNoteStatus.APPROVED, ...commonWhere },
+        where: {
+          status: CreditNoteStatus.APPROVED,
+          ...commonWhere,
+          AND: [buildOperatingCreditNoteWhere()],
+        },
         include: {
           persona: {
             select: {

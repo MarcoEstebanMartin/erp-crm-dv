@@ -1,7 +1,11 @@
 import prisma from '../../utils/prisma';
 import { BillingType, CreditNoteStatus, OrderStatus } from '@prisma/client';
 import { computeProfitabilityMetrics } from '../../engines/reports-profitability.engine';
-import { resolveReportDateRange } from './admin-report.helpers';
+import {
+  buildOperatingCreditNoteWhere,
+  buildOperatingOrderWhere,
+  resolveReportDateRange,
+} from './admin-report.helpers';
 import {
   REPORT_PROFITABILITY_TTL_SECONDS,
   withReportCache,
@@ -48,12 +52,14 @@ export class AdminProfitabilitySubService {
           ...(range ? { createdAt: range } : {}),
           ...(filters.sellerId ? { sellerId: Number(filters.sellerId) } : {}),
           ...billingFilter,
+          AND: [buildOperatingOrderWhere()],
         };
 
         const whereCreditNote: any = {
           status: CreditNoteStatus.APPROVED,
           ...(range ? { createdAt: range } : {}),
           ...billingFilter,
+          AND: [buildOperatingCreditNoteWhere()],
         };
 
         const [orders, creditNotes] = await Promise.all([
