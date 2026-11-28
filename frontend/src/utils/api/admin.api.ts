@@ -1,5 +1,31 @@
 import { type AuditLogQueryFilters, request } from './httpClient';
 
+export interface CitySaleDetailItem {
+  id: number;
+  movementId: number;
+  kind: 'ORDER' | 'CREDIT_NOTE';
+  date: string;
+  clientName: string;
+  voucher: string;
+  billingType: 'OFFICIAL' | 'INTERNAL';
+  branch: 'A' | 'X';
+  amount: number;
+}
+
+export interface CitySalesDetailResponse {
+  city: string;
+  summary: {
+    official: number;
+    internal: number;
+    total: number;
+    officialCount: number;
+    internalCount: number;
+    count: number;
+    creditNotesCount: number;
+  };
+  items: CitySaleDetailItem[];
+}
+
 export const adminApi = {
   // --- ADMINISTRADOR ---
   getDocumentAuditLogs: async (entityType: string, entityId: number) => {
@@ -87,6 +113,19 @@ export const adminApi = {
     const qs = query.toString();
     const res = await request(`/admin/reports${qs ? `?${qs}` : ''}`);
     return res.report;
+  },
+
+  getCitySalesDetail: async (params: {
+    city: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<CitySalesDetailResponse> => {
+    const query = new URLSearchParams();
+    query.set('city', params.city);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    const res = await request(`/admin/reports/city-sales?${query.toString()}`);
+    return res.detail;
   },
 
   getZoneReports: async (filters: { city?: string; cities?: string[]; sellerId?: number; startDate?: string; endDate?: string } = {}) => {

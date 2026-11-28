@@ -6,6 +6,7 @@ import {
   buildWeeklyPulseTsv,
   formatWeekRangeLabel,
   getCurrentMondayArIso,
+  normalizePulseCompanyKey,
   shiftMondayIso,
   type SaveWeeklyPulsePayload,
   type WeeklyPulseData,
@@ -136,6 +137,36 @@ export default function WeeklyPulseTab() {
               ...c,
               manualPurchases: [...c.manualPurchases, { id: `mp-${Date.now()}`, ...item }],
             }))
+          }
+          onUpdatePurchase={(id, patch) =>
+            void persistUpdate((c) => ({
+              ...c,
+              manualPurchases: c.manualPurchases.map((x) =>
+                x.id === id
+                  ? {
+                      ...x,
+                      date: patch.date ?? x.date,
+                      amount: patch.amount !== undefined ? patch.amount : x.amount,
+                    }
+                  : x,
+              ),
+            }))
+          }
+          onLoadHabituals={() =>
+            void persistUpdate((c) => {
+              const existingKeys = new Set(data.purchases.map((p) => normalizePulseCompanyKey(p.company)));
+              const toAppend = (data.habitualCompanies ?? [])
+                .map(normalizePulseCompanyKey)
+                .filter((key) => key && !existingKeys.has(key))
+                .map((key, i) => ({
+                  id: `hab-${Date.now()}-${i}`,
+                  company: key,
+                  date: data.weekStart,
+                  amount: 0,
+                }));
+              if (toAppend.length === 0) return c;
+              return { ...c, manualPurchases: [...toAppend, ...c.manualPurchases] };
+            })
           }
           onRemovePurchase={(id) =>
             void persistUpdate((c) => ({

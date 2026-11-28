@@ -9,11 +9,13 @@ import {
   resolveItemHistoricalMetrics,
 } from './reports-core.engine';
 import { computeEmployeeReportMetrics } from './reports-employee.engine';
+import { buildCitySalesDetail, normalizeTargetCity } from './reports-city-sales.engine';
 import {
   getArgentinaWeekMondayIso,
   resolveReportDateRange,
 } from '../services/admin/admin-report.helpers';
 import {
+  getCitySalesDetailQuerySchema,
   getEmployeeReportQuerySchema,
   getExecutiveReportQuerySchema,
   getFinancialReportsQuerySchema,
@@ -472,5 +474,142 @@ describe('Reportes Minimalistas — Motores Decimal.js, Fechas AR (-03:00), Nota
     expect(routesContent).not.toMatch(/['"]\/reports\/weekly['"]/);
     expect(routesContent).not.toContain('/reports/sales-channels');
     expect(routesContent).not.toContain('/reports/local-sales');
+    expect(routesContent).toContain('/reports/city-sales');
+  });
+
+  it('buildCitySalesDetail agrupa alias de localidad, cuadra al peso con salesByCity incluyendo NC y formatea comprobantes', () => {
+    const orders = [
+      {
+        id: 101,
+        movementId: 5001,
+        createdAt: new Date('2026-11-24T13:00:00.000Z'),
+        billingType: 'OFFICIAL',
+        invoiceType: 'FACTURA_A',
+        invoiceNumber: '0005-00001234',
+        totalAmount: 100000,
+        persona: { id: 1, name: 'Supermercado Norte', city: 'Gral. Villegas' },
+        items: [{ quantity: 1, subtotal: 100000, unitCostSnapshot: 70000 }],
+      },
+      {
+        id: 102,
+        movementId: 5002,
+        createdAt: new Date('2026-11-26T15:00:00.000Z'),
+        billingType: 'INTERNAL',
+        invoiceType: 'PRESUPUESTO',
+        invoiceNumber: null,
+        totalAmount: 50000,
+        persona: { id: 2, name: 'Despensa Sur', city: 'GENERAL VILLEGAS' },
+        items: [{ quantity: 1, subtotal: 50000, unitCostSnapshot: 35000 }],
+      },
+      {
+        id: 103,
+        movementId: 5003,
+        createdAt: new Date('2026-11-25T10:00:00.000Z'),
+        billingType: 'INTERNAL',
+        invoiceType: 'PRESUPUESTO',
+        invoiceNumber: null,
+        totalAmount: 80000,
+        persona: { id: 3, name: 'Almacén Bunge', city: 'Bunge' },
+        items: [{ quantity: 1, subtotal: 80000, unitCostSnapshot: 55000 }],
+      },
+      {
+        id: 104,
+        movementId: 5004,
+        createdAt: new Date('2026-11-25T11:00:00.000Z'),
+        billingType: 'OFFICIAL',
+        invoiceType: 'FACTURA_B',
+        invoiceNumber: '0005-00001235',
+        totalAmount: 20000,
+        persona: { id: 4, name: 'Cliente Sin Ciudad', city: null },
+        items: [{ quantity: 1, subtotal: 20000, unitCostSnapshot: 14000 }],
+      },
+    ];
+
+    const creditNotes = [
+      {
+        id: 201,
+        movementId: 6001,
+        createdAt: new Date('2026-11-27T12:00:00.000Z'),
+        billingType: 'OFFICIAL',
+        creditNoteType: 'NOTA_CREDITO_A',
+        creditNoteNumber: '0005-00000045',
+        totalAmount: 10000,
+        persona: { id: 1, name: 'Supermercado Norte', city: 'Villegas' },
+        order: null,
+        items: [{ productId: 1, quantity: 1, subtotal: 10000, unitCostSnapshot: 7000 }],
+      },
+    ];
+
+    const globalSummary = computeFinancialSummaryMetrics({
+      orders,
+      creditNotes,
+      expenses: [],
+      transactionsGrouped: [],
+      paymentMethodsGrouped: [],
+    });
+    const villegasRow = globalSummary.salesByCity.find((r) => r.city === 'GENERAL VILLEGAS');
+    expect(villegasRow).toBeDefined();
+
+    const detail = buildCitySalesDetail({
+      city: 'GENERAL VILLEGAS',
+      orders,
+      creditNotes,
+    });
+
+    expect(detail.city).toBe('GENERAL VILLEGAS');
+    expect(detail.summary).toEqual({
+      official: villegasRow!.official,
+      internal: villegasRow!.internal,
+      total: villegasRow!.total,
+      officialCount: villegasRow!.officialCount,
+      internalCount: villegasRow!.internalCount,
+      count: villegasRow!.count,
+      creditNotesCount: 1,
+    });
+    expect(detail.items.reduce((acc, item) => acc + item.amount, 0)).toBe(detail.summary.total);
+    expect(detail.items.map((i) => ({ kind: i.kind, voucher: i.voucher, branch: i.branch, amount: i.amount }))).toEqual([
+      { kind: 'CREDIT_NOTE', voucher: 'NC A 0005-00000045', branch: 'A', amount: -10000 },
+      { kind: 'ORDER', voucher: 'PRES #5002', branch: 'X', amount: 50000 },
+      { kind: 'ORDER', voucher: 'FAC A 0005-00001234', branch: 'A', amount: 100000 },
+    ]);
+
+    expect(normalizeTargetCity('Sin Localidad')).toBe('Sin Localidad');
+    const sinCiudadDetail = buildCitySalesDetail({
+      city: 'Sin Localidad',
+      orders,
+      creditNotes,
+    });
+    expect(sinCiudadDetail.summary.total).toBe(20000);
+    expect(sinCiudadDetail.items).toHaveLength(1);
+    expect(sinCiudadDetail.items[0].voucher).toBe('FAC B 0005-00001235');
+
+    const accentDetail = buildCitySalesDetail({
+      city: 'BANDERALÓ',
+      orders: [
+        {
+          id: 105,
+          movementId: 5005,
+          createdAt: new Date('2026-11-26T10:00:00.000Z'),
+          billingType: 'INTERNAL',
+          invoiceType: 'PRESUPUESTO',
+          invoiceNumber: null,
+          totalAmount: 15000,
+          persona: { id: 5, name: 'Kiosco Banderaló', city: 'BANDERALÓ' },
+          items: [{ quantity: 1, subtotal: 15000 }],
+        },
+      ],
+      creditNotes: [],
+    });
+    expect(accentDetail.summary.total).toBe(15000);
+    expect(accentDetail.items).toHaveLength(1);
+  });
+
+  it('getCitySalesDetailQuerySchema valida city obligatorio y rango ISO opcional', () => {
+    expect(getCitySalesDetailQuerySchema.safeParse({ query: { city: '' } }).success).toBe(false);
+    expect(
+      getCitySalesDetailQuerySchema.safeParse({
+        query: { city: 'GENERAL VILLEGAS', startDate: '2026-11-23', endDate: '2026-11-29' },
+      }).success,
+    ).toBe(true);
   });
 });

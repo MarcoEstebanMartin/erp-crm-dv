@@ -59,7 +59,7 @@ export const ClientIdentityRolesCard: React.FC<ClientIdentityRolesCardProps> = (
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minInlineSize: 0 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.35fr 0.85fr', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: data.isClient ? '1.35fr 0.85fr' : '1fr', gap: '12px' }}>
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label htmlFor="client-cuit" style={LABEL_STYLE}>DNI o CUIT</label>
           <div style={{ position: 'relative', width: '100%' }}>
@@ -113,22 +113,24 @@ export const ClientIdentityRolesCard: React.FC<ClientIdentityRolesCardProps> = (
           </div>
         </div>
 
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label htmlFor="client-web-pin" style={LABEL_STYLE}>PIN Tienda</label>
-          <input
-            id="client-web-pin"
-            type="text"
-            className="input"
-            placeholder="4 dígitos"
-            value={data.webPin || ''}
-            onChange={(e) => onChangeData({ webPin: e.target.value })}
-            maxLength={8}
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            style={{ ...INPUT_STYLE, fontWeight: 700, letterSpacing: '1px' }}
-          />
-        </div>
+        {Boolean(data.isClient) && (
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label htmlFor="client-web-pin" style={LABEL_STYLE}>PIN Tienda</label>
+            <input
+              id="client-web-pin"
+              type="text"
+              className="input"
+              placeholder="4 dígitos"
+              value={data.webPin || ''}
+              onChange={(e) => onChangeData({ webPin: e.target.value })}
+              maxLength={8}
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              style={{ ...INPUT_STYLE, fontWeight: 700, letterSpacing: '1px' }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="form-group" style={{ marginBottom: 0 }}>

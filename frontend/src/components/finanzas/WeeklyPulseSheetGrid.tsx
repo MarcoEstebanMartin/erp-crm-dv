@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import { Eye, EyeOff, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ListPlus, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { WeeklyPulsePurchaseCells } from './WeeklyPulsePurchaseCells';
 import {
   formatPeso,
   formatShortArDate,
+  normalizePulseCompanyKey,
+  parseArIntegerInput,
   type WeeklyPulseData,
 } from './weeklyPulseTypes';
 
 const CELL_BORDER = '1px solid var(--border-color, #e5e7eb)';
 const HEADER_BG = '#f8fafc';
+const COMPANIES_DATALIST_ID = 'weekly-pulse-companies-list';
 
 interface WeeklyPulseSheetGridProps {
   data: WeeklyPulseData;
@@ -15,6 +19,8 @@ interface WeeklyPulseSheetGridProps {
   onSaveCredit: (value: number | null) => void;
   onSaveBuffer: (value: number) => void;
   onAddPurchase: (item: { company: string; date: string; amount: number }) => void;
+  onUpdatePurchase: (id: string, patch: { date?: string; amount?: number }) => void;
+  onLoadHabituals: () => void;
   onRemovePurchase: (id: string) => void;
   onToggleExcludePurchase: (id: string) => void;
   onAddSale: (item: { locality: string; date: string; amountA: number; amountX: number }) => void;
@@ -27,6 +33,8 @@ export function WeeklyPulseSheetGrid({
   onSaveCredit,
   onSaveBuffer,
   onAddPurchase,
+  onUpdatePurchase,
+  onLoadHabituals,
   onRemovePurchase,
   onToggleExcludePurchase,
   onAddSale,
@@ -64,13 +72,18 @@ export function WeeklyPulseSheetGrid({
 
   const submitPurchase = (e: React.FormEvent) => {
     e.preventDefault();
-    const num = Number(pAmount.replace(/\./g, '').replace(',', '.'));
-    if (!pCompany.trim() || !Number.isFinite(num) || num === 0) return;
-    onAddPurchase({ company: pCompany.trim().toUpperCase(), date: pDate || data.weekStart, amount: Math.round(num) });
+    const num = parseArIntegerInput(pAmount);
+    if (!pCompany.trim() || num === null) return;
+    onAddPurchase({ company: normalizePulseCompanyKey(pCompany), date: pDate || data.weekStart, amount: num });
     setAddingPurchase(false);
     setPCompany('');
     setPAmount('');
   };
+
+  const missingHabitualsCount = useMemo(() => {
+    const existingKeys = new Set(data.purchases.map((p) => normalizePulseCompanyKey(p.company)));
+    return (data.habitualCompanies ?? []).filter((name) => !existingKeys.has(normalizePulseCompanyKey(name))).length;
+  }, [data.purchases, data.habitualCompanies]);
 
   const submitSale = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,16 +112,30 @@ export function WeeklyPulseSheetGrid({
             <th colSpan={3} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.02em', borderRight: '2px solid #cbd5e1' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                 <span>COMPRA SEMANAL</span>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={saving}
-                  onClick={() => { setPDate(data.weekStart); setAddingPurchase((v) => !v); }}
-                  style={{ padding: '2px 6px', fontSize: '0.73rem', minHeight: 'auto', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                >
-                  <Plus size={12} aria-hidden="true" />
-                  Gasto / Compra
-                </button>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  {missingHabitualsCount > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={saving}
+                      onClick={onLoadHabituals}
+                      style={{ padding: '2px 6px', fontSize: '0.73rem', minHeight: 'auto', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      <ListPlus size={12} aria-hidden="true" />
+                      Habituales
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={saving}
+                    onClick={() => { setPDate(data.weekStart); setAddingPurchase((v) => !v); }}
+                    style={{ padding: '2px 6px', fontSize: '0.73rem', minHeight: 'auto', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                  >
+                    <Plus size={12} aria-hidden="true" />
+                    Gasto / Compra
+                  </button>
+                </div>
               </div>
             </th>
             <th colSpan={5} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.02em' }}>
@@ -145,9 +172,25 @@ export function WeeklyPulseSheetGrid({
               {addingPurchase ? (
                 <td colSpan={3} style={{ padding: '6px 8px', borderRight: '2px solid #cbd5e1' }}>
                   <form onSubmit={submitPurchase} style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    <input type="text" className="input" placeholder="Ej. COMISION M.PAGO" value={pCompany} onChange={(e) => setPCompany(e.target.value)} autoFocus style={{ fontSize: '0.78rem', padding: '4px 6px', flex: 1, minWidth: 0 }} />
-                    <input type="date" className="input" value={pDate} onChange={(e) => setPDate(e.target.value)} style={{ fontSize: '0.74rem', padding: '4px', width: '106px' }} />
-                    <input type="number" step="1" className="input tabular-nums" placeholder="$" value={pAmount} onChange={(e) => setPAmount(e.target.value)} style={{ fontSize: '0.78rem', padding: '4px 6px', width: '84px', textAlign: 'right' }} />
+                    <input
+                      type="text"
+                      name="company"
+                      list={COMPANIES_DATALIST_ID}
+                      className="input"
+                      placeholder="Empresa o concepto"
+                      autoComplete="off"
+                      value={pCompany}
+                      onChange={(e) => setPCompany(e.target.value)}
+                      autoFocus
+                      style={{ fontSize: '0.78rem', padding: '4px 6px', flex: 1, minWidth: 0 }}
+                    />
+                    <datalist id={COMPANIES_DATALIST_ID}>
+                      {(data.suggestedCompanies ?? []).map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                    <input type="date" name="date" className="input" value={pDate} onChange={(e) => setPDate(e.target.value)} style={{ fontSize: '0.74rem', padding: '4px', width: '106px' }} />
+                    <input type="text" name="amount" inputMode="numeric" enterKeyHint="done" className="input tabular-nums" placeholder="$" value={pAmount} onChange={(e) => setPAmount(e.target.value)} style={{ fontSize: '0.78rem', padding: '4px 6px', width: '84px', textAlign: 'right' }} />
                     <button type="submit" className="btn btn-primary" disabled={saving} style={{ padding: '4px 8px', fontSize: '0.74rem', minHeight: 'auto' }}>OK</button>
                     <button type="button" className="btn btn-ghost" onClick={() => setAddingPurchase(false)} style={{ padding: '4px 6px', fontSize: '0.74rem', minHeight: 'auto' }}>×</button>
                   </form>
@@ -171,35 +214,16 @@ export function WeeklyPulseSheetGrid({
           {Array.from({ length: maxBodyRows }).map((_, idx) => {
             const p = data.purchases[idx];
             const s = data.sales[idx];
-            const pExcluded = Boolean(p?.excluded);
-            const pTooltip = p?.invoiceNumber
-              ? `Fact. ${p.invoiceNumber}${p.invoiceDate ? ` (${formatShortArDate(p.invoiceDate)})` : ''}`
-              : undefined;
 
             return (
-              <tr key={idx} style={{ borderBottom: CELL_BORDER }}>
-                <td title={pTooltip} style={{ padding: '6px 10px', borderRight: CELL_BORDER, opacity: pExcluded ? 0.4 : 1, textDecoration: pExcluded ? 'line-through' : 'none' }}>
-                  {p ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                      <span style={{ fontWeight: 500 }}>{p.company}</span>
-                      {p.source === 'MANUAL' ? (
-                        <button type="button" className="btn btn-ghost" aria-label={`Eliminar ${p.company}`} disabled={saving} onClick={() => onRemovePurchase(p.id)} style={{ padding: '2px', minHeight: 'auto', color: 'var(--text-muted)' }}>
-                          <Trash2 size={12} aria-hidden="true" />
-                        </button>
-                      ) : (
-                        <button type="button" className="btn btn-ghost" aria-label={pExcluded ? `Incluir ${p.company}` : `Ocultar ${p.company}`} title={pExcluded ? 'Incluir' : 'Excluir esta semana'} disabled={saving} onClick={() => onToggleExcludePurchase(p.id)} style={{ padding: '2px', minHeight: 'auto', color: 'var(--text-muted)' }}>
-                          {pExcluded ? <Eye size={12} aria-hidden="true" /> : <EyeOff size={12} aria-hidden="true" />}
-                        </button>
-                      )}
-                    </div>
-                  ) : null}
-                </td>
-                <td className="tabular-nums" style={{ padding: '6px 8px', textAlign: 'center', color: 'var(--text-secondary)', borderRight: CELL_BORDER, opacity: pExcluded ? 0.4 : 1 }}>
-                  {p ? formatShortArDate(p.date) : ''}
-                </td>
-                <td className="tabular-nums" style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 500, borderRight: '2px solid #cbd5e1', opacity: pExcluded ? 0.4 : 1, textDecoration: pExcluded ? 'line-through' : 'none' }}>
-                  {p ? formatPeso(p.amount) : ''}
-                </td>
+              <tr key={p?.id ?? `row-${idx}`} style={{ borderBottom: CELL_BORDER }}>
+                <WeeklyPulsePurchaseCells
+                  purchase={p}
+                  saving={saving}
+                  onUpdatePurchase={onUpdatePurchase}
+                  onRemovePurchase={onRemovePurchase}
+                  onToggleExcludePurchase={onToggleExcludePurchase}
+                />
 
                 <td style={{ padding: '6px 10px', borderRight: CELL_BORDER }}>
                   {s ? (

@@ -3,6 +3,87 @@ import { roundToIntegerPeso, sumIntegerAmounts, toDecimal } from '../core/money'
 
 export const DEFAULT_WEEKLY_RESULT_BUFFER = 20_000_000;
 
+export const DEFAULT_WEEKLY_FIXED_CONCEPTS: readonly string[] = [
+  'COMISION M.PAGO',
+  'PERC-ING.BRUTOS',
+];
+
+export const DEFAULT_WEEKLY_HABITUAL_SUPPLIERS: readonly string[] = [
+  'REMOTTI',
+  'CREMIGAL',
+  'NIZA SA',
+  'FRATELLI BRANCA',
+  'VITAL',
+  'R.P.B.',
+  'A.G.D',
+  'SANCOR',
+  'LA VIRGINIA',
+  'CASA NINI',
+  'SODECAR',
+];
+
+export function normalizePulseCompanyKey(name: string): string {
+  return name.trim().toUpperCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * Genera las filas fijas semanales (ej. COMISION M.PAGO, PERC-ING.BRUTOS) en $0
+ * salteando cualquier concepto que ya exista en la semana.
+ */
+export function buildInitialFixedPurchases(
+  weekStart: string,
+  existingPurchases: WeeklyPulsePurchaseItem[],
+  fixedConcepts: readonly string[] = DEFAULT_WEEKLY_FIXED_CONCEPTS,
+): WeeklyPulsePurchaseItem[] {
+  const existingKeys = new Set(
+    existingPurchases.map((p) => normalizePulseCompanyKey(p.company)),
+  );
+  const result: WeeklyPulsePurchaseItem[] = [];
+  for (const concept of fixedConcepts) {
+    const key = normalizePulseCompanyKey(concept);
+    if (!key || existingKeys.has(key)) continue;
+    const slug = key.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    result.push({
+      id: `fixed-${slug}`,
+      source: 'MANUAL',
+      company: key,
+      date: weekStart,
+      amount: 0,
+    });
+    existingKeys.add(key);
+  }
+  return result;
+}
+
+/**
+ * Devuelve las filas de proveedores habituales que todavía no están presentes
+ * (ni automáticas ni manuales) en la semana actual, listas en $0 para completar.
+ */
+export function buildHabitualPurchasesToAppend(
+  weekStart: string,
+  habitualCompanies: readonly string[],
+  existingPurchases: WeeklyPulsePurchaseItem[],
+): WeeklyPulsePurchaseItem[] {
+  const existingKeys = new Set(
+    existingPurchases.map((p) => normalizePulseCompanyKey(p.company)),
+  );
+  const result: WeeklyPulsePurchaseItem[] = [];
+  for (const name of habitualCompanies) {
+    const key = normalizePulseCompanyKey(name);
+    if (!key || existingKeys.has(key)) continue;
+    const slug = key.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    result.push({
+      id: `hab-${slug}`,
+      source: 'MANUAL',
+      company: key,
+      date: weekStart,
+      amount: 0,
+    });
+    existingKeys.add(key);
+  }
+  return result;
+}
+
 export interface WeeklyPulsePurchaseItem {
   id: string;
   source: 'AUTO_INVOICE' | 'AUTO_PO' | 'MANUAL';

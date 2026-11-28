@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   addDaysIso,
+  buildHabitualPurchasesToAppend,
+  buildInitialFixedPurchases,
   buildNormalizedSaleRow,
   computeWeeklyPulseChain,
   computeWeeklyPulseSummary,
+  DEFAULT_WEEKLY_FIXED_CONCEPTS,
   DEFAULT_WEEKLY_RESULT_BUFFER,
   getWorkWeekBounds,
 } from './weekly-pulse.engine';
@@ -127,5 +130,37 @@ describe('weekly-pulse.engine', () => {
       weekEnd: '2026-11-28',
     });
     expect(addDaysIso('2026-11-23', 7)).toBe('2026-11-30');
+  });
+
+  it('genera fijos semanales en $0 sin duplicar los que ya existen y sin alterar el total', () => {
+    const existing = [
+      { id: 'mp-1', source: 'MANUAL' as const, company: '  comision   m.pago ', date: '2026-11-24', amount: 250_000 },
+    ];
+    const seeded = buildInitialFixedPurchases('2026-11-23', existing, DEFAULT_WEEKLY_FIXED_CONCEPTS);
+    expect(seeded).toHaveLength(1);
+    expect(seeded[0]).toMatchObject({
+      source: 'MANUAL',
+      company: 'PERC-ING.BRUTOS',
+      date: '2026-11-23',
+      amount: 0,
+    });
+
+    const summary = computeWeeklyPulseSummary({
+      openingCredit: 0,
+      resultBuffer: 0,
+      purchases: [...existing, ...seeded],
+      sales: [],
+    });
+    expect(summary.weekPurchasesTotal).toBe(250_000);
+  });
+
+  it('trae proveedores habituales salteando los que ya entraron por factura o carga manual', () => {
+    const existing = [
+      { id: 'inv:1', source: 'AUTO_INVOICE' as const, company: 'REMOTTI', date: '2026-11-24', amount: 1_500_000 },
+      { id: 'mp-2', source: 'MANUAL' as const, company: 'cremigal', date: '2026-11-25', amount: 800_000 },
+    ];
+    const toAppend = buildHabitualPurchasesToAppend('2026-11-23', ['REMOTTI', 'CREMIGAL', 'NIZA SA', 'VITAL'], existing);
+    expect(toAppend.map((x) => x.company)).toEqual(['NIZA SA', 'VITAL']);
+    expect(toAppend.every((x) => x.amount === 0 && x.date === '2026-11-23')).toBe(true);
   });
 });

@@ -1,13 +1,20 @@
 import { BillingType } from '@prisma/client';
 import { Decimal } from 'decimal.js';
 import { roundToIntegerPeso } from '../../core/money';
-import { addDaysIso, getWorkWeekBounds } from '../../engines/weekly-pulse.engine';
+import {
+  addDaysIso,
+  DEFAULT_WEEKLY_FIXED_CONCEPTS,
+  DEFAULT_WEEKLY_HABITUAL_SUPPLIERS,
+  getWorkWeekBounds,
+  normalizePulseCompanyKey,
+} from '../../engines/weekly-pulse.engine';
 import { getArgentinaTodayParts, normalizeCity } from './admin-report.helpers';
 
 export interface StoredPurchasesMeta {
   manualItems: Array<{ id: string; company: string; date: string; amount: number }>;
   excludedSourceKeys: string[];
   manualOpeningCredit: number | null;
+  fixedInitialized: boolean;
 }
 
 export interface StoredSalesMeta {
@@ -43,9 +50,10 @@ export function parsePurchasesMeta(raw: unknown): StoredPurchasesMeta {
       typeof obj.manualOpeningCredit === 'number' && Number.isFinite(obj.manualOpeningCredit)
         ? roundToIntegerPeso(obj.manualOpeningCredit).toNumber()
         : null;
-    return { manualItems, excludedSourceKeys, manualOpeningCredit };
+    const fixedInitialized = Boolean(obj.fixedInitialized);
+    return { manualItems, excludedSourceKeys, manualOpeningCredit, fixedInitialized };
   }
-  return { manualItems: [], excludedSourceKeys: [], manualOpeningCredit: null };
+  return { manualItems: [], excludedSourceKeys: [], manualOpeningCredit: null, fixedInitialized: false };
 }
 
 export function parseSalesMeta(raw: unknown): StoredSalesMeta {
@@ -115,4 +123,57 @@ export function accumulateCitySaleBucket(
   if (dateIso > existing.lastDate) existing.lastDate = dateIso;
   if (isOrder) existing.ordersCount += 1;
   cityMap.set(locality, existing);
+}
+
+/**
+ * Construye el catálogo de proveedores habituales (botón 1-clic) y la lista completa
+ * de sugerencias para autocompletado combinando defaults, proveedores activos e historial.
+ */
+export function buildPulseCompanyCatalogs(params: {
+  providerNames: string[];
+  historicalManualNames: string[];
+  historicalInvoiceNames: string[];
+}): { habitualCompanies: string[]; suggestedCompanies: string[] } {
+  const fixedSet = new Set(DEFAULT_WEEKLY_FIXED_CONCEPTS.map(normalizePulseCompanyKey));
+
+  const habitualList: string[] = [];
+  const habitualSeen = new Set<string>();
+  for (const name of DEFAULT_WEEKLY_HABITUAL_SUPPLIERS) {
+    const key = normalizePulseCompanyKey(name);
+    if (!key || habitualSeen.has(key)) continue;
+    habitualSeen.add(key);
+    habitualList.push(key);
+  }
+
+  // Sumar al catálogo de habituales cualquier empresa usada 2+ veces en semanas previas
+  const freq = new Map<string, number>();
+  for (const raw of [...params.historicalManualNames, ...params.historicalInvoiceNames]) {
+    const key = normalizePulseCompanyKey(raw);
+    if (!key || fixedSet.has(key) || habitualSeen.has(key)) continue;
+    freq.set(key, (freq.get(key) ?? 0) + 1);
+  }
+  for (const [key, count] of freq.entries()) {
+    if (count >= 2) {
+      habitualSeen.add(key);
+      habitualList.push(key);
+    }
+  }
+
+  const suggestedSet = new Set<string>([
+    ...DEFAULT_WEEKLY_FIXED_CONCEPTS.map(normalizePulseCompanyKey),
+    ...habitualList,
+  ]);
+  for (const raw of [
+    ...params.providerNames,
+    ...params.historicalManualNames,
+    ...params.historicalInvoiceNames,
+  ]) {
+    const key = normalizePulseCompanyKey(raw);
+    if (key) suggestedSet.add(key);
+  }
+
+  return {
+    habitualCompanies: habitualList,
+    suggestedCompanies: Array.from(suggestedSet).sort((a, b) => a.localeCompare(b, 'es')),
+  };
 }

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getFinancialReports,
+  getCitySalesDetail,
   getProfitabilityReport,
   getExecutivePdfReport,
   getSellerMeetingPdfReport,
@@ -40,6 +41,7 @@ import {
 } from '../validators/admin.validator';
 import {
   getFinancialReportsQuerySchema,
+  getCitySalesDetailQuerySchema,
   getProfitabilityQuerySchema,
   getExecutiveReportQuerySchema,
   getSellerMeetingQuerySchema,
@@ -69,6 +71,7 @@ router.use(authenticateJWT);
 router.use(requireRole([Role.ADMIN]));
 
 router.get('/reports', validateRequest(getFinancialReportsQuerySchema), getFinancialReports);
+router.get('/reports/city-sales', validateRequest(getCitySalesDetailQuerySchema), getCitySalesDetail);
 router.get('/reports/profitability', validateRequest(getProfitabilityQuerySchema), getProfitabilityReport);
 router.get('/reports/pdf/executive', validateRequest(getExecutiveReportQuerySchema), getExecutivePdfReport);
 router.get('/reports/pdf/employee/:userId', validateRequest(getEmployeeReportQuerySchema), getEmployeePdfReport);

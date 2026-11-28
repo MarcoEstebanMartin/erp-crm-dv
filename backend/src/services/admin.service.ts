@@ -14,6 +14,14 @@ export class AdminService {
     month?: number,
   ) => adminFinanceSubService.getFinancialReports(paramsOrYear, month);
 
+  getCitySalesDetail = (params: {
+    city: string;
+    year?: number;
+    month?: number;
+    startDate?: string;
+    endDate?: string;
+  }) => adminFinanceSubService.getCitySalesDetail(params);
+
   // 2. Usuarios y Logs de Auditoría
   getAuditLogs = (page = 1, limit = 50, filters?: AuditLogFilters) =>
     adminAuditSubService.getAuditLogs(page, limit, filters);

@@ -7,6 +7,8 @@ export const HOME_QUERY_KEYS = {
   weeklySchedule: ['home', 'weekly-schedule'] as const,
   weeklySales: (startDate: string, endDate: string) =>
     ['home', 'weekly-sales', startDate, endDate] as const,
+  weeklyCitySales: (city: string, startDate: string, endDate: string) =>
+    ['home', 'weekly-city-sales', city, startDate, endDate] as const,
 };
 
 export function usePendingRendicionesQuery() {
@@ -31,5 +33,19 @@ export function useWeeklySalesQuery(startDate: string, endDate: string, enabled 
     queryFn: () => api.getFinancialReports({ startDate, endDate }),
     staleTime: 60_000,
     enabled: enabled && Boolean(startDate) && Boolean(endDate),
+  });
+}
+
+export function useWeeklyCitySalesQuery(
+  city: string | null,
+  startDate: string,
+  endDate: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: HOME_QUERY_KEYS.weeklyCitySales(city || '', startDate, endDate),
+    queryFn: () => api.getCitySalesDetail({ city: city!, startDate, endDate }),
+    staleTime: 60_000,
+    enabled: enabled && Boolean(city) && Boolean(startDate) && Boolean(endDate),
   });
 }

@@ -272,6 +272,32 @@ export function formatCurrentEditionSubtitle(date: Date = new Date()): string {
   return `EDICION ${dd}/${mm}`;
 }
 
+function formatCatalogDownloadDatePart(date: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    day: '2-digit',
+    month: '2-digit',
+  }).formatToParts(date);
+  const dd = parts.find((p) => p.type === 'day')?.value ?? String(date.getDate()).padStart(2, '0');
+  const mm =
+    parts.find((p) => p.type === 'month')?.value ?? String(date.getMonth() + 1).padStart(2, '0');
+  return `${dd}-${mm}`;
+}
+
+export function formatCatalogDownloadFilename(date: Date = new Date()): string {
+  return `Catálogo de ofertas - ${formatCatalogDownloadDatePart(date)}.pdf`;
+}
+
+export function formatResumenDownloadFilename(
+  mode: CatalogResumenMode = 'all',
+  date: Date = new Date(),
+): string {
+  const ddmm = formatCatalogDownloadDatePart(date);
+  if (mode === 'ofertones') return `Ofertones ${ddmm}.pdf`;
+  if (mode === 'destacados') return `Destacados ${ddmm}.pdf`;
+  return `Ofertones y Destacados ${ddmm}.pdf`;
+}
+
 export function isRefrigeratedCategory(catName: string): boolean {
   const u = String(catName || '').toUpperCase();
   return ['MELINCU', 'CREMIGAL', 'SANCOR', 'CASONA', 'FIAMBRE', 'REFRIGERAD', 'LACTEO', 'LÁCTEO'].some((k) =>

@@ -104,6 +104,20 @@ export function formatShortArRange(startIso: string, endIso: string): string {
   return `${short(startIso)} – ${short(endIso)}`;
 }
 
+export function formatShortArDate(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [, m, d] = trimmed.split('-');
+    return `${d}/${m}`;
+  }
+  return new Date(trimmed).toLocaleDateString('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    day: '2-digit',
+    month: '2-digit',
+  });
+}
+
 export function formatCityLabel(raw: string): string {
   if (!raw) return 'Sin Localidad';
   const trimmed = raw.trim();
@@ -149,5 +163,34 @@ export function buildWeeklySalesTsv(
       Math.round(Number(totals.orders || 0)),
     ].join('\t'),
   );
+  return lines.join('\n');
+}
+
+export interface CitySalesDetailTsvRow {
+  dateLabel: string;
+  clientName: string;
+  voucher: string;
+  branch: 'A' | 'X';
+  amount: number;
+}
+
+export function buildCitySalesDetailTsv(
+  items: CitySalesDetailTsvRow[],
+  total: number,
+): string {
+  const cleanCell = (value: string) => value.replace(/[\t\r\n]+/g, ' ').trim();
+  const lines = ['Fecha\tCliente\tComprobante\tSucursal\tImporte'];
+  for (const item of items) {
+    lines.push(
+      [
+        cleanCell(item.dateLabel),
+        cleanCell(item.clientName),
+        cleanCell(item.voucher),
+        cleanCell(item.branch),
+        Math.round(Number(item.amount || 0)),
+      ].join('\t'),
+    );
+  }
+  lines.push(['Total', '', '', '', Math.round(Number(total || 0))].join('\t'));
   return lines.join('\n');
 }

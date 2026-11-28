@@ -1,25 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Copy, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
-import { useWeeklySalesQuery } from '../../hooks/queries';
+import { useWeeklyCitySalesQuery, useWeeklySalesQuery } from '../../hooks/queries';
 import {
+  buildCitySalesDetailTsv,
   buildWeeklySalesTsv,
   computeArDatePreset,
   formatCityLabel,
+  formatShortArDate,
   formatShortArRange,
   shiftArWeekRange,
 } from '../reports/reportDateHelpers';
+import {
+  type CityDetailBranchFilter,
+  WeeklySalesCityDetailView,
+} from './WeeklySalesCityDetailView';
+import { type SalesByCityRow, WeeklySalesCityListTable } from './WeeklySalesCityListTable';
 
-export interface SalesByCityRow {
-  city: string;
-  official: number;
-  internal: number;
-  total: number;
-  officialCount: number;
-  internalCount: number;
-  count: number;
-  sharePct: number;
-}
+export type { SalesByCityRow };
 
 interface WeeklySalesByCityModalProps {
   isOpen: boolean;
@@ -39,17 +37,27 @@ export function WeeklySalesByCityModal({
   initialReport,
 }: WeeklySalesByCityModalProps) {
   const [range, setRange] = useState({ startDate: initialStartDate, endDate: initialEndDate });
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [branchFilter, setBranchFilter] = useState<CityDetailBranchFilter>('ALL');
+  const [search, setSearch] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [copyAnnouncement, setCopyAnnouncement] = useState('');
   const copyTimerRef = useRef<number | null>(null);
   const lastAnnouncementRef = useRef('');
+  const backButtonRef = useRef<HTMLButtonElement | null>(null);
+  const cityButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const lastCityRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setRange({ startDate: initialStartDate, endDate: initialEndDate });
-      setCopyStatus('idle');
-      setCopyAnnouncement('');
     }
+    setSelectedCity(null);
+    setBranchFilter('ALL');
+    setSearch('');
+    setCopyStatus('idle');
+    setCopyAnnouncement('');
+    lastCityRef.current = null;
   }, [isOpen, initialStartDate, initialEndDate]);
 
   useEffect(() => {
@@ -71,6 +79,12 @@ export function WeeklySalesByCityModal({
     range.endDate,
     isOpen,
   );
+  const {
+    data: cityDetail,
+    isFetching: isFetchingDetail,
+    isError: isErrorDetail,
+    refetch: refetchDetail,
+  } = useWeeklyCitySalesQuery(selectedCity, range.startDate, range.endDate, isOpen && Boolean(selectedCity));
 
   const report = queriedReport ?? (isInitialRange ? initialReport : undefined);
   const officialSales = Number(report?.sales?.official || 0);
@@ -78,31 +92,98 @@ export function WeeklySalesByCityModal({
   const totalSales = Number(report?.summary?.netSales ?? officialSales + internalSales);
   const totalOrders =
     Number(report?.sales?.officialCount || 0) + Number(report?.sales?.internalCount || 0);
-  const officialPct = totalSales > 0 ? Math.round((officialSales / totalSales) * 100) : 0;
-  const internalPct = totalSales > 0 ? Math.round((internalSales / totalSales) * 100) : 0;
   const rows: SalesByCityRow[] = Array.isArray(report?.salesByCity) ? report.salesByCity : [];
+
+  const selectedCityRow = selectedCity ? rows.find((r) => r.city === selectedCity) : undefined;
+  const kpiOfficial = selectedCity
+    ? (cityDetail?.summary.official ?? selectedCityRow?.official ?? 0)
+    : officialSales;
+  const kpiInternal = selectedCity
+    ? (cityDetail?.summary.internal ?? selectedCityRow?.internal ?? 0)
+    : internalSales;
+  const kpiTotal = selectedCity
+    ? (cityDetail?.summary.total ?? selectedCityRow?.total ?? 0)
+    : totalSales;
+  const kpiOrders = selectedCity
+    ? (cityDetail?.summary.count ?? selectedCityRow?.count ?? 0)
+    : totalOrders;
+  const kpiOfficialPct = kpiTotal > 0 ? Math.round((kpiOfficial / kpiTotal) * 100) : 0;
+  const kpiInternalPct = kpiTotal > 0 ? Math.round((kpiInternal / kpiTotal) * 100) : 0;
+
+  const filteredDetailItems = useMemo(() => {
+    const items = cityDetail?.items ?? [];
+    const term = search.trim().toLowerCase();
+    return items.filter((item) => {
+      if (branchFilter !== 'ALL' && item.branch !== branchFilter) return false;
+      if (!term) return true;
+      return (
+        item.clientName.toLowerCase().includes(term) ||
+        item.voucher.toLowerCase().includes(term)
+      );
+    });
+  }, [cityDetail?.items, branchFilter, search]);
+
+  const filteredDetailTotal = useMemo(
+    () => filteredDetailItems.reduce((acc, item) => acc + item.amount, 0),
+    [filteredDetailItems],
+  );
 
   const handleShiftWeek = (delta: number) => {
     setRange((prev) => shiftArWeekRange(prev.startDate, delta));
   };
 
+  const handleSelectCity = (city: string) => {
+    lastCityRef.current = city;
+    setSelectedCity(city);
+    setBranchFilter('ALL');
+    setSearch('');
+    setCopyStatus('idle');
+    window.requestAnimationFrame(() => backButtonRef.current?.focus());
+  };
+
+  const handleBackToCities = () => {
+    const targetCity = lastCityRef.current;
+    setSelectedCity(null);
+    setBranchFilter('ALL');
+    setSearch('');
+    setCopyStatus('idle');
+    if (targetCity) {
+      window.requestAnimationFrame(() => cityButtonRefs.current[targetCity]?.focus());
+    }
+  };
+
   const handleCopyForSheets = async () => {
-    if (rows.length === 0) return;
-    const tsv = buildWeeklySalesTsv(
-      rows.map((row) => ({
-        cityLabel: formatCityLabel(row.city),
-        official: row.official,
-        internal: row.internal,
-        total: row.total,
-        count: row.count,
-      })),
-      {
-        official: officialSales,
-        internal: internalSales,
-        total: totalSales,
-        orders: totalOrders,
-      },
-    );
+    let tsv = '';
+    if (selectedCity) {
+      if (filteredDetailItems.length === 0) return;
+      tsv = buildCitySalesDetailTsv(
+        filteredDetailItems.map((item) => ({
+          dateLabel: formatShortArDate(item.date),
+          clientName: item.clientName,
+          voucher: item.voucher,
+          branch: item.branch,
+          amount: item.amount,
+        })),
+        filteredDetailTotal,
+      );
+    } else {
+      if (rows.length === 0) return;
+      tsv = buildWeeklySalesTsv(
+        rows.map((row) => ({
+          cityLabel: formatCityLabel(row.city),
+          official: row.official,
+          internal: row.internal,
+          total: row.total,
+          count: row.count,
+        })),
+        {
+          official: officialSales,
+          internal: internalSales,
+          total: totalSales,
+          orders: totalOrders,
+        },
+      );
+    }
     if (copyTimerRef.current !== null) {
       window.clearTimeout(copyTimerRef.current);
     }
@@ -124,6 +205,8 @@ export function WeeklySalesByCityModal({
       copyTimerRef.current = null;
     }, 2000);
   };
+
+  const isCopyDisabled = selectedCity ? filteredDetailItems.length === 0 : rows.length === 0;
 
   return (
     <NativeModalDialog
@@ -152,20 +235,45 @@ export function WeeklySalesByCityModal({
             borderBottom: '1px solid var(--border-color, #e5e7eb)',
           }}
         >
-          <h2
-            id="weekly-sales-modal-title"
-            style={{
-              margin: 0,
-              fontSize: '1.05rem',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              letterSpacing: '-0.015em',
-            }}
-          >
-            Ventas por localidad
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            {selectedCity && (
+              <button
+                ref={backButtonRef}
+                type="button"
+                className="btn btn-ghost"
+                aria-label="Volver a localidades"
+                onClick={handleBackToCities}
+                style={{
+                  padding: '5px',
+                  minInlineSize: '30px',
+                  minBlockSize: '30px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                <ArrowLeft size={16} aria-hidden="true" />
+              </button>
+            )}
+            <h2
+              id="weekly-sales-modal-title"
+              style={{
+                margin: 0,
+                fontSize: '1.05rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                letterSpacing: '-0.015em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {selectedCity ? formatCityLabel(selectedCity) : 'Ventas por localidad'}
+            </h2>
+          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <div
               style={{
                 display: 'inline-flex',
@@ -223,10 +331,14 @@ export function WeeklySalesByCityModal({
             <button
               type="button"
               className="btn btn-ghost"
-              aria-label="Copiar ventas por localidad para Google Sheets"
+              aria-label={
+                selectedCity
+                  ? 'Copiar ventas de la localidad para Google Sheets'
+                  : 'Copiar ventas por localidad para Google Sheets'
+              }
               title={copyStatus === 'copied' ? 'Copiado' : copyStatus === 'failed' ? 'No se pudo copiar' : 'Copiar para Google Sheets'}
               onClick={handleCopyForSheets}
-              disabled={rows.length === 0}
+              disabled={isCopyDisabled}
               style={{
                 padding: '6px',
                 minInlineSize: '30px',
@@ -237,11 +349,7 @@ export function WeeklySalesByCityModal({
                 color: copyStatus === 'copied' ? '#16a34a' : copyStatus === 'failed' ? '#dc2626' : 'var(--text-secondary)',
               }}
             >
-              {copyStatus === 'copied' ? (
-                <Check size={16} aria-hidden="true" />
-              ) : (
-                <Copy size={16} aria-hidden="true" />
-              )}
+              {copyStatus === 'copied' ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
             </button>
             <span role="status" className="visually-hidden">
               {copyAnnouncement}
@@ -270,9 +378,9 @@ export function WeeklySalesByCityModal({
           }}
         >
           {[
-            { label: 'Total', value: formatPeso(totalSales), meta: `${totalOrders} ${totalOrders === 1 ? 'pedido' : 'pedidos'}` },
-            { label: 'Sucursal A', value: formatPeso(officialSales), meta: `${officialPct}%` },
-            { label: 'Sucursal X', value: formatPeso(internalSales), meta: `${internalPct}%` },
+            { label: 'Total', value: formatPeso(kpiTotal), meta: `${kpiOrders} ${kpiOrders === 1 ? 'pedido' : 'pedidos'}` },
+            { label: 'Sucursal A', value: formatPeso(kpiOfficial), meta: `${kpiOfficialPct}%` },
+            { label: 'Sucursal X', value: formatPeso(kpiInternal), meta: `${kpiInternalPct}%` },
           ].map((card) => (
             <div
               key={card.label}
@@ -288,13 +396,7 @@ export function WeeklySalesByCityModal({
               </div>
               <div
                 className="tabular-nums"
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  marginTop: '4px',
-                  letterSpacing: '-0.02em',
-                }}
+                style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px', letterSpacing: '-0.02em' }}
               >
                 {card.value}
               </div>
@@ -305,128 +407,34 @@ export function WeeklySalesByCityModal({
           ))}
         </div>
 
-        <div
-          className="table-container table-container--sticky"
-          role="region"
-          aria-label="Ventas por localidad y sucursal"
-          tabIndex={0}
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            border: 'none',
-            borderRadius: 0,
-            opacity: isFetching && !report ? 0.6 : 1,
-          }}
-        >
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-            <thead>
-              <tr>
-                <th scope="col" style={{ textAlign: 'left', padding: '8px 20px' }}>Localidad</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '8px 14px' }}>Sucursal A</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '8px 14px' }}>Sucursal X</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '8px 14px' }}>Total</th>
-                <th scope="col" style={{ textAlign: 'right', padding: '8px 20px' }}>Pedidos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!report && isFetching ? (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
-                    Cargando...
-                  </td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
-                    Sin ventas en este período
-                  </td>
-                </tr>
-              ) : (
-                rows.map((row) => (
-                  <tr key={row.city}>
-                    <th
-                      scope="row"
-                      style={{
-                        textAlign: 'left',
-                        padding: '7px 20px',
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        background: 'transparent',
-                      }}
-                    >
-                      {formatCityLabel(row.city)}
-                    </th>
-                    <td
-                      className="tabular-nums"
-                      style={{
-                        textAlign: 'right',
-                        padding: '7px 14px',
-                        color: row.official !== 0 ? 'var(--text-primary)' : 'var(--text-muted, #94a3b8)',
-                      }}
-                    >
-                      {row.official !== 0 ? formatPeso(row.official) : '—'}
-                    </td>
-                    <td
-                      className="tabular-nums"
-                      style={{
-                        textAlign: 'right',
-                        padding: '7px 14px',
-                        color: row.internal !== 0 ? 'var(--text-primary)' : 'var(--text-muted, #94a3b8)',
-                      }}
-                    >
-                      {row.internal !== 0 ? formatPeso(row.internal) : '—'}
-                    </td>
-                    <td
-                      className="tabular-nums"
-                      style={{
-                        textAlign: 'right',
-                        padding: '7px 14px',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                      }}
-                    >
-                      {formatPeso(row.total)}
-                    </td>
-                    <td
-                      className="tabular-nums"
-                      style={{
-                        textAlign: 'right',
-                        padding: '7px 20px',
-                        color: 'var(--text-secondary)',
-                      }}
-                    >
-                      {row.count}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-            {rows.length > 0 && (
-              <tfoot>
-                <tr style={{ borderTop: '1px solid var(--border-color, #e5e7eb)', backgroundColor: '#f8fafc' }}>
-                  <th
-                    scope="row"
-                    style={{ textAlign: 'left', padding: '9px 20px', fontWeight: 700, color: 'var(--text-primary)' }}
-                  >
-                    Total
-                  </th>
-                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '9px 14px', fontWeight: 700 }}>
-                    {formatPeso(officialSales)}
-                  </td>
-                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '9px 14px', fontWeight: 700 }}>
-                    {formatPeso(internalSales)}
-                  </td>
-                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '9px 14px', fontWeight: 700 }}>
-                    {formatPeso(totalSales)}
-                  </td>
-                  <td className="tabular-nums" style={{ textAlign: 'right', padding: '9px 20px', fontWeight: 700 }}>
-                    {totalOrders}
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
+        {selectedCity ? (
+          <WeeklySalesCityDetailView
+            cityLabel={formatCityLabel(selectedCity)}
+            items={filteredDetailItems}
+            totalAmount={filteredDetailTotal}
+            branchFilter={branchFilter}
+            onBranchFilterChange={setBranchFilter}
+            search={search}
+            onSearchChange={setSearch}
+            isLoading={isFetchingDetail && !cityDetail}
+            isError={isErrorDetail && !cityDetail}
+            onRetry={() => refetchDetail()}
+          />
+        ) : (
+          <WeeklySalesCityListTable
+            rows={rows}
+            isLoading={!report && isFetching}
+            isDimmed={isFetching && !report}
+            officialSales={officialSales}
+            internalSales={internalSales}
+            totalSales={totalSales}
+            totalOrders={totalOrders}
+            onSelectCity={handleSelectCity}
+            registerCityButtonRef={(city, el) => {
+              cityButtonRefs.current[city] = el;
+            }}
+          />
+        )}
       </div>
     </NativeModalDialog>
   );

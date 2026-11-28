@@ -37,6 +37,16 @@ export const getFinancialReportsQuerySchema = z.object({
   }),
 });
 
+export const getCitySalesDetailQuerySchema = z.object({
+  query: z.object({
+    city: z.string().trim().min(1, 'La localidad es obligatoria').max(120, 'Localidad demasiado larga'),
+    year: yearOptional,
+    month: monthOptional,
+    startDate: isoDateOptional,
+    endDate: isoDateOptional,
+  }),
+});
+
 export const getProfitabilityQuerySchema = z.object({
   query: z.object({
     startDate: isoDateOptional,

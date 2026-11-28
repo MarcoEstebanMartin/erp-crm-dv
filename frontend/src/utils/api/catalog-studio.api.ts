@@ -84,8 +84,18 @@ async function downloadPdfEndpoint(endpoint: string, fallbackName: string): Prom
   }
   const blob = await res.blob();
   const disposition = res.headers.get('Content-Disposition') || '';
-  const match = disposition.match(/filename="?([^"]+)"?/i);
-  const filename = match?.[1] || fallbackName;
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;\s]+)/i);
+  const asciiMatch = disposition.match(/filename="?([^";]+)"?/i);
+  let filename = fallbackName;
+  if (utf8Match?.[1]) {
+    try {
+      filename = decodeURIComponent(utf8Match[1]);
+    } catch {
+      filename = asciiMatch?.[1] || fallbackName;
+    }
+  } else if (asciiMatch?.[1]) {
+    filename = asciiMatch[1];
+  }
 
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -130,16 +140,26 @@ export const catalogStudioApi = {
     return res.data?.product || res.product || res;
   },
 
-  downloadMagazinePdf: () =>
-    downloadPdfEndpoint('/catalog-studio/pdf/magazine', 'OFERTA_SEMANAL_DON_VENANCIO.pdf'),
+  downloadMagazinePdf: () => {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    return downloadPdfEndpoint(
+      '/catalog-studio/pdf/magazine',
+      `Catálogo de ofertas - ${dd}-${mm}.pdf`,
+    );
+  },
 
   downloadResumenPdf: (mode: CatalogResumenMode = 'all') => {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
     const fallback =
       mode === 'ofertones'
-        ? 'OFERTONES_DON_VENANCIO.pdf'
+        ? `Ofertones ${dd}-${mm}.pdf`
         : mode === 'destacados'
-          ? 'DESTACADOS_DON_VENANCIO.pdf'
-          : 'RESUMEN_OFERTAS_DON_VENANCIO.pdf';
+          ? `Destacados ${dd}-${mm}.pdf`
+          : `Ofertones y Destacados ${dd}-${mm}.pdf`;
     return downloadPdfEndpoint(`/catalog-studio/pdf/resumen?mode=${mode}`, fallback);
   },
 };

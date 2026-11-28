@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { computeCajaGrandeBalance, computeFilteredMetricsAndLedger, parseCsvAmount, parseMercadoPagoCsv } from '../finanzasHelpers';
-import { buildWeeklySalesTsv } from '../../reports/reportDateHelpers';
+import {
+  buildCitySalesDetailTsv,
+  buildWeeklySalesTsv,
+  formatShortArDate,
+} from '../../reports/reportDateHelpers';
 
 describe('parseCsvAmount', () => {
   it('parses international decimal dot amounts without multiplying by 100', () => {
@@ -183,6 +187,42 @@ describe('buildWeeklySalesTsv', () => {
         'Córdoba\t150000\t200001\t350001\t12',
         'Villa María\t0\t85000\t85000\t4',
         'Total\t150000\t285001\t435001\t16',
+      ].join('\n'),
+    );
+  });
+});
+
+describe('formatShortArDate y buildCitySalesDetailTsv', () => {
+  it('formatea fechas a dd/MM en horario AR y genera TSV limpio incluyendo NC negativas', () => {
+    expect(formatShortArDate('2026-11-26')).toBe('26/11');
+    expect(formatShortArDate('2026-11-26T01:30:00.000Z')).toBe('25/11');
+
+    const tsv = buildCitySalesDetailTsv(
+      [
+        {
+          dateLabel: '26/11',
+          clientName: 'Super\tNorte',
+          voucher: 'FAC A 0005-00001234',
+          branch: 'A',
+          amount: 100000,
+        },
+        {
+          dateLabel: '27/11',
+          clientName: 'Super Norte',
+          voucher: 'NC A 0005-00000045',
+          branch: 'A',
+          amount: -10000,
+        },
+      ],
+      90000,
+    );
+
+    expect(tsv).toBe(
+      [
+        'Fecha\tCliente\tComprobante\tSucursal\tImporte',
+        '26/11\tSuper Norte\tFAC A 0005-00001234\tA\t100000',
+        '27/11\tSuper Norte\tNC A 0005-00000045\tA\t-10000',
+        'Total\t\t\t\t90000',
       ].join('\n'),
     );
   });

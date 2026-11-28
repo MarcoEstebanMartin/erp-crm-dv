@@ -5,7 +5,9 @@ import { roundToIntegerPeso } from '../../core/money';
 import {
   CANONICAL_CATALOG_CATEGORY_ORDER,
   computeMarginPercent,
+  formatCatalogDownloadFilename,
   formatCurrentEditionSubtitle,
+  formatResumenDownloadFilename,
   normalizeCatalogBadge,
   normalizeCatalogCategory,
   type CatalogComboInput,
@@ -370,7 +372,7 @@ export class CatalogStudioService {
   }
 
   static async generateMagazinePdf(): Promise<{ buffer: Buffer; filename: string }> {
-    return this.runSingleFlightPdf('magazine', async () => {
+    const result = await this.runSingleFlightPdf('magazine', async () => {
       const { state, products } = await this.getStudioData();
       const visibleProducts = products.filter((p) => {
         if (!p.isActive || !p.catalogVisible) return false;
@@ -384,12 +386,16 @@ export class CatalogStudioService {
         categoryOrder: state.categoryOrder.length > 0 ? state.categoryOrder : undefined,
       });
 
-      const suffix = sanitizeFilenamePart(state.subtitle || formatCurrentEditionSubtitle());
       return {
         buffer,
-        filename: `OFERTA_SEMANAL_DON_VENANCIO_${suffix}.pdf`,
+        filename: formatCatalogDownloadFilename(),
       };
     });
+
+    return {
+      buffer: result.buffer,
+      filename: formatCatalogDownloadFilename(),
+    };
   }
 
   static async generateResumenPdf(
@@ -403,7 +409,7 @@ export class CatalogStudioService {
         : modeOrOnlyOferton;
 
     const cacheKey = `resumen:${mode}`;
-    return this.runSingleFlightPdf(cacheKey, async () => {
+    const result = await this.runSingleFlightPdf(cacheKey, async () => {
       const { state, products } = await this.getStudioData();
       const visibleProducts = products.filter((p) => {
         if (!p.isActive || !p.catalogVisible) return false;
@@ -417,17 +423,15 @@ export class CatalogStudioService {
         resumenMode: mode,
       });
 
-      const suffix = sanitizeFilenamePart(state.subtitle || formatCurrentEditionSubtitle());
-      const prefix =
-        mode === 'ofertones'
-          ? 'OFERTONES_DON_VENANCIO'
-          : mode === 'destacados'
-            ? 'DESTACADOS_DON_VENANCIO'
-            : 'RESUMEN_OFERTAS_DON_VENANCIO';
       return {
         buffer,
-        filename: `${prefix}_${suffix}.pdf`,
+        filename: formatResumenDownloadFilename(mode),
       };
     });
+
+    return {
+      buffer: result.buffer,
+      filename: formatResumenDownloadFilename(mode),
+    };
   }
 }

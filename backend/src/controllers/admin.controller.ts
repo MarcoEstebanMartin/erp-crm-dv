@@ -30,6 +30,23 @@ export async function getFinancialReports(req: AuthenticatedRequest, res: Respon
   }
 }
 
+export async function getCitySalesDetail(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const { city, year, month, startDate, endDate } = req.query;
+  try {
+    const detail = await adminService.getCitySalesDetail({
+      city: typeof city === 'string' ? city.trim() : '',
+      year: year ? Number(year) : undefined,
+      month: month ? Number(month) : undefined,
+      startDate: typeof startDate === 'string' && startDate.trim() ? startDate.trim() : undefined,
+      endDate: typeof endDate === 'string' && endDate.trim() ? endDate.trim() : undefined,
+    });
+    res.status(200).json({ status: 'success', data: { detail } });
+  } catch (error: any) {
+    console.error('Error al obtener detalle de ventas por localidad:', error);
+    res.status(500).json({ status: 'error', message: 'Error al obtener ventas de la localidad.' });
+  }
+}
+
 export async function getSensitiveEvents(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const days = req.query.days ? Number(req.query.days) : 7;

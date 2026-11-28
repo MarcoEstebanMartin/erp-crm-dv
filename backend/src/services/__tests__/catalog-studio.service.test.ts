@@ -181,11 +181,15 @@ describe('CatalogStudioService', () => {
 
     const mag = await CatalogStudioService.generateMagazinePdf();
     const res = await CatalogStudioService.generateResumenPdf(false);
+    const resOfertones = await CatalogStudioService.generateResumenPdf('ofertones');
+    const resDestacados = await CatalogStudioService.generateResumenPdf('destacados');
 
     expect(mag.buffer.subarray(0, 5).toString('ascii')).toBe('%PDF-');
-    expect(mag.filename).toContain('OFERTA_SEMANAL_DON_VENANCIO_EDICION_25_11');
+    expect(mag.filename).toMatch(/^Catálogo de ofertas - \d{2}-\d{2}\.pdf$/);
     expect(res.buffer.subarray(0, 5).toString('ascii')).toBe('%PDF-');
-    expect(res.filename).toContain('RESUMEN_OFERTAS_DON_VENANCIO_EDICION_25_11');
+    expect(res.filename).toMatch(/^Ofertones y Destacados \d{2}-\d{2}\.pdf$/);
+    expect(resOfertones.filename).toMatch(/^Ofertones \d{2}-\d{2}\.pdf$/);
+    expect(resDestacados.filename).toMatch(/^Destacados \d{2}-\d{2}\.pdf$/);
     expect((prisma.product.findMany as any).mock.calls[0][0]).toMatchObject({
       where: { isActive: true },
     });

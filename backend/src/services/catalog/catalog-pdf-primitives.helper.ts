@@ -345,7 +345,7 @@ export function drawPriceTagBadge(
   const rectW = Math.max(70, priceTextW + 18);
   const rectH = isOferton ? 33 : 28;
   const rectX = rightEdgeX - rectW;
-  const rectY = topY + (hasOld ? 12.5 : 0);
+  const rectY = topY + (hasOld ? 17.2 : 0);
 
   // 1. Subtle drop shadow for main red rectangle
   doc.save();
@@ -372,24 +372,24 @@ export function drawPriceTagBadge(
     });
   doc.restore();
 
-  // 3. Tilted yellow old-price pill overlapping top-right (+10% scale)
+  // 3. Tilted yellow old-price pill overlapping top-right (+30% scale over previous)
   if (hasOld && oldPriceStr) {
-    const oldFontSize = 10.35;
+    const oldFontSize = 13.45;
     doc.font(fonts.price).fontSize(oldFontSize);
     const oldTextW = doc.widthOfString(oldPriceStr);
-    const oldW = Math.max(51, oldTextW + 13.5);
-    const oldH = 17.05;
+    const oldW = Math.max(66, oldTextW + 17.5);
+    const oldH = 22.2;
     const oldX = rectX + rectW - oldW - 1;
-    const oldY = rectY - oldH + 5;
+    const oldY = rectY - oldH + 5.5;
     const oldCx = oldX + oldW / 2;
     const oldCy = oldY + oldH / 2;
 
     doc.save();
     doc.rotate(4.2, { origin: [oldCx, oldCy] });
     doc.fillColor('#0F172A').fillOpacity(0.14);
-    doc.roundedRect(oldX + 0.7, oldY + 1.1, oldW, oldH, 4.2).fill();
+    doc.roundedRect(oldX + 0.9, oldY + 1.4, oldW, oldH, 5.5).fill();
     doc.fillOpacity(1);
-    doc.roundedRect(oldX, oldY, oldW, oldH, 4.2).fill('#FBBF24');
+    doc.roundedRect(oldX, oldY, oldW, oldH, 5.5).fill('#FBBF24');
 
     doc
       .font(fonts.price)
@@ -401,12 +401,13 @@ export function drawPriceTagBadge(
         lineBreak: false,
       });
 
-    const strikePad = Math.max(4.4, (oldW - oldTextW) / 2 - 1.5);
+    const strikePad = Math.max(5.7, (oldW - oldTextW) / 2 - 2);
     doc
       .strokeColor('#DC2626')
-      .lineWidth(1.35)
-      .moveTo(oldX + strikePad, oldCy + 0.3)
-      .lineTo(oldX + oldW - strikePad, oldCy + 0.3)
+      .lineWidth(0.9)
+      .lineCap('round')
+      .moveTo(oldX + strikePad, oldCy + 4.0)
+      .lineTo(oldX + oldW - strikePad, oldCy - 3.6)
       .stroke();
     doc.restore();
   }

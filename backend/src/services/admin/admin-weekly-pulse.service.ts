@@ -3,6 +3,7 @@ import prisma from '../../utils/prisma';
 import { roundToIntegerPeso } from '../../core/money';
 import {
   addDaysIso,
+  buildInitialFixedPurchases,
   buildNormalizedSaleRow,
   computeWeeklyPulseChain,
   DEFAULT_WEEKLY_RESULT_BUFFER,
@@ -19,6 +20,7 @@ import {
 } from './admin-report.helpers';
 import {
   accumulateCitySaleBucket,
+  buildPulseCompanyCatalogs,
   formatIsoAr,
   listWeekStartsBetween,
   parsePurchasesMeta,
@@ -48,6 +50,8 @@ export interface WeeklyPulseResponse {
   purchases: WeeklyPulsePurchaseItem[];
   sales: WeeklyPulseSaleRow[];
   excludedSourceKeys: string[];
+  habitualCompanies: string[];
+  suggestedCompanies: string[];
   history: WeeklyPulseHistoryItem[];
 }
 
@@ -87,7 +91,7 @@ export class AdminWeeklyPulseService {
     const weekStarts = listWeekStartsBetween(chainStart, targetWeekStart);
     const fullRange = parseArgentinaTimestampRange(weekStarts[0], targetWeekEnd);
 
-    const [deliveredOrders, approvedCreditNotes, receivedInvoices, standalonePOs] =
+    const [deliveredOrders, approvedCreditNotes, receivedInvoices, standalonePOs, activeProviders] =
       await Promise.all([
         prisma.order.findMany({
           where: {
@@ -149,6 +153,11 @@ export class AdminWeeklyPulseService {
             persona: { select: { name: true } },
           },
           orderBy: { receivedAt: 'asc' },
+        }),
+        prisma.persona.findMany({
+          where: { isProvider: true, isActive: true },
+          select: { name: true },
+          orderBy: { name: 'asc' },
         }),
       ]);
 
@@ -238,7 +247,11 @@ export class AdminWeeklyPulseService {
         date: m.date,
         amount: m.amount,
       }));
-      const purchases = [...autoPurchases, ...manualPurchases];
+      const basePurchases = [...autoPurchases, ...manualPurchases];
+      const shouldSeedFixed = wk === targetWeekStart && !saved?.purchasesMeta.fixedInitialized;
+      const purchases = shouldSeedFixed
+        ? [...basePurchases, ...buildInitialFixedPurchases(wk, basePurchases)]
+        : basePurchases;
 
       const cityMap = autoSalesByWeek.get(wk);
       const autoSales: WeeklyPulseSaleRow[] = cityMap
@@ -303,6 +316,16 @@ export class AdminWeeklyPulseService {
         status: item.summary.status,
       }));
 
+    const historicalManualNames = savedReports.flatMap((rep) =>
+      parsePurchasesMeta(rep.purchases).manualItems.map((m) => m.company),
+    );
+    const historicalInvoiceNames = receivedInvoices.map((inv) => inv.persona.name);
+    const { habitualCompanies, suggestedCompanies } = buildPulseCompanyCatalogs({
+      providerNames: activeProviders.map((p) => p.name),
+      historicalManualNames,
+      historicalInvoiceNames,
+    });
+
     return {
       weekStart: targetWeekStart,
       weekEnd: targetWeekEnd,
@@ -312,6 +335,8 @@ export class AdminWeeklyPulseService {
       purchases: targetDetails.purchases,
       sales: targetDetails.sales,
       excludedSourceKeys: targetDetails.excludedSourceKeys,
+      habitualCompanies,
+      suggestedCompanies,
       history,
     };
   }
@@ -333,6 +358,7 @@ export class AdminWeeklyPulseService {
       })),
       excludedSourceKeys: Array.from(new Set(payload.excludedSourceKeys)),
       manualOpeningCredit,
+      fixedInitialized: true,
     };
 
     const salesMeta: StoredSalesMeta = {

@@ -118,7 +118,7 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: data.isSeller && !data.isClient ? '1fr 1fr' : '1fr', gap: '12px' }}>
+      {Boolean(data.isClient) && (
         <div className="form-group" style={{ marginBottom: 0 }}>
           <label htmlFor="client-delivery-route" style={LABEL_STYLE}>Ruta de reparto</label>
           <select
@@ -134,25 +134,7 @@ export const ClientLocationCommercialCard: React.FC<ClientLocationCommercialCard
             ))}
           </select>
         </div>
-
-        {data.isSeller && !data.isClient && (
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="seller-sale-route" style={LABEL_STYLE}>Ruta de preventa</label>
-            <select
-              id="seller-sale-route"
-              className="select"
-              value={data.saleRouteId || ''}
-              onChange={(e) => handleSaleRouteChange(e.target.value)}
-              style={SELECT_STYLE}
-            >
-              <option value="">Sin ruta</option>
-              {availableSaleRoutes.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
+      )}
 
       <ClientGpsPickerSection data={data} onChangeData={onChangeData} />
 

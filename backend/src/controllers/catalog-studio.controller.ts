@@ -42,11 +42,21 @@ export const patchCatalogProduct = async (req: Request, res: Response): Promise<
   }
 };
 
+function buildPdfContentDisposition(filename: string): string {
+  const asciiFallback = filename
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/["\\]/g, '');
+  const encoded = encodeURIComponent(filename);
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
+}
+
 export const downloadMagazinePdf = async (_req: Request, res: Response): Promise<void> => {
   try {
     const { buffer, filename } = await CatalogStudioService.generateMagazinePdf();
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', buildPdfContentDisposition(filename));
     res.setHeader('Cache-Control', 'no-store');
     res.send(buffer);
   } catch (error) {
@@ -66,7 +76,7 @@ export const downloadResumenPdf = async (req: Request, res: Response): Promise<v
           : 'all';
     const { buffer, filename } = await CatalogStudioService.generateResumenPdf(mode);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', buildPdfContentDisposition(filename));
     res.setHeader('Cache-Control', 'no-store');
     res.send(buffer);
   } catch (error) {

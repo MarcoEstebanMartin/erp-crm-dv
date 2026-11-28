@@ -55,6 +55,8 @@ export interface WeeklyPulseData {
   purchases: WeeklyPulsePurchaseItem[];
   sales: WeeklyPulseSaleRow[];
   excludedSourceKeys: string[];
+  habitualCompanies?: string[];
+  suggestedCompanies?: string[];
   history: WeeklyPulseHistoryItem[];
 }
 
@@ -71,6 +73,17 @@ export function formatPeso(value: number): string {
   const rounded = Math.round(value || 0);
   const absStr = Math.abs(rounded).toLocaleString('es-AR');
   return rounded < 0 ? `-$${absStr}` : `$${absStr}`;
+}
+
+export function normalizePulseCompanyKey(name: string): string {
+  return name.trim().toUpperCase().replace(/\s+/g, ' ');
+}
+
+export function parseArIntegerInput(raw: string): number | null {
+  const cleaned = raw.trim().replace(/\$/g, '').replace(/\./g, '').replace(',', '.');
+  if (!cleaned) return 0;
+  const num = Number(cleaned);
+  return Number.isFinite(num) ? Math.round(num) : null;
 }
 
 export function formatShortArDate(iso: string): string {
