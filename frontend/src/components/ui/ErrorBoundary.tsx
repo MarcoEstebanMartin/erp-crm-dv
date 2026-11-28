@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { isDynamicImportError, tryRecoverFromChunkError } from '../../utils/chunkReloadGuard';
 
 interface Props {
   children?: ReactNode;
@@ -24,6 +25,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error captured by ErrorBoundary:', error, errorInfo);
+    if (isDynamicImportError(error)) {
+      tryRecoverFromChunkError();
+    }
   }
 
   private handleReload = () => {
@@ -76,11 +80,15 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 8px 0', color: '#0f172a' }}>
-              Algo no salió como esperábamos
+              {isDynamicImportError(this.state.error)
+                ? 'Hay una actualización disponible'
+                : 'Algo no salió como esperábamos'}
             </h2>
 
             <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.5', margin: '0 0 24px 0' }}>
-              Se produjo un error inesperado al renderizar esta vista. Podés intentar recargar la página o volver al menú principal.
+              {isDynamicImportError(this.state.error)
+                ? 'Se publicó una versión nueva del sistema. Recargá la página para continuar.'
+                : 'Se produjo un error inesperado al renderizar esta vista. Podés intentar recargar la página o volver al menú principal.'}
             </p>
 
             {this.state.error && (

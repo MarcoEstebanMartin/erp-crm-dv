@@ -9,8 +9,10 @@ import { ConfirmProvider } from './context/ConfirmContext.tsx'
 
 import { ErrorBoundary } from './components/ui/ErrorBoundary.tsx'
 import { registerPwaServiceWorker } from './utils/registerPwa.ts'
+import { installChunkReloadListener } from './utils/chunkReloadGuard.ts'
 
 registerPwaServiceWorker();
+installChunkReloadListener();
 
 if (typeof document !== 'undefined') {
   const blockPinch = (e: Event) => e.preventDefault();
