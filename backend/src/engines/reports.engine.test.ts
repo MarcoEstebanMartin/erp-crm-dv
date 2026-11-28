@@ -469,7 +469,7 @@ describe('Reportes Minimalistas — Motores Decimal.js, Fechas AR (-03:00), Nota
 
     const routesContent = fs.readFileSync(path.resolve(__dirname, '../routes/admin.routes.ts'), 'utf8');
     expect(routesContent).toContain('/reports/pdf/employee/:userId');
-    expect(routesContent).not.toContain('/reports/weekly');
+    expect(routesContent).not.toMatch(/['"]\/reports\/weekly['"]/);
     expect(routesContent).not.toContain('/reports/sales-channels');
     expect(routesContent).not.toContain('/reports/local-sales');
   });

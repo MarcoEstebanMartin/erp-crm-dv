@@ -1,61 +1,16 @@
 import { MapPin, X } from 'lucide-react';
 import { NativeModalDialog } from '../modals/NativeModalDialog';
-import { classifyDrawerHistoryRow } from './drawerHistoryHelpers';
+import {
+  classifyDrawerHistoryRow,
+  formatCompactTxDetail,
+  formatPaymentMethodLabel,
+} from './drawerHistoryHelpers';
 
 interface InspectDrawerModalProps {
   inspectDrawer: any | null;
   inspectTxs: any[];
   loadingTxs: boolean;
   onClose: () => void;
-}
-
-function formatCompactTxDetail(t: any): { short: string; full: string; receiptUrl: string | null } {
-  const rawDesc = typeof t.description === 'string' ? t.description.trim() : '';
-  const isClientReceipt = t.type === 'INCOME' && Boolean(t.personaId || t.persona?.id);
-
-  if (isClientReceipt) {
-    const code = t.receiptNumber || `REC-${String(t.id).padStart(5, '0')}`;
-    const receiptUrl = t.verificationCode
-      ? `/recibo/${t.id}?v=${encodeURIComponent(t.verificationCode)}`
-      : `/recibo/${t.id}`;
-    return {
-      short: code,
-      full: rawDesc ? `${code} · ${rawDesc}` : code,
-      receiptUrl,
-    };
-  }
-
-  if (t.receiptNumber) {
-    return {
-      short: t.receiptNumber,
-      full: rawDesc ? `${t.receiptNumber} · ${rawDesc}` : t.receiptNumber,
-      receiptUrl: null,
-    };
-  }
-  if (t.orderId) {
-    return {
-      short: `Pedido #${t.orderId}`,
-      full: rawDesc || `Pedido #${t.orderId}`,
-      receiptUrl: null,
-    };
-  }
-  if (!rawDesc) {
-    return { short: 'Movimiento interno', full: 'Movimiento interno', receiptUrl: null };
-  }
-
-  const compact = rawDesc
-    .replace(/^(Cobro|Pago)\s+de\s+/i, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-
-  return { short: compact || rawDesc, full: rawDesc, receiptUrl: null };
-}
-
-function formatPaymentMethodLabel(method: string): string {
-  if (method === 'CASH') return 'Efectivo';
-  if (method === 'CHECK') return 'Cheque';
-  if (method === 'BANK_TRANSFER') return 'Transf.';
-  return method;
 }
 
 export default function InspectDrawerModal({
