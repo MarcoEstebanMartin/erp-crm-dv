@@ -14,6 +14,7 @@ interface FulfillmentStageFilterBarProps {
   pendingCaeCount: number;
   selectedPendingCount: number;
   onPrintBatchA4: () => void;
+  onPrintConsolidatedBilled: () => void;
 }
 
 /**
@@ -29,6 +30,7 @@ export function FulfillmentStageFilterBar({
   pendingCaeCount,
   selectedPendingCount,
   onPrintBatchA4,
+  onPrintConsolidatedBilled,
 }: FulfillmentStageFilterBarProps) {
   const stageTabs: Array<{
     key: FulfillmentListStageFilter;
@@ -145,6 +147,32 @@ export function FulfillmentStageFilterBar({
                 }}
               >
                 <Printer size={14} aria-hidden="true" />
+              </button>
+            )}
+            {tab.key === 'BILLED' && billedCount > 0 && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onPrintConsolidatedBilled}
+                title="Imprimir consolidado de mercadería facturada"
+                aria-label="Imprimir consolidado de mercadería facturada"
+                style={{
+                  flex: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  height: '30px',
+                  padding: '0 10px',
+                  borderRadius: '6px',
+                  fontSize: '0.76rem',
+                  fontWeight: 600,
+                  backgroundColor: '#FFFFFF',
+                  borderColor: '#D1D5DB',
+                  color: '#111827',
+                }}
+              >
+                <Printer size={13} aria-hidden="true" />
+                Consolidado
               </button>
             )}
           </Fragment>

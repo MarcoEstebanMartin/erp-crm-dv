@@ -68,6 +68,7 @@ export default function FulfillmentDashboard() {
           onToggleSelectPreparing={f.toggleSelectPreparing}
           onToggleSelectAllPreparing={f.toggleSelectAllPreparing}
           onPrintBatchA4={f.handlePrintBatchA4}
+          onPrintConsolidatedBilled={f.handlePrintConsolidatedBilled}
           onPrintPickingList={f.handlePrintSinglePicking}
           onPrintLabels={f.handlePrintLabels}
           onOpenFulfillmentModal={f.setFulfillmentModalOrder}
@@ -282,6 +283,28 @@ export default function FulfillmentDashboard() {
                   </span>
                 )}
               </h3>
+              {f.billedOrPendingCae.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '0.72rem',
+                    height: '24px',
+                    borderRadius: '5px',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  onClick={f.handlePrintConsolidatedBilled}
+                  title="Imprimir consolidado de mercadería facturada"
+                  aria-label="Imprimir consolidado de mercadería facturada"
+                >
+                  <Printer size={12} aria-hidden="true" />
+                  Consolidado
+                </button>
+              )}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flexGrow: 1, paddingRight: '2px' }}>

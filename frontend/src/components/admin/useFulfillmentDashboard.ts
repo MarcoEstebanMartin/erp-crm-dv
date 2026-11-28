@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../utils/api';
 import {
   printBatchPickingA4,
+  printConsolidatedBilledA4,
   printConsolidatedPickingA4,
   printPickingList,
   printShippingLabelsBultos,
@@ -334,6 +335,26 @@ export function useFulfillmentDashboard() {
     });
   };
 
+  const handlePrintConsolidatedBilled = () => {
+    if (billedOrPendingCae.length === 0) {
+      showConfirm({
+        title: 'Sin Facturados',
+        message: 'No hay pedidos facturados que coincidan con los filtros.',
+        isAlert: true,
+        confirmText: 'Entendido',
+        type: 'info',
+        onConfirm: () => {},
+      });
+      return;
+    }
+
+    printConsolidatedBilledA4({
+      orders: billedOrPendingCae,
+      zone: selectedZone,
+      filterLabel: getFilterLabel(),
+    });
+  };
+
   const handlePrintLabels = (singleOrder?: any) => {
     const ordersToPrint = singleOrder ? [singleOrder] : getOrdersForBatchAction();
     if (ordersToPrint.length === 0) {
@@ -393,6 +414,7 @@ export function useFulfillmentDashboard() {
     handlePrintSinglePicking,
     handlePrintBatchA4,
     handlePrintConsolidated,
+    handlePrintConsolidatedBilled,
     handlePrintLabels,
   };
 }

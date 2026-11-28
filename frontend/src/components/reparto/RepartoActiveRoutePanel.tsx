@@ -1,6 +1,6 @@
 import { useState, type FC, type Dispatch, type SetStateAction } from 'react';
 import { Navigation, CheckCircle, Play, Map, Printer, Pencil, ChevronUp, ChevronDown, Banknote, Route } from 'lucide-react';
-import { printDeliveryRouteCustodyGuide } from '../../utils/printHelpers';
+import { printConsolidatedBilledA4, printDeliveryRouteCustodyGuide } from '../../utils/printHelpers';
 import { api } from '../../utils/api';
 import { printCompletedRouteReprintTicket } from '../../utils/print/printHandoverTicket80mm';
 import { RouteMap } from './LeafletRouteMap';
@@ -95,6 +95,29 @@ export const RepartoActiveRoutePanel: FC<RepartoActiveRoutePanelProps> = ({
               onClick={() => printCompletedRouteReprintTicket(selectedRoute, api.getCurrentUser()?.username || 'Caja / Administración')}
             >
               <Printer size={12} aria-hidden="true" /> Ticket 80mm
+            </button>
+          )}
+          {(selectedRoute.orders || []).length > 0 && (
+            <button
+              type="button"
+              className="btn btn-secondary no-print"
+              style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              title="Imprimir consolidado de mercadería facturada del viaje"
+              aria-label="Imprimir consolidado de mercadería facturada del viaje"
+              onClick={() =>
+                printConsolidatedBilledA4({
+                  orders: selectedRoute.orders || [],
+                  filterLabel: selectedRoute.routeName || `Viaje #${selectedRoute.id}`,
+                  tripMeta: {
+                    routeId: selectedRoute.id,
+                    driverName: selectedRoute.driverName,
+                    companionName: selectedRoute.companionName,
+                    vehiclePlate: selectedRoute.vehiclePlate,
+                  },
+                })
+              }
+            >
+              <Printer size={12} aria-hidden="true" /> Consolidado
             </button>
           )}
           <button type="button" className="btn btn-secondary no-print" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }} onClick={() => printDeliveryRouteCustodyGuide(selectedRoute)}>

@@ -77,7 +77,15 @@ export const deliveryRouteService = {
           orderBy: [{ deliverySequence: 'asc' }, { id: 'asc' }],
           include: {
             persona: { select: SAFE_PERSONA_SELECT },
-            items: { include: { product: true } },
+            items: {
+              include: {
+                product: {
+                  include: {
+                    rubro: { select: { pickingZone: true } },
+                  },
+                },
+              },
+            },
           },
         },
         fieldReceipts: {
