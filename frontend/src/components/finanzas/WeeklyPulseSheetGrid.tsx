@@ -128,14 +128,14 @@ export function WeeklyPulseSheetGrid({
             </th>
           </tr>
           <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #cbd5e1', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>
-            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, width: '215px', borderRight: CELL_BORDER }}>EMPRESAS</th>
-            <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600, width: '62px', borderRight: CELL_BORDER }}>FECHA</th>
-            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '118px', borderRight: '2px solid #cbd5e1' }}>$</th>
-            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, width: '215px', borderRight: CELL_BORDER }}>LOCALIDADES</th>
-            <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600, width: '62px', borderRight: CELL_BORDER }}>FECHA</th>
-            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '108px', borderRight: CELL_BORDER }}>IMPORTE A</th>
-            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '108px', borderRight: CELL_BORDER }}>IMPORTE X</th>
-            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '112px' }}>TOTAL</th>
+            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, width: '245px', borderRight: CELL_BORDER }}>EMPRESAS</th>
+            <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600, width: '64px', borderRight: CELL_BORDER }}>FECHA</th>
+            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '121px', borderRight: '2px solid #cbd5e1' }}>$</th>
+            <th style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 600, width: '250px', borderRight: CELL_BORDER }}>LOCALIDADES</th>
+            <th style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 600, width: '64px', borderRight: CELL_BORDER }}>FECHA</th>
+            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '110px', borderRight: CELL_BORDER }}>IMPORTE A</th>
+            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '110px', borderRight: CELL_BORDER }}>IMPORTE X</th>
+            <th style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, width: '116px' }}>TOTAL</th>
           </tr>
         </thead>
 

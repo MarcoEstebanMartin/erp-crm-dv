@@ -82,7 +82,7 @@ export default function WeeklyPulseTab() {
   const isCurrentWeek = weekStart === currentMonday;
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '1000px' }}>
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '1080px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', backgroundColor: '#fff', border: CELL_BORDER, borderRadius: '6px', padding: '2px' }}>
