@@ -13,6 +13,12 @@ const prisma = new PrismaClient();
 const CLIENT_ALIASES = {
   'POLLERIA LA PINY (CICLON)': 'POLLERIA EL PINY (CICLON)',
   'LORENA DIDLAUKIS (CENTRO 2)': 'LORENA DIDLAUKIS',
+  'ROJAS AGUSTIN ( HOSPITAL )': 'ROJAS AGUSTIN',
+};
+
+// Mapeo explícito de productos conocidos con variación abreviada entre Iduo y Kilate
+const PRODUCT_ALIASES = {
+  'CUMANA SARDINAS AC. X125GR': 'CUMANA SARDINAS ACEITE Y AGUA X125GR',
 };
 
 // Mapeo de vendedores de Iduo a username en Kilate
@@ -97,17 +103,17 @@ function parseArDateNoon(ddmmyyyy) {
 
 function tokenizeProduct(s) {
   const clean = normText(s)
+    .replace(/(\d)([A-Z])/g, '$1 $2')
+    .replace(/([A-Z])(\d)/g, '$1 $2')
     .replace(/\bYOGURT\b/g, 'YOGUR')
     .replace(/\bS\/AZUCAR\b/g, 'SIN AZUCAR')
     .replace(/\bC\/([A-Z])/g, 'CON $1')
     .replace(/\bA\/FACIL\b/g, 'ABRE FACIL')
-    .replace(/\bGR\.?\b/g, 'GR')
-    .replace(/\bML\.?\b/g, 'ML')
-    .replace(/\bCC\.?\b/g, 'ML')
-    .replace(/\bLT\.?\b/g, 'LT')
-    .replace(/\bKG\.?\b/g, 'KG')
-    .replace(/(\d)([A-Z])/g, '$1 $2')
-    .replace(/([A-Z])(\d)/g, '$1 $2')
+    .replace(/\bGR(?:\.|\b)/g, 'GR')
+    .replace(/\bML(?:\.|\b)/g, 'ML')
+    .replace(/\bCC(?:\.|\b)/g, 'ML')
+    .replace(/\bLT(?:\.|\b)/g, 'LT')
+    .replace(/\bKG(?:\.|\b)/g, 'KG')
     .replace(/[^A-Z0-9.]+/g, ' ')
     .trim();
   const stop = new Set(['X', 'DE', 'EN', 'CON', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'A', 'POR', '1']);
@@ -370,10 +376,15 @@ async function main() {
       }
     }
 
-    // 2. Nombre normalizado exacto
+    // 2. Nombre normalizado exacto o alias explícito
     const n = normText(prodName);
     if (prodByName.has(n)) {
       const res = { db: prodByName.get(n), by: 'NAME_EXACT', score: 1 };
+      productMatchCache.set(cacheKey, res);
+      return res;
+    }
+    if (PRODUCT_ALIASES[n] && prodByName.has(PRODUCT_ALIASES[n])) {
+      const res = { db: prodByName.get(PRODUCT_ALIASES[n]), by: 'ALIAS', score: 1 };
       productMatchCache.set(cacheKey, res);
       return res;
     }
@@ -451,7 +462,7 @@ async function main() {
     for (const it of doc.items) {
       const prRes = matchProduct(it.prodName, it.codeRaw);
       if (!prRes.db) {
-        const pk = `${it.codeRaw}|${it.prodName}`;
+        const pk = `${it.codeRaw}|${normText(it.prodName)}`;
         if (!missingProducts.has(pk)) {
           missingProducts.set(pk, {
             prodName: it.prodName,
@@ -583,7 +594,10 @@ async function main() {
       console.log(`+ Cliente creado: [${created.id}] ${created.name}`);
     }
 
-    let histSeq = 1;
+    let histSeq = products.reduce((max, pr) => {
+      const m = String(pr.sku || '').match(/^HIST-(\d+)$/);
+      return m ? Math.max(max, Number(m[1])) : max;
+    }, 0) + 1;
     for (const p of sortedMissingProds) {
       const sku = `HIST-${String(histSeq++).padStart(4, '0')}`;
       const created = await prisma.product.create({
