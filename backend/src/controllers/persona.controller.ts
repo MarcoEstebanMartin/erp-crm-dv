@@ -219,8 +219,14 @@ export async function getDebtorsReport(req: AuthenticatedRequest, res: Response)
     return;
   }
 
+  const rawAsOfDate = typeof req.query.asOfDate === 'string' ? req.query.asOfDate.trim() : '';
+  if (rawAsOfDate && !/^\d{4}-\d{2}-\d{2}$/.test(rawAsOfDate)) {
+    res.status(400).json({ status: 'error', message: 'Fecha de corte inválida (formato YYYY-MM-DD).' });
+    return;
+  }
+
   try {
-    const result = await personaService.getDebtorsReport(userId, userRole);
+    const result = await personaService.getDebtorsReport(userId, userRole, rawAsOfDate || undefined);
     res.status(200).json({ status: 'success', data: result });
   } catch (error: any) {
     res.status(500).json({ status: 'error', message: 'Error al obtener el reporte de deudores.' });

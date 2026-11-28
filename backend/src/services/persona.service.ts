@@ -357,8 +357,8 @@ export class PersonaService {
     personaLedgerSubService.getPersonaPendingInvoicesSummary(id, userId, userRole);
   getPersonaPendingInvoicesCount = (id: number, dbClient?: any) =>
     personaDebtorsSubService.getPersonaPendingInvoicesCount(id, dbClient);
-  getDebtorsReport = (userId: number, userRole: string) =>
-    personaDebtorsSubService.getDebtorsReport(userId, userRole);
+  getDebtorsReport = (userId: number, userRole: string, asOfDate?: string) =>
+    personaDebtorsSubService.getDebtorsReport(userId, userRole, asOfDate);
   getSellers = () => personaSellersSubService.getSellers();
   getSellerProfileStats = (sellerIdParam: number) =>
     personaSellersSubService.getSellerProfileStats(sellerIdParam);

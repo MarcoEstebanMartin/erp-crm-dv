@@ -12,17 +12,33 @@ interface DebtorsByCityReportViewProps {
   setSelectedSellerFilter: (s: string) => void;
   selectedBranchFilter: string;
   setSelectedBranchFilter: (b: string) => void;
+  asOfDate?: string;
+  setAsOfDate?: (date: string) => void;
+  loading?: boolean;
   setShowResumenModal: (client: any) => void;
   setPaymentModal: (modal: any) => void;
   canViewTotals?: boolean;
 }
 
+function getLocalIsoDate(offsetDays: number = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = ({
   debtorsReport, availableCities, selectedCities, setSelectedCities,
   availableSellers, selectedSellerFilter, setSelectedSellerFilter,
-  selectedBranchFilter, setSelectedBranchFilter, setShowResumenModal, setPaymentModal,
+  selectedBranchFilter, setSelectedBranchFilter,
+  asOfDate = '', setAsOfDate, loading = false,
+  setShowResumenModal, setPaymentModal,
   canViewTotals = true,
 }) => {
+  const todayIso = getLocalIsoDate(0);
+  const yesterdayIso = getLocalIsoDate(-1);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [followUpFilter, setFollowUpFilter] = useState<'ALL' | 'FOLLOW_UP'>('ALL');
@@ -168,6 +184,36 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
             <option value="FOLLOW_UP">A reclamar ({followUpCount})</option>
           </select>
         </div>
+
+        {setAsOfDate && (
+          <div style={{ flex: '1 1 215px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label htmlFor="debtors-asof-date" style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Hasta</label>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <input
+                id="debtors-asof-date"
+                type="date"
+                className="input"
+                max={todayIso}
+                value={asOfDate || todayIso}
+                disabled={loading}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setAsOfDate(!val || val >= todayIso ? '' : val);
+                }}
+                style={{ padding: '7px 10px', flex: 1, minWidth: '132px' }}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary"
+                disabled={loading}
+                onClick={() => setAsOfDate(asOfDate ? '' : yesterdayIso)}
+                style={{ padding: '7px 10px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+              >
+                {asOfDate ? 'Hoy' : 'Ayer'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {filteredDebtors.length === 0 ? (
@@ -307,6 +353,7 @@ export const DebtorsByCityReportView: React.FC<DebtorsByCityReportViewProps> = (
         groups={groups}
         sellerLabel={sellerLabel}
         selectedBranchFilter={selectedBranchFilter}
+        asOfDate={asOfDate}
       />
     </>
   );

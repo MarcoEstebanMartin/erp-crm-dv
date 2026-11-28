@@ -48,6 +48,8 @@ export default function ClientsTab({
   const [isGpsMapOpen, setIsGpsMapOpen] = useState(false);
 
   const [debtorsReport, setDebtorsReport] = useState<any[]>([]);
+  const [debtorsAsOfDate, setDebtorsAsOfDate] = useState<string>('');
+  const [debtorsLoading, setDebtorsLoading] = useState<boolean>(false);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedSellerFilter, setSelectedSellerFilter] = useState<string>('ALL');
@@ -63,24 +65,29 @@ export default function ClientsTab({
     const loadTabContent = async () => {
       try {
         if (personaRoleFilter === 'debtors_by_city') {
-          const report = await api.getDebtorsReport();
+          setDebtorsLoading(true);
+          const report = await api.getDebtorsReport(debtorsAsOfDate || undefined);
           if (!isCurrent) return;
           setDebtorsReport(report.debtors || []);
           const sortedCities = ([...(report.availableCities || [])] as string[]).sort();
           setAvailableCities(sortedCities);
-          setSelectedCities(sortedCities);
+          setSelectedCities((prev) => (prev.length > 0 ? prev : sortedCities));
+          setDebtorsLoading(false);
         } else {
           const data = await api.getPersonas(personaRoleFilter);
           if (!isCurrent) return;
           setRolePersonas(data || []);
         }
       } catch (err) {
-        if (isCurrent) console.error('Error loading clients tab data:', err);
+        if (isCurrent) {
+          setDebtorsLoading(false);
+          console.error('Error loading clients tab data:', err);
+        }
       }
     };
     void loadTabContent();
     return () => { isCurrent = false; };
-  }, [personaRoleFilter, clientsVersion]);
+  }, [personaRoleFilter, clientsVersion, debtorsAsOfDate]);
 
   useEffect(() => {
     setSelectedCityFilter('ALL');
@@ -219,6 +226,7 @@ export default function ClientsTab({
             debtorsReport={debtorsReport} availableCities={availableCities} selectedCities={selectedCities} setSelectedCities={setSelectedCities}
             availableSellers={availableSellers} selectedSellerFilter={selectedSellerFilter} setSelectedSellerFilter={setSelectedSellerFilter}
             selectedBranchFilter={selectedBranchFilter} setSelectedBranchFilter={setSelectedBranchFilter}
+            asOfDate={debtorsAsOfDate} setAsOfDate={setDebtorsAsOfDate} loading={debtorsLoading}
             setShowResumenModal={setShowResumenModal} setPaymentModal={setPaymentModal}
             canViewTotals={isAdmin}
           />

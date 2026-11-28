@@ -14,8 +14,9 @@ export const personasApi = {
     return res.personas;
   },
 
-  getDebtorsReport: async () => {
-    const res = await request('/personas/debtors-report');
+  getDebtorsReport: async (asOfDate?: string) => {
+    const query = asOfDate ? `?asOfDate=${encodeURIComponent(asOfDate)}` : '';
+    const res = await request(`/personas/debtors-report${query}`);
     return res;
   },
 

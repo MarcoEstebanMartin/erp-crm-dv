@@ -5,6 +5,15 @@ interface DebtorsPrintSheetProps {
   groups: Record<string, any[]>;
   sellerLabel: string;
   selectedBranchFilter?: string;
+  asOfDate?: string;
+}
+
+function formatAsOfPrintLabel(asOfDate?: string): string {
+  if (!asOfDate || !/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)) {
+    return new Date().toLocaleDateString('es-AR');
+  }
+  const [y, m, d] = asOfDate.split('-');
+  return `Al ${Number(d)}/${Number(m)}/${y}`;
 }
 
 const getBranchPrintMeta = (d: any, amountKey: 'debtA' | 'debtX') => {
@@ -83,6 +92,7 @@ export const DebtorsPrintSheet: React.FC<DebtorsPrintSheetProps> = ({
   groups,
   sellerLabel,
   selectedBranchFilter = 'ALL',
+  asOfDate,
 }) => {
   if (filteredDebtors.length === 0) return null;
 
@@ -135,7 +145,7 @@ export const DebtorsPrintSheet: React.FC<DebtorsPrintSheetProps> = ({
           )}
         </div>
         <div className="tabular-nums" style={{ textAlign: 'right', fontSize: '0.78rem', color: '#334155', whiteSpace: 'nowrap' }}>
-          {new Date().toLocaleDateString('es-AR')}
+          {formatAsOfPrintLabel(asOfDate)}
         </div>
       </div>
 

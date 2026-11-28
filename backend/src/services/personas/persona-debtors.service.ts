@@ -37,6 +37,12 @@ function resolveCity(
   return 'OTRAS';
 }
 
+function parseAsOfCutoffDate(asOfDate?: string): Date | null {
+  if (!asOfDate || !/^\d{4}-\d{2}-\d{2}$/.test(asOfDate)) return null;
+  const parsed = new Date(`${asOfDate}T23:59:59.999-03:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export class PersonaDebtorsSubService {
   /**
    * Calcula métricas FIFO (boletas impagas y deuda discriminada A/X) en paralelo con agregaciones SQL.
@@ -45,6 +51,7 @@ export class PersonaDebtorsSubService {
   async getDebtMetricsByPersonaIds(
     personas: Array<{ id: number; outstandingBalance: any }>,
     dbClient: any = prisma,
+    cutoffDate: Date | null = null,
   ): Promise<Map<number, DebtorFifoMetrics>> {
     const activeDebtors = personas.filter((p) =>
       toDecimal(p.outstandingBalance?.toString() ?? 0).gt(0),
@@ -54,10 +61,22 @@ export class PersonaDebtorsSubService {
     }
 
     const debtorIds = activeDebtors.map((p) => p.id);
+    const createdAtFilter = cutoffDate ? { lte: cutoffDate } : undefined;
 
     const [deliveredOrders, unallocatedTx, unallocatedCn, openingLedger] = await Promise.all([
       dbClient.order.findMany({
-        where: { personaId: { in: debtorIds }, status: OrderStatus.DELIVERED },
+        where: {
+          personaId: { in: debtorIds },
+          status: OrderStatus.DELIVERED,
+          ...(cutoffDate
+            ? {
+                OR: [
+                  { deliveredAt: { lte: cutoffDate } },
+                  { deliveredAt: null, createdAt: { lte: cutoffDate } },
+                ],
+              }
+            : {}),
+        },
         select: {
           id: true,
           personaId: true,
@@ -72,7 +91,13 @@ export class PersonaDebtorsSubService {
       }),
       dbClient.transaction.groupBy({
         by: ['personaId', 'billingType'],
-        where: { personaId: { in: debtorIds }, orderId: null, type: TransactionType.INCOME, voidedAt: null },
+        where: {
+          personaId: { in: debtorIds },
+          orderId: null,
+          type: TransactionType.INCOME,
+          voidedAt: null,
+          ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+        },
         _sum: { amount: true },
       }),
       dbClient.creditNote.groupBy({
@@ -81,6 +106,7 @@ export class PersonaDebtorsSubService {
           personaId: { in: debtorIds },
           orderId: null,
           status: CreditNoteStatus.APPROVED,
+          ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
           OR: [
             { comments: null },
             { NOT: { comments: { startsWith: 'Importado historial Iduo' } } },
@@ -94,6 +120,7 @@ export class PersonaDebtorsSubService {
             where: {
               personaId: { in: debtorIds },
               sourceType: LedgerSourceType.OPENING_BALANCE,
+              ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
             },
             _sum: { amount: true },
           })
@@ -106,12 +133,21 @@ export class PersonaDebtorsSubService {
         ? await Promise.all([
             dbClient.transaction.groupBy({
               by: ['orderId'],
-              where: { orderId: { in: orderIds }, type: TransactionType.INCOME, voidedAt: null },
+              where: {
+                orderId: { in: orderIds },
+                type: TransactionType.INCOME,
+                voidedAt: null,
+                ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+              },
               _sum: { amount: true },
             }),
             dbClient.creditNote.groupBy({
               by: ['orderId'],
-              where: { orderId: { in: orderIds }, status: CreditNoteStatus.APPROVED },
+              where: {
+                orderId: { in: orderIds },
+                status: CreditNoteStatus.APPROVED,
+                ...(createdAtFilter ? { createdAt: createdAtFilter } : {}),
+              },
               _sum: { totalAmount: true },
             }),
           ])
@@ -193,6 +229,7 @@ export class PersonaDebtorsSubService {
         unallocatedInternalCredit: unallocatedInternalByPersona.get(debtor.id) || 0,
         openingOfficialDebt: openingOfficialByPersona.get(debtor.id) || 0,
         openingInternalDebt: openingInternalByPersona.get(debtor.id) || 0,
+        referenceDate: cutoffDate ?? undefined,
       });
       metricsMap.set(debtor.id, metrics);
     }
@@ -219,44 +256,92 @@ export class PersonaDebtorsSubService {
 
   /**
    * Obtiene el reporte consolidado de deudores con saldo por sucursales (A / X) y advertencias.
+   * Si se recibe asOfDate (YYYY-MM-DD), calcula la foto exacta al cierre de ese día (23:59:59 AR).
    */
-  async getDebtorsReport(userId: number, userRole: string) {
-    const whereClause: any = {
+  async getDebtorsReport(userId: number, userRole: string, asOfDate?: string) {
+    const cutoffDate = parseAsOfCutoffDate(asOfDate);
+    const basePersonaWhere: any = {
       isClient: true,
-      outstandingBalance: { gt: 0 },
+      isActive: true,
     };
 
     if (userRole === Role.VENDEDOR) {
-      whereClause.sellerId = userId;
+      basePersonaWhere.sellerId = userId;
     }
 
-    const [clients, sellers] = await Promise.all([
-      prisma.persona.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          name: true,
-          cuit: true,
-          address: true,
-          city: true,
-          province: true,
-          zipCode: true,
-          phone: true,
-          email: true,
-          route: true,
-          outstandingBalance: true,
-          sellerId: true,
-          seller: { select: { id: true, username: true } },
-        },
-        orderBy: { name: 'asc' },
-      }),
-      prisma.user.findMany({
-        where: { role: Role.VENDEDOR },
-        select: { id: true, username: true },
-      }),
-    ]);
+    const personaSelect = {
+      id: true,
+      name: true,
+      cuit: true,
+      address: true,
+      city: true,
+      province: true,
+      zipCode: true,
+      phone: true,
+      email: true,
+      route: true,
+      outstandingBalance: true,
+      sellerId: true,
+      seller: { select: { id: true, username: true } },
+    };
 
-    const metricsMap = await this.getDebtMetricsByPersonaIds(clients);
+    let clients: any[] = [];
+    let sellers: any[] = [];
+
+    if (!cutoffDate) {
+      [clients, sellers] = await Promise.all([
+        prisma.persona.findMany({
+          where: { ...basePersonaWhere, outstandingBalance: { gt: 0 } },
+          select: personaSelect,
+          orderBy: { name: 'asc' },
+        }),
+        prisma.user.findMany({
+          where: { role: Role.VENDEDOR },
+          select: { id: true, username: true },
+        }),
+      ]);
+    } else {
+      const [ledgerRows, sellersRows] = await Promise.all([
+        prisma.accountLedger.groupBy({
+          by: ['personaId', 'entryType'],
+          where: { createdAt: { lte: cutoffDate } },
+          _sum: { amount: true },
+        }),
+        prisma.user.findMany({
+          where: { role: Role.VENDEDOR },
+          select: { id: true, username: true },
+        }),
+      ]);
+      sellers = sellersRows;
+
+      const balanceByPersonaId = new Map<number, ReturnType<typeof toDecimal>>();
+      for (const row of ledgerRows) {
+        const amt = toDecimal(row._sum?.amount?.toString() ?? '0');
+        const signed = row.entryType === LedgerEntryType.DEBIT ? amt : amt.negated();
+        balanceByPersonaId.set(
+          row.personaId,
+          (balanceByPersonaId.get(row.personaId) || toDecimal(0)).plus(signed),
+        );
+      }
+
+      const positiveIds = Array.from(balanceByPersonaId.entries())
+        .filter(([, bal]) => bal.gt('0.5'))
+        .map(([id]) => id);
+
+      if (positiveIds.length > 0) {
+        const rawClients = await prisma.persona.findMany({
+          where: { ...basePersonaWhere, id: { in: positiveIds } },
+          select: personaSelect,
+          orderBy: { name: 'asc' },
+        });
+        clients = rawClients.map((c) => ({
+          ...c,
+          outstandingBalance: (balanceByPersonaId.get(c.id) || toDecimal(0)).toFixed(2),
+        }));
+      }
+    }
+
+    const metricsMap = await this.getDebtMetricsByPersonaIds(clients, prisma, cutoffDate);
 
     const debtors = clients.map((client) => {
       const metrics = metricsMap.get(client.id) ?? {
