@@ -267,6 +267,83 @@ describe('persona-debtors.engine (Motor Puro FIFO con Decimal.js)', () => {
       expect(restoAndTwo.followUpLabel).toBe('2 + resto 5/11');
     });
 
+    it('muestra "Resto 17/11: $1.146" (remarcado) cuando el resto es < $10.000 y la última boleta está dentro de los 10 días corridos', () => {
+      // Caso real Mittino: factura 17/11 pagada casi completa (queda resto $1.146) + factura 25/11 ($70.681) a 3 días
+      const mittinoRefDate = new Date('2026-11-28T15:00:00-03:00');
+      const mittino = computeDebtorFifoMetrics({
+        outstandingBalance: 71827,
+        referenceDate: mittinoRefDate,
+        orders: [
+          {
+            id: 1,
+            billingType: 'INTERNAL',
+            totalAmount: 63629,
+            directIncomeSum: 0,
+            directCreditNoteSum: 0,
+            date: '2026-11-17T10:00:00-03:00',
+          },
+          {
+            id: 2,
+            billingType: 'INTERNAL',
+            totalAmount: 70681,
+            directIncomeSum: 0,
+            directCreditNoteSum: 0,
+            date: '2026-11-25T10:00:00-03:00',
+          },
+        ],
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 62483,
+      });
+
+      expect(mittino.needsFollowUp).toBe(true);
+      expect(mittino.followUpLabel).toBe('Resto 17/11: $1.146');
+      expect(mittino.branchX.followUpReason).toBe('PARTIAL_REMAINDER');
+
+      // Frontera exacta $10.000 -> vuelve a mostrar "1 + resto"
+      const exactThreshold = computeDebtorFifoMetrics({
+        outstandingBalance: 80681,
+        referenceDate: mittinoRefDate,
+        orders: [
+          { id: 1, billingType: 'INTERNAL', totalAmount: 60000, directIncomeSum: 50000, directCreditNoteSum: 0, date: '2026-11-17T10:00:00-03:00' },
+          { id: 2, billingType: 'INTERNAL', totalAmount: 70681, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-25T10:00:00-03:00' },
+        ],
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+      });
+      expect(exactThreshold.needsFollowUp).toBe(true);
+      expect(exactThreshold.followUpLabel).toBe('1 + resto 17/11');
+      expect(exactThreshold.branchX.followUpReason).toBe('PARTIAL_AND_MORE');
+
+      // Resto chico (< $10.000) pero la última boleta superó los 10 días corridos -> "1 + resto"
+      const overdueLatestWithSmallResto = computeDebtorFifoMetrics({
+        outstandingBalance: 71827,
+        referenceDate: mittinoRefDate,
+        orders: [
+          { id: 1, billingType: 'INTERNAL', totalAmount: 63629, directIncomeSum: 62483, directCreditNoteSum: 0, date: '2026-11-10T10:00:00-03:00' },
+          { id: 2, billingType: 'INTERNAL', totalAmount: 70681, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-17T10:00:00-03:00' }, // 11 días > 10
+        ],
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+      });
+      expect(overdueLatestWithSmallResto.needsFollowUp).toBe(true);
+      expect(overdueLatestWithSmallResto.followUpLabel).toBe('1 + resto 10/11');
+
+      // Resto chico (< $10.000) + 2 boletas nuevas -> "2 + resto"
+      const twoTripsWithSmallResto = computeDebtorFifoMetrics({
+        outstandingBalance: 141827,
+        referenceDate: mittinoRefDate,
+        orders: [
+          { id: 1, billingType: 'INTERNAL', totalAmount: 63629, directIncomeSum: 62483, directCreditNoteSum: 0, date: '2026-11-10T10:00:00-03:00' },
+          { id: 2, billingType: 'INTERNAL', totalAmount: 70000, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-20T10:00:00-03:00' },
+          { id: 3, billingType: 'INTERNAL', totalAmount: 70681, directIncomeSum: 0, directCreditNoteSum: 0, date: '2026-11-25T10:00:00-03:00' },
+        ],
+        unallocatedOfficialCredit: 0,
+        unallocatedInternalCredit: 0,
+      });
+      expect(twoTripsWithSmallResto.needsFollowUp).toBe(true);
+      expect(twoTripsWithSmallResto.followUpLabel).toBe('2 + resto 10/11');
+    });
+
     it('marca "Resto 5/11" cuando solo quedó un resto impago', () => {
       const onlyResto = computeDebtorFifoMetrics({
         outstandingBalance: 87656,

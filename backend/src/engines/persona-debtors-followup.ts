@@ -40,6 +40,16 @@ export function createEmptyBranchFollowUp(): DebtorBranchFollowUp {
   };
 }
 
+export const SMALL_REMAINDER_THRESHOLD = 10000;
+
+function formatIntegerPeso(amount: number): string {
+  const rounded = Math.round(amount);
+  const formatted = Math.abs(rounded)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return rounded < 0 ? `-$${formatted}` : `$${formatted}`;
+}
+
 /** Construye la etiqueta de lectura rápida (por viaje, resto o saldo anterior) de una sucursal. */
 export function buildBranchFollowUpSummary(
   pendingTrips: PendingInvoiceFifoDetail[],
@@ -128,6 +138,29 @@ export function buildBranchFollowUpSummary(
 
   if (oldest.isPartial) {
     const newerCount = tripCount - 1;
+    const latestTrip = pendingTrips[1];
+    const isSingleCurrentInvoicePlusSmallRemainder =
+      tripCount === 2 &&
+      oldest.remainingAmount < SMALL_REMAINDER_THRESHOLD &&
+      !latestTrip.isSkippedPrevious &&
+      (latestTrip.daysOld === null || latestTrip.daysOld <= overdueDaysThreshold);
+
+    if (isSingleCurrentInvoicePlusSmallRemainder) {
+      const amountLabel = formatIntegerPeso(oldest.remainingAmount);
+      return {
+        pendingCount: tripCount,
+        fullPendingCount,
+        hasPartialRemainder: true,
+        oldestPendingShortDate,
+        oldestPendingDays,
+        needsFollowUp: true,
+        followUpReason: 'PARTIAL_REMAINDER',
+        followUpLabel: oldestPendingShortDate
+          ? `Resto ${oldestPendingShortDate}: ${amountLabel}`
+          : `Resto: ${amountLabel}`,
+      };
+    }
+
     const restoPart = oldestPendingShortDate ? `resto ${oldestPendingShortDate}` : 'resto';
     return {
       pendingCount: tripCount,

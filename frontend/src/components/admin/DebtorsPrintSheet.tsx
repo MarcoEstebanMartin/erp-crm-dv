@@ -42,15 +42,15 @@ const getUniqueRoutesLabel = (rows: any[]): string => {
 };
 
 const renderDebtorTable = (rows: any[], amountKey: 'debtA' | 'debtX') => (
-  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem', lineHeight: 1.2, tableLayout: 'fixed' }}>
+  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.89rem', lineHeight: 1.25, tableLayout: 'fixed' }}>
     <thead style={{ display: 'table-row-group' }}>
       <tr style={{ borderBottom: '1px solid #94a3b8' }}>
-        <th style={{ textAlign: 'left', padding: '4px 6px', width: '38%' }}>
+        <th style={{ textAlign: 'left', padding: '4px 6px', width: '36%' }}>
           {amountKey === 'debtA' ? 'Cliente (A)' : 'Cliente'}
         </th>
-        <th style={{ textAlign: 'left', padding: '4px 6px', width: '30%' }}>Dirección</th>
-        <th style={{ textAlign: 'right', padding: '4px 6px', width: '14%' }}>Saldo</th>
-        <th style={{ textAlign: 'left', padding: '4px 6px', width: '18%' }}>Detalle</th>
+        <th style={{ textAlign: 'left', padding: '4px 6px', width: '27%' }}>Dirección</th>
+        <th style={{ textAlign: 'right', padding: '4px 6px', width: '15%' }}>Saldo</th>
+        <th style={{ textAlign: 'left', padding: '4px 6px', width: '22%' }}>Detalle</th>
       </tr>
     </thead>
     <tbody>
@@ -68,16 +68,16 @@ const renderDebtorTable = (rows: any[], amountKey: 'debtA' | 'debtX') => (
               printColorAdjust: 'exact',
             }}
           >
-            <td style={{ padding: '3px 6px', verticalAlign: 'top', fontWeight: flagged ? 700 : 600 }}>
+            <td style={{ padding: '4px 6px', verticalAlign: 'top', fontWeight: flagged ? 700 : 600 }}>
               {d.name}
             </td>
-            <td style={{ padding: '3px 6px', verticalAlign: 'top', fontSize: '0.66rem', color: '#475569' }}>
+            <td style={{ padding: '4px 6px', verticalAlign: 'top', fontSize: '0.83rem', color: '#475569' }}>
               {d.address || '-'}
             </td>
-            <td className="tabular-nums" style={{ textAlign: 'right', padding: '3px 6px', fontWeight: 700, verticalAlign: 'top', whiteSpace: 'nowrap' }}>
+            <td className="tabular-nums" style={{ textAlign: 'right', padding: '4px 6px', fontWeight: 700, verticalAlign: 'top', whiteSpace: 'nowrap' }}>
               ${Math.round(Number(d[amountKey] || 0)).toLocaleString('es-AR')}
             </td>
-            <td style={{ padding: '3px 6px', verticalAlign: 'top', fontWeight: 700, fontSize: '0.68rem', color: '#9A3412' }}>
+            <td style={{ padding: '4px 6px', verticalAlign: 'top', fontWeight: 700, fontSize: '0.85rem', color: '#9A3412' }}>
               {label}
             </td>
           </tr>
@@ -130,21 +130,21 @@ export const DebtorsPrintSheet: React.FC<DebtorsPrintSheetProps> = ({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '12px', borderBottom: '1.5px solid #1D1D1F', paddingBottom: '6px', marginBottom: '10px' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#1D1D1F' }}>
+          <h1 style={{ margin: 0, fontSize: '1.27rem', fontWeight: 700, color: '#1D1D1F' }}>
             Deudor de {cityLabel}
             {singleCityRoutes && (
-              <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#475569', marginLeft: '6px' }}>
+              <span style={{ fontSize: '0.89rem', fontWeight: 500, color: '#475569', marginLeft: '6px' }}>
                 ({singleCityRoutes})
               </span>
             )}
           </h1>
           {headerMetaParts.length > 0 && (
-            <div style={{ fontSize: '0.76rem', color: '#334155', marginTop: '2px' }}>
+            <div style={{ fontSize: '0.93rem', color: '#334155', marginTop: '2px' }}>
               {headerMetaParts.join(' · ')}
             </div>
           )}
         </div>
-        <div className="tabular-nums" style={{ textAlign: 'right', fontSize: '0.78rem', color: '#334155', whiteSpace: 'nowrap' }}>
+        <div className="tabular-nums" style={{ textAlign: 'right', fontSize: '0.95rem', color: '#334155', whiteSpace: 'nowrap' }}>
           {formatAsOfPrintLabel(asOfDate)}
         </div>
       </div>
@@ -162,11 +162,11 @@ export const DebtorsPrintSheet: React.FC<DebtorsPrintSheetProps> = ({
         return (
           <div key={city} style={{ marginBottom: '14px' }}>
             {cityKeys.length > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 8px', fontWeight: 700, fontSize: '0.78rem', marginBottom: '4px', breakAfter: 'avoid', pageBreakAfter: 'avoid' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '4px 8px', fontWeight: 700, fontSize: '0.95rem', marginBottom: '4px', breakAfter: 'avoid', pageBreakAfter: 'avoid' }}>
                 <span>
                   {city}
                   {cityRoutes && (
-                    <span style={{ fontSize: '0.68rem', fontWeight: 500, color: '#475569', marginLeft: '6px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#475569', marginLeft: '6px' }}>
                       ({cityRoutes})
                     </span>
                   )}
